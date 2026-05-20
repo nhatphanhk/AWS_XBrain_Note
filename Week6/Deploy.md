@@ -1,6 +1,6 @@
 # Triển khai 1 VPC (không dùng VPC Peering) — theo sơ đồ
 
-Tài liệu này mô tả triển khai **1 VPC** duy nhất (2 AZ) gồm: Route 53 → CloudFront (+WAF, ACM) → ALB → ECS Fargate backend → RDS MySQL + ElastiCache (Redis/Valkey), và S3 (Web + Media). Backend nằm trong **private subnets**, outbound qua **NAT Gateway**; truy cập S3 qua **S3 Gateway Endpoint**.
+Tài liệu này mô tả triển khai **1 VPC** duy nhất (2 AZ) gồm: Route 53 → CloudFront (+WAF, ACM) → ALB → ECS Fargate backend → RDS MySQL, và S3 (Web + Media). Backend nằm trong **private subnets**, outbound qua **NAT Gateway**; truy cập S3 qua **S3 Gateway Endpoint**.
 
 Khu vực triển khai: `ap-southeast-1` (Singapore).
 
@@ -57,7 +57,6 @@ Vì giới hạn policy/Group, tạo thêm group thứ 2:
 - Group name: `DevOps-Team-Policy-2`
 - Attach policies:
   - `AmazonRDSFullAccess`
-  - `ElastiCacheFullAccess`
   - `CloudWatchLogsFullAccess`
   - `CloudWatchFullAccess`
   - `AWSCloudTrail_FullAccess`
@@ -250,7 +249,6 @@ Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 - Outbound rules:
   - Allow all (đơn giản) hoặc giới hạn:
     - MySQL 3306 → `sg-db-minie-prod`
-    - Redis 6379 → `sg-redis-minie-prod`
     - HTTPS 443 → `0.0.0.0/0` (gọi service bên ngoài)
 
 Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
@@ -259,14 +257,6 @@ Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 
 - Inbound rules:
   - MySQL 3306 from `sg-ecs-minie-prod`
-- Outbound: Allow all
-
-Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
-
-### 6.4 SG cho Redis/Valkey: `sg-redis-minie-prod`
-
-- Inbound rules:
-  - TCP 6379 from `sg-ecs-minie-prod`
 - Outbound: Allow all
 
 Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
@@ -355,37 +345,9 @@ Ghi lại endpoint:
 
 - DB endpoint để ECS dùng (host + port)
 
-## 9) ElastiCache (Redis/Valkey) như sơ đồ
+## 9) ALB + Target Group (đúng sơ đồ)
 
-### 9.1 Cache subnet group
-
-ElastiCache → Subnet groups → Create subnet group
-
-- Name: `redis-subnet-group-minie-prod`
-- VPC: `minie-prod`
-- Subnets: chọn **2 private subnets** (AZ-a và AZ-b)
-
-Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
-
-### 9.2 Tạo Redis/Valkey
-
-ElastiCache → (Redis/Valkey) → Create
-
-- Name: `redis-minie-prod`
-- Engine: Redis hoặc Valkey (theo account)
-- Deployment: Multi-AZ (nếu có lựa chọn) hoặc Replication group
-- Node type: `cache.t3.micro` (demo) / tùy ngân sách
-- Subnet group: `redis-subnet-group-minie-prod`
-- Security group: `sg-redis-minie-prod`
-- Port: `6379`
-
-Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
-
-Ghi lại primary endpoint để ECS cấu hình.
-
-## 10) ALB + Target Group (đúng sơ đồ)
-
-### 10.1 Target Group cho backend
+### 9.1 Target Group cho backend
 
 EC2 → Target Groups → Create
 
@@ -405,7 +367,7 @@ EC2 → Target Groups → Create
 
 Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 
-### 10.2 Application Load Balancer
+### 9.2 Application Load Balancer
 
 EC2 → Load Balancers → Create → Application Load Balancer
 
@@ -425,9 +387,9 @@ Nếu dùng HTTPS tại ALB:
 
 - Tạo/Import ACM cert trong `ap-southeast-1`, gắn listener `HTTPS:443` và redirect 80→443.
 
-## 11) ECS Fargate: Cluster + Task Definition + Service
+## 10) ECS Fargate: Cluster + Task Definition + Service
 
-### 11.1 CloudWatch Log group
+### 10.1 CloudWatch Log group
 
 CloudWatch → Logs → Log groups → Create
 
@@ -436,7 +398,7 @@ CloudWatch → Logs → Log groups → Create
 
 Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 
-### 11.2 ECS Cluster
+### 10.2 ECS Cluster
 
 ECS → Clusters → Create
 
@@ -445,7 +407,7 @@ ECS → Clusters → Create
 
 Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 
-### 11.3 Task Definition
+### 10.3 Task Definition
 
 ECS → Task definitions → Create new task definition
 
@@ -477,7 +439,7 @@ Container:
   - Region: `ap-southeast-1`
   - Stream prefix: `ecs`
 
-### 11.4 ECS Service
+### 10.4 ECS Service
 
 ECS → Clusters → `cluster-minie-prod` → Services → Create
 
@@ -509,14 +471,14 @@ Test nhanh qua ALB:
 
 - `curl http://<ALB_DNS_NAME>/api`
 
-## 12) ACM + CloudFront + WAF + Route 53 (đúng sơ đồ)
+## 11) ACM + CloudFront + WAF + Route 53 (đúng sơ đồ)
 
 Mục tiêu: user → Route 53 → CloudFront (TLS + WAF) →
 
 - default: S3 Web bucket
 - path `/api/*`: forward tới ALB
 
-### 12.1 ACM certificate cho CloudFront
+### 11.1 ACM certificate cho CloudFront
 
 Lưu ý: certificate dùng cho CloudFront phải tạo ở **us-east-1 (N. Virginia)**.
 
@@ -526,7 +488,7 @@ ACM (region us-east-1) → Request certificate
 - Validation: DNS validation
 - Add CNAME record theo hướng dẫn ACM (trong Route 53)
 
-### 12.2 CloudFront Distribution
+### 11.2 CloudFront Distribution
 
 CloudFront → Create distribution
 
@@ -562,7 +524,7 @@ Behavior cho API:
 Settings:
 
 - Alternate domain name (CNAME): `minie.example.com`
-- Custom SSL certificate: chọn cert ở bước 12.1
+- Custom SSL certificate: chọn cert ở bước 11.1
 - Default root object: `index.html`
 - Custom error responses (cho SPA, khuyến nghị):
   - 403 → Response page path `/index.html` → HTTP response code `200`
@@ -574,7 +536,7 @@ Sau khi tạo, CloudFront sẽ cung cấp Distribution domain name (ví dụ `dx
 
 S3 bucket policy cho OAC: CloudFront console thường tạo giúp; nếu không, vào bucket Web → Permissions → Bucket policy để allow CloudFront access.
 
-### 12.3 AWS WAF (attach vào CloudFront)
+### 11.3 AWS WAF (attach vào CloudFront)
 
 WAF → Web ACLs → Create web ACL
 
@@ -586,11 +548,11 @@ WAF → Web ACLs → Create web ACL
   - AWS Managed Rules: SQLiRuleSet
   - Rate-based rule: 1000 requests/5 minutes (tùy nhu cầu)
 
-Attach Web ACL vào CloudFront distribution ở bước 12.2.
+Attach Web ACL vào CloudFront distribution ở bước 11.2.
 
 Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 
-### 12.4 Route 53
+### 11.4 Route 53
 
 Route 53 → Hosted zones → (chọn hosted zone domain)
 
@@ -602,9 +564,9 @@ Route 53 → Hosted zones → (chọn hosted zone domain)
 
 Kết quả: user truy cập `https://minie.example.com`.
 
-## 13) CloudTrail + CloudWatch (đúng sơ đồ)
+## 12) CloudTrail + CloudWatch (đúng sơ đồ)
 
-### 13.1 CloudTrail
+### 12.1 CloudTrail
 
 CloudTrail → Trails → Create trail
 
@@ -614,13 +576,13 @@ CloudTrail → Trails → Create trail
 
 Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 
-### 13.2 CloudWatch dashboard/alarms (tối thiểu)
+### 12.2 CloudWatch dashboard/alarms (tối thiểu)
 
 - ECS service CPU/Memory utilization alarms
 - ALB target 5xx alarms
 - RDS MySQL CPU/FreeableMemory alarms
 
-### 13.3 Enforce Tagging Compliance (khuyến nghị)
+### 12.3 Enforce Tagging Compliance (khuyến nghị)
 
 Để đảm bảo team luôn tag đúng chuẩn (không bị lệch chữ hoa/thường), cấu hình tối thiểu:
 
@@ -636,7 +598,7 @@ Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 
 Thực tế vận hành: dùng AWS Config để phát hiện resource thiếu tag + notify Owner; với service hỗ trợ tag-on-create có thể bổ sung IAM guardrail để chặn tạo resource nếu thiếu tag (tham khảo [Week6/TaggingStrategy.md](Week6/TaggingStrategy.md)).
 
-## 14) Cập nhật FE env + deploy
+## 13) Cập nhật FE env + deploy
 
 Nếu FE gọi API qua CloudFront:
 
