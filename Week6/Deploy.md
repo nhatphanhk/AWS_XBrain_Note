@@ -1,14 +1,14 @@
 # Triển khai 1 VPC (không dùng VPC Peering) — theo sơ đồ
 
-Tài liệu này mô tả triển khai **1 VPC** duy nhất (2 AZ) gồm: Route 53 → CloudFront (+WAF, ACM) → ALB → ECS Fargate backend → RDS MySQL, và S3 (Web + Media). Backend nằm trong **private subnets**, outbound qua **NAT Gateway**; truy cập S3 qua **S3 Gateway Endpoint**.
+Tài liệu này mô tả triển khai **1 VPC** duy nhất (2 AZ) gồm: Route 53 → CloudFront (+WAF, ACM) → ALB → ECS Fargate backend → RDS MySQL, và S3 (Web + Media). Backend nằm trong **private app subnets**, outbound qua **NAT Gateway**; truy cập S3 qua **S3 Gateway Endpoint**. RDS nằm trong **private DB subnets** (tách riêng).
 
-Khu vực triển khai: `ap-southeast-1` (Singapore).
+Khu vực triển khai: `us-east-1` (Singapore).
 
 ## 0) Quy ước tên + thông số chuẩn (điền theo project)
 
 - Prefix/tên dự án: `minie`
 - Environment: `prod`
-- Region: `ap-southeast-1`
+- Region: `us-east-1`
 - Domain (Route 53): ví dụ `minie.example.com` (thay bằng domain bạn sở hữu)
 - AccountId: ví dụ `055255093740` (thay bằng account của bạn)
 
@@ -23,13 +23,15 @@ Default tag set cho dự án (điền giá trị thật):
 - `CostCenter=G4`
 - `Application=minie`
 
-### CIDR 1 VPC (giống sơ đồ)
+### CIDR 1 VPC (giống sơ đồ, bổ sung DB subnets)
 
 - VPC CIDR: `10.0.0.0/24`
 - Public subnet A (AZ-a): `10.0.0.0/26`
 - Public subnet B (AZ-b): `10.0.0.64/26`
-- Private subnet A (AZ-a): `10.0.0.128/26`
-- Private subnet B (AZ-b): `10.0.0.192/26`
+- Private App subnet A (AZ-a): `10.0.0.128/27`
+- Private App subnet B (AZ-b): `10.0.0.160/27`
+- Private DB subnet A (AZ-a): `10.0.0.192/27`
+- Private DB subnet B (AZ-b): `10.0.0.224/27`
 
 ## 1) IAM: User/Group/Role
 
@@ -192,40 +194,118 @@ Khuyến nghị: dùng IAM Identity Center / short-term credentials. Nếu buộ
 
 1. Login ECR:
 
-- `aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.ap-southeast-1.amazonaws.com`
+- `aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com`
 
 2. Tạo repo (nếu chưa có):
 
-- `aws ecr create-repository --repository-name minie-backend --region ap-southeast-1`
+- `aws ecr create-repository --repository-name minie-backend --region us-east-1`
 
 3. Build + tag + push:
 
 - `docker build -t minie-backend:latest .`
-- `docker tag minie-backend:latest <ACCOUNT_ID>.dkr.ecr.ap-southeast-1.amazonaws.com/minie-backend:latest`
-- `docker push <ACCOUNT_ID>.dkr.ecr.ap-southeast-1.amazonaws.com/minie-backend:latest`
+- `docker tag minie-backend:latest <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/minie-backend:latest`
+- `docker push <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/minie-backend:latest`
 
-## 5) VPC (1 VPC) + IGW + NAT + S3 Gateway Endpoint
+## 5) VPC (1 VPC) + IGW + NAT + S3 Gateway Endpoint (tạo theo “VPC only”)
+
+Mục tiêu: tạo VPC “trống” trước (VPC only), sau đó tự tạo subnets/route tables/IGW/NAT/endpoint để có **2 public + 2 private app + 2 private DB** subnets.
+
+### 5.1 Tạo VPC (VPC only)
 
 VPC → Your VPCs → Create VPC
 
-- Resources to create: **VPC and more**
-- Name tag auto-generation: `minie-prod`
+- Resources to create: **VPC only**
+- Name tag: `minie-prod`
 - IPv4 CIDR: `10.0.0.0/24`
-- Number of AZs: 2
-- Number of public subnets: 2
-- Number of private subnets: 2
-- NAT gateways: **1 per AZ**
-- VPC endpoints: **S3 Gateway**
 - DNS options: Enable DNS hostnames + Enable DNS resolution
 
-Tags (Required): áp cho VPC/subnets/route tables/NAT/IGW/endpoint theo `Owner`, `Environment`, `CostCenter`, `Application`
+Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 
-Sau khi tạo xong, kiểm tra:
+### 5.2 Tạo 6 subnets (2 AZ)
 
-- Internet Gateway đã attach vào VPC
-- Public route table có route `0.0.0.0/0 → igw-...`
-- Private route tables có route `0.0.0.0/0 → nat-...` (mỗi AZ)
-- Endpoint S3: route tables của **private** subnets đã được associate
+VPC → Subnets → Create subnet
+
+- VPC: `minie-prod`
+- Chọn 2 AZ (ví dụ `us-east-1a` và `us-east-1b`)
+- Tạo các subnet theo CIDR ở mục 0:
+  Public A: 10.0.0.0/27
+  Public B: 10.0.0.32/27
+
+  Private App A: 10.0.0.64/27
+  Private App B: 10.0.0.96/27
+
+  Private DB A: 10.0.0.128/27
+  Private DB B: 10.0.0.160/27
+
+Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
+
+Khuyến nghị: bật “Auto-assign public IPv4 address” = **Enabled** cho 2 public subnets (để ALB/NAT dễ hoạt động).
+
+### 5.3 Internet Gateway (IGW)
+
+VPC → Internet gateways → Create internet gateway
+
+- Name: `igw-minie-prod`
+- Attach to VPC: `minie-prod`
+
+Tags (Required)
+
+### 5.4 Route tables
+
+VPC → Route tables → Create
+
+Tạo 3 route table:
+
+1. Public RT: `rtb-public-minie-prod`
+
+- Routes:
+  - `0.0.0.0/0 → igw-minie-prod`
+- Subnet associations: associate **2 public subnets**
+
+2. Private App RT (mỗi AZ 1 cái để đi đúng NAT):
+
+- `rtb-private-app-a-minie-prod` associate **Private App subnet A**
+- `rtb-private-app-b-minie-prod` associate **Private App subnet B**
+
+3. Private DB RT: `rtb-private-db-minie-prod`
+
+- Không cần default route ra internet (DB nên “isolated”)
+- Subnet associations: associate **2 DB subnets**
+
+Tags (Required)
+
+### 5.5 NAT Gateways (1 per AZ)
+
+VPC → NAT gateways → Create NAT gateway
+
+- Tạo NAT GW A trong **Public subnet A** + 1 Elastic IP
+- Tạo NAT GW B trong **Public subnet B** + 1 Elastic IP
+
+Cập nhật routes cho private app route tables:
+
+- `rtb-private-app-a-minie-prod`: `0.0.0.0/0 → nat-...A`
+- `rtb-private-app-b-minie-prod`: `0.0.0.0/0 → nat-...B`
+
+Tags (Required)
+
+### 5.6 VPC Endpoint: S3 Gateway (cho private app subnets)
+
+VPC → Endpoints → Create endpoint
+
+- Service: `com.amazonaws.us-east-1.s3`
+- Type: **Gateway**
+- VPC: `minie-prod`
+- Route tables: chọn **2 private app route tables** (`rtb-private-app-a-...`, `rtb-private-app-b-...`)
+
+Tags (Required)
+
+Sau khi tạo xong, kiểm tra tối thiểu:
+
+- IGW đã attach vào VPC
+- Public RT có `0.0.0.0/0 → igw-...`
+- Private App RTs có `0.0.0.0/0 → nat-...` đúng AZ
+- Private DB RT không có default route internet
+- Endpoint S3 đã associate vào 2 private app route tables
 
 ## 6) Security Groups (1 VPC)
 
@@ -268,7 +348,7 @@ Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 S3 → Buckets → Create bucket
 
 - Bucket name: `minie-web-<ACCOUNT_ID>`
-- Region: `ap-southeast-1`
+- Region: `us-east-1`
 - ACLs disabled
 - Block all public access: **ON** (khuyến nghị)
 - Default encryption: SSE-S3
@@ -301,7 +381,7 @@ RDS → Subnet groups → Create DB subnet group
 - Name: `db-subnet-group-minie-prod`
 - Description: DB subnet group for minie prod
 - VPC: `minie-prod`
-- Subnets: chọn **2 private subnets** (AZ-a và AZ-b)
+- Subnets: chọn **2 private DB subnets** (DB subnet A và DB subnet B)
 
 Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 
@@ -385,7 +465,7 @@ Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 
 Nếu dùng HTTPS tại ALB:
 
-- Tạo/Import ACM cert trong `ap-southeast-1`, gắn listener `HTTPS:443` và redirect 80→443.
+- Tạo/Import ACM cert trong `us-east-1`, gắn listener `HTTPS:443` và redirect 80→443.
 
 ## 10) ECS Fargate: Cluster + Task Definition + Service
 
@@ -421,7 +501,7 @@ ECS → Task definitions → Create new task definition
 Container:
 
 - Name: `minie-backend`
-- Image URI: `<ACCOUNT_ID>.dkr.ecr.ap-southeast-1.amazonaws.com/minie-backend:latest`
+- Image URI: `<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/minie-backend:latest`
 - Port mappings:
   - Container port: `3000`
   - Protocol: TCP
@@ -429,14 +509,14 @@ Container:
 - Environment (ví dụ):
   - `NODE_ENV=production`
   - `PORT=3000`
-  - `AWS_REGION=ap-southeast-1`
+  - `AWS_REGION=us-east-1`
   - `S3_MEDIA_BUCKET=media-s3-minie`
 - Secrets (khuyến nghị lấy từ Secrets Manager):
   - `DB_USERNAME` / `DB_PASSWORD` / `DB_HOST`… (map từ secret `minie/prod/db`)
 - Logging:
   - Log driver: `awslogs`
   - Log group: `/ecs/minie-backend-prod`
-  - Region: `ap-southeast-1`
+  - Region: `us-east-1`
   - Stream prefix: `ecs`
 
 ### 10.4 ECS Service
@@ -449,7 +529,7 @@ ECS → Clusters → `cluster-minie-prod` → Services → Create
 - Desired tasks: 2
 - Networking:
   - VPC: `minie-prod`
-  - Subnets: **2 private subnets**
+  - Subnets: **2 private app subnets** (Private App subnet A + Private App subnet B)
   - Security group: `sg-ecs-minie-prod`
   - Public IP: Disabled
 - Load balancing:
@@ -469,7 +549,7 @@ Verify:
 
 Test nhanh qua ALB:
 
-- `curl http://<ALB_DNS_NAME>/api`
+- `curl http://alb-minie-prod-148977089.us-east-1.elb.amazonaws.com/api/categories`
 
 ## 11) ACM + CloudFront + WAF + Route 53 (đúng sơ đồ)
 
@@ -590,7 +670,7 @@ Tags (Required): `Owner`, `Environment`, `CostCenter`, `Application`
 
 - Activate 4 tag keys: `Owner`, `Environment`, `CostCenter`, `Application`
 
-2. AWS Config (ap-southeast-1)
+2. AWS Config (us-east-1)
 
 - Bật AWS Config
 - Thêm managed rule `required-tags`
