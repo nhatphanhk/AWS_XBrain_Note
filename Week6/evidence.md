@@ -13,37 +13,7 @@ IAM → Roles → Create role
 
 **Inline policy** (least-privilege):
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ec2:DescribeInstances",
-        "ec2:StopInstances",
-        "rds:DescribeDBInstances",
-        "rds:StopDBInstance"
-      ],
-      "Resource": "*",
-      "Condition": {
-        "StringNotEquals": {
-          "aws:ResourceTag/keep": "true"
-        }
-      }
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ],
-      "Resource": "arn:aws:logs:us-east-1:*:log-group:/aws/lambda/*"
-    }
-  ]
-}
-```
+[LambdaCostGuardRole](code/LambdaCostGuardRole.json)
 
 **Tags** (Required): Owner, Environment, CostCenter, Application
 
@@ -66,124 +36,7 @@ Lambda → Functions → Create function
 
 Dán mã dưới đây vào editor:
 
-```python
-import boto3
-import json
-from datetime import datetime
-
-ec2 = boto3.client('ec2', region_name='us-east-1')
-rds = boto3.client('rds', region_name='us-east-1')
-
-def lambda_handler(event, context):
-    """
-    Stop EC2 & RDS instances that are:
-    1. NOT tagged with keep=true
-    2. Environment=dev (or any criteria you define)
-    Only stop if currently running.
-    """
-
-    stopped_resources = []
-    errors = []
-
-    try:
-        # ========== EC2 Instances ==========
-        print("[INFO] Checking EC2 instances...")
-
-        response = ec2.describe_instances(
-            Filters=[
-                {'Name': 'instance-state-name', 'Values': ['running', 'pending']}
-            ]
-        )
-
-        for reservation in response.get('Reservations', []):
-            for instance in reservation.get('Instances', []):
-                instance_id = instance['InstanceId']
-                tags = {tag['Key']: tag['Value'] for tag in instance.get('Tags', [])}
-
-                # Check if keep=true tag exists
-                if tags.get('keep') == 'true':
-                    print(f"[SKIP] {instance_id} has keep=true tag")
-                    continue
-
-                # OPTIONAL: Only stop if Environment=dev
-                # Uncomment if you only want to stop dev instances
-                # if tags.get('Environment') != 'dev':
-                #     print(f"[SKIP] {instance_id} is not Environment=dev")
-                #     continue
-
-                # Stop the instance
-                try:
-                    ec2.stop_instances(InstanceIds=[instance_id])
-                    stopped_resources.append({
-                        'type': 'EC2',
-                        'id': instance_id,
-                        'tags': tags,
-                        'timestamp': datetime.utcnow().isoformat()
-                    })
-                    print(f"[STOP] EC2 instance {instance_id} stopped")
-                except Exception as e:
-                    errors.append(f"EC2 {instance_id}: {str(e)}")
-                    print(f"[ERROR] Failed to stop {instance_id}: {str(e)}")
-
-        # ========== RDS Instances ==========
-        print("[INFO] Checking RDS instances...")
-
-        response = rds.describe_db_instances()
-
-        for db_instance in response.get('DBInstances', []):
-            db_id = db_instance['DBInstanceIdentifier']
-            status = db_instance['DBInstanceStatus']
-
-            # Skip if already stopped
-            if status not in ['available', 'creating', 'modifying']:
-                print(f"[SKIP] RDS {db_id} is in status {status}")
-                continue
-
-            # Get tags
-            try:
-                tag_response = rds.list_tags_for_resource(
-                    ResourceName=db_instance['DBInstanceArn']
-                )
-                tags = {tag['Key']: tag['Value'] for tag in tag_response.get('TagList', [])}
-            except Exception as e:
-                tags = {}
-                print(f"[WARN] Could not get tags for {db_id}: {str(e)}")
-
-            # Check if keep=true tag exists
-            if tags.get('keep') == 'true':
-                print(f"[SKIP] {db_id} has keep=true tag")
-                continue
-
-            # Stop the RDS instance
-            try:
-                rds.stop_db_instance(DBInstanceIdentifier=db_id)
-                stopped_resources.append({
-                    'type': 'RDS',
-                    'id': db_id,
-                    'tags': tags,
-                    'timestamp': datetime.utcnow().isoformat()
-                })
-                print(f"[STOP] RDS instance {db_id} stopped")
-            except Exception as e:
-                errors.append(f"RDS {db_id}: {str(e)}")
-                print(f"[ERROR] Failed to stop {db_id}: {str(e)}")
-
-    except Exception as e:
-        print(f"[FATAL] {str(e)}")
-        errors.append(f"Fatal error: {str(e)}")
-
-    response_body = {
-        'statusCode': 200,
-        'stopped_count': len(stopped_resources),
-        'stopped_resources': stopped_resources,
-        'errors': errors,
-        'timestamp': datetime.utcnow().isoformat()
-    }
-
-    print(f"[RESULT] {json.dumps(response_body, indent=2)}")
-
-    return response_body
-```
+[CostGuard](code/Lambda.py)
 
 ### 2.3 Deploy
 
@@ -223,32 +76,32 @@ Click **Create schedule**
 
 ## **Bước 4: Demo Component (c) — Demonstrated Stop Action**
 
-Để chứng minh Lambda **thực sự** stop resource, bạn cần:
+Để chứng minh Lambda **thực sự** stop resource, sử dụng **ECS service** hiện có để scale down to 0 tasks:
 
-### 4.1 Tạo test EC2 instance (không có tag `keep=true`)
+### 4.1 Chuẩn bị ECS Service
 
-EC2 → Instances → Launch instances
+ECS → Clusters → `cluster-minie-prod` → Services → `svc-minie-backend-prod`
 
-- **Name**: `test-cost-guard-instance`
-- **AMI**: Amazon Linux 2023 (free tier)
-- **Instance type**: `t3.micro`
-- **VPC**: `minie-prod` (hoặc default)
-- **Tags** (bắt buộc):
-  - Key: `Owner`, Value: `test`
-  - Key: `Environment`, Value: `dev`
-  - Key: `CostCenter`, Value: `testing`
-  - Key: `Application`, Value: `cost-guard`
-  - **LỌC**: KHÔNG thêm tag `keep=true`
+**Điều kiện bắt buộc**:
 
-Wait for instance to reach **running** state (1–2 phút)
+- ECS service hiện có **KHÔNG** có tag `keep=true`
+- Service đang có **2 running tasks** (hoặc tùy minDesiredCount)
+
+Nếu cần, gán tag cho service (ECS service tags):
+
+- Key: `Owner`, Value: `prod`
+- Key: `Environment`, Value: `prod`
+- Key: `CostCenter`, Value: `backend`
+- Key: `Application`, Value: `minie`
+- **LỌC**: KHÔNG thêm tag `keep=true`
 
 ### 4.2 Screenshot Before
 
-- Console → EC2 → Instances
-- **Screenshot 1**: Tình trạng instance `test-cost-guard-instance` = **running**
-  ![instance running](Screenshot/Screenshot%202026-05-21%20144256.png)
+- Console → ECS → Clusters → `cluster-minie-prod` → Services → `svc-minie-backend-prod`
+- **Screenshot 1**: Tình trạng service = **Desired count: 2, Running count: 2** (hoặc số lượng ban đầu)
+  ![ECS service running](Screenshot/Screenshot%202026-05-21%20154237.png)
 
-- Note instance ID (ví dụ: `i-0abc123def456`)
+- Note service name: `svc-minie-backend-prod`
 
 ### 4.3 Trigger Lambda thủ công
 
@@ -256,30 +109,32 @@ Lambda → Functions → `CostGuard-Stop-Untagged-Resources` → Test
 
 - **Test event**: Tạo event mới (payload có thể trống `{}`)
 - Click **Test**
-- **Check output**: Nó sẽ log "STOP EC2 instance i-0abc123def456 stopped"
-  ![Lambda log](Screenshot/Screenshot%202026-05-21%20144450.png)
+- **Check output**: Nó sẽ log "[SCALE-DOWN] ECS service svc-minie-backend-prod scaled to 0 tasks"
+  ![Lambda log](Screenshot/Screenshot%202026-05-21%20155721.png)
 
 ### 4.4 Screenshot After
 
-- Đợi 15–30 giây
-- Console → EC2 → Instances
-- **Screenshot 2**: Instance `test-cost-guard-instance` = **stopped**
-- Note thời gian state change
-  ![Instance stopped](Screenshot/Screenshot%202026-05-21%20144634.png)
+- Đợi 5–10 giây
+- Console → ECS → Clusters → `cluster-minie-prod` → Services → `svc-minie-backend-prod`
+- **Screenshot 2**: Service = **Desired count: 0, Running count: 0** (tasks đang scale down)
+- Note thời gian scale action
+  ![ECS scaled to 0](Screenshot/Screenshot%202026-05-21%20160441.png)
 
 ### 4.5 CloudTrail Evidence
 
 CloudTrail → Event history
 
 - **Search filter**:
-  - Event name: `StopInstances`
-    ![Event name](Screenshot/Screenshot%202026-05-21%20144829.png)
+  - Event name: `UpdateService`
+    ![Event name UpdateService](Screenshot/Screenshot%202026-05-21%20144829.png)
 
-  - Resource name: `test-cost-guard-instance` (hoặc instance ID)
-    ![Resource name](Screenshot/Screenshot%202026-05-21%20145233.png)
+  - Resource name: `svc-minie-backend-prod` (hoặc service ARN)
+    ![Resource name service](Screenshot/Screenshot%202026-05-21%20145233.png)
 
-  - Event source: `ec2.amazonaws.com`
-    ![Event source](Screenshot/Screenshot%202026-05-21%20145024.png)
+  - Event source: `ecs.amazonaws.com`
+    ![Event source ECS](Screenshot/Screenshot%202026-05-21%20145024.png)
+
+- **Detail tab** sẽ hiện: `desiredCount: 0` được set bởi Lambda
 
 ---
 
@@ -357,4 +212,14 @@ Click **Publish message**
   - Xem log entry cho SNS trigger (timestamp gần đó)
   - Log sẽ ghi: `[STOP] EC2 instance i-... stopped` hoặc `[SKIP]` nếu resource đã có tag
 
-  ![Demo SNS](Screenshot/Screenshot%202026-05-21%20150719.png)
+  ![Demo SNS](Screenshot/Screenshot%202026-05-21%20161733.png)
+
+### 5.5. Latency ADR (Architectural Decision Record)
+
+|                  |                                                                                                                                                                                                                                                                |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Context**      | AWS cost data có độ trễ ~8-24 giờ. Trong account workshop 48h, cost-driven trigger từ Budgets gần như chắc chắn sẽ KHÔNG fire vì cost data chưa kịp cập nhật.                                                                                                  |
+| **Decision**     | Triển khai **CẢ HAI** mechanism song song:                                                                                                                                                                                                                     |
+|                  | 1. **Scheduled (primary)**: EventBridge daily cron → Lambda tắt ECS Fargate tasks không tag `keep=true`                                                                                                                                                        |
+|                  | 2. **Cost-driven (secondary)**: Budgets $150 → SNS → cùng Lambda. Đã wire và test bằng manual SNS publish                                                                                                                                                      |
+| **Consequences** | Scheduled mechanism hoạt động và demonstrated trong 48h. Cost-driven trigger không fire — **dự kiến, không phải lỗi**. Trong production, cả hai chạy song song: scheduled tắt dev resources mỗi tối, cost-driven làm **emergency brake** khi chi phí đột biến. |
