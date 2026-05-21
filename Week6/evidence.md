@@ -126,13 +126,13 @@ CloudTrail → Event history
 
 - **Search filter**:
   - Event name: `UpdateService`
-    ![Event name UpdateService](Screenshot/Screenshot%202026-05-21%20144829.png)
+    [Event name](Screenshot/Screenshot%202026-05-21%20171205.png)
 
-  - Resource name: `svc-minie-backend-prod` (hoặc service ARN)
-    ![Resource name service](Screenshot/Screenshot%202026-05-21%20145233.png)
+  - Resource name: `cluster-minie-prod` (hoặc service ARN)
+    [Resource name](Screenshot/Screenshot%202026-05-21%20171303.png)
 
   - Event source: `ecs.amazonaws.com`
-    ![Event source ECS](Screenshot/Screenshot%202026-05-21%20145024.png)
+    [Event source](Screenshot/Screenshot%202026-05-21%20171340.png)
 
 - **Detail tab** sẽ hiện: `desiredCount: 0` được set bởi Lambda
 
