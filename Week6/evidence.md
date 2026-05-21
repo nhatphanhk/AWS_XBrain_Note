@@ -210,7 +210,7 @@ Click **Publish message**
 
 - Lambda Logs (CloudWatch) → `/aws/lambda/CostGuard-Stop-Untagged-Resources`
   - Xem log entry cho SNS trigger (timestamp gần đó)
-  - Log sẽ ghi: `[STOP] EC2 instance i-... stopped` hoặc `[SKIP]` nếu resource đã có tag
+  - Log sẽ ghi: `[STOP] ECS service minie-backend-task-prod-service-vu5xegzh already desiredCount=0` hoặc `[SKIP]` nếu resource đã có tag
 
   ![Demo SNS](Screenshot/Screenshot%202026-05-21%20161733.png)
 
