@@ -1,0 +1,21 @@
+# Personalize Overview
+
+> **Khóa học (Course):** Ultimate AWS Certified Solutions Architect Associate 2026  
+> **Chương (Section):** 23 - Machine Learning  
+> **Bài giảng (Lecture):** 261  
+> **Link bài học:** [Xem trên Udemy](https://www.udemy.com/course/aws-certified-solutions-architect-associate-saa-c03/learn/lecture/32411818)  
+
+---
+
+## 📝 Nội dung bài giảng (Transcript)
+### ⏱️ [00:00 - 00:42]
+
+Next, we have Amazon Personalize, which is a fully machine learning service to build apps with real-time personalized recommendations. So what could be a recommendation? For example, a personalized product recommendation, or re-ranking, or customized direct marketing. For example, a user has bought a lot of gardening tools, and you want to provide recommendations on the next one to buy based on a personalized service. So this is the same technology used by Amazon.com. So when you go and shop on Amazon.com and after buying a few products, what you will see is that Amazon.com start recommending products in the same category or in completely different categories based on how you've been searching and how you've been buying and user interest and that kind of things.
+
+### ⏱️ [00:42 - 01:20]
+
+So Personalize is how you access this from within AWS. So, you read your input data from Amazon S3. For example, it could be user interactions, those kind of things. Also, you can use the Amazon Personalize API to have real-time data integration into the Amazon Personalize service. And then this will expose a customized personalized API for your websites and applications, your mobile applications. Also, you can send SMS or emails for personalization as well. So you have all these integrations. It takes days, not months, to build this model. So you don't need to build, train, and deploy ML solutions. You can just use this bundled as is.
+
+### ⏱️ [01:20 - 01:35]
+
+And so the use cases is going to be retail stores, and media, and entertainment. So from an exam perspective, anytime you see a machine learning service to build recommendations and personalized recommendations, think Amazon Personalize, that's it. I will see you in the next lecture.

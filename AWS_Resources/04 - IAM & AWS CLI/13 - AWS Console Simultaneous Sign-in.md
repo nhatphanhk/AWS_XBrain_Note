@@ -1,0 +1,21 @@
+# AWS Console Simultaneous Sign-in
+
+> **Khóa học (Course):** Ultimate AWS Certified Solutions Architect Associate 2026  
+> **Chương (Section):** 04 - IAM & AWS CLI  
+> **Bài giảng (Lecture):** 13  
+> **Link bài học:** [Xem trên Udemy](https://www.udemy.com/course/aws-certified-solutions-architect-associate-saa-c03/learn/lecture/51960287)  
+
+---
+
+## 📝 Nội dung bài giảng (Transcript)
+### ⏱️ [00:00 - 00:40]
+
+So let me show you something cool now called the multi-session support. So you click on it to turn it on, and the idea now is that now I can have in this browser a specific role or account and then I can add a session, and sign into any of your identities using the same browser. So here I'm going to click on it and I'm going to add a session. And now you can login again using any account ID or route. And then you go to go. So let's go and let me just signing into one of my accounts. And after being signed in, as you can see here, I have one specific account ID and here I have a different account ID.
+
+### ⏱️ [00:40 - 01:21]
+
+And the cool thing is that, for example, let's say I'm going to the EC2 console here, and then I'm going to go into volumes and then I'm going to, for example, create an EBS volume of one gigabyte just to do something very quickly. So let's create this volume. Okay, as you can see, my volume has been created, so it's just showing you how to do something very quickly on this window. You don't have to know about EBS and so on. But now if I go into EBS on this other browser, so I go under EC2, and then I go under EBS. As you can see here, I don't see any volumes, because I'm using a different account window, and this other one is using the other account window.
+
+### ⏱️ [01:21 - 01:47]
+
+So that means I can have two accounts under the same browser. This was not possible before, which is very helpful, and something you should know about if you want to use AWS at scale. So a nice welcome edition. You don't need to go ahead and create an EBS volume. I just want to show you the fact that you could have two different accounts on two different browser windows. And for me, that's been using AWS for over 10 years, this is a little revolution. All right, so that's it, you can go back to the course. I hope you liked it, and I will see you in the next lecture.

@@ -1,0 +1,21 @@
+# S3 Batch Operations
+
+> **Khóa học (Course):** Ultimate AWS Certified Solutions Architect Associate 2026  
+> **Chương (Section):** 13 - Advanced Amazon S3  
+> **Bài giảng (Lecture):** 148  
+> **Link bài học:** [Xem trên Udemy](https://www.udemy.com/course/aws-certified-solutions-architect-associate-saa-c03/learn/lecture/33878726)  
+
+---
+
+## 📝 Nội dung bài giảng (Transcript)
+### ⏱️ [00:00 - 00:44]
+
+So now, let's talk about the S3 batch operation. So this allows you to perform bulk operations on existing S3 objects with a single request. For example, and there are lots of use cases for it, you can modify all the object metadata and properties of many S3 objects at a time. Or you can copy objects between S3 buckets as a batch operation. Or something that can come up in the exam, is to encrypt all the unencrypted objects in your S3 buckets. Or to modify ACLs or tags, or to restore many objects at a time from S3 Glacier. Or to invoke a Lambda function to perform whatever custom action you want on every object from your S3 batch operation.
+
+### ⏱️ [00:44 - 01:26]
+
+So the idea is that you can do whatever operation you want on the list of objects. And so, therefore, a job consists of a list of objects, the action to perform, as well as optional parameters. So why would we use S3 batch operations versus scripting it ourselves? Well, because when we use the S3 batch operation, there is a management of retries, we can track the progress. We can send completion notifications, generate reports, and so on. And, well, how to generate a list to pass to S3 Batch? Well, we can use S3 Inventory to get your object list in an S3 bucket. And then you use Athena to query that list, and filter the objects you actually wanna pass to the S3 batch service.
+
+### ⏱️ [01:26 - 02:01]
+
+So using S3 Inventory and then Athena, we get a filtered list of objects that we want to include in our batch operation. We pass it to the batch operation, plus whatever operation we wanna do, as well as some parameters. And then S3 Batch will do its thing and process the objects. So, again, one main use case is to find all the unencrypted objects using S3 Inventory. And then encrypt them all at once using an S3 batch operation. So that's it for this lecture, I hope you liked it, and I will see you in the next lecture.

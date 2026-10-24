@@ -1,0 +1,17 @@
+# DocumentDB
+
+> **Khóa học (Course):** Ultimate AWS Certified Solutions Architect Associate 2026  
+> **Chương (Section):** 21 - Databases in AWS  
+> **Bài giảng (Lecture):** 236  
+> **Link bài học:** [Xem trên Udemy](https://www.udemy.com/course/aws-certified-solutions-architect-associate-saa-c03/learn/lecture/33878844)  
+
+---
+
+## 📝 Nội dung bài giảng (Transcript)
+### ⏱️ [00:00 - 00:41]
+
+Now let's talk about DocumentDB. So the same way we had Aurora as the way for AWS to implement a sort of big cloud native version of PostgreSQL and MySQL, we have DocumentDB, which is an Aurora version for MongoDB. So MongoDB, if you don't know, that's the logo on the top right corner of your screen, it is another no SQL database and you need to remember this for the exam. So DocumentDB is a no SQL database and it's based on top of the MongoDB technology. So it's compatible with MongoDB. So MongoDB is used to store query and index JSON data, and you have the same similar deployment concept as Aurora with DocumentDB.
+
+### ⏱️ [00:41 - 01:14]
+
+So that means it's a fully managed database, it's highly available. Data is replicated across three availability zones and DocumentDB storage automatically will grow in increments of 10 gigabytes, and DocumentDB has been engineered so it can scale to workloads with millions of requests per second. So at the exam, if you see anything related to MongoDB, think DocumentDB, or if you see anything related to no SQL databases, think DocumentDB and also DynamoDB. That's it for this lecture. I hope you liked it, and I will see you in the next lecture.

@@ -1,0 +1,29 @@
+# Transferring Large Datasets into AWS
+
+> **Khóa học (Course):** Ultimate AWS Certified Solutions Architect Associate 2026  
+> **Chương (Section):** 28 - Disaster Recovery & Migrations  
+> **Bài giảng (Lecture):** 360  
+> **Link bài học:** [Xem trên Udemy](https://www.udemy.com/course/aws-certified-solutions-architect-associate-saa-c03/learn/lecture/18078457)  
+
+---
+
+## 📝 Nội dung bài giảng (Transcript)
+### ⏱️ [00:00 - 00:31]
+
+So here is a quick summary lecture to describe to you all the ways you can transfer a large amount of data into AWS and which one is going to be the most appropriate based on the constraints you have. So for example, let's say we want to transfer 200 terabytes of data into the cloud, and what we have currently is a 100 megabits per second internet connection. So, option number one would be to use the internet, the public internet, or establish a Site-to-Site VPN, which also uses the public internet. And the advantage of this is that it's immediate to set up. We can leverage our connection right away.
+
+### ⏱️ [00:31 - 01:07]
+
+If we do a quick computation, what we get is that it will take 200 terabytes converted into gigabytes and then megabytes, then you have to convert this to megabits, so times eight, then you divide by the speed you have, so 100 megabits per second, and that gives you about 16 million seconds, which is the equivalent of 185 days. So, almost half a year to transfer 200 terabytes of data over 100 megabits internet connection, so this can take a long time. Obviously, based on the size you have of the data, it could be appropriate or not. And in this case, I will never probably transfer 200 terabytes over this internet connection speed.
+
+### ⏱️ [01:07 - 01:47]
+
+If I want to transfer now over direct connect and say we have provisioned a one gigabits per second line, then the first thing is that it's going to be a long, one-time setup. So if I'd never had direct connect before, it will take about a month to get this connection established. And then, once I have this connection, it will take about, if we do the exact same computation, 10 times faster than my first connection, so it's gonna end up being 18.5 days. So a lot quicker, but still quite long. Now, if I use Snowball, how long do I need? Well, first of all, I need to order my Snowballs, and then it takes about one week all in all from the Snowball to being delivered, to being loaded, to being sent back to AWS and the data being transferred.
+
+### ⏱️ [01:47 - 02:25]
+
+It'll take about one week for the end-to-end transfer and on top of it, if there was a database that was being transferred through Snowball, it could be combined with DMS to transfer the rest of the data afterwards. So finally, for ongoing replications, so this is like for one-off transfers. For ongoing replications, we could use techniques such as Site-to-Site VPN, again, because we'll have less data to transfer on an ongoing basis, or use direct connect, or use DMS, or use a service like we just saw, like DataSync. So, all these things would allow us to transfer the data on an ongoing basis continuously or not through some more reasonable internet lines, such as a Site-to-Site VPN or direct connect, okay?
+
+### ⏱️ [02:25 - 02:53]
+
+Snowball is going to be used more for one-off large transfers. And as you can see, Snowball in this case is really, really helpful into speeding up our first data transfer into AWS, okay? So, this lecture is just about to make you realize which use case is more appropriate and what are the constraints of each use case. And then in the exam, you will be asked to figure out what is the easiest, fastest, or most reliable way to send data into AWS if it's a small data or a large data set. All right, that's it. I will see you in the next lecture.
