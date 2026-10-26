@@ -1,240 +1,374 @@
 # Tài Liệu Học Tập Chuyên Sâu: AWS Lambda, Amazon API Gateway, DynamoDB & Kiến Trúc Phi Máy Chủ (Serverless Architecture)
 
-> **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer.  
+> **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
-> **Các bài giảng liên quan**: Chương 19 (Serverless Overviews) & Chương 20 (Serverless Solution Architectures).
+> **Các dịch vụ liên quan**: AWS Lambda, Amazon API Gateway, Amazon DynamoDB, AWS Step Functions, Amazon Cognito, Amazon EventBridge.
 
 ---
 
 ## 6.1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### Dịch vụ gì?
-Mô hình điện toán phi máy chủ (**Serverless**) trên AWS cho phép lập trình viên xây dựng và vận hành các ứng dụng hoàn chỉnh mà không cần phải quan tâm, cung cấp hay quản lý bất kỳ máy chủ nào. Bộ tứ trụ cột Serverless cốt lõi bao gồm:
-1. **AWS Lambda**: Dịch vụ tính toán phi máy chủ (Function-as-a-Service - FaaS), thực thi mã nguồn để phản hồi lại các sự kiện (Events), tự động co giãn từ 0 đến hàng chục ngàn lượt thực thi đồng thời và chỉ tính phí chính xác theo từng millisecond thực thi mã.
-2. **Amazon API Gateway**: Cổng kết nối API được quản lý toàn diện cho phép tạo, xuất bản, duy trì, giám sát và bảo mật các REST API, HTTP API và WebSocket API ở bất kỳ quy mô nào.
-3. **Amazon DynamoDB**: Cơ sở dữ liệu NoSQL dạng Key-Value và Document hoàn toàn phi máy chủ, cung cấp độ trễ phản hồi dưới 10 millisecond (**Single-digit millisecond latency**) ở bất kỳ quy mô lưu trữ và truy vấn nào.
-4. **AWS Step Functions**: Dịch vụ điều phối luồng công việc (Visual Workflow Orchestration) sử dụng máy trạng thái (State Machines) để kết nối các hàm Lambda, dịch vụ AWS và hệ thống bên ngoài thành các quy trình nghiệp vụ phức tạp.
-5. **Amazon Cognito**: Dịch vụ quản lý danh tính người dùng ứng dụng di động/web, hỗ trợ đăng nhập, đăng ký và cấp quyền truy cập tài nguyên AWS.
+Mô hình điện toán phi máy chủ (**Serverless**) trên AWS cho phép lập trình viên và kiến trúc sư đám mây xây dựng và vận hành các ứng dụng hoàn chỉnh mà không cần cấu hình, bảo trì hay quản lý bất kỳ cụm máy ảo nào. Bộ tứ trụ cột Serverless cốt lõi bao gồm:
+1. **AWS Lambda**: Dịch vụ tính toán phi máy chủ (Function-as-a-Service - FaaS), thực thi mã nguồn để phản hồi lại các sự kiện (Events), tự động co giãn từ 0 đến hàng chục ngàn lượt thực thi đồng thời và chỉ tính phí chính xác theo từng millisecond thực thi mã (GB-seconds).
+2. **Amazon API Gateway**: Cổng kết nối API được quản lý toàn diện cho phép tạo, xuất bản, bảo mật, đo lường và giám sát các REST API, HTTP API và WebSocket API ở bất kỳ quy mô nào.
+3. **Amazon DynamoDB**: Cơ sở dữ liệu NoSQL dạng Key-Value và Document hoàn toàn phi máy chủ, cung cấp độ trễ phản hồi dưới 10 millisecond (**Single-digit millisecond latency**) ở bất kỳ quy mô lưu trữ và thông lượng nào.
+4. **AWS Step Functions**: Dịch vụ điều phối quy trình phân tán (Visual Workflow Orchestration) sử dụng máy trạng thái (State Machines) để kết nối các microservices, xử lý luồng rẽ nhánh và rollback giao dịch (Saga Pattern).
+5. **Amazon Cognito**: Dịch vụ quản lý danh tính người dùng ứng dụng di động/web, hỗ trợ đăng nhập, đăng ký và cấp quyền truy cập tài nguyên AWS an toàn.
 
 ---
 
-## 6.2. Các Khái Niệm và Thành Phần Cốt Lõi (Core Concepts and Components)
+## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+
+### 1. Giới Hạn Kỹ Thuật Sống Còn của AWS Lambda (Lambda Limits & Runtime)
+
+```mermaid
+flowchart LR
+    subgraph ExecutionLimits[Giới Hạn Thực Thi Lambda]
+        T[Timeout: Tối đa 15 phút / 900s]
+        M[RAM: 128 MB đến 10,240 MB\nTăng RAM = Tăng CPU & Network]
+        D[Disk /tmp: 512 MB đến 10,240 MB]
+    end
+
+    subgraph PackagingLimits[Kích Thước Triển Khai]
+        Z[ZIP trực tiếp: Tối đa 50 MB]
+        U[Uncompressed / Layer: Tối đa 250 MB]
+        C[OCI / Docker Container Image: Tối đa 10 GB]
+    end
+
+    subgraph PayloadLimits[Giới Hạn Payload Dữ Liệu]
+        Sync[Gọi Đồng Bộ Synchronous: 6 MB]
+        Async[Gọi Bất Đồng Bộ Asynchronous: 256 KB]
+    end
+```
+
+- **Thời gian thực thi tối đa (Execution Timeout)**: **Tối đa 15 phút (900 giây)** cho một lần gọi. Không dùng Lambda cho các tác vụ phân tích batch kéo dài hàng giờ (chuyển sang AWS Fargate hoặc AWS Batch).
+- **Cấp phát bộ nhớ RAM**: Từ **128 MB đến 10 GB**. Khi tăng RAM, AWS tự động tăng tuyến tính sức mạnh vCPU (tại 1,769 MB RAM, Lambda được cấp chính xác 1 vCPU đầy đủ).
+- **Ổ đĩa tạm thời (`/tmp`)**: Khởi tạo từ 512 MB lên tới 10 GB, có thể dùng để giải nén model AI hoặc cache dữ liệu lớn trong cùng một môi trường thực thi.
+- **Payload Limits**: 6 MB cho gọi đồng bộ (qua API Gateway / SDK invoke) và 256 KB cho gọi bất đồng bộ (qua SNS / S3 / EventBridge).
+
+---
+
+### 2. Quản Trị Concurrency, Cold Start & SnapStart
+
+- **Cold Start (Khởi động lạnh)**: Khi có request mới mà chưa có môi trường thực thi nào sẵn sàng, Lambda phải tải code, khởi động container runtime, và chạy đoạn mã khởi tạo bên ngoài handler (`init code`). Gây độ trễ từ vài trăm ms đến vài giây (đặc biệt với Java/.NET).
+- **Reserved Concurrency**: Cố định số lượng thực thi đồng thời dành riêng cho một hàm (ví dụ: cấp 200 execution slots). Vừa đảm bảo hàm luôn có slot chạy, vừa đóng vai trò làm trần giới hạn bảo vệ database phía sau khỏi bị sập do quá tải kết nối.
+- **Provisioned Concurrency**: Khởi tạo và "làm ấm" sẵn môi trường thực thi 24/7, **triệt tiêu hoàn toàn độ trễ Cold Start**, phản hồi ngay lập tức dưới 10ms.
+- **Lambda SnapStart (cho Java 11/17/21)**: Chụp snapshot toàn bộ trạng thái bộ nhớ MicroVM sau khi hoàn tất init và cache lại; khi có request, Lambda khôi phục tức thời từ snapshot, giảm độ trễ khởi động tới **90%** mà không mất thêm chi phí duy trì.
+- **Response Streaming**: Cho phép hàm Lambda truyền luồng phản hồi dữ liệu về client theo từng phần (Chunked Transfer) mà không cần đợi toàn bộ payload hoàn tất, giúp giảm Time-to-First-Byte (TTFB) và vượt giới hạn payload 6 MB (lên tới 20 MB).
+
+---
+
+### 3. Mô Hình Kích Hoạt Lambda: Sync vs Async vs Event Source Mapping
 
 ```mermaid
 flowchart TD
-    Client[Người dùng Web / Mobile] --> Cognito[Amazon Cognito\nXác thực người dùng / Cấp JWT]
-    Client --> APIGW[Amazon API Gateway\nEndpoint quản lý API & Throttling]
-    Cognito -.->|Xác thực Token| APIGW
-    
-    APIGW --> Lambda[AWS Lambda Cluster\nThực thi logic nghiệp vụ]
-    
-    Lambda <-->|Query / Put Item\nĐộ trễ < 10ms| DynamoDB[(Amazon DynamoDB\nNoSQL Database)]
-    Lambda <-->|Độ trễ microsecond| DAX[(DynamoDB Accelerator DAX\nIn-Memory Cache)]
-    
-    Lambda --> StepFunc[AWS Step Functions\nĐiều phối quy trình nhiều bước]
-    StepFunc --> S3[(Amazon S3)]
-    StepFunc --> SQS[(Amazon SQS)]
+    subgraph SyncModel[1. Synchronous Invocation]
+        APIGW[API Gateway / ALB] -->|Chờ kết quả trả về ngay| L1[AWS Lambda]
+        L1 -->|Return Payload / Error| APIGW
+    end
+
+    subgraph AsyncModel[2. Asynchronous Invocation]
+        S3[S3 / SNS / EventBridge] -->|HTTP 202 Accepted| Queue[(Internal Lambda Queue)]
+        Queue --> L2[AWS Lambda]
+        L2 -.->|Retry 2 lần thất bại| DLQ[(Dead-Letter Queue SQS / SNS / Destination)]
+    end
+
+    subgraph ESMModel[3. Event Source Mapping Polling]
+        Streams[(DynamoDB Streams / Kinesis / SQS)] -->|Lambda Service tự động Poll| ESM[Event Source Mapping]
+        ESM -->|Batching Records| L3[AWS Lambda]
+    end
 ```
 
-### 1. Giới hạn kỹ thuật sống còn của AWS Lambda (Lambda Limits)
-- **Thời gian thực thi tối đa (Execution Timeout)**: **Tối đa 15 phút (900 giây)** cho một lượt gọi hàm. Không dùng Lambda cho các tác vụ tính toán dài nhiều giờ.
-- **Dung lượng bộ nhớ RAM (Memory Allocation)**: Từ **128 MB đến 10,240 MB (10 GB)** (tăng giảm theo bước nhảy 1 MB). Khi bạn tăng dung lượng RAM, AWS sẽ **tự động tăng tỷ lệ sức mạnh CPU và băng thông mạng** tương ứng.
-- **Ổ đĩa tạm thời (`/tmp` Ephemeral Storage)**: Cung cấp sẵn từ **512 MB lên tới 10,240 MB (10 GB)**.
-- **Kích thước gói triển khai (Deployment Package Size)**:
-  - Tệp nén `.zip`: Tối đa **50 MB**.
-  - Tệp giải nén (Uncompressed): Tối đa **250 MB**.
-  - Docker Container Image cho Lambda: Tối đa **10 GB**.
-- **Kích thước tải dữ liệu (Payload Size)**:
-  - Gọi đồng bộ (Synchronous Invocation): Tối đa **6 MB**.
-  - Gọi bất đồng bộ (Asynchronous Invocation): Tối đa **256 KB**.
+---
 
-### 2. Xử lý Cold Start & Quản trị Concurrency trong Lambda
-- **Cold Start (Khởi động lạnh)**: Khi có request mới mà chưa có môi trường thực thi nào sẵn sàng, Lambda phải tải code, khởi động container runtime, và chạy đoạn mã khởi tạo (Initialization). Điều này gây ra độ trễ ban đầu (đặc biệt với ngôn ngữ Java, C#).
-- **Các chế độ Concurrency**:
-  - *Reserved Concurrency*: Cố định một hạn ngạch số lượng thực thi đồng thời cho một hàm cụ thể, đảm bảo hàm đó luôn có sẵn tài nguyên và không bị các hàm khác tranh chấp, đồng thời đóng vai trò làm trần giới hạn không để hàm gọi quá nhiều làm sập database backend.
-  - *Provisioned Concurrency*: Khởi tạo và làm nóng sẵn (Pre-warmed) môi trường thực thi, **triệt tiêu hoàn toàn độ trễ Cold Start**, sẵn sàng phản hồi trong vài millisecond.
-  - *Lambda SnapStart (cho Java)*: Chụp ảnh nhanh trạng thái bộ nhớ của hàm sau khi khởi tạo (MicroVM Snapshot) và lưu vào bộ nhớ cache; khi có request mới, Lambda phục hồi tức thời từ snapshot, giảm độ trễ khởi động tới **90%**.
-
-### 3. Amazon API Gateway: REST APIs vs HTTP APIs
+### 4. Amazon API Gateway: HTTP APIs vs REST APIs
 
 | Tiêu chuẩn so sánh | HTTP APIs (Thế hệ mới) | REST APIs (Thế hệ chuẩn) |
 | :--- | :--- | :--- |
-| **Chi phí** | **Rẻ hơn tới 71%** so với REST API. | Chi phí tiêu chuẩn. |
-| **Độ trễ** | Rất thấp, tối ưu hóa cho kiến trúc serverless nhẹ. | Độ trễ trung bình. |
-| **Giao thức** | HTTP/2, HTTP/1.1 | HTTP/1.1 |
-| **Tính năng hỗ trợ** | Hỗ trợ OIDC, OAuth 2.0, CORS tích hợp sẵn. | Hỗ trợ toàn diện: **API Caching**, **Request Validation**, **WAF Integration**, **Usage Plans & API Keys**, Client Certificates. |
-| **Khuyến nghị lựa chọn** | Dành cho các ứng dụng chỉ cần proxy gọi Lambda/HTTP backend đơn giản và muốn tối ưu chi phí tối đa. | Dành cho các cổng API doanh nghiệp cần đầy đủ tính năng bảo vệ, rate limiting và monetize API. |
-
-### 4. Amazon DynamoDB: Kiến Trúc NoSQL Hiệu Năng Cao
-- **Cấu trúc Primary Key (Khóa chính)**:
-  - *Single Primary Key (Partition Key / Hash Key)*: Dữ liệu được băm (hash) để xác định phân vùng vật lý lưu trữ bản ghi.
-  - *Composite Primary Key (Partition Key + Sort Key / Range Key)*: Cho phép lưu trữ nhiều bản ghi có cùng Partition Key và được sắp xếp thứ tự bởi Sort Key (ví dụ: `UserID` (Partition Key) + `TransactionDate` (Sort Key)).
-- **Chế độ tính toán dung lượng (Capacity Modes)**:
-  - *On-Demand Mode*: Tự động thích ứng với lưu lượng không đoán trước; không cần quy hoạch dung lượng; tính tiền theo từng triệu lượt đọc/ghi thực tế.
-  - *Provisioned Mode*: Đặt trước số lượng **Read Capacity Units (RCU)** và **Write Capacity Units (WCU)**; kết hợp Auto Scaling để tiết kiệm chi phí cho tải ổn định.
-- **Tính nhất quán dữ liệu**:
-  - *Eventually Consistent Read (Mặc định)*: Tiêu tốn 0.5 RCU cho mỗi 4KB; dữ liệu trả về có thể trễ vài trăm millisecond so với bản ghi mới nhất.
-  - *Strongly Consistent Read*: Tiêu tốn 1 RCU cho mỗi 4KB; đảm bảo trả về dữ liệu mới nhất tuyệt đối.
-- **DynamoDB Accelerator (DAX)**: Cụm bộ nhớ đệm in-memory chuyên biệt đặt ngay trước DynamoDB, giúp giảm độ trễ từ mili-giây xuống **micro-giây**, không cần viết lại logic ứng dụng.
-- **DynamoDB Streams**: Ghi lại toàn bộ chuỗi sự kiện thay đổi dữ liệu (Insert, Update, Delete) theo thời gian thực (Change Data Capture - CDC), tự động kích hoạt hàm Lambda để đồng bộ sang OpenSearch hoặc gửi thông báo.
-
-### 5. Amazon Cognito: User Pools vs Identity Pools
-- **Cognito User Pools (Authentication - Xác thực)**:
-  - Đóng vai trò là danh bạ người dùng (User Directory).
-  - Cung cấp tính năng đăng ký tài khoản, đăng nhập, quên mật khẩu, bật MFA, xác thực qua mạng xã hội (Google, Facebook, Apple) hoặc SAML/OIDC.
-  - Trả về mã thông báo chuẩn **JSON Web Tokens (JWT: ID Token, Access Token, Refresh Token)**.
-- **Cognito Identity Pools (Authorization - Phân quyền)**:
-  - Đổi token của người dùng (từ User Pool hoặc Google/Facebook) lấy các **thông tin xác thực AWS tạm thời (Temporary AWS Credentials qua STS)**.
-  - Cho phép người dùng ứng dụng di động tải trực tiếp tệp tin lên S3 Bucket riêng của họ hoặc truy cập vào bảng DynamoDB theo quyền hạn của một IAM Role được gán.
+| **Đơn giá cuộc gọi** | **$1.00 / 1 triệu requests** (**Rẻ hơn 71%**) | **$3.50 / 1 triệu requests** |
+| **Độ trễ xử lý** | Siêu thấp (< 10ms xử lý gateway) | Trung bình (20 - 40ms) |
+| **Cơ chế xác thực** | Native OIDC / OAuth2 JWT Authorizer, Lambda Authorizer | Lambda Authorizer, Cognito User Pools, IAM (SigV4), API Keys |
+| **Tính năng doanh nghiệp** | Hỗ trợ CORS, OIDC native, tự động deploy | **API Caching**, **Request/Response Validation**, **WAF Integration**, **Usage Plans & Throttling theo khách hàng**, Mock Endpoints |
+| **Khuyến nghị kiến trúc** | Serverless microservices hiện đại, proxy Lambda đơn giản, tối ưu chi phí | Hệ thống API thương mại cho đối tác B2B, cần Rate Limit theo API Key hoặc bảo vệ bởi AWS WAF |
 
 ---
 
-## 6.3. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+### 5. Amazon DynamoDB: Kiến Trúc NoSQL & Tối Ưu Phân Vùng
+
+- **Khóa chính (Primary Key)**:
+  - *Partition Key (PK)*: Băm giá trị qua thuật toán hash để phân bổ bản ghi vào phân vùng vật lý (Physical Partition). PK phải có độ biến thiên cao (High Cardinality) để tránh tạo ra **Hot Partition**.
+  - *Sort Key (SK)*: Sắp xếp các bản ghi có cùng Partition Key theo thứ tự vật lý, cho phép truy vấn dải (`begins_with`, `between`).
+- **Secondary Indexes**:
+  - *Local Secondary Index (LSI)*: Cùng PK với bảng chính nhưng khác SK. Phải tạo ngay khi tạo bảng (không thể thêm sau), chia sẻ hạn mức RCU/WCU của bảng chính.
+  - *Global Secondary Index (GSI)*: PK và SK hoàn toàn mới. Có thể tạo hoặc xóa bất kỳ lúc nào, sở hữu hạn mức RCU/WCU độc lập.
+- **DynamoDB Streams & CDC**: Ghi nhận toàn bộ biến động dữ liệu theo thứ tự thời gian, tự động kích hoạt Lambda xử lý hậu kỳ (Real-time analytics, cache invalidation).
+- **Amazon DynamoDB Accelerator (DAX)**: Cụm bộ nhớ đệm in-memory hoàn toàn tương thích API của DynamoDB, giảm độ trễ đọc từ mili-giây xuống **micro-giây**.
+
+---
+
+## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+
+### Kiến trúc Webhook & Xử Lý Đơn Hàng Phi Máy Chủ Bất Đồng Bộ
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Khách Hàng Web / Mobile
+    participant APIGW as Amazon API Gateway (HTTP API)
+    participant SQS as Amazon SQS FIFO Queue
+    participant Lambda as Order Processing Lambda (Arm64)
+    participant Dynamo as Amazon DynamoDB (Billing Table)
+    participant EventBridge as Amazon EventBridge Bus
+    participant DLQ as Dead-Letter Queue (SQS)
+
+    Client->>APIGW: POST /orders (Kèm JWT Token & Thông tin đơn)
+    APIGW->>APIGW: Validate JWT Token qua Cognito Authorizer
+    APIGW->>SQS: Đẩy trực tiếp tin nhắn vào SQS (Direct AWS Integration, không tốn Lambda cold start)
+    APIGW-->>Client: 202 Accepted (Kèm OrderTrackingID)
+    
+    SQS->>Lambda: Event Source Mapping chuyển batch 10 orders
+    Lambda->>Dynamo: TransactWriteItems (Ghi nhận hóa đơn & trạng thái thanh toán)
+    alt Giao dịch thành công
+        Lambda->>EventBridge: Bắn sự kiện "OrderCreated" cho Notification Service
+        Lambda-->>SQS: Xóa tin nhắn khỏi Queue
+    else Lỗi xử lý nghiệp vụ / Timeout
+        Lambda-->>SQS: NACK (Tin nhắn quay lại hàng đợi, Retry sau VisibilityTimeout)
+        Note over SQS,DLQ: Sau 3 lần thử lại thất bại -> Chuyển vào DLQ
+        SQS->>DLQ: Lưu trữ bản ghi lỗi để kỹ sư điều tra
+    end
+```
+
+---
+
+## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức tích hợp) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
-| **Amazon S3** | Lưu trữ website tĩnh và kích hoạt xử lý dữ liệu tự động | S3 Event Notifications trỏ tới Lambda | Người dùng tải video lên S3, S3 tự kích hoạt Lambda để chia nhỏ và tạo các độ phân giải khác nhau. |
-| **Amazon RDS / Aurora** | Cho phép Lambda truy cập cơ sở dữ liệu quan hệ an toàn trong mạng riêng | **Lambda in VPC** & **Amazon RDS Proxy** | Lambda được cấu hình gắn vào Private Subnet của VPC để truy vấn dữ liệu từ cụm Aurora Serverless qua RDS Proxy. |
-| **AWS Step Functions** | Điều phối chuỗi xử lý nghiệp vụ nhiều bước phức tạp | Serverless State Machine Integration | Chuỗi quy trình xử lý đơn hàng: Trừ tiền thẻ tín dụng ➔ Nếu thành công thì trừ hàng trong kho ➔ Nếu thất bại thì gọi bước hoàn tiền. |
-| **Amazon EventBridge** | Định tuyến các sự kiện từ hạ tầng và ứng dụng tới Lambda | Event Rule Target | Tự động kích hoạt hàm Lambda dọn dẹp các EBS Snapshot cũ vào lúc 0h00 hàng đêm theo lịch cron. |
+| **Amazon S3** | Xử lý sự kiện lưu trữ phi máy chủ | S3 Event Notifications | Tự động kích hoạt Lambda sinh thumbnail và trích xuất metadata khi người dùng tải ảnh lên S3. |
+| **Amazon RDS / Aurora** | Quản lý kết nối cơ sở dữ liệu bền bỉ | **Amazon RDS Proxy** | Hàng ngàn container Lambda đồng thời chia sẻ một connection pool nhỏ qua RDS Proxy, tránh làm sập PostgreSQL/MySQL. |
+| **Amazon SQS / SNS** | Phân tách (Decouple) các thành phần kiến trúc | Event Source Mapping & Push Triggers | Lambda tiêu thụ hàng đợi tin nhắn bất đồng bộ, tự động scale out theo số lượng thông điệp trong queue. |
+| **AWS Step Functions** | Điều phối quy trình nghiệp vụ nhiều bước | Task State `arn:aws:states:::lambda:invoke` | Quy trình duyệt hoàn tiền: Kiểm tra số dư ➔ Trừ ví ➔ Gửi SMS ➔ Báo cáo kế toán (có tự động retry và catch error). |
+| **Amazon CloudWatch** | Giám sát hiệu năng và truy vết lỗi | CloudWatch Logs Insights & X-Ray Tracing | Bật AWS X-Ray Active Tracing để đo đạc chính xác thời gian khởi tạo container (Cold Start) và thời gian thực thi hàm. |
+| **AWS Secrets Manager** | Bảo mật chuỗi kết nối và API keys | Lambda Extensions / SDK Caching | Lambda nạp API Key bên thứ 3 và cache trong bộ nhớ RAM, tự động lấy secret mới khi được xoay vòng. |
 
 ---
 
-## 6.4. Mô Hình Tính Phí Dịch Vụ & Chiến Lược Tối Ưu Chi Phí Theo Từng Use Case (Serverless Cost Breakdown & Optimization)
+## 6.5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
 
-Kiến trúc Serverless được biết đến với khẩu hiệu "Chỉ trả tiền cho những gì bạn thực sự sử dụng" (Pay-as-you-go). Tuy nhiên, nếu không nắm vững sự khác biệt giữa các dòng API Gateway, cơ chế định cỡ RAM Lambda và chế độ tính cước DynamoDB, chi phí Serverless có thể đắt hơn gấp 5 lần so với máy ảo truyền thống.
+### So sánh các nền tảng tính toán cho Microservices trên AWS
 
----
-
-### 6.4.1. Bảng Phân Tích Cơ Chế Tính Phí Các Dịch Vụ Serverless
-
-| Dịch Vụ Serverless | Cơ chế tính phí chi tiết (Pricing Dimensions) | Mức phí tham chiếu điển hình | Rủi ro phát sinh chi phí (Cost Pitfalls) |
-| :--- | :--- | :--- | :--- |
-| **AWS Lambda** | • **Số lượng request**: **$0.20 / 1 triệu requests** (1 triệu reqs đầu/tháng miễn phí).<br>• **Thời gian thực thi (GB-seconds)**:<br>  - Kiến trúc x86: **$0.0000166667 / GB-s**.<br>  - Kiến trúc **Arm64 (Graviton2)**: **$0.0000133334 / GB-s** (Rẻ hơn 20%!).<br>• Tính cước làm tròn tới **1 mili-giây (1 ms)**. | Rất rẻ ở quy mô vừa. Tự động về $0 khi không có traffic. | Cấu hình cấp phát RAM quá thấp khiến hàm chạy lê thê dẫn tới tổng chi phí GB-s cao hơn! |
-| **Lambda Provisioned Concurrency** | • Giữ ấm sẵn môi trường thực thi để xóa Cold Start.<br>• Tính phí theo dung lượng RAM và thời gian duy trì: **$0.0000041667 / GB-s** duy trì + phí chạy giảm nhẹ. | Cần thiết cho API thanh toán thời gian thực. | Bật Provisioned Concurrency 24/7 với số lượng lớn trong khi traffic ban đêm rất thấp. |
-| **Amazon API Gateway (REST API)** | • **$3.50 / 1 triệu requests** (cho 333 triệu requests đầu tiên).<br>• Hỗ trợ đầy đủ: API Keys, Usage Plans, Request Validation, WAF integration, Caching. | Phù hợp cho API doanh nghiệp phức tạp cần quản trị khách hàng B2B. | Sử dụng REST API cho các tác vụ CRUD đơn giản (đắt gấp 3.5 lần HTTP API!). |
-| **Amazon API Gateway (HTTP API)** | • **$1.00 / 1 triệu requests** (**Rẻ hơn tới 71% so với REST API!**).<br>• Độ trễ xử lý thấp hơn (Low latency), hỗ trợ OIDC/OAuth2 native JWT authorizer. | Lựa chọn mặc định tốt nhất cho Microservices và Serverless backend. | Cần tính năng API Key / Usage Plan hoặc Request Transformation (HTTP API không hỗ trợ). |
-| **Amazon DynamoDB (On-Demand Mode)** | • **Phí ghi (WRU)**: **$1.25 / 1 triệu Write Request Units**.<br>• **Phí đọc (RRU)**: **$0.25 / 1 triệu Read Request Units**.<br>• **Lưu trữ**: 25 GB đầu miễn phí, sau đó **$0.25 / GB / tháng**. | Tự động thích ứng tức thì với tải đột biến, không cần cấu hình dung lượng trước. | Dùng On-Demand cho các hệ thống có tải đọc/ghi ổn định liên tục 24/7 (đắt hơn Provisioned 5-7 lần). |
-| **Amazon DynamoDB (Provisioned Mode)** | • **$0.00065 / WCU / giờ** (~$0.47 / WCU / tháng).<br>• **$0.00013 / RCU / giờ** (~$0.09 / RCU / tháng).<br>• **Miễn phí vĩnh viễn 25 WCU và 25 RCU** mỗi tháng. | Cực kỳ tiết kiệm khi kết hợp với **DynamoDB Auto Scaling**. | Cấp phát cứng dung lượng cao mà không bật Auto Scaling khi traffic giảm. |
-| **AWS Step Functions (Standard vs Express)** | • **Standard Workflows**: **$0.025 / 1,000 State Transitions** ($25 / 1 triệu bước!).<br>• **Express Workflows**: **$1.00 / 1 triệu lượt thực thi** + thời gian chạy GB-s. | Standard dùng cho nghiệp vụ kiểm toán dài ngày; Express dùng cho streaming/IoT tốc độ cao. | Dùng Standard Workflow cho luồng xử lý hàng chục triệu tin nhắn IoT/Streaming (gây nổ hóa đơn hàng ngàn USD!). |
-
----
-
-### 6.4.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
-
-#### Use Case 1: Chuyển đổi từ API Gateway REST API sang HTTP API (Cắt giảm 71% chi phí API)
-* **Vấn đề & So sánh chi phí**:
-  - Hệ thống backend ứng dụng di động tiếp nhận **100 triệu lượt gọi API** mỗi tháng.
-  - Ban đầu kỹ sư tạo API Gateway bằng loại **REST API** mặc định.
-  - Chi phí API Gateway hàng tháng:
-    $$\text{Chi phí REST API} = 100 \text{ triệu} \times 3.50\$/\text{triệu} = \mathbf{350.00\$/\text{tháng}}$$
-* **Giải pháp Tối ưu kiến trúc**:
-  - Đánh giá lại tính năng: Ứng dụng chỉ sử dụng xác thực JWT Token qua Cognito User Pool và định tuyến request về Lambda (không dùng API Keys, không dùng XML transform).
-  - Chuyển đổi sang **API Gateway HTTP API**:
-    $$\text{Chi phí HTTP API} = 100 \text{ triệu} \times 1.00\$/\text{triệu} = \mathbf{100.00\$/\text{tháng}}$$
-* **Kết quả tiết kiệm**: Tiết kiệm ngay **$250/tháng ($3,000/năm - Giảm 71.4%)**, đồng thời độ trễ API giảm đi khoảng 15-20ms.
-
-#### Use Case 2: Tối ưu dung lượng RAM và Thời gian chạy Lambda (AWS Lambda Power Tuning)
-* **Vấn đề & Nghịch lý Serverless**:
-  - Kỹ sư nghĩ rằng cấu hình Lambda ở mức RAM thấp nhất (**128 MB**) sẽ tiết kiệm tiền nhất.
-  - Một tác vụ xử lý ảnh với RAM 128 MB (chỉ nhận được một phần nhỏ năng lực CPU) mất **10,000 ms (10 giây)** để hoàn thành:
-    $$\text{Chi phí 128 MB} = 10 \text{s} \times (128/1024) \text{ GB} \times 0.0000166667\$ = \mathbf{0.00002083\$/\text{lần chạy}}$$
-* **Giải pháp Tối ưu với AWS Lambda Power Tuning**:
-  - Chạy công cụ mã nguồn mở **AWS Lambda Power Tuning** để thử nghiệm hàm qua các mức RAM từ 128MB đến 2048MB.
-  - Khi tăng RAM lên **1,024 MB (1 GB)**, AWS cấp phát tương đương **1 vCPU đầy đủ**, hàm hoàn thành chỉ trong **500 ms (0.5 giây)** (nhanh gấp 20 lần!):
-    $$\text{Chi phí 1024 MB} = 0.5 \text{s} \times (1024/1024) \text{ GB} \times 0.0000166667\$ = \mathbf{0.00000833\$/\text{lần chạy}}$$
-* **Kết quả tiết kiệm**: Chi phí cho mỗi lần chạy **giảm tới 60%**, trong khi trải nghiệm người dùng tăng tốc gấp 20 lần!
-
-#### Use Case 3: Chuyển đổi kiến trúc Lambda sang chip AWS Graviton (Arm64)
-* **Vấn đề**: Toàn bộ hệ thống 50 hàm Lambda chạy trên kiến trúc mặc định `x86_64` (Intel/AMD) tiêu tốn 10,000,000 GB-seconds mỗi tháng:
-  $$\text{Chi phí x86} = 10,000,000 \times 0.0000166667\$ = \mathbf{166.67\$/\text{tháng}}$$
-* **Giải pháp Tối ưu**:
-  - Với các hàm viết bằng Node.js, Python, Java, Go: Chỉ cần vào phần cấu hình Architecture và chuyển cờ từ `x86_64` sang **`arm64` (AWS Graviton2)**.
-  - Mức giá giảm còn **$0.0000133334 / GB-s**:
-    $$\text{Chi phí Graviton2} = 10,000,000 \times 0.0000133334\$ = \mathbf{133.33\$/\text{tháng}}$$
-* **Kết quả tiết kiệm**: Tiết kiệm ngay **20% chi phí tính toán** chỉ bằng 1 cú nhấp chuột mà không cần sửa đổi bất kỳ dòng mã nguồn nào.
-
-#### Use Case 4: Lựa chọn chế độ DynamoDB On-Demand vs Provisioned Capacity Mode
-* **Vấn đề & Bài toán thực tế**:
-  - Bảng DynamoDB của một ứng dụng IoT tiếp nhận lưu lượng ghi ổn định liên tục **500 WCU** (500 writes/giây) suốt 24/7 (khoảng 1.3 tỷ lượt ghi/tháng).
-  - *Nếu chạy ở chế độ On-Demand Mode*:
-    $$\text{Chi phí On-Demand} = 1,300 \text{ triệu} \times 1.25\$/\text{triệu} = \mathbf{1,625\$/\text{tháng}}$$
-  - *Nếu chuyển sang chế độ Provisioned Mode có bật Auto Scaling*:
-    - Cấp phát 500 WCU (trừ đi 25 WCU miễn phí):
-    $$\text{Chi phí Provisioned} = (500 - 25) \text{ WCU} \times 0.00065\$ \times 720 = \mathbf{222.30\$/\text{tháng}}$$
-* **Kết quả tiết kiệm**: Tiết kiệm hơn **$1,400/tháng (Giảm hơn 86% chi phí!)** cho các luồng dữ liệu có tải ổn định và dự đoán được.
-
-#### Use Case 5: Tối ưu quy trình Step Functions cho Khối lượng Sự kiện Lớn (Express Workflows)
-* **Vấn đề & Cách tính tiền cũ**:
-  - Hệ thống xử lý đơn hàng xử lý **5 triệu đơn hàng/tháng**, mỗi đơn hàng trải qua 6 bước (State Transitions).
-  - Sử dụng **Step Functions Standard Workflows**:
-    $$\text{Số bước chuyển trạng thái} = 5 \text{ triệu} \times 6 = 30 \text{ triệu transitions}$$
-    $$\text{Chi phí Standard Workflows} = 30,000 \times 0.025\$ = \mathbf{750.00\$/\text{tháng}}$$
-* **Giải pháp Tối ưu kiến trúc**:
-  - Vì toàn bộ quy trình xử lý đơn hàng hoàn tất trong vòng dưới 5 phút, chuyển đổi sang **Step Functions Express Workflows**:
-    $$\text{Phí thực thi Express} = 5 \text{ triệu} \times 1.00\$/\text{triệu} = 5.00\$$$
-    $$\text{Phí thời gian chạy (ước tính 2 giây/đơn ở mức 256MB)} \approx 15.00\$$$
-    $$\text{Tổng chi phí Express Workflows} \approx \mathbf{20.00\$/\text{tháng}}$$
-* **Kết quả tiết kiệm**: Tiết kiệm **$730/tháng (Giảm hơn 97% chi phí điều phối quy trình!)**.
-
----
-
-## 6.5. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
-
-| Vấn đề (Problem) | Nguyên nhân khả dĩ (Possible Causes) | Các bước điều tra (Investigation Steps) | Giải pháp (Solution) | Biện pháp phòng ngừa (Prevention) |
+| Tiêu chí | AWS Lambda | AWS Fargate (ECS/EKS) | AWS App Runner | Amazon EC2 |
 | :--- | :--- | :--- | :--- | :--- |
-| **Hàm Lambda bị lỗi `Task timed out after 3.00 seconds`** | Thời gian thực thi mặc định của Lambda là 3 giây; logic code hoặc gọi dịch vụ ngoài mất nhiều thời gian hơn. | Xem CloudWatch Logs của Lambda tại dòng `REPORT RequestId: ... Duration: 3000.00 ms`. | Tăng thông số **Timeout** trong cấu hình của Lambda lên giá trị phù hợp (ví dụ 30 giây hoặc 1 phút). | Luôn cấu hình timeout thực tế và xử lý cơ chế retry. |
-| **Lambda trong VPC không thể kết nối ra ngoài Internet (gọi API bên ngoài)** | Subnet của Lambda không có đường dẫn tới **NAT Gateway** (hoặc Lambda đang được đặt nhầm vào Public Subnet). | Kiểm tra Route Table của Subnet mà Lambda đang được gắn ENI. | Đặt Lambda vào **Private Subnet** và cấu hình Route Table trỏ `0.0.0.0/0` tới **NAT Gateway** đặt tại Public Subnet. | Nắm vững nguyên tắc: Lambda trong VPC không bao giờ nhận Public IP trực tiếp. |
-| **DynamoDB báo lỗi `ProvisionedThroughputExceededException`** | Tốc độ đọc hoặc ghi vượt quá số lượng RCU hoặc WCU đã cấp phát trong chế độ Provisioned. | Xem metric `ThrottledRequests` trên CloudWatch của bảng DynamoDB. | 1. Bật **Auto Scaling** cho RCU/WCU.<br>2. Chuyển sang chế độ **On-Demand Capacity Mode**.<br>3. Áp dụng Exponential Backoff trong mã nguồn. | Thiết kế Partition Key có độ phân tán đồng đều để tránh tạo ra "Hot Partition". |
-| **Người dùng gặp lỗi `HTTP 429 Too Many Requests` từ API Gateway** | Lưu lượng gọi API vượt quá giới hạn Throttling (Rate và Burst limits) của tài khoản hoặc Usage Plan. | Xem CloudWatch metric `4XXError` và cấu hình Throttling trên Stage. | Tăng giới hạn Throttling Limits trong API Gateway hoặc yêu cầu tăng Service Quota. | Sử dụng **API Gateway Caching** để phục vụ các request trùng lặp từ bộ nhớ đệm. |
+| **Mô hình tính toán** | Function-as-a-Service (FaaS) hướng sự kiện. | Container-as-a-Service (CaaS) phi máy chủ. | Platform-as-a-Service (PaaS) triển khai web/API tự động. | Infrastructure-as-a-Service (IaaS) máy ảo chuyên dụng. |
+| **Giới hạn thời gian chạy** | **Tối đa 15 phút (900 giây)**. | **Không giới hạn** (chạy tiến trình liên tục 24/7). | **Không giới hạn** (phù hợp HTTP request dài). | **Không giới hạn**. |
+| **Khả năng co giãn về 0 (Scale to Zero)** |  **Có (Mặc định)**: $0 khi không có lưu lượng. | ❌ Không tự về 0 (phải duy trì tối thiểu 1 task). |  Có thể tạm dừng instance khi không có request. | ❌ Không tự về 0 (phải duy trì instance bật). |
+| **Độ trễ khởi động** | Vài mili-giây (Warm) đến vài giây (Cold Start). | Khoảng 30 giây đến 2 phút để kéo image và chạy task. | Vài giây đến 1 phút khi scale up. | Vài phút khi ASG khởi tạo máy ảo mới. |
+| **Cơ chế tính phí** | Làm tròn tới **1 ms** theo dung lượng RAM và thời gian chạy. | Tính theo từng giây dựa trên vCPU và GB RAM cấp phát. | Tính theo vCPU/RAM active + phí duy trì memory khi idle. | Tính theo từng giây chạy của máy ảo (cố định). |
+| **Trường hợp sử dụng tối ưu** | Tác vụ xử lý sự kiện ngắn, webhook, API tải đột biến thất thường. | Microservices chạy liên tục, background worker dài ngày, websockets. | Ứng dụng web/REST API container hóa đơn giản cần CI/CD tự động. | Ứng dụng legacy, kiến trúc monlithic, yêu cầu tùy biến sâu kernel OS. |
 
 ---
 
-## 6.6. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
+## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### A. 10 Câu hỏi Cốt lõi (Core Concepts)
-1. Thời gian chạy tối đa (Maximum Execution Timeout) được phép của một hàm AWS Lambda là bao nhiêu phút?
-2. Dung lượng bộ nhớ RAM tối thiểu và tối đa có thể cấp phát cho một hàm AWS Lambda là bao nhiêu?
-3. Khi bạn tăng dung lượng bộ nhớ RAM cho một hàm AWS Lambda, yếu tố tài nguyên phần cứng nào khác sẽ tự động được AWS tăng theo tỷ lệ tương ứng?
-4. Tính năng nào của AWS Lambda giúp loại bỏ hoàn toàn độ trễ khởi động lạnh (Cold Start) bằng cách khởi tạo và làm nóng sẵn các môi trường thực thi?
-5. Sự khác biệt cốt lõi nhất giữa **Amazon Cognito User Pools** và **Amazon Cognito Identity Pools** là gì?
-6. Để một hàm AWS Lambda đặt bên trong một VPC có thể truy cập được các dịch vụ trên Internet công cộng, nó bắt buộc phải được đặt ở loại Subnet nào và cần thành phần mạng nào?
-7. Hai chế độ tính toán dung lượng (Capacity Modes) của cơ sở dữ liệu Amazon DynamoDB là gì?
-8. Bộ nhớ đệm in-memory chuyên biệt nào của DynamoDB giúp giảm độ trễ phản hồi từ mili-giây xuống micro-giây mà không cần thay đổi logic ứng dụng?
-9. Thuật ngữ **WORM** trong bảo mật dữ liệu lưu trữ có nghĩa là gì?
-10. Sự khác biệt giữa **Standard Workflows** và **Express Workflows** trong dịch vụ AWS Step Functions là gì?
+### 6.6.1. Bảng Cấu Trúc Định Giá Chi Tiết
+
+| Thành phần Dịch Vụ | Đơn giá AWS niêm yết | Cơ chế đo lường | Ghi chú tối ưu hóa chi phí FinOps |
+| :--- | :--- | :--- | :--- |
+| **AWS Lambda (x86_64)** | **$0.0000166667 / GB-s** | Tính theo mili-giây (1 ms) thực thi | 1 triệu request và 3.2 triệu GB-s miễn phí mỗi tháng (Free Tier vĩnh viễn). |
+| **AWS Lambda (Arm64 Graviton)** | **$0.0000133334 / GB-s** | Rẻ hơn **20%** so với x86 | Chuyển đổi kiến trúc sang Arm64 cho Python, Node.js, Go để tiết kiệm ngay 20%. |
+| **Amazon API Gateway (HTTP API)** | **$1.00 / 1 triệu requests** | Tính trên mỗi request nhận được | Rẻ hơn 71% so với REST API ($3.50/triệu requests). |
+| **Amazon DynamoDB (On-Demand)** | **$1.25 / 1M WRU** & **$0.25 / 1M RRU** | Tính trên lượt đọc/ghi thực tế | Phù hợp cho tải khó đoán hoặc mới ra mắt; chuyển sang Provisioned khi tải ổn định. |
+| **Amazon DynamoDB (Provisioned)** | **$0.00065 / WCU / giờ** (~$0.47/tháng)<br>**$0.00013 / RCU / giờ** (~$0.09/tháng) | Miễn phí 25 WCU và 25 RCU cố định | Bật Auto Scaling để giảm 80% chi phí so với On-Demand trên tải đều đặn. |
+| **AWS Step Functions (Express)** | **$1.00 / 1 triệu executions** | $1/triệu + cước GB-s | Rẻ hơn 97% so với Standard Workflows ($25/triệu transitions) cho tác vụ < 5 phút. |
 
 ---
 
-### Đáp án Bộ Câu Hỏi Ôn Tập (Answer Key)
+### 6.6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
 
+#### Kịch bản 1: Chuyển đổi API Gateway từ REST API sang HTTP API
+- **Bối cảnh**: Hệ thống backend di động tiếp nhận **120 triệu lượt gọi API** mỗi tháng. Kỹ sư khởi tạo cổng API bằng REST API mặc định.
+- **Tính toán chi phí REST API**:
+  $$\text{Cost}_{\text{REST}} = \left( \frac{120{,}000{,}000}{1{,}000{,}000} \right) \times \$3.50 = \$420/\text{tháng}$$
+- **Giải pháp tối ưu**:
+  - Đánh giá kiến trúc: Ứng dụng chỉ dùng xác thực JWT qua Cognito và chuyển tiếp request về Lambda (không cần API Keys hay Request XML Transformation).
+  - Chuyển sang **HTTP API** với đơn giá $1.00/1 triệu calls:
+  $$\text{Cost}_{\text{HTTP}} = \left( \frac{120{,}000{,}000}{1{,}000{,}000} \right) \times \$1.00 = \$120/\text{tháng}$$
+- **Hiệu quả kinh tế**:
+  $$\text{Tiết kiệm} = \$420 - \$120 = \$300/\text{tháng} \quad (\$3{,}600/\text{năm}) \implies \text{Cắt giảm } 71.4\% \text{ chi phí API}$$
+
+#### Kịch bản 2: Tối ưu dung lượng RAM bằng AWS Lambda Power Tuning (Nghịch lý Serverless)
+- **Bối cảnh**: Kỹ sư nghĩ rằng cấu hình mức RAM nhỏ nhất (**128 MB**) sẽ tiết kiệm chi phí nhất. Một tác vụ xử lý đồ họa với 128 MB RAM (nhận tỷ lệ CPU rất nhỏ) mất **8.0 giây (8,000 ms)** để hoàn thành. Hệ thống chạy 5 triệu lần mỗi tháng.
+- **Tính toán chi phí 128 MB**:
+  $$\text{Cost}_{128\text{MB}} = 5{,}000{,}000 \times 8.0 \text{ s} \times \left( \frac{128}{1024} \text{ GB} \right) \times \$0.0000166667 = \$83.33/\text{tháng}$$
+- **Giải pháp tối ưu**:
+  - Dùng công cụ **AWS Lambda Power Tuning** nâng RAM lên **1,024 MB (1 GB)**. Tại mức này, hàm được cấp 1 vCPU trọn vẹn, thời gian xử lý giảm mạnh xuống chỉ còn **0.4 giây (400 ms)**:
+  $$\text{Cost}_{1024\text{MB}} = 5{,}000{,}000 \times 0.4 \text{ s} \times \left( \frac{1024}{1024} \text{ GB} \right) \times \$0.0000166667 = \$33.33/\text{tháng}$$
+- **Hiệu quả kinh tế**:
+  $$\text{Tiết kiệm} = \$83.33 - \$33.33 = \$50.00/\text{tháng} \quad (\$600/\text{năm}) \implies \text{Tiết kiệm } 60\% \text{ chi phí, tăng tốc } 20\text{ lần}$$
+
+#### Kịch bản 3: Chuyển đổi Runtime Lambda sang chip ARM64 (AWS Graviton)
+- **Bối cảnh**: Hệ thống microservices gồm 40 hàm Lambda viết bằng Node.js và Python chạy trên kiến trúc `x86_64`, tiêu tốn trung bình 15,000,000 GB-seconds mỗi tháng.
+- **Tính toán chi phí x86**:
+  $$\text{Cost}_{\text{x86}} = 15{,}000{,}000 \times \$0.0000166667 = \$250.00/\text{tháng}$$
+- **Giải pháp tối ưu**:
+  - Chuyển đổi cờ cấu hình kiến trúc sang **`arm64` (AWS Graviton)** trên Console hoặc Terraform mà không cần đổi mã nguồn:
+  $$\text{Cost}_{\text{Arm64}} = 15{,}000{,}000 \times \$0.0000133334 = \$200.00/\text{tháng}$$
+- **Hiệu quả kinh tế**:
+  $$\text{Tiết kiệm} = \$250.00 - \$200.00 = \$50.00/\text{tháng} \quad (\$600/\text{năm}) \implies \text{Tiết kiệm ngay } 20\% \text{ chi phí tính toán}$$
+
+#### Kịch bản 4: DynamoDB On-Demand vs Provisioned Capacity Mode kèm Auto Scaling
+- **Bối cảnh**: Một ứng dụng thương mại điện tử có lưu lượng ghi ổn định liên tục **400 WCU** (400 writes/giây) suốt 24/7 (tương đương khoảng 1.036 tỷ lượt ghi mỗi tháng).
+- **Tính toán chi phí On-Demand Mode**:
+  $$\text{Cost}_{\text{OnDemand}} = \left( \frac{1{,}036{,}800{,}000}{1{,}000{,}000} \right) \times \$1.25 = \$1{,}296/\text{tháng}$$
+- **Giải pháp tối ưu**:
+  - Chuyển sang **Provisioned Capacity Mode** với Auto Scaling (cấp phát 400 WCU, trừ đi 25 WCU miễn phí):
+  $$\text{Cost}_{\text{Provisioned}} = (400 - 25) \text{ WCU} \times \$0.00065/\text{giờ} \times 730 \text{ giờ} = \$177.94/\text{tháng}$$
+- **Hiệu quả kinh tế**:
+  $$\text{Tiết kiệm} = \$1{,}296 - \$177.94 = \$1{,}118.06/\text{tháng} \quad (\$13{,}416/\text{năm}) \implies \text{Tiết kiệm } 86.3\% \text{ chi phí DB}$$
+
+#### Kịch bản 5: Chuyển đổi Step Functions từ Standard sang Express Workflows
+- **Bối cảnh**: Hệ thống phân tích thanh toán xử lý **8 triệu giao dịch/tháng**. Mỗi giao dịch trải qua 5 bước chuyển trạng thái (State Transitions). Tất cả giao dịch hoàn thành trong vòng dưới 3 giây.
+- **Tính toán chi phí Standard Workflows**:
+  $$\text{Số transitions} = 8{,}000{,}000 \times 5 = 40{,}000{,}000 \text{ transitions}$$
+  $$\text{Cost}_{\text{Standard}} = \left( \frac{40{,}000{,}000}{1{,}000} \right) \times \$0.025 = \$1{,}000/\text{tháng}$$
+- **Giải pháp tối ưu**:
+  - Chuyển sang **Express Workflows** (thiết kế chuyên biệt cho tác vụ xử lý sự kiện ngắn dưới 5 phút):
+  $$\text{Phí thực thi} = 8 \text{ triệu} \times \$1.00/\text{triệu} = \$8.00$$
+  $$\text{Phí thời gian chạy (3s @ 256MB RAM)} \approx \$20.00$$
+  $$\text{Total Cost}_{\text{Express}} = \$8.00 + \$20.00 = \$28.00/\text{tháng}$$
+- **Hiệu quả kinh tế**:
+  $$\text{Tiết kiệm} = \$1{,}000 - \$28 = \$972/\text{tháng} \quad (\$11{,}664/\text{năm}) \implies \text{Tiết kiệm } 97.2\% \text{ chi phí điều phối}$$
+
+---
+
+## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+
+| Tình huống sự cố (Problem) | Nguyên nhân cốt lõi (Root Cause) | Các bước điều tra & Chỉ số giám sát (Metrics & Logs) | Giải pháp khắc phục (Remediation) | Biện pháp phòng ngừa (Prevention) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Lỗi `Task timed out after 3.00 seconds` trên Lambda** | Thời gian timeout mặc định là 3 giây; mã nguồn gọi API ngoài hoặc truy vấn database bị chậm vượt quá thời gian này. | - Xem CloudWatch Logs: `REPORT RequestId: ... Duration: 3000.00 ms Status: timeout`.<br>- Giám sát CloudWatch metric `Duration` và `Errors`. | Tăng thông số **Timeout** trong cấu hình của Lambda lên giá trị thực tế (ví dụ: 15s - 30s). | Thiết lập kết nối timeout trên HTTP Client trong code để fail-fast; cấu hình CloudWatch Alarm cho metric `Errors`. |
+| **Lambda trong VPC không thể gọi API ra ngoài Internet** | Subnet gắn Lambda không có route ra Internet hoặc bị đặt nhầm vào Public Subnet không có NAT Gateway. | - Kiểm tra Route Table của Subnet gắn Lambda ENI.<br>- Tra cứu lỗi kết nối mạng `ETIMEDOUT` hoặc `Connection refused`. | Đặt Lambda vào **Private Subnet** và cấu hình Route Table trỏ `0.0.0.0/0` tới **NAT Gateway** ở Public Subnet. | Nhớ nguyên tắc: Lambda trong VPC không bao giờ nhận Public IP; bắt buộc phải đi qua NAT Gateway để ra ngoài. |
+| **DynamoDB báo lỗi `ProvisionedThroughputExceededException`** | Tốc độ đọc/ghi vượt quá hạn mức RCU/WCU đã cấp phát, hoặc do thiết kế Partition Key kém gây **Hot Partition**. | - Xem CloudWatch metric `ThrottledRequests` và `ReadThrottleEvents`.<br>- Kiểm tra phân bổ dữ liệu trên CloudWatch Contributor Insights. | 1. Bật **Auto Scaling** cho bảng DynamoDB.<br>2. Chuyển sang chế độ **On-Demand Capacity**.<br>3. Áp dụng Exponential Backoff trong SDK. | Thiết kế Partition Key có độ phân tán cao (High Cardinality) hoặc kết hợp kỹ thuật Salted Key. |
+| **Khách hàng gặp lỗi `HTTP 429 Too Many Requests` từ API Gateway** | Lưu lượng gọi API vượt quá giới hạn Rate Limits hoặc Burst Limits của tài khoản hoặc Usage Plan. | - Giám sát CloudWatch metric `4XXError` và `IntegrationLatency` trên API Gateway Console. | Nâng giới hạn Throttling Limits trong API Gateway Stage/Usage Plan hoặc gửi yêu cầu tăng Service Quotas. | Kích hoạt tính năng **API Gateway Caching** để trả về dữ liệu đệm cho các request trùng lặp. |
+| **Tăng vọt số lượng Cold Starts gây trễ hệ thống thanh toán** | Tải tăng đột biến không dự đoán trước khiến Lambda phải liên tục khởi tạo container MicroVM mới. | - Tra cứu log tìm chuỗi `Init Duration: ... ms`.<br>- Giám sát metric `ConcurrentExecutions`. | 1. Bật **Provisioned Concurrency** cho các endpoints thanh toán quan trọng.<br>2. Kích hoạt **Lambda SnapStart** nếu dùng runtime Java. | Tối ưu mã nguồn khởi tạo (Init code): Lazy-load các thư viện không cần thiết và giữ kết nối DB ngoài handler. |
+
+---
+
+## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
+
+### A. Nhóm Câu Hỏi Cốt Lõi (Core Concepts)
+
+#### Câu 1: Thời gian thực thi tối đa (Maximum Execution Timeout) cho phép của một hàm AWS Lambda là bao nhiêu? Nếu tác vụ kéo dài hơn thì giải pháp là gì?
 <details>
-<summary>👉 Nhấp vào đây để xem toàn bộ đáp án chi tiết</summary>
+<summary>👉 Nhấp để xem đáp án chi tiết</summary>
 
-1. Tối đa **15 phút (900 giây)**.
-2. Tối thiểu là **128 MB** và tối đa là **10,240 MB (10 GB)**.
-3. **Năng lực tính toán CPU** (và băng thông mạng).
-4. Tính năng **Provisioned Concurrency**.
-5. **Cognito User Pools** phục vụ cho việc **Xác thực (Authentication)**, quản lý tài khoản người dùng và cấp mã thông báo JWT; trong khi **Cognito Identity Pools** phục vụ cho việc **Phân quyền (Authorization)**, đổi token người dùng lấy thông tin xác thực AWS tạm thời (STS credentials) để truy cập trực tiếp tài nguyên AWS.
-6. Lambda phải được đặt trong **Private Subnet** và lưu lượng đi ra ngoài Internet phải được định tuyến qua một **NAT Gateway** (nằm ở Public Subnet) kết nối với Internet Gateway.
-7. Chế độ **On-Demand Capacity Mode** (tự động co giãn theo request thực tế) và **Provisioned Capacity Mode** (cấp phát trước số lượng RCU và WCU cố định kèm Auto Scaling).
-8. **Amazon DynamoDB Accelerator (DAX)**.
-9. Viết tắt của **Write Once, Read Many** (Ghi một lần, Đọc nhiều lần - dữ liệu sau khi ghi sẽ không thể bị sửa đổi hoặc xóa bỏ trong suốt thời gian quy định).
-10. **Standard Workflows** có thể chạy tối đa **1 năm**, có cơ chế thực thi "đúng chính xác một lần" (Exactly-once), lưu lịch sử thực thi đầy đủ; trong khi **Express Workflows** chỉ chạy tối đa **5 phút**, thông lượng cực lớn (hơn 100,000 executions/s), cơ chế thực thi "tối thiểu một lần" (At-least-once), chi phí rẻ hơn nhiều cho xử lý dữ liệu IoT/Streaming.
+- **Đáp án**: Tối đa là **15 phút (900 giây)**.
+- **Giải thích**: AWS Lambda được thiết kế cho các tác vụ xử lý sự kiện ngắn hạn. Nếu một tác vụ tính toán hoặc xử lý dữ liệu đòi hỏi thời gian chạy dài hơn 15 phút, bạn không thể sử dụng Lambda trực tiếp mà phải chuyển sang các giải pháp container hóa phi máy chủ như **AWS Fargate (Amazon ECS/EKS)** hoặc dịch vụ tính toán theo lô **AWS Batch**.
+</details>
+
+#### Câu 2: Khi bạn tăng dung lượng bộ nhớ RAM cho hàm AWS Lambda từ 128 MB lên 1,024 MB, yếu tố tài nguyên phần cứng nào khác được tự động tăng tương ứng?
+<details>
+<summary>👉 Nhấp để xem đáp án chi tiết</summary>
+
+- **Đáp án**: **Năng lực tính toán vCPU** và **Băng thông mạng (Network Throughput)**.
+- **Giải thích**: Trong AWS Lambda, bạn chỉ có thể trực tiếp cấu hình dung lượng bộ nhớ RAM (từ 128 MB đến 10,240 MB). AWS sẽ tự động phân bổ tỷ lệ sức mạnh CPU tương ứng với dung lượng RAM. Tại mốc **1,769 MB RAM**, hàm Lambda nhận được đúng 1 vCPU trọn vẹn.
+</details>
+
+#### Câu 3: Hãy phân biệt sự khác nhau giữa Amazon Cognito User Pools và Amazon Cognito Identity Pools.
+<details>
+<summary>👉 Nhấp để xem đáp án chi tiết</summary>
+
+- **Cognito User Pools (Authentication - Xác thực)**: Là một thư mục người dùng (User Directory) quản lý việc đăng ký, đăng nhập, khôi phục mật khẩu, MFA và liên kết mạng xã hội (Google, Facebook, Apple). Kết quả trả về cho client là các **mã thông báo chuẩn JSON Web Tokens (JWT: ID Token, Access Token, Refresh Token)**.
+- **Cognito Identity Pools (Authorization - Phân quyền)**: Nhận token từ User Pool hoặc nhà cung cấp định danh bên ngoài để đổi lấy các **thông tin xác thực AWS tạm thời (Temporary AWS Credentials qua STS)**. Điều này cho phép client trực tiếp gọi các API của AWS (như tải file lên S3, đọc ghi DynamoDB) dựa trên quyền hạn của IAM Role được gán.
 </details>
 
 ---
 
-## 6.7. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+### B. Nhóm Câu Hỏi Tình Huống & Xử Lý Sự Cố (Scenarios & Troubleshooting)
 
-### 5 Khái niệm quan trọng nhất phải nhớ:
-1. **Lambda Timeout 15 phút & Tỷ lệ RAM/CPU**: Tăng RAM đồng nghĩa tăng CPU; tác vụ dài hơn 15 phút phải chuyển sang ECS Fargate hoặc Batch.
-2. **Triệt tiêu Cold Start**: Sử dụng Provisioned Concurrency hoặc Lambda SnapStart cho Java.
-3. **Lambda trong VPC**: Cần Private Subnet + NAT Gateway để vừa gọi được RDS nội bộ vừa gọi được Internet ngoài.
-4. **DynamoDB Single-Digit Millisecond**: Partition Key tốt là chìa khóa tránh Hot Partition; dùng DAX cho microsecond cache.
-5. **Cognito Architecture**: User Pool (Đăng nhập, Identity) ➔ Identity Pool (Lấy AWS IAM Temporary Credentials).
+#### Câu 4: Một kỹ sư cấu hình hàm Lambda kết nối vào VPC để truy vấn dữ liệu từ Amazon Aurora PostgreSQL. Sau khi kết nối vào VPC, hàm không thể gọi được các API thanh toán bên ngoài Internet. Nguyên nhân và cách xử lý là gì?
+- (A) Lambda phải được gắn vào Public Subnet có gắn Internet Gateway và bật Auto-assign Public IP.
+- (B) Lambda phải được đặt trong Private Subnet và Route Table của Subnet đó phải trỏ đường truyền `0.0.0.0/0` tới NAT Gateway đặt tại Public Subnet.
+- (C) Mở toàn bộ cổng Inbound trên Security Group của Lambda.
+- (D) Tạo VPC Peering kết nối VPC với Internet.
+<details>
+<summary>👉 Nhấp để xem đáp án chi tiết</summary>
 
-### Liên kết và Chủ đề tiếp theo:
-- 📖 [Ghi Chú Bài Học Chương 19-20: Serverless Lambda, APIGW & DynamoDB](file:///n:/AWS_XBrain_Note/Lesson_Notes/19_20_Serverless_Lambda_APIGW_DynamoDB.md)
-- 📖 [Bảng Thuật Ngữ Kỹ Thuật (GLOSSARY.md)](file:///n:/AWS_XBrain_Note/GLOSSARY.md)
-- ⏭️ Tiếp tục chuyển sang chuyên đề: **Hạ Tầng Mạng Riêng Ảo: Amazon VPC & Mạng Đám Mây Nâng Cao**.
+- **Đáp án đúng**: **(B)**
+- **Giải thích chuyên sâu**:
+  - Khi gắn Lambda vào VPC, AWS sẽ gắn các Elastic Network Interfaces (ENI) vào các subnet được chỉ định. Lambda ENI **không bao giờ sở hữu địa chỉ Public IP**, do đó dù có đặt Lambda vào Public Subnet thì lưu lượng cũng không thể đi thẳng ra Internet Gateway.
+  - Kiến trúc chuẩn: Đặt Lambda vào **Private Subnet**, lưu lượng Internet của Lambda được định tuyến qua **NAT Gateway** (nằm ở Public Subnet) để đi ra ngoài mạng Internet.
+</details>
+
+#### Câu 5: Hệ thống thương mại điện tử gặp sự cố vào dịp khuyến mãi lớn: Hàng ngàn container Lambda đồng thời khởi chạy và đồng loạt mở kết nối tới cơ sở dữ liệu Amazon RDS PostgreSQL, làm cạn kiệt connection pool của cơ sở dữ liệu và gây sập hệ thống. Giải pháp kiến trúc nào giải quyết triệt để vấn đề này?
+- (A) Tăng dung lượng máy chủ RDS lên instance lớn hơn.
+- (B) Giảm thời gian timeout của Lambda xuống 1 giây.
+- (C) Triển khai dịch vụ Amazon RDS Proxy đứng giữa Lambda và cơ sở dữ liệu RDS.
+- (D) Chuyển toàn bộ database sang SQLite nhúng trong code Lambda.
+<details>
+<summary>👉 Nhấp để xem đáp án chi tiết</summary>
+
+- **Đáp án đúng**: **(C)**
+- **Giải thích chuyên sâu**:
+  - Bản chất của Lambda là co giãn tự động theo từng request (mỗi container là một tiến trình độc lập). Khi có 1,000 requests đồng thời, 1,000 container Lambda sẽ cố gắng mở 1,000 kết nối TCP tới cơ sở dữ liệu quan hệ, gây tràn bộ nhớ và sập DB (**Connection Exhaustion**).
+  - **Amazon RDS Proxy** duy trì một nhóm kết nối dùng chung (Connection Pooling) bền vững với RDS, cho phép hàng ngàn hàm Lambda chia sẻ lại một số lượng nhỏ các kết nối cơ sở dữ liệu, đồng thời giảm thời gian chuyển đổi dự phòng (failover) của Aurora xuống tới 66%.
+</details>
+
+---
+
+### C. Nhóm Câu Hỏi Phỏng Vấn Chuyên Sâu (Solutions Architect & DevOps)
+
+#### Câu 6: "Hãy phân tích ưu và nhược điểm của việc sử dụng Amazon API Gateway HTTP API so với REST API, và khi nào bắt buộc phải giữ lại REST API?"
+<details>
+<summary>👉 Nhấp để xem đáp án chi tiết</summary>
+
+- **Ưu điểm của HTTP API**:
+  - Chi phí cực rẻ: $1.00/1M requests (tiết kiệm 71% so với $3.50 của REST API).
+  - Độ trễ thấp hơn đáng kể vì kiến trúc gọn nhẹ, tối ưu hóa cho serverless proxy.
+  - Hỗ trợ native JWT Authorizer (tích hợp trực tiếp với Cognito/OIDC mà không cần viết custom Lambda Authorizer tốn tiền và trễ).
+- **Khi nào BẮT BUỘC phải dùng REST API**:
+  1. **Tích hợp AWS WAF**: Cần lọc và chặn các cuộc tấn công Layer 7 ngay tại API Gateway.
+  2. **API Caching**: Cần lưu cache phản hồi của backend ngay tại gateway để giảm tải server.
+  3. **Quản trị API thương mại**: Cần sử dụng tính năng **Usage Plans**, **API Keys**, và phân bổ hạn ngạch (Throttling) theo từng nhóm khách hàng B2B.
+  4. **Request/Response Transformation**: Cần chuyển đổi dữ liệu từ XML sang JSON hoặc chỉnh sửa payload trước khi gửi về backend.
+</details>
+
+#### Câu 7: "Làm thế nào để xử lý các tin nhắn lỗi khi Lambda tiêu thụ dữ liệu từ SQS Queue mà không làm tắc nghẽn toàn bộ hàng đợi?"
+<details>
+<summary>👉 Nhấp để xem đáp án chi tiết</summary>
+
+- **Giải pháp**: Sử dụng **Dead-Letter Queue (DLQ)** kết hợp với **ReportBatchItemFailures**:
+  1. **Cấu hình DLQ trên SQS**: Thiết lập thuộc tính `maxReceiveCount` (ví dụ: 3 lần). Nếu một tin nhắn được tiêu thụ thất bại quá 3 lần, SQS sẽ tự động tách tin nhắn đó ra khỏi hàng đợi chính và chuyển vào DLQ để không làm nghẽn các tin nhắn phía sau (Head-of-Line Blocking).
+  2. **Sử dụng `ReportBatchItemFailures` trong Lambda**: Khi Lambda nhận một batch gồm 10 tin nhắn từ SQS, nếu chỉ có tin nhắn số 4 bị lỗi, thay vì làm cả batch bị fail và SQS phải retry lại cả 10 tin nhắn, hàm Lambda chỉ trả về ID của đúng tin nhắn số 4 (`itemIdentifier`). SQS sẽ chỉ retry đúng tin nhắn bị lỗi đó, giúp tối ưu hóa hiệu năng và chi phí xử lý.
+</details>
+
+---
+
+## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+
+### 7 Nguyên Tắc Vàng Kiến Trúc Serverless AWS (Golden Rules)
+1. **Tuân thủ giới hạn 15 phút**: Lambda chỉ dành cho tác vụ ngắn dưới 900 giây; tác vụ dài hơn bắt buộc chuyển sang ECS Fargate.
+2. **Nghịch lý RAM và CPU**: Tăng RAM giúp tăng CPU tương ứng; nhiều trường hợp tăng RAM giúp hàm chạy nhanh gấp nhiều lần và tổng chi phí lại rẻ hơn.
+3. **Ưu tiên Arm64 Graviton**: Luôn chuyển đổi kiến trúc Lambda sang `arm64` để tiết kiệm ngay 20% chi phí tính toán.
+4. **Mặc định dùng HTTP APIs**: Chỉ chọn REST API khi thực sự cần WAF, Caching hoặc API Keys/Usage Plans.
+5. **Bảo vệ Database với RDS Proxy**: Không bao giờ kết nối trực tiếp hàng ngàn hàm Lambda vào cơ sở dữ liệu quan hệ mà không có connection pool.
+6. **Thiết kế Partition Key phân tán**: Tránh Hot Partition trong DynamoDB bằng cách chọn Partition Key có độ biến thiên cao.
+7. **Triệt tiêu Cold Start cho luồng tài chính**: Sử dụng **Provisioned Concurrency** cho các endpoints nhạy cảm với độ trễ và **SnapStart** cho runtime Java.
+
+---
+
+### Danh Mục Kiểm Tra Năng Lực (Learning Checklist)
+- [ ] Tôi nắm vững các giới hạn kỹ thuật của Lambda (Timeout 15m, RAM 128MB-10GB, Payload 6MB/256KB).
+- [ ] Tôi hiểu rõ sự khác biệt giữa Reserved Concurrency và Provisioned Concurrency.
+- [ ] Tôi biết cách cấu hình Lambda trong VPC với Private Subnet và NAT Gateway để kết nối cả DB nội bộ và Internet.
+- [ ] Tôi phân biệt được trường hợp sử dụng tối ưu giữa API Gateway HTTP API và REST API.
+- [ ] Tôi giải thích được nguyên lý hoạt động của DynamoDB Partition Key, Sort Key, LSI và GSI.
+- [ ] Tôi biết cách tính toán chuyển đổi giữa DynamoDB On-Demand Mode và Provisioned Mode kèm Auto Scaling.
+- [ ] Tôi hiểu rõ vai trò của RDS Proxy trong việc chống cạn kiệt kết nối database cho kiến trúc Serverless.
+
+---
+
+### Liên kết và Tài liệu Liên quan
+- 📖 [Ghi Chú Bài Học Chương 19-20: Serverless Lambda, APIGW & DynamoDB](../Lesson_Notes/19_20_Serverless_Lambda_APIGW_DynamoDB.md)
+- 📖 [Bảng Thuật Ngữ Kỹ Thuật (GLOSSARY.md)](../GLOSSARY.md)
+- ⏭️ Tiếp tục chuyển sang chuyên đề: [Amazon ECS, EKS & Dịch Vụ Container](./ECS_Fargate_Containers.md).

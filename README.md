@@ -80,21 +80,21 @@ Mỗi tài liệu trong thư mục này được xây dựng theo chuẩn cấu 
 
 | Tên tài liệu | Lĩnh vực kiến trúc (Domain) | Trọng tâm công nghệ chính | Liên kết tài liệu |
 |---|---|---|---|
-| **AWS Well-Architected Framework** | Cloud Architecture & Governance | 6 Trụ cột kiến trúc, AWS WA Tool, Trusted Advisor | [AWS_Well_Architected_Framework.md](file:///n:/AWS_XBrain_Note/AWS_Services/AWS_Well_Architected_Framework.md) |
-| **IAM & Governance** | Identity, Security & Compliance | Users, Roles, Policies, Organizations, SCPs, Identity Center | [IAM_Identity_and_Access_Management.md](file:///n:/AWS_XBrain_Note/AWS_Services/IAM_Identity_and_Access_Management.md) |
-| **Amazon EC2** | Compute & Virtualization | Instance Types, Purchasing Options, Placement Groups, ENI | [EC2_Elastic_Compute_Cloud.md](file:///n:/AWS_XBrain_Note/AWS_Services/EC2_Elastic_Compute_Cloud.md) |
-| **EBS & EFS Storage** | Block & File Storage | gp3, io2 Block Express, Multi-Attach, Snapshots, EFS | [EBS_EFS_Storage.md](file:///n:/AWS_XBrain_Note/AWS_Services/EBS_EFS_Storage.md) |
-| **ELB & Auto Scaling** | High Availability & Scalability | ALB, NLB, GWLB, Target Groups, Scaling Policies | [ELB_and_ASG_High_Availability.md](file:///n:/AWS_XBrain_Note/AWS_Services/ELB_and_ASG_High_Availability.md) |
-| **RDS & Aurora Databases** | Relational Databases & Caching | Multi-AZ, Read Replicas, Aurora Quorum, RDS Proxy, ElastiCache | [RDS_Aurora_Databases.md](file:///n:/AWS_XBrain_Note/AWS_Services/RDS_Aurora_Databases.md) |
-| **Amazon Route 53** | DNS & Traffic Management | Hosted Zones, CNAME vs Alias, 8 Routing Policies, Hybrid Resolver | [Route53_DNS.md](file:///n:/AWS_XBrain_Note/AWS_Services/Route53_DNS.md) |
-| **S3 & CloudFront** | Object Storage & Edge Networking | Storage Classes, Lifecycle, Object Lock, OAC, CDN Edge Caching | [S3_and_CloudFront_Storage.md](file:///n:/AWS_XBrain_Note/AWS_Services/S3_and_CloudFront_Storage.md) |
-| **Decoupling & Messaging** | Asynchronous & Event-Driven | SQS Standard/FIFO, SNS Pub/Sub, EventBridge, Kinesis, MQ | [SQS_SNS_EventBridge_Decoupling.md](file:///n:/AWS_XBrain_Note/AWS_Services/SQS_SNS_EventBridge_Decoupling.md) |
-| **Containers (ECS & Fargate)** | Container Orchestration | Task Definitions, EC2 vs Fargate, Dynamic Port Mapping, ECR, EKS | [ECS_Fargate_Containers.md](file:///n:/AWS_XBrain_Note/AWS_Services/ECS_Fargate_Containers.md) |
-| **Serverless Architecture** | Serverless & Microservices | Lambda Concurrency/Cold Starts, API Gateway, DynamoDB, Cognito | [Lambda_Serverless_Architecture.md](file:///n:/AWS_XBrain_Note/AWS_Services/Lambda_Serverless_Architecture.md) |
-| **VPC Networking** | Networking & Hybrid Connectivity | CIDRs, Subnets, Route Tables, NAT GW, Peering, Endpoints, TGW | [VPC_Networking.md](file:///n:/AWS_XBrain_Note/AWS_Services/VPC_Networking.md) |
-| **Observability & Audit** | Monitoring, Logging & Governance | CloudWatch (Metrics, Logs, Alarms), CloudTrail, AWS Config Rules | [CloudWatch_CloudTrail_Observability.md](file:///n:/AWS_XBrain_Note/AWS_Services/CloudWatch_CloudTrail_Observability.md) |
-| **KMS & Cloud Security** | Data Protection & Threat Defense | KMS Envelope Encryption, Secrets Manager, CloudHSM, WAF, Shield | [KMS_Security_Encryption.md](file:///n:/AWS_XBrain_Note/AWS_Services/KMS_Security_Encryption.md) |
-| **Disaster Recovery & Migration** | Resiliency & Migration Strategy | RPO/RTO, 4 Chiến lược DR, AWS DRS, DMS, DataSync, Snow Family | [Disaster_Recovery_Migration.md](file:///n:/AWS_XBrain_Note/AWS_Services/Disaster_Recovery_Migration.md) |
+| **AWS Well-Architected Framework** | Cloud Architecture & Governance | 6 Trụ cột kiến trúc, AWS WA Tool, Trusted Advisor | [AWS_Well_Architected_Framework.md](./AWS_Services/AWS_Well_Architected_Framework.md) |
+| **IAM & Governance** | Identity, Security & Compliance | Users, Roles, Policies, Organizations, SCPs, Identity Center | [IAM_Identity_and_Access_Management.md](./AWS_Services/IAM_Identity_and_Access_Management.md) |
+| **Amazon EC2** | Compute & Virtualization | Instance Types, Purchasing Options, Placement Groups, ENI | [EC2_Elastic_Compute_Cloud.md](./AWS_Services/EC2_Elastic_Compute_Cloud.md) |
+| **EBS & EFS Storage** | Block & File Storage | gp3, io2 Block Express, Multi-Attach, Snapshots, EFS | [EBS_EFS_Storage.md](./AWS_Services/EBS_EFS_Storage.md) |
+| **ELB & Auto Scaling** | High Availability & Scalability | ALB, NLB, GWLB, Target Groups, Scaling Policies | [ELB_and_ASG_High_Availability.md](./AWS_Services/ELB_and_ASG_High_Availability.md) |
+| **RDS & Aurora Databases** | Relational Databases & Caching | Multi-AZ, Read Replicas, Aurora Quorum, RDS Proxy, ElastiCache | [RDS_Aurora_Databases.md](./AWS_Services/RDS_Aurora_Databases.md) |
+| **Amazon Route 53** | DNS & Traffic Management | Hosted Zones, CNAME vs Alias, 8 Routing Policies, Hybrid Resolver | [Route53_DNS.md](./AWS_Services/Route53_DNS.md) |
+| **S3 & CloudFront** | Object Storage & Edge Networking | Storage Classes, Lifecycle, Object Lock, OAC, CDN Edge Caching | [S3_and_CloudFront_Storage.md](./AWS_Services/S3_and_CloudFront_Storage.md) |
+| **Decoupling & Messaging** | Asynchronous & Event-Driven | SQS Standard/FIFO, SNS Pub/Sub, EventBridge, Kinesis, MQ | [SQS_SNS_EventBridge_Decoupling.md](./AWS_Services/SQS_SNS_EventBridge_Decoupling.md) |
+| **Containers (ECS & Fargate)** | Container Orchestration | Task Definitions, EC2 vs Fargate, Dynamic Port Mapping, ECR, EKS | [ECS_Fargate_Containers.md](./AWS_Services/ECS_Fargate_Containers.md) |
+| **Serverless Architecture** | Serverless & Microservices | Lambda Concurrency/Cold Starts, API Gateway, DynamoDB, Cognito | [Lambda_Serverless_Architecture.md](./AWS_Services/Lambda_Serverless_Architecture.md) |
+| **VPC Networking** | Networking & Hybrid Connectivity | CIDRs, Subnets, Route Tables, NAT GW, Peering, Endpoints, TGW | [VPC_Networking.md](./AWS_Services/VPC_Networking.md) |
+| **Observability & Audit** | Monitoring, Logging & Governance | CloudWatch (Metrics, Logs, Alarms), CloudTrail, AWS Config Rules | [CloudWatch_CloudTrail_Observability.md](./AWS_Services/CloudWatch_CloudTrail_Observability.md) |
+| **KMS & Cloud Security** | Data Protection & Threat Defense | KMS Envelope Encryption, Secrets Manager, CloudHSM, WAF, Shield | [KMS_Security_Encryption.md](./AWS_Services/KMS_Security_Encryption.md) |
+| **Disaster Recovery & Migration** | Resiliency & Migration Strategy | RPO/RTO, 4 Chiến lược DR, AWS DRS, DMS, DataSync, Snow Family | [Disaster_Recovery_Migration.md](./AWS_Services/Disaster_Recovery_Migration.md) |
 
 ---
 
@@ -104,39 +104,39 @@ Mỗi tài liệu ghi chú tổng hợp các bài học theo cấu trúc chuẩn
 
 | Mã Section | Tên Section Khóa học | Số bài giảng | Chủ đề kỹ thuật cốt lõi | Liên kết ghi chú |
 |---|---|---|---|---|
-| **03** | Getting Started with AWS | 9 | Cloud Computing, AWS Global Infrastructure, Tạo tài khoản & Billing Alarm | [03_Getting_Started_with_AWS.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/03_Getting_Started_with_AWS.md) |
-| **04** | IAM & AWS CLI | 16 | IAM Users, Groups, Policies, Roles, MFA, AWS CLI & CloudShell | [04_IAM_and_AWS_CLI.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/04_IAM_and_AWS_CLI.md) |
-| **05** | EC2 Fundamentals | 16 | EC2 Instances, SSH/PuTTY, Security Groups, Elastic IPs, User Data | [05_EC2_Fundamentals.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/05_EC2_Fundamentals.md) |
-| **06** | EC2 Solutions Architect Associate | 14 | Purchasing Options (Spot, Reserved, Savings Plans), Placement Groups, ENI | [06_EC2_Solutions_Architect_Associate.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/06_EC2_Solutions_Architect_Associate.md) |
-| **07** | EC2 Instance Storage | 13 | EBS Volume Types (gp3, io2), Snapshots, AMI, Instance Store, EFS | [07_EC2_Instance_Storage.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/07_EC2_Instance_Storage.md) |
-| **08** | High Availability & Scalability | 18 | Scalability vs High Availability, ELB (ALB, NLB, GWLB), ASG Auto Scaling | [08_High_Availability_and_Scalability.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/08_High_Availability_and_Scalability.md) |
-| **09** | RDS, Aurora & ElastiCache | 16 | RDS Read Replicas vs Multi-AZ, Aurora Architecture, ElastiCache Redis/Memcached | [09_RDS_Aurora_ElastiCache.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/09_RDS_Aurora_ElastiCache.md) |
-| **10** | Route 53 | 16 | DNS Records, CNAME vs Alias, Routing Policies (Failover, Latency, Geolocation) | [10_Route_53.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/10_Route_53.md) |
-| **11** | Classic Solutions Architecture | 6 | Thiết kế kiến trúc WordPress đa tầng, Stateful sang Stateless web tier | [11_Classic_Solutions_Architecture.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/11_Classic_Solutions_Architecture.md) |
-| **12-14** | Amazon S3 Comprehensive | 28 | S3 Bucket, Storage Classes, Lifecycle Rules, Static Website, Security, KMS | [12_13_14_Amazon_S3_Comprehensive.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/12_13_14_Amazon_S3_Comprehensive.md) |
-| **15** | CloudFront & Global Accelerator | 10 | CloudFront Caching, OAC, Signed URL, AWS Global Accelerator Anycast IP | [15_CloudFront_Global_Accelerator.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/15_CloudFront_Global_Accelerator.md) |
-| **16** | AWS Storage Extras | 7 | Snow Family (Snowcone, Snowball, Snowmobile), FSx (Windows, Lustre), Storage Gateway | [16_AWS_Storage_Extras.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/16_AWS_Storage_Extras.md) |
-| **17** | Decoupling (SQS, SNS, Kinesis) | 16 | SQS Standard/FIFO, Dead-Letter Queues, SNS Pub/Sub, Kinesis Data Streams | [17_Decoupling_SQS_SNS_Kinesis.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/17_Decoupling_SQS_SNS_Kinesis.md) |
-| **18** | Containers (ECS, Fargate, EKS) | 12 | Docker Container, ECS Task Definition, EC2 vs Fargate Launch Type, ECR, EKS | [18_Containers_ECS_Fargate_EKS.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/18_Containers_ECS_Fargate_EKS.md) |
-| **19-20** | Serverless Architecture | 26 | AWS Lambda, API Gateway REST vs HTTP, DynamoDB Partitioning, Cognito User Pools | [19_20_Serverless_Lambda_APIGW_DynamoDB.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/19_20_Serverless_Lambda_APIGW_DynamoDB.md) |
-| **21** | Databases in AWS | 8 | Redshift Data Warehouse, Neptune Graph DB, OpenSearch, Timestream, QLDB | [21_Databases_in_AWS.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/21_Databases_in_AWS.md) |
-| **22** | Data & Analytics | 10 | Athena Presto Queries, EMR Spark/Hadoop, QuickSight BI, AWS Glue ETL | [22_Data_and_Analytics.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/22_Data_and_Analytics.md) |
-| **23** | Machine Learning | 10 | Rekognition, Transcribe, Polly, Translate, Lex, Comprehend, SageMaker | [23_Machine_Learning.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/23_Machine_Learning.md) |
-| **24** | AWS Monitoring & Audit | 12 | CloudWatch Metrics/Logs/Alarms, CloudTrail Event History, AWS Config Compliance | [24_AWS_Monitoring_CloudWatch_CloudTrail_Config.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/24_AWS_Monitoring_CloudWatch_CloudTrail_Config.md) |
-| **25** | Advanced IAM & Governance | 14 | IAM Permission Boundaries, STS AssumeRole, AWS Organizations, SCP, Control Tower | [25_Identity_and_Access_Management_Advanced.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/25_Identity_and_Access_Management_Advanced.md) |
-| **26** | AWS Security & Encryption | 13 | KMS Customer Managed Keys, CloudHSM, Secrets Manager, AWS WAF & Shield | [26_AWS_Security_Encryption_KMS.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/26_AWS_Security_Encryption_KMS.md) |
-| **27** | Networking - VPC | 28 | VPC CIDR, Subnets, IGW, Route Tables, NAT Gateway, NACL, Peering, Endpoints | [27_Networking_VPC_Comprehensive.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/27_Networking_VPC_Comprehensive.md) |
-| **28** | Disaster Recovery & Migrations | 11 | RPO & RTO, 4 Chiến lược DR (Backup, Pilot Light, Warm Standby, Multi-Site), DMS | [28_Disaster_Recovery_and_Migrations.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/28_Disaster_Recovery_and_Migrations.md) |
-| **29** | More Solution Architectures | 10 | Microservices Event-Driven, Caching Strategies, High Throughput Ingestion | [29_More_Solution_Architectures.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/29_More_Solution_Architectures.md) |
-| **30** | Other Services | 8 | CloudFormation Templates/Drift, Systems Manager Parameter Store/Session Manager | [30_Other_Services_CloudFormation_SSM.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/30_Other_Services_CloudFormation_SSM.md) |
-| **31** | WhitePapers & Architectures | 10 | AWS Well-Architected 6 Pillars, Disaster Recovery Whitepaper, Trusted Advisor | [31_WhitePapers_and_Architectures.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/31_WhitePapers_and_Architectures.md) |
-| **32** | Preparing for the Exam & Exam Tricks | 5 | Chiến lược ôn thi SAA-C03, 7 nhóm Core Services, 5 Trick loại trừ thực chiến, Bảng Keyword Triggers | [32_Preparing_for_the_Exam.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/32_Preparing_for_the_Exam.md) |
+| **03** | Getting Started with AWS | 9 | Cloud Computing, AWS Global Infrastructure, Tạo tài khoản & Billing Alarm | [03_Getting_Started_with_AWS.md](./Lesson_Notes/03_Getting_Started_with_AWS.md) |
+| **04** | IAM & AWS CLI | 16 | IAM Users, Groups, Policies, Roles, MFA, AWS CLI & CloudShell | [04_IAM_and_AWS_CLI.md](./Lesson_Notes/04_IAM_and_AWS_CLI.md) |
+| **05** | EC2 Fundamentals | 16 | EC2 Instances, SSH/PuTTY, Security Groups, Elastic IPs, User Data | [05_EC2_Fundamentals.md](./Lesson_Notes/05_EC2_Fundamentals.md) |
+| **06** | EC2 Solutions Architect Associate | 14 | Purchasing Options (Spot, Reserved, Savings Plans), Placement Groups, ENI | [06_EC2_Solutions_Architect_Associate.md](./Lesson_Notes/06_EC2_Solutions_Architect_Associate.md) |
+| **07** | EC2 Instance Storage | 13 | EBS Volume Types (gp3, io2), Snapshots, AMI, Instance Store, EFS | [07_EC2_Instance_Storage.md](./Lesson_Notes/07_EC2_Instance_Storage.md) |
+| **08** | High Availability & Scalability | 18 | Scalability vs High Availability, ELB (ALB, NLB, GWLB), ASG Auto Scaling | [08_High_Availability_and_Scalability.md](./Lesson_Notes/08_High_Availability_and_Scalability.md) |
+| **09** | RDS, Aurora & ElastiCache | 16 | RDS Read Replicas vs Multi-AZ, Aurora Architecture, ElastiCache Redis/Memcached | [09_RDS_Aurora_ElastiCache.md](./Lesson_Notes/09_RDS_Aurora_ElastiCache.md) |
+| **10** | Route 53 | 16 | DNS Records, CNAME vs Alias, Routing Policies (Failover, Latency, Geolocation) | [10_Route_53.md](./Lesson_Notes/10_Route_53.md) |
+| **11** | Classic Solutions Architecture | 6 | Thiết kế kiến trúc WordPress đa tầng, Stateful sang Stateless web tier | [11_Classic_Solutions_Architecture.md](./Lesson_Notes/11_Classic_Solutions_Architecture.md) |
+| **12-14** | Amazon S3 Comprehensive | 28 | S3 Bucket, Storage Classes, Lifecycle Rules, Static Website, Security, KMS | [12_13_14_Amazon_S3_Comprehensive.md](./Lesson_Notes/12_13_14_Amazon_S3_Comprehensive.md) |
+| **15** | CloudFront & Global Accelerator | 10 | CloudFront Caching, OAC, Signed URL, AWS Global Accelerator Anycast IP | [15_CloudFront_Global_Accelerator.md](./Lesson_Notes/15_CloudFront_Global_Accelerator.md) |
+| **16** | AWS Storage Extras | 7 | Snow Family (Snowcone, Snowball, Snowmobile), FSx (Windows, Lustre), Storage Gateway | [16_AWS_Storage_Extras.md](./Lesson_Notes/16_AWS_Storage_Extras.md) |
+| **17** | Decoupling (SQS, SNS, Kinesis) | 16 | SQS Standard/FIFO, Dead-Letter Queues, SNS Pub/Sub, Kinesis Data Streams | [17_Decoupling_SQS_SNS_Kinesis.md](./Lesson_Notes/17_Decoupling_SQS_SNS_Kinesis.md) |
+| **18** | Containers (ECS, Fargate, EKS) | 12 | Docker Container, ECS Task Definition, EC2 vs Fargate Launch Type, ECR, EKS | [18_Containers_ECS_Fargate_EKS.md](./Lesson_Notes/18_Containers_ECS_Fargate_EKS.md) |
+| **19-20** | Serverless Architecture | 26 | AWS Lambda, API Gateway REST vs HTTP, DynamoDB Partitioning, Cognito User Pools | [19_20_Serverless_Lambda_APIGW_DynamoDB.md](./Lesson_Notes/19_20_Serverless_Lambda_APIGW_DynamoDB.md) |
+| **21** | Databases in AWS | 8 | Redshift Data Warehouse, Neptune Graph DB, OpenSearch, Timestream, QLDB | [21_Databases_in_AWS.md](./Lesson_Notes/21_Databases_in_AWS.md) |
+| **22** | Data & Analytics | 10 | Athena Presto Queries, EMR Spark/Hadoop, QuickSight BI, AWS Glue ETL | [22_Data_and_Analytics.md](./Lesson_Notes/22_Data_and_Analytics.md) |
+| **23** | Machine Learning | 10 | Rekognition, Transcribe, Polly, Translate, Lex, Comprehend, SageMaker | [23_Machine_Learning.md](./Lesson_Notes/23_Machine_Learning.md) |
+| **24** | AWS Monitoring & Audit | 12 | CloudWatch Metrics/Logs/Alarms, CloudTrail Event History, AWS Config Compliance | [24_AWS_Monitoring_CloudWatch_CloudTrail_Config.md](./Lesson_Notes/24_AWS_Monitoring_CloudWatch_CloudTrail_Config.md) |
+| **25** | Advanced IAM & Governance | 14 | IAM Permission Boundaries, STS AssumeRole, AWS Organizations, SCP, Control Tower | [25_Identity_and_Access_Management_Advanced.md](./Lesson_Notes/25_Identity_and_Access_Management_Advanced.md) |
+| **26** | AWS Security & Encryption | 13 | KMS Customer Managed Keys, CloudHSM, Secrets Manager, AWS WAF & Shield | [26_AWS_Security_Encryption_KMS.md](./Lesson_Notes/26_AWS_Security_Encryption_KMS.md) |
+| **27** | Networking - VPC | 28 | VPC CIDR, Subnets, IGW, Route Tables, NAT Gateway, NACL, Peering, Endpoints | [27_Networking_VPC_Comprehensive.md](./Lesson_Notes/27_Networking_VPC_Comprehensive.md) |
+| **28** | Disaster Recovery & Migrations | 11 | RPO & RTO, 4 Chiến lược DR (Backup, Pilot Light, Warm Standby, Multi-Site), DMS | [28_Disaster_Recovery_and_Migrations.md](./Lesson_Notes/28_Disaster_Recovery_and_Migrations.md) |
+| **29** | More Solution Architectures | 10 | Microservices Event-Driven, Caching Strategies, High Throughput Ingestion | [29_More_Solution_Architectures.md](./Lesson_Notes/29_More_Solution_Architectures.md) |
+| **30** | Other Services | 8 | CloudFormation Templates/Drift, Systems Manager Parameter Store/Session Manager | [30_Other_Services_CloudFormation_SSM.md](./Lesson_Notes/30_Other_Services_CloudFormation_SSM.md) |
+| **31** | WhitePapers & Architectures | 10 | AWS Well-Architected 6 Pillars, Disaster Recovery Whitepaper, Trusted Advisor | [31_WhitePapers_and_Architectures.md](./Lesson_Notes/31_WhitePapers_and_Architectures.md) |
+| **32** | Preparing for the Exam & Exam Tricks | 5 | Chiến lược ôn thi SAA-C03, 7 nhóm Core Services, 5 Trick loại trừ thực chiến, Bảng Keyword Triggers | [32_Preparing_for_the_Exam.md](./Lesson_Notes/32_Preparing_for_the_Exam.md) |
 
 ---
 
 ## 📖 5. Master Technical Terminology Glossary (`GLOSSARY.md`)
 
-Tài liệu [GLOSSARY.md](file:///n:/AWS_XBrain_Note/GLOSSARY.md) cung cấp từ điển thuật ngữ kỹ thuật chuyên sâu theo chuẩn định dạng:
+Tài liệu [GLOSSARY.md](./GLOSSARY.md) cung cấp từ điển thuật ngữ kỹ thuật chuyên sâu theo chuẩn định dạng:
 `| English Term | Full Form / Acronym | Vietnamese Definition | Practical Meaning in Cloud DevOps | Example or Related Terms |`
 
 Gồm 10 danh mục kỹ thuật ưu tiên:
@@ -169,38 +169,38 @@ flowchart TD
 ### Chặng 1: Nền tảng Điện toán & Hạ tầng cốt lõi (Core Compute & Infrastructure)
 - **Mục tiêu**: Nắm vững mô hình tài nguyên ảo hóa, phương án tính toán và quản lý truy cập cơ bản.
 - **Tài liệu học**:
-  - Ghi chú: [03_Getting_Started_with_AWS.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/03_Getting_Started_with_AWS.md), [04_IAM_and_AWS_CLI.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/04_IAM_and_AWS_CLI.md), [05_EC2_Fundamentals.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/05_EC2_Fundamentals.md), [06_EC2_Solutions_Architect_Associate.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/06_EC2_Solutions_Architect_Associate.md).
-  - Chuyên đề Master: [EC2_Elastic_Compute_Cloud.md](file:///n:/AWS_XBrain_Note/AWS_Services/EC2_Elastic_Compute_Cloud.md), [IAM_Identity_and_Access_Management.md](file:///n:/AWS_XBrain_Note/AWS_Services/IAM_Identity_and_Access_Management.md).
+  - Ghi chú: [03_Getting_Started_with_AWS.md](./Lesson_Notes/03_Getting_Started_with_AWS.md), [04_IAM_and_AWS_CLI.md](./Lesson_Notes/04_IAM_and_AWS_CLI.md), [05_EC2_Fundamentals.md](./Lesson_Notes/05_EC2_Fundamentals.md), [06_EC2_Solutions_Architect_Associate.md](./Lesson_Notes/06_EC2_Solutions_Architect_Associate.md).
+  - Chuyên đề Master: [EC2_Elastic_Compute_Cloud.md](./AWS_Services/EC2_Elastic_Compute_Cloud.md), [IAM_Identity_and_Access_Management.md](./AWS_Services/IAM_Identity_and_Access_Management.md).
 
 ### Chặng 2: Mạng nâng cao & Tính sẵn sàng cao (Networking & High Availability)
 - **Mục tiêu**: Thiết kế mạng VPC cô lập an toàn, định tuyến DNS toàn cầu và cân bằng tải đàn hồi.
 - **Tài liệu học**:
-  - Ghi chú: [08_High_Availability_and_Scalability.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/08_High_Availability_and_Scalability.md), [10_Route_53.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/10_Route_53.md), [27_Networking_VPC_Comprehensive.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/27_Networking_VPC_Comprehensive.md).
-  - Chuyên đề Master: [VPC_Networking.md](file:///n:/AWS_XBrain_Note/AWS_Services/VPC_Networking.md), [ELB_and_ASG_High_Availability.md](file:///n:/AWS_XBrain_Note/AWS_Services/ELB_and_ASG_High_Availability.md), [Route53_DNS.md](file:///n:/AWS_XBrain_Note/AWS_Services/Route53_DNS.md).
+  - Ghi chú: [08_High_Availability_and_Scalability.md](./Lesson_Notes/08_High_Availability_and_Scalability.md), [10_Route_53.md](./Lesson_Notes/10_Route_53.md), [27_Networking_VPC_Comprehensive.md](./Lesson_Notes/27_Networking_VPC_Comprehensive.md).
+  - Chuyên đề Master: [VPC_Networking.md](./AWS_Services/VPC_Networking.md), [ELB_and_ASG_High_Availability.md](./AWS_Services/ELB_and_ASG_High_Availability.md), [Route53_DNS.md](./AWS_Services/Route53_DNS.md).
 
 ### Chặng 3: Lưu trữ & Cơ sở dữ liệu chuyên sâu (Storage & Databases)
 - **Mục tiêu**: Lựa chọn đúng loại lưu trữ (Block, File, Object) và hệ cơ sở dữ liệu tối ưu theo workload (RDBMS, NoSQL, In-memory Cache, Data Warehouse).
 - **Tài liệu học**:
-  - Ghi chú: [07_EC2_Instance_Storage.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/07_EC2_Instance_Storage.md), [09_RDS_Aurora_ElastiCache.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/09_RDS_Aurora_ElastiCache.md), [12_13_14_Amazon_S3_Comprehensive.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/12_13_14_Amazon_S3_Comprehensive.md), [15_CloudFront_Global_Accelerator.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/15_CloudFront_Global_Accelerator.md), [16_AWS_Storage_Extras.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/16_AWS_Storage_Extras.md), [21_Databases_in_AWS.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/21_Databases_in_AWS.md).
-  - Chuyên đề Master: [S3_and_CloudFront_Storage.md](file:///n:/AWS_XBrain_Note/AWS_Services/S3_and_CloudFront_Storage.md), [EBS_EFS_Storage.md](file:///n:/AWS_XBrain_Note/AWS_Services/EBS_EFS_Storage.md), [RDS_Aurora_Databases.md](file:///n:/AWS_XBrain_Note/AWS_Services/RDS_Aurora_Databases.md).
+  - Ghi chú: [07_EC2_Instance_Storage.md](./Lesson_Notes/07_EC2_Instance_Storage.md), [09_RDS_Aurora_ElastiCache.md](./Lesson_Notes/09_RDS_Aurora_ElastiCache.md), [12_13_14_Amazon_S3_Comprehensive.md](./Lesson_Notes/12_13_14_Amazon_S3_Comprehensive.md), [15_CloudFront_Global_Accelerator.md](./Lesson_Notes/15_CloudFront_Global_Accelerator.md), [16_AWS_Storage_Extras.md](./Lesson_Notes/16_AWS_Storage_Extras.md), [21_Databases_in_AWS.md](./Lesson_Notes/21_Databases_in_AWS.md).
+  - Chuyên đề Master: [S3_and_CloudFront_Storage.md](./AWS_Services/S3_and_CloudFront_Storage.md), [EBS_EFS_Storage.md](./AWS_Services/EBS_EFS_Storage.md), [RDS_Aurora_Databases.md](./AWS_Services/RDS_Aurora_Databases.md).
 
 ### Chặng 4: Serverless, Container & Tách rời hệ thống (Serverless & Microservices)
 - **Mục tiêu**: Xây dựng kiến trúc bất đồng bộ hướng sự kiện (Event-Driven) không cần quản lý máy chủ, tối ưu khả năng mở rộng tức thời.
 - **Tài liệu học**:
-  - Ghi chú: [17_Decoupling_SQS_SNS_Kinesis.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/17_Decoupling_SQS_SNS_Kinesis.md), [18_Containers_ECS_Fargate_EKS.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/18_Containers_ECS_Fargate_EKS.md), [19_20_Serverless_Lambda_APIGW_DynamoDB.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/19_20_Serverless_Lambda_APIGW_DynamoDB.md).
-  - Chuyên đề Master: [SQS_SNS_EventBridge_Decoupling.md](file:///n:/AWS_XBrain_Note/AWS_Services/SQS_SNS_EventBridge_Decoupling.md), [Lambda_Serverless_Architecture.md](file:///n:/AWS_XBrain_Note/AWS_Services/Lambda_Serverless_Architecture.md), [ECS_Fargate_Containers.md](file:///n:/AWS_XBrain_Note/AWS_Services/ECS_Fargate_Containers.md).
+  - Ghi chú: [17_Decoupling_SQS_SNS_Kinesis.md](./Lesson_Notes/17_Decoupling_SQS_SNS_Kinesis.md), [18_Containers_ECS_Fargate_EKS.md](./Lesson_Notes/18_Containers_ECS_Fargate_EKS.md), [19_20_Serverless_Lambda_APIGW_DynamoDB.md](./Lesson_Notes/19_20_Serverless_Lambda_APIGW_DynamoDB.md).
+  - Chuyên đề Master: [SQS_SNS_EventBridge_Decoupling.md](./AWS_Services/SQS_SNS_EventBridge_Decoupling.md), [Lambda_Serverless_Architecture.md](./AWS_Services/Lambda_Serverless_Architecture.md), [ECS_Fargate_Containers.md](./AWS_Services/ECS_Fargate_Containers.md).
 
 ### Chặng 5: Bảo mật, Quản trị & Giám sát vận hành (Security, Governance & Observability)
 - **Mục tiêu**: Triển khai phòng thủ đa tầng (Defense in Depth), mã hóa dữ liệu với KMS, kiểm toán và giám sát toàn diện hệ thống.
 - **Tài liệu học**:
-  - Ghi chú: [24_AWS_Monitoring_CloudWatch_CloudTrail_Config.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/24_AWS_Monitoring_CloudWatch_CloudTrail_Config.md), [25_Identity_and_Access_Management_Advanced.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/25_Identity_and_Access_Management_Advanced.md), [26_AWS_Security_Encryption_KMS.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/26_AWS_Security_Encryption_KMS.md), [30_Other_Services_CloudFormation_SSM.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/30_Other_Services_CloudFormation_SSM.md).
-  - Chuyên đề Master: [KMS_Security_Encryption.md](file:///n:/AWS_XBrain_Note/AWS_Services/KMS_Security_Encryption.md), [CloudWatch_CloudTrail_Observability.md](file:///n:/AWS_XBrain_Note/AWS_Services/CloudWatch_CloudTrail_Observability.md).
+  - Ghi chú: [24_AWS_Monitoring_CloudWatch_CloudTrail_Config.md](./Lesson_Notes/24_AWS_Monitoring_CloudWatch_CloudTrail_Config.md), [25_Identity_and_Access_Management_Advanced.md](./Lesson_Notes/25_Identity_and_Access_Management_Advanced.md), [26_AWS_Security_Encryption_KMS.md](./Lesson_Notes/26_AWS_Security_Encryption_KMS.md), [30_Other_Services_CloudFormation_SSM.md](./Lesson_Notes/30_Other_Services_CloudFormation_SSM.md).
+  - Chuyên đề Master: [KMS_Security_Encryption.md](./AWS_Services/KMS_Security_Encryption.md), [CloudWatch_CloudTrail_Observability.md](./AWS_Services/CloudWatch_CloudTrail_Observability.md).
 
 ### Chặng 6: Kiến trúc giải pháp, Phục hồi sau thảm họa & Thi cử (Architecture & Exam Preparation)
 - **Mục tiêu**: Tổng hợp thiết kế kiến trúc toàn diện theo 6 trụ cột Well-Architected, xây dựng kế hoạch Disaster Recovery và làm chủ kỹ năng xử lý câu hỏi tình huống thi SAA-C03.
 - **Tài liệu học**:
-  - Ghi chú: [11_Classic_Solutions_Architecture.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/11_Classic_Solutions_Architecture.md), [22_Data_and_Analytics.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/22_Data_and_Analytics.md), [23_Machine_Learning.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/23_Machine_Learning.md), [28_Disaster_Recovery_and_Migrations.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/28_Disaster_Recovery_and_Migrations.md), [29_More_Solution_Architectures.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/29_More_Solution_Architectures.md), [31_WhitePapers_and_Architectures.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/31_WhitePapers_and_Architectures.md), [32_Preparing_for_the_Exam.md](file:///n:/AWS_XBrain_Note/Lesson_Notes/32_Preparing_for_the_Exam.md).
-  - Chuyên đề Master: [AWS_Well_Architected_Framework.md](file:///n:/AWS_XBrain_Note/AWS_Services/AWS_Well_Architected_Framework.md), [Disaster_Recovery_Migration.md](file:///n:/AWS_XBrain_Note/AWS_Services/Disaster_Recovery_Migration.md).
+  - Ghi chú: [11_Classic_Solutions_Architecture.md](./Lesson_Notes/11_Classic_Solutions_Architecture.md), [22_Data_and_Analytics.md](./Lesson_Notes/22_Data_and_Analytics.md), [23_Machine_Learning.md](./Lesson_Notes/23_Machine_Learning.md), [28_Disaster_Recovery_and_Migrations.md](./Lesson_Notes/28_Disaster_Recovery_and_Migrations.md), [29_More_Solution_Architectures.md](./Lesson_Notes/29_More_Solution_Architectures.md), [31_WhitePapers_and_Architectures.md](./Lesson_Notes/31_WhitePapers_and_Architectures.md), [32_Preparing_for_the_Exam.md](./Lesson_Notes/32_Preparing_for_the_Exam.md).
+  - Chuyên đề Master: [AWS_Well_Architected_Framework.md](./AWS_Services/AWS_Well_Architected_Framework.md), [Disaster_Recovery_Migration.md](./AWS_Services/Disaster_Recovery_Migration.md).
 
 ---
 
