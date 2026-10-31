@@ -99,6 +99,84 @@ flowchart TD
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Cảnh Báo An Ninh Chủ Động: CloudTrail + CloudWatch Metric Filters + Amazon SNS
+- **Tình huống thi**: Đội ngũ bảo mật cần nhận thông báo khẩn cấp ngay lập tức qua email mỗi khi có người dùng hoặc service cố tình thực hiện các thao tác API trái phép trong tài khoản (ví dụ: bị từ chối với lỗi `AccessDenied` hoặc `UnauthorizedOperation`).
+- **Giải pháp tối ưu chuẩn AWS**:
+  - **AWS CloudTrail**: Cấu hình đẩy toàn bộ Management Events và Data Events vào một **CloudWatch Logs Log Group**.
+  - **CloudWatch Metric Filter**: Thiết lập bộ lọc trích xuất pattern lỗi trong file log JSON:
+    `{ ($.errorCode = "*UnauthorizedOperation") || ($.errorCode = "AccessDenied*") }`
+  - Gắn một **CloudWatch Alarm** vào Metric vừa tạo: Nếu số lượng lỗi vượt ngưỡng $\ge 1$ trong vòng 1 phút -> Kích hoạt gửi thông báo tới một **Amazon SNS Topic** để gửi email cảnh báo tới đội SOC/SecOps.
+
+#### 2. Kiểm Toán Toàn Diện Đa Tài Khoản Bằng CloudTrail Organizational Trail
+- **Tình huống thi**: Doanh nghiệp quản lý hàng chục tài khoản AWS qua AWS Organizations. Cần thiết lập hệ thống ghi log kiểm toán tập trung cho mọi hành động của người dùng trên toàn bộ các tài khoản thành viên, đảm bảo các tài khoản con không thể tắt hoặc xóa log.
+- **Giải pháp chuẩn**:
+  - Tại **Management Account**, tạo một **AWS CloudTrail Organizational Trail**.
+  - Trail này sẽ tự động nhân bản và thu thập log API từ **toàn bộ các member accounts hiện tại và các member accounts mới được tạo trong tương lai**.
+  - Đích đến (Destination): Lưu trữ tập trung tại một **Amazon S3 Bucket** an toàn được bật tính năng S3 Object Lock / SSE-KMS, chỉ cấp quyền truy cập cho nhóm bảo mật.
+
+#### 3. Giám Sát Chất Lượng Mạng Lai Với CloudWatch Network Monitor
+- **Tình huống thi**: Doanh nghiệp kết nối văn phòng On-Premises với AWS VPC qua Direct Connect / VPN và cần liên tục giám sát chất lượng đường truyền (độ trễ mạng Round-Trip Time - RTT và tỷ lệ mất gói tin Packet Loss).
+- **Giải pháp chuẩn**:
+  - Kích hoạt dịch vụ **Amazon CloudWatch Network Monitor**.
+  - Thiết lập giám sát giữa Subnet trong VPC và địa chỉ IP của router On-Premises. Dịch vụ tự động sinh ra các metrics `RTT` và `PacketLoss` vào CloudWatch để kích hoạt alarm khi chất lượng mạng suy giảm.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Tự Động Kiểm Toán Hạn Chứng Chỉ SSL Bằng AWS Config Managed Rules — (U-PT2 Q35)
+- **Tình huống đề thi**: *"Doanh nghiệp nhập khẩu nhiều chứng chỉ SSL/TLS của bên thứ ba vào AWS Certificate Manager (ACM). Yêu cầu tự động kiểm tra định kỳ và gửi thông báo cho đội vận hành trước khi chứng chỉ hết hạn 30 ngày với ÍT CÔNG SỨC QUẢN TRỊ NHẤT."*
+- **Các phương án bẫy**:
+  - ❌ *Trông cậy vào tính năng tự động gia hạn của ACM*: ACM **chỉ tự động gia hạn** cho các chứng chỉ do chính ACM phát hành (ACM-issued certificates); đối với chứng chỉ bên ngoài tự import vào (Imported Certificates), ACM **hoàn toàn không thể tự gia hạn**!
+  - ❌ *Viết script Lambda chạy định kỳ qua EventBridge để quét API*: Hoạt động được nhưng tốn công viết mã, bảo trì và kiểm thử -> Vi phạm yêu cầu "Least Operational Overhead".
+- **Giải pháp ĐÚNG**: Sử dụng quy tắc có sẵn của AWS Config: **`acm-certificate-expiration-check`**.
+  - Quy tắc này tự động đánh giá ngày hết hạn của toàn bộ chứng chỉ trong ACM.
+  - Khi còn dưới 30 ngày, AWS Config tự động đánh dấu trạng thái Non-Compliant và kích hoạt thông báo qua **Amazon SNS** tới đội vận hành.
+
+#### 🪤 Bẫy 2: Truy Vết Phân Tán Serverless & Phát Hiện Điểm Nghẽn Độ Trễ (AWS X-Ray) — (CM-PT1 Q21)
+- **Tình huống đề thi**: *"Ứng dụng Serverless bao gồm API Gateway, nhiều hàm Lambda và DynamoDB gặp hiện tượng phản hồi chậm gián đoạn. Cần giải pháp theo dõi luồng yêu cầu (end-to-end request tracing) và xác định chính xác dịch vụ nào đang gây ra nút thắt cổ chai độ trễ với chi phí vận hành thấp nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Ghi log thời gian thực thi thủ công vào CloudWatch Logs rồi viết câu truy vấn CloudWatch Insights*: Tốn công lập trình và không hiển thị được bản đồ dịch vụ (Service Map).
+  - ❌ *Cài đặt OpenSearch để phân tích log*: Tốn chi phí cụm server và phức tạp.
+- **Giải pháp ĐÚNG**: Kích hoạt **AWS X-Ray** trực tiếp trong mẫu hạ tầng **AWS CloudFormation** (`Tracing: Active`).
+  - X-Ray tự động vẽ Service Map trực quan.
+  - Phân tích chi tiết từng Segment và Subsegment để chỉ rõ hàm Lambda nào chạy chậm hoặc câu truy vấn DynamoDB nào bị throttle.
+
+#### 🪤 Bẫy 3: Phân Biệt Rạch Ròi Bộ Ba: CloudWatch vs CloudTrail vs AWS Config
+- **Bẫy thi phổ biến**: Đề bài hỏi về một yêu cầu kiểm toán hoặc tuân thủ nhưng đưa ra cả 3 dịch vụ làm các phương án lựa chọn:
+
+| Dịch vụ | Câu hỏi trả lời | Từ khóa nhận diện trong đề bài |
+|:---|:---|:---|
+| **Amazon CloudWatch** | *"Ứng dụng đang hoạt động như thế nào?"* | Performance, Metrics (CPU, RAM, Disk, Network), Logs, Alarms, Dashboards, Xử lý sự cố theo thời gian thực |
+| **AWS CloudTrail** | *"Ai đã làm gì, vào lúc nào, từ địa chỉ IP nào?"* | Security Audit, API History, User Activity, Unauthorized API Calls, Forensic Investigation |
+| **AWS Config** | *"Cấu hình tài nguyên có đúng quy chuẩn không?"* | Compliance, Configuration History, Resource Inventory, Change Tracking, Audit Rules (ví dụ: kiểm tra S3 có mở public không) |
+
+#### 🪤 Bẫy 4: Kiểm Toán Tuân Thủ Sao Lưu Bằng AWS Backup Audit Manager — (CM-PT1 Q31)
+- **Tình huống đề thi**: *"Doanh nghiệp cần tự động kiểm tra, đối soát và xuất báo cáo tuân thủ chính sách sao lưu định kỳ (Backup Compliance Reports) trên hàng trăm tài khoản AWS để nộp cho kiểm toán viên quốc tế."*
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Backup Audit Manager** tích hợp với các quy tắc được quản lý của **AWS Config**. Dịch vụ tự động đối chiếu các kế hoạch sao lưu thực tế với chính sách đề ra và sinh báo cáo tuân thủ tiêu chuẩn tự động.
+
+---
+
+### 📊 III. Ma Trận Quyết Định Giám Sát & Kiểm Toán Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Cảnh báo cuộc gọi API trái phép/Root login** | **CloudTrail + CloudWatch Metric Filter + SNS** | Chỉ dùng CloudWatch Logs (thiếu bộ lọc sự kiện) |
+| **Kiểm tra chứng chỉ ACM bên thứ 3 sắp hết hạn** | **AWS Config managed rule `acm-certificate-expiration-check`** | Tự động gia hạn của ACM (không áp dụng cho imported certs) |
+| **Tìm nút thắt cổ chai độ trễ microservices** | **AWS X-Ray** (Tracing: Active) | CloudWatch Metrics (chỉ đo tổng quan, không map request) |
+| **Lịch sử thay đổi cấu hình Security Group/S3** | **AWS Config** (Config Timeline) | CloudTrail (chỉ thấy API call, khó theo dõi diff cấu hình) |
+| **Kiểm toán hoạt động người dùng toàn tổ chức** | **CloudTrail Organizational Trail** | Cấu hình CloudTrail riêng lẻ từng account |
+| **Giám sát độ trễ & mất gói tin Hybrid Network** | **CloudWatch Network Monitor** | VPC Flow Logs (chỉ lưu metadata IP/port, không đo RTT) |
+| **Báo cáo tuân thủ sao lưu đa tài khoản** | **AWS Backup Audit Manager** | Viết Lambda script kiểm tra thủ công |
+
+---
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Luồng Tự Động Phát Hiện & Khắc Phục Sự Cố An Ninh (EventBridge, CloudTrail vs Config)
@@ -257,102 +335,9 @@ sequenceDiagram
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Nhóm Câu Hỏi Cốt Lõi (Core Concepts)
-
-#### Câu 1: Theo mặc định của AWS, Amazon CloudWatch có thể tự động thu thập chỉ số mức độ sử dụng bộ nhớ RAM (Memory Utilization) của máy ảo EC2 không? Vì sao?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: **HOÀN TOÀN KHÔNG THỂ**.
-- **Giải thích**: Mặc định AWS CloudWatch chỉ thu thập các số liệu từ tầng Hypervisor bên ngoài máy ảo (như CPUUtilization, NetworkIn/Out, DiskReadOps). Bộ nhớ RAM và dung lượng ổ đĩa bên trong hệ điều hành thuộc trách nhiệm quản lý của khách hàng theo Mô hình Trách nhiệm Chung (Shared Responsibility Model). Để lấy được số liệu RAM, người dùng bắt buộc phải cài đặt **Unified CloudWatch Agent** bên trong máy ảo EC2.
-</details>
-
-#### Câu 2: Sự khác nhau bản chất giữa Management Events và Data Events trong AWS CloudTrail là gì?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Management Events**: Ghi lại các thao tác quản trị trên mặt phẳng điều khiển (Control Plane) của tài khoản AWS (ví dụ: tạo VPC, khởi chạy EC2, gắn IAM policy, cấu hình subnet). Mặc định luôn được kích hoạt.
-- **Data Events**: Ghi lại các thao tác trên mặt phẳng dữ liệu (Data Plane) tác động trực tiếp lên nội dung tài nguyên (ví dụ: đọc/ghi file trên S3 `s3:GetObject`, `s3:PutObject` hoặc thực thi hàm Lambda `lambda:Invoke`). Mặc định **bị tắt** vì số lượng sự kiện dữ liệu phát sinh là cực kỳ khổng lồ và có tính phí ($0.10/100,000 events).
-</details>
-
-#### Câu 3: Dịch vụ nào liên tục theo dõi, ghi lại lịch sử thay đổi cấu hình tài nguyên theo thời gian và hỗ trợ tự động vá lỗi (Automated Remediation) khi phát hiện vi phạm?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: **AWS Config**.
-- **Giải thích**: AWS Config chụp lại các Configuration Items (CIs) mỗi khi tài nguyên thay đổi trạng thái, so sánh với bộ quy tắc **Config Rules**, và nếu phát hiện trạng thái `NON-COMPLIANT`, Config có thể tự động thực thi kịch bản sửa chữa thông qua **AWS Systems Manager Automation Runbooks**.
-</details>
-
 ---
 
-### B. Nhóm Câu Hỏi Tình Huống & Xử Lý Sự Cố (Scenarios & Troubleshooting)
-
-#### Câu 4: Một máy chủ ảo EC2 chạy cơ sở dữ liệu quan trọng gặp sự cố lỗi phần cứng ở tầng máy chủ vật lý bên dưới của AWS (`StatusCheckFailed_System = 1`). Bạn muốn hệ thống tự động phục hồi máy ảo sang một phần cứng mới mà không làm thay đổi địa chỉ IP Private, Elastic IP hay Instance ID. Giải pháp nào tối ưu nhất?
-- (A) Viết hàm Lambda định kỳ kiểm tra sức khỏe và gọi API TerminateInstances rồi RunInstances mới.
-- (B) Tạo CloudWatch Alarm trên metric `StatusCheckFailed_System` và gắn hành động **EC2 Recovery Action**.
-- (C) Cấu hình Auto Scaling Group với Min = 1, Max = 1.
-- (D) Thiết lập AWS Config Rule tự động khởi động lại máy ảo.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - Tính năng **CloudWatch Alarm EC2 Recovery Action** được thiết kế chuyên biệt cho tình huống này.
-  - Khi phát hiện lỗi hệ thống phần cứng (`StatusCheckFailed_System`), CloudWatch Alarm sẽ tự động di chuyển máy ảo sang một máy chủ vật lý khỏe mạnh khác trong cùng Availability Zone mà **giữ nguyên 100% Instance ID, Private IP, Elastic IP, và các ổ đĩa EBS đính kèm**.
-  - Phương án (C) Auto Scaling Group sẽ tiêu hủy máy cũ và tạo máy mới, dẫn đến thay đổi Instance ID và Private IP.
-</details>
-
-#### Câu 5: Đội ngũ an ninh yêu cầu phải đảm bảo rằng các file log kiểm toán của AWS CloudTrail lưu trữ trên Amazon S3 không thể bị chỉnh sửa hoặc xóa bỏ bởi bất kỳ ai (kể cả tài khoản Root), và phải có bằng chứng toán học chứng minh file log còn nguyên vẹn phục vụ thanh tra. Bạn sẽ cấu hình những tính năng nào?
-- (A) Bật tính năng S3 Versioning và S3 Server Access Logging.
-- (B) Bật tính năng **CloudTrail Log File Integrity Validation** và cấu hình **S3 Object Lock** ở chế độ **Compliance Mode**.
-- (C) Mã hóa S3 bằng AWS Managed Key `aws/s3`.
-- (D) Tạo IAM Policy từ chối quyền xóa cho toàn bộ nhân viên.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - **S3 Object Lock Compliance Mode** tuân thủ nguyên tắc WORM (Write Once, Read Many): Ngay cả tài khoản Root của tài khoản AWS cũng không thể xóa hoặc ghi đè file log trong suốt thời hạn bảo lưu.
-  - **CloudTrail Log File Integrity Validation**: Tự động sinh ra các file mã băm (Digest Files) chứa chữ ký điện tử SHA-256 HMAC cho từng file log. Kiểm toán viên có thể dùng lệnh `aws cloudtrail validate-logs` để chứng minh chắc chắn file log không bị can thiệp sau khi được ghi nhận.
-</details>
-
----
-
-### C. Nhóm Câu Hỏi Phỏng Vấn Chuyên Sâu (Solutions Architect & DevOps)
-
-#### Câu 6: "Composite Alarms trong Amazon CloudWatch là gì và nó giúp giải quyết vấn đề Alarm Fatigue trong các hệ thống doanh nghiệp lớn như thế nào?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Bản chất**: **Composite Alarm** là cảnh báo cấp cao được tạo thành từ sự kết hợp của nhiều Metric Alarms độc lập thông qua các biểu thức logic (`AND`, `OR`, `NOT`).
-- **Giải quyết vấn đề Alarm Fatigue (Hội chứng kiệt sức vì báo động giả)**:
-  - Trong thực tế, nếu chỉ cài đặt một Alarm duy nhất theo dõi CPU > 85%, hệ thống sẽ bắn hàng chục thông báo tới điện thoại của kỹ sư mỗi khi có một tác vụ tính toán ngắn hạn, dù website vẫn hoạt động hoàn toàn bình thường.
-  - Sử dụng Composite Alarm cho phép định nghĩa điều kiện sự cố thực sự:
-    $$\text{Composite Alarm} = \text{Alarm}(\text{CPU} > 85\%) \text{ AND } \text{Alarm}(\text{HTTP 5xx Errors} > 5\%) \text{ AND NOT } \text{Alarm}(\text{DeploymentInProgress})$$
-  - Hệ thống chỉ thực sự bắn chuông báo động đánh thức kỹ sư trực ban khi cả CPU tăng cao VÀ người dùng thực tế đang gặp lỗi dịch vụ, giúp loại bỏ hoàn toàn các báo động rác.
-</details>
-
-#### Câu 7: "Làm thế nào để thiết kế một giải pháp phân tích nhật ký tập trung (Centralized Logging Architecture) cho một tổ chức sở hữu hơn 50 tài khoản AWS với chi phí tối ưu và năng lực vận hành hiện đại nhất?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Kiến trúc giải pháp chuẩn mực (AWS Organizations + OAM)**:
-  1. **Nền tảng quan sát tập trung thời gian thực (Operational Observability)**:
-     - Kích hoạt tính năng **Amazon CloudWatch Cross-Account Observability (thông qua OAM - Observability Access Manager)** trên toàn bộ AWS Organizations.
-     - Thiết lập một tài khoản trung tâm làm **Monitoring Account** (thường là Shared Services Account hoặc Security Operations Account).
-     - Toàn bộ 50 tài khoản thành viên đóng vai trò là **Source Accounts**, chia sẻ liên kết an toàn: **Logs, Metrics, X-Ray Traces** và **Application Signals** sang Monitoring Account.
-     - *Ưu điểm vượt trội*: Đội ngũ kỹ sư tại tài khoản trung tâm có thể mở CloudWatch Logs Insights và truy vấn hàng triệu dòng log của toàn bộ 50 tài khoản trên 1 màn hình duy nhất **mà không cần sao chép log qua Kinesis Data Firehose, tiết kiệm 100% chi phí chuyển giao dữ liệu**.
-  2. **Tối ưu chi phí lưu trữ dài hạn (FinOps & Compliance Archive)**:
-     - Tại các tài khoản con: Cấu hình chính sách lưu trữ (**Retention Policy**) cho CloudWatch Log Groups từ **7 đến 14 ngày** (đủ để debug nóng sự cố gần nhất).
-     - Đối với log kiểm toán bắt buộc lưu trữ 5–10 năm: Thiết lập CloudWatch Subscription Filter đẩy luồng nén về **Amazon S3 Bucket** tại tài khoản Log Archive trung tâm, áp dụng **S3 Lifecycle** chuyển sang **S3 Glacier Flexible Archive** ($0.0036/GB) hoặc **Glacier Deep Archive** ($0.00099/GB).
-     - Khi kiểm toán viên cần tra cứu dữ liệu cũ trong quá khứ, sử dụng **Amazon Athena** truy vấn trực tiếp trên S3 với chi phí chỉ $5/TB dữ liệu quét.
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Giám Sát & Kiểm Toán AWS (Golden Rules)
 1. **Cài đặt CloudWatch Agent để lấy RAM**: AWS Hypervisor không tự đo được RAM và Disk bên trong hệ điều hành máy ảo.

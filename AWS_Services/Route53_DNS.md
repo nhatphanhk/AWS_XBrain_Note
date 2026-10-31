@@ -152,6 +152,88 @@ flowchart LR
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Giới Hạn Phân Phối Bản Quyền Truyền Thông Bằng Geolocation Routing
+- **Tình huống thi**: Một giải bóng đá lớn cấp quyền phát sóng trực tiếp các trận đấu độc quyền tại Hoa Kỳ. Nền tảng phát sóng phải đảm bảo chỉ người dùng tại Mỹ mới có thể xem luồng video, người dùng từ các quốc gia khác phải bị từ chối truy cập.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Sử dụng chính sách **Amazon Route 53 Geolocation Routing Policy**: Ánh xạ truy vấn DNS từ người dùng tại Hoa Kỳ tới tài nguyên phục vụ video, cấu hình Default record trả về trang thông báo từ chối cho các quốc gia khác.
+  - Kết hợp sử dụng tính năng **CloudFront Georestriction (Geo-blocking)** với danh sách cho phép (Allowlist) chỉ gồm Hoa Kỳ để bảo vệ lớp nội dung tại CDN Edge.
+
+#### 2. Định Tuyến Độ Trễ Thấp Nhất Toàn Cầu Với Latency-Based Routing
+- **Tình huống thi**: Ứng dụng triển khai trên nhiều AWS Regions (Mỹ, Châu Âu, Châu Á). Cần định tuyến người dùng toàn cầu tới Region mang lại trải nghiệm độ trễ mạng thấp nhất cho họ một cách tự động.
+- **Giải pháp chuẩn**:
+  - Cấu hình chính sách **Latency-Based Routing** trên Amazon Route 53.
+  - AWS liên tục đo đạc độ trễ mạng giữa các dải mạng Internet của người dùng trên toàn thế giới tới các data centers của AWS và tự động trả về IP của Region có độ trễ ngắn nhất.
+  - Gắn kèm **Route 53 Health Checks** cho từng Region: Nếu Region gần nhất gặp sự cố, Route 53 sẽ tự động chuyển tiếp người dùng sang Region khả dụng kế tiếp.
+
+#### 3. Sử Dụng Alias Record Cho Tên Miền Gốc (Zone Apex / Naked Domain)
+- **Tình huống thi**: Doanh nghiệp sở hữu tên miền gốc `example.com` (không có tiền tố `www`) và muốn trỏ tên miền này tới Application Load Balancer hoặc CloudFront Distribution.
+- **Quy tắc DNS cốt lõi**:
+  - Tiêu chuẩn DNS RFC **nghiêm cấm tạo CNAME record** tại cấp độ Apex (`example.com`).
+  - **Giải pháp chuẩn của AWS**: Tạo một **Route 53 Alias Record** kiểu A trỏ tới tên miền của ALB hoặc CloudFront.
+  - **Lợi ích**:
+    - Hỗ trợ đầy đủ cho Zone Apex.
+    - Truy vấn DNS Alias tới tài nguyên AWS hoàn toàn **MIỄN PHÍ cước phí ($0.00)**.
+    - Route 53 tự động nhận biết khi IP của ALB thay đổi mà không cần cập nhật thủ công.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Triển Khai Blue-Green Tức Thì: Route 53 Weighted Bị Nghẽn Bởi DNS Cache — (U-PT2 Q43, CM-PT1 Q40)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn triển khai phiên bản mới của ứng dụng di động theo mô hình Blue-Green. Yêu cầu chuyển đổi lưu lượng giữa hai môi trường phải diễn ra tức thì trong vài giây và có thể rollback ngay lập tức nếu phát hiện lỗi nghiêm trọng."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Route 53 Weighted Routing*: Lý thuyết cho phép chia tỉ lệ (ví dụ: 90% Blue, 10% Green). Tuy nhiên, **Route 53 dựa trên giao thức DNS**, các nhà mạng viễn thông ISP và thiết bị di động của người dùng **thường lưu cache bản ghi DNS rất lâu** (bỏ qua giá trị TTL thấp). Khi cần rollback khẩn cấp, người dùng vẫn tiếp tục gửi yêu cầu vào phiên bản Green bị lỗi trong nhiều giờ!
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Global Accelerator với Traffic Dial**.
+  - Cung cấp **2 địa chỉ IP tĩnh Anycast**.
+  - Việc điều phối phần trăm lưu lượng (0% đến 100%) diễn ra trực tiếp tại các máy chủ Edge trên mạng trục riêng của AWS, **hoàn toàn bỏ qua bộ đệm DNS của client (Bypasses Client DNS Caching)** -> Thay đổi có hiệu lực ngay lập tức trong vài giây.
+
+#### 🪤 Bẫy 2: Phân Biệt Chiều Định Tuyến Của Route 53 Resolver Endpoints — (CM-PT1 Q41)
+- **Bẫy tráo chiều kinh điển trong đề thi**:
+  - Muốn máy chủ On-Premises phân giải được các tên miền nội bộ AWS `*.internal`:
+    - 👉 **Cấu hình Route 53 Resolver INBOUND Endpoint** (Lưu lượng truy vấn từ On-Premises đi **VÀO** AWS).
+  - Muốn máy chủ EC2 trong VPC phân giải được các tên miền Active Directory nội bộ On-Premises `*.corp.local`:
+    - 👉 **Cấu hình Route 53 Resolver OUTBOUND Endpoint** kết hợp với **Forwarding Rule** trỏ về địa chỉ IP của DNS Server On-Premises (Lưu lượng truy vấn từ AWS đi **RA NGOÀI** On-Premises).
+
+#### 🪤 Bẫy 3: Phân Biệt Giữa Geolocation Routing và Geoproximity Routing
+- **Geolocation Routing**:
+  - Định tuyến dựa trên **vị trí địa lý của người dùng** (Quốc gia, Châu lục, hoặc Bang của Mỹ).
+  - Thường dùng để hạn chế phân phối nội dung bản quyền hoặc hiển thị ngôn ngữ bản địa phù hợp.
+- **Geoproximity Routing**:
+  - Định tuyến dựa trên **khoảng cách địa lý giữa người dùng và tài nguyên AWS**.
+  - Điểm đặc biệt: Cho phép sử dụng tham số **Bias** (giá trị từ `-99` đến `+99`) để chủ động mở rộng hoặc thu hẹp vùng địa lý mà một Region phục vụ (ví dụ: ép người dùng ở Châu Á chuyển hướng sang Region Châu Âu dù họ ở gần Châu Á hơn).
+  - Yêu cầu bắt buộc phải sử dụng **Route 53 Traffic Flow**.
+
+#### 🪤 Bẫy 4: Yêu Cầu Kích Hoạt DNS Trên VPC Để Dùng Private Hosted Zone — (U-PT2 Q60)
+- **Tình huống đề thi**: *"Sau khi tạo Route 53 Private Hosted Zone và liên kết với VPC, các ứng dụng chạy trên EC2 vẫn không thể phân giải được tên miền."*
+- **Nguyên nhân**: VPC bị thiếu một trong hai thiết lập mạng cơ sở:
+  - `enableDnsHostnames` phải được đặt thành `true`.
+  - `enableDnsSupport` phải được đặt thành `true`.
+- Nếu thiếu cờ `enableDnsSupport`, máy chủ nội bộ `10.x.x.2` (AmazonProvidedDNS) sẽ không được kích hoạt, dẫn tới Route 53 Resolver không thể phản hồi truy vấn cho Private Hosted Zone.
+
+---
+
+### 📊 III. Ma Trận Quyết Định Chính Sách Định Tuyến DNS Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Chính sách Route 53 chuẩn | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Giới hạn nội dung theo quốc gia/châu lục** | **Geolocation Routing** | Latency-based (không chặn theo quốc gia được) |
+| **Trải nghiệm mạng nhanh nhất cho user toàn cầu** | **Latency-Based Routing** | Weighted Routing (không đo đạc độ trễ mạng) |
+| **Failover chủ động - dự phòng (Active-Passive)** | **Failover Routing** (+ Health Check) | Multi-Value (trả về nhiều IP cùng lúc) |
+| **Phân bổ traffic thử nghiệm (Canary/A-B Testing)** | **Weighted Routing** | Geolocation Routing |
+| **Chuyển đổi lưu lượng tức thì, bypass DNS cache** | **AWS Global Accelerator** | Route 53 Weighted (bị nghẽn bởi DNS cache) |
+| **Điều chỉnh vùng phục vụ bằng tham số Bias** | **Geoproximity Routing** (Traffic Flow) | Geolocation Routing (không có tính năng Bias) |
+| **Tên miền gốc `example.com` trỏ vào ALB/CloudFront** | **Alias Record (A/AAAA)** | CNAME Record (vi phạm tiêu chuẩn RFC DNS Apex) |
+| **On-Premises phân giải tên miền private AWS** | **Route 53 Resolver Inbound Endpoint** | Outbound Endpoint (sai chiều đi của query) |
+| **EC2 trong VPC phân giải tên miền On-Premises** | **Route 53 Resolver Outbound Endpoint** | Inbound Endpoint (sai chiều đi của query) |
+
+---
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Sơ đồ luồng định tuyến tự động chịu lỗi thảm họa đa vùng (Multi-Region Active-Passive Failover)
@@ -315,142 +397,9 @@ sequenceDiagram
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Danh mục câu hỏi trắc nghiệm & Tình huống kiến trúc
-
-#### Câu 1 (Core Concept)
-Cổng mạng (**Network Port**) mặc định mà giao thức phân giải tên miền DNS sử dụng để giao tiếp truyền nhận gói tin là cổng số mấy?
-- A. Cổng 22.
-- B. Cổng 53 (hỗ trợ cả giao thức UDP và TCP).
-- C. Cổng 80.
-- D. Cổng 443.
-
-#### Câu 2 (Core Concept)
-Điểm khác biệt vượt trội nhất giữa **CNAME Record** truyền thống và **Route 53 Alias Record** là gì?
-- A. CNAME chỉ dùng được cho IP; Alias Record dùng cho URL.
-- B. CNAME không dùng được cho tên miền gốc (Zone Apex); trong khi **Alias Record áp dụng hoàn hảo cho Zone Apex**, chỉ trỏ tới tài nguyên AWS và **hoàn toàn miễn phí truy vấn DNS**.
-- C. CNAME có tính năng kiểm tra sức khỏe tự động; Alias Record thì không.
-- D. Cả hai bản ghi đều giống hệt nhau về mọi mặt.
-
-#### Câu 3 (Core Concept)
-Bạn có thể cấu hình một bản ghi CNAME cho tên miền gốc (Naked Domain / Zone Apex như `mycompany.com`) trong hệ thống DNS được không?
-- A. Hoàn toàn được phép trên mọi hệ thống DNS.
-- B. Không thể, vì chuẩn DNS quốc tế RFC cấm việc cấu hình CNAME tại Zone Apex; bạn bắt buộc phải dùng **Alias Record** trên Route 53.
-- C. Được phép nếu tên miền đó đã mua từ Route 53 Registrar.
-- D. Chỉ được phép nếu dùng giao thức HTTPS.
-
-#### Câu 4 (Core Concept - Routing Policies)
-Chính sách định tuyến nào cho phép bạn gửi **80% lượng truy cập người dùng** vào cụm máy chủ hiện tại và **20% lưu lượng** vào cụm máy chủ thử nghiệm phiên bản mới để thực hiện kiểm thử A/B Testing?
-- A. Latency-based Routing Policy.
-- B. Weighted Routing Policy.
-- C. Geolocation Routing Policy.
-- D. Failover Routing Policy.
-
-#### Câu 5 (Core Concept - Routing Policies)
-Chính sách định tuyến nào tự động đo lường và điều hướng người dùng tới **AWS Region nào đem lại độ trễ mạng thấp nhất** đối với vị trí của người dùng đó?
-- A. Latency-based Routing Policy.
-- B. Geoproximity Routing Policy.
-- C. Simple Routing Policy.
-- D. Multi-Value Answer Routing Policy.
-
-#### Câu 6 (Core Concept - Disaster Recovery)
-Khi cấu hình chính sách định tuyến chuyển đổi dự phòng (**Failover Routing**), hai vai trò của bản ghi là gì và bản ghi nào **BẮT BUỘC** phải được gắn kèm Route 53 Health Check?
-- A. Gồm bản ghi Active và Standby; Standby bắt buộc gắn Health Check.
-- B. Gồm bản ghi **Primary** và **Secondary**; bản ghi **Primary** bắt buộc phải gắn kèm Health Check để Route 53 phát hiện lỗi và chuyển hướng sang Secondary.
-- C. Cả hai bản ghi đều không cần gắn Health Check.
-- D. Gồm bản ghi Master và Slave; Slave bắt buộc gắn Health Check.
-
-#### Câu 7 (Core Concept - Hybrid DNS)
-Dịch vụ nào của Route 53 cung cấp các điểm cuối **Inbound Endpoints** và **Outbound Endpoints** để thiết lập kênh phân giải tên miền hai chiều an toàn giữa hệ thống On-Premises và AWS VPC qua đường truyền riêng AWS Direct Connect?
-- A. Route 53 Traffic Flow.
-- B. Route 53 Resolver.
-- C. AWS Transit Gateway.
-- D. Amazon Route 53 Domain Registrar.
-
-#### Câu 8 (Core Concept - High Availability)
-Số lượng bản ghi địa chỉ IP tối đa mà chính sách **Multi-Value Answer Routing** có thể trả về cho mỗi lần truy vấn của client là bao nhiêu?
-- A. Tối đa 1 IP duy nhất.
-- B. Tối đa 4 IPs.
-- C. Tối đa 8 bản ghi IP khỏe mạnh (Healthy Records).
-- D. Không giới hạn số lượng.
-
-#### Câu 9 (Scenario - Static Website on S3 Apex Domain)
-Một doanh nghiệp muốn lưu trữ một trang web tĩnh trên **Amazon S3** và sử dụng tên miền gốc không có tiền tố www (`example.com`). Yêu cầu cấu hình nào sau đây là bắt buộc và chuẩn mực nhất?
-- A. Tạo S3 bucket với tên bất kỳ và tạo bản ghi CNAME trỏ về bucket đó.
-- B. Tạo S3 bucket có tên **trùng khớp chính xác 100% với tên miền (`example.com`)**, bật tính năng S3 Static Website Hosting và tạo một **Route 53 Alias Record (A Record)** trỏ vào S3 website endpoint.
-- C. Sử dụng Network Load Balancer đứng trước S3 bucket.
-- D. Đăng ký một IP tĩnh Elastic IP và gán trực tiếp vào S3 bucket.
-
-#### Câu 10 (Scenario - Private Hosted Zone DNS Resolution Failure)
-Một kỹ sư mới tạo một Private Hosted Zone mang tên `corp.internal` và liên kết với một VPC mới tạo. Tuy nhiên, các máy ảo EC2 trong VPC này không thể phân giải được tên miền `db.corp.internal`. Nguyên nhân kỹ thuật khả dĩ nhất là gì?
-- A. EC2 instance chưa được cài đặt phần mềm Nginx.
-- B. VPC chưa được kích hoạt hai thuộc tính DNS bắt buộc là **`enableDnsHostnames`** và **`enableDnsSupport`**.
-- C. Cổng 80 chưa được mở trên Security Group của EC2.
-- D. Tên miền `.internal` đã bị một tổ chức khác mua mất trên Internet.
-
-#### Câu 11 (Scenario - Geolocation vs Latency for Compliance)
-Một ứng dụng truyền hình trực tuyến cần đảm bảo rằng người dùng tại Pháp chỉ được truy cập vào cụm máy chủ đặt tại Châu Âu để tuân thủ luật bảo vệ dữ liệu GDPR và nhận giao diện tiếng Pháp, trong khi người dùng tại Mỹ được chuyển tới cụm máy chủ tại Bắc Mỹ. Chính sách định tuyến nào là phù hợp nhất?
-- A. Latency-based Routing Policy.
-- B. **Geolocation Routing Policy**.
-- C. Weighted Routing Policy.
-- D. Multi-Value Answer Routing Policy.
-
-#### Câu 12 (Scenario - Malicious Domain Blocking at VPC Level)
-Đội ngũ an ninh mạng doanh nghiệp phát hiện một số máy chủ EC2 trong VPC bị nhiễm mã độc và cố gắng kết nối tới các tên miền máy chủ điều khiển botnet (C&C Server) bên ngoài Internet. Giải pháp kiến trúc nào cho phép chặn đứng các truy vấn DNS độc hại này ở cấp độ mạng VPC mà không cần cài đặt phần mềm agent lên từng máy chủ?
-- A. Sử dụng AWS WAF gắn vào từng máy ảo EC2.
-- B. Triển khai **Route 53 Resolver DNS Firewall** kết hợp các bộ quy tắc Domain List Denylist gắn vào VPC.
-- C. Tắt hoàn toàn dịch vụ Route 53 trong tài khoản.
-- D. Thay đổi file `/etc/resolv.conf` trên toàn bộ máy chủ.
-
 ---
 
-### B. Đáp án Chi Tiết Bộ Câu Hỏi Ôn Tập (Answer Key & Explanations)
-
-<details>
-<summary>👉 Nhấp vào đây để xem toàn bộ đáp án chi tiết và giải thích kiến trúc</summary>
-
-### Đáp án Câu 1: B
-- **Giải thích**: Giao thức DNS hoạt động chuẩn mực trên cổng **Port 53**. Các truy vấn phân giải thông thường sử dụng giao thức **UDP 53** để đạt tốc độ cao; trong khi các truy vấn có kích thước gói tin lớn (> 512 bytes) hoặc đồng bộ vùng DNS (Zone Transfers) sử dụng giao thức **TCP 53**.
-
-### Đáp án Câu 2: B
-- **Giải thích**: **CNAME Record** bị cấm áp dụng cho Zone Apex bởi chuẩn RFC DNS quốc tế và bị tính phí truy vấn thông thường; trong khi **Route 53 Alias Record** là tính năng mở rộng độc quyền, hỗ trợ Zone Apex hoàn hảo, tự động nhận biết thay đổi IP ngầm của tài nguyên AWS và hoàn toàn **miễn phí cước truy vấn DNS**.
-
-### Đáp án Câu 3: B
-- **Giải thích**: Chuẩn DNS RFC 1034 quy định nếu một node có bản ghi CNAME, nó không được phép chứa bất kỳ bản ghi nào khác (kể cả SOA và NS). Vì Zone Apex bắt buộc phải chứa bản ghi SOA và NS, do đó **không thể đặt CNAME tại Zone Apex**. Giải pháp chuẩn duy nhất trên AWS là dùng **Alias Record**.
-
-### Đáp án Câu 4: B
-- **Giải thích**: **Weighted Routing Policy** cho phép kỹ sư gán trọng số tương đối (Weight) cho từng bản ghi (ví dụ: 80 và 20) để chia tỷ lệ phần trăm lưu lượng truy cập, hoàn hảo cho các bài toán kiểm thử A/B Testing và Canary Releases.
-
-### Đáp án Câu 5: A
-- **Giải thích**: **Latency-based Routing Policy** liên tục theo dõi độ trễ mạng toàn cầu giữa người dùng và các AWS Regions, sau đó tự động phân giải DNS trỏ về Region nào mang lại độ trễ mạng thấp nhất cho người dùng đó.
-
-### Đáp án Câu 6: B
-- **Giải thích**: Trong cấu hình Failover, bản ghi **Primary** bắt buộc phải gắn kèm **Route 53 Health Check**. Khi hệ thống kiểm tra sức khỏe phát hiện Primary bị lỗi, Route 53 sẽ tự động chuyển hướng các truy vấn DNS sang bản ghi dự phòng **Secondary**.
-
-### Đáp án Câu 7: B
-- **Giải thích**: **Route 53 Resolver** đóng vai trò là cầu nối DNS mạng lai (Hybrid Cloud DNS): Inbound Endpoints tiếp nhận truy vấn từ On-Premises vào AWS, và Outbound Endpoints chuyển tiếp truy vấn từ AWS về DNS Server On-Premises.
-
-### Đáp án Câu 8: C
-- **Giải thích**: Chính sách **Multi-Value Answer Routing** có khả năng kiểm tra sức khỏe và trả về ngẫu nhiên tối đa **8 địa chỉ IP khỏe mạnh (Healthy IP Records)** cho mỗi truy vấn DNS của client.
-
-### Đáp án Câu 9: B
-- **Giải thích**: Để host website tĩnh trên S3 với tên miền riêng, tên của S3 bucket **bắt buộc phải trùng khớp 100% với tên miền** (ví dụ: bucket name phải là `example.com`), bật tính năng S3 Static Website Hosting và dùng **Route 53 Alias Record** loại A trỏ vào website endpoint của bucket.
-
-### Đáp án Câu 10: B
-- **Giải thích**: Để VPC có thể phân giải được các bản ghi trong Private Hosted Zone thông qua địa chỉ IP của Amazon Route 53 Resolver (`VPC IPv4 network range + 2`), VPC liên kết **bắt buộc phải bật cả 2 thuộc tính: `enableDnsHostnames = true` và `enableDnsSupport = true`**.
-
-### Đáp án Câu 11: B
-- **Giải thích**: **Geolocation Routing Policy** định tuyến dựa trên vị trí địa lý thực tế (quốc gia, châu lục) của địa chỉ IP người dùng, đảm bảo người dùng tại Pháp luôn được đưa về cụm máy chủ Châu Âu để tuân thủ luật bảo mật dữ liệu GDPR và nhận giao diện bản địa hóa.
-
-### Đáp án Câu 12: B
-- **Giải thích**: **Route 53 Resolver DNS Firewall** cho phép quản trị viên thiết lập các quy tắc lọc tên miền ở cấp độ VPC, tự động chặn đứng các truy vấn DNS gửi tới các domain nằm trong danh sách đen (Denylist / C&C servers) mà không cần cài đặt agent lên máy ảo.
-
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon Route 53 (Golden Rules)
 1. **Luôn ưu tiên sử dụng Alias Record thay cho CNAME**:  

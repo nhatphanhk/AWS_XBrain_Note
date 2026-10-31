@@ -170,6 +170,98 @@ flowchart TD
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Tính Toán Hiệu Năng Cao (HPC) Với Cluster Placement Groups & ENA
+- **Tình huống thi**: Ứng dụng mô phỏng khí tượng, tài chính định lượng, hoặc xử lý trí tuệ nhân tạo phân tán cần trao đổi dữ liệu giữa các node tính toán với độ trễ mạng thấp nhất và thông lượng cao nhất có thể.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Triển khai cụm máy chủ EC2 bên trong một **Cluster Placement Group**.
+  - **Cơ chế**: Toàn bộ các máy chủ được đặt gần nhau về mặt vật lý bên trong **cùng một Availability Zone**.
+  - Kết hợp sử dụng card mạng **Elastic Network Adapter (ENA)** hoặc **Elastic Fabric Adapter (EFA)** để đạt băng thông mạng liên node lên tới 100 Gbps – 400 Gbps với độ trễ microsecond.
+  - *Lưu ý*: Không triển khai Cluster Placement Group qua nhiều AZ.
+
+#### 2. Xử Lý Tác Vụ Hàng Loạt (Batch Processing) Tiết Kiệm Tới 90% Bằng EC2 Spot Instances
+- **Tình huống thi**: Hệ thống xử lý chuyển mã video hoặc tính toán dữ liệu lớn chạy theo lô, có khả năng chịu lỗi (fault-tolerant) và có thể tự động chạy lại nếu bị gián đoạn. Mục tiêu là tối thiểu hóa chi phí hạ tầng.
+- **Giải pháp chuẩn**:
+  - Sử dụng **EC2 Spot Instances** kết hợp với **AWS Batch** hoặc **EC2 Spot Fleet**.
+  - Cắt giảm tới **90% chi phí** so với On-Demand.
+  - Cấu hình ứng dụng lưu checkpoint thường xuyên lên S3 để khi nhận thông báo thu hồi máy chủ trước 2 phút (**2-Minute Spot Interruption Notice**), tiến trình có thể lưu lại trạng thái kịp thời.
+
+#### 3. Quản Trị Tự Động Chi Phí Môi Trường Phi Sản Xuất Bằng AWS Instance Scheduler
+- **Tình huống thi**: Doanh nghiệp có hàng trăm máy chủ EC2 và cơ sở dữ liệu RDS dành cho môi trường Dev/Test/QA. Các tài nguyên này chỉ cần chạy trong giờ hành chính (8h sáng - 6h tối, thứ 2 - thứ 6).
+- **Giải pháp chuẩn**:
+  - Triển khai giải pháp **AWS Instance Scheduler**.
+  - Giải pháp sử dụng AWS Lambda và Amazon EventBridge để tự động gắn lịch Start/Stop tài nguyên dựa trên Resource Tags (ví dụ: `Schedule=office-hours`).
+  - **Hiệu quả**: Tự động cắt giảm tới **70% chi phí máy chủ** cho các môi trường phi sản xuất mà không cần can thiệp thủ công mỗi ngày.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Dedicated Hosts vs Dedicated Instances Cho Tuân Thủ Bản Quyền Phần Mềm (BYOL) — (U-PT6 Q34)
+- **Tình huống đề thi**: *"Doanh nghiệp chuyển đổi máy chủ Windows Server và SQL Server lên AWS. Họ muốn tái sử dụng các bản quyền phần mềm hiện có (BYOL - Bring Your Own License) vốn được cấp phép theo số lượng Socket và Core vật lý của máy chủ. Giải pháp nào đáp ứng đúng yêu cầu?"*
+- **Phân biệt rạch ròi 2 khái niệm**:
+
+| Tiêu chuẩn so sánh | Dedicated Instances | Dedicated Hosts |
+|:---|:---|:---|
+| **Môi trường phần cứng** | Dedicated (không chung phần cứng với khách hàng khác) | Dedicated (toàn quyền sở hữu máy chủ vật lý) |
+| **Kiểm soát Socket & Cores** | ❌ **KHÔNG** (AWS tự quản lý việc phân bổ vCPU) | ✅ **CÓ** (Hiển thị chi tiết số lượng Sockets & Cores vật lý) |
+| **Hỗ trợ bản quyền BYOL** | ❌ Không hỗ trợ bản quyền tính theo Socket/Core vật lý | ✅ **Lựa chọn duy nhất** cho bản quyền tính theo Socket/Core |
+| **Gán cố định máy chủ (Affinity)** | ❌ Không (khi restart có thể chuyển sang host khác) | ✅ Có (đảm bảo instance luôn chạy lại trên cùng host vật lý) |
+
+- **Bẫy thi**: Chọn Dedicated Instances vì thấy chữ "Dedicated" -> **SAI**. Phải là **Dedicated Hosts** khi đề bài nhắc tới *BYOL, Core/Socket Visibility*.
+
+#### 🪤 Bẫy 2: Vòng Đời Của EC2 User Data & Quyền Hạn Root — (U-PT2 Q29)
+- **Tình huống đề thi**: *"Một kỹ sư cấu hình một đoạn script trong EC2 User Data để cập nhật bản vá phần mềm mỗi khi máy chủ khởi động lại. Tuy nhiên, script không chạy khi kỹ sư thực hiện Reboot máy chủ."*
+- **Nguyên lý cốt lõi**:
+  - Mặc định, đoạn mã trong **User Data chỉ thực thi DUY NHẤT 1 LẦN** trong lần khởi động đầu tiên (Initial Launch Boot Cycle) khi instance được tạo ra.
+  - Các lần Reboot, Stop rồi Start tiếp theo sẽ **KHÔNG BAO GIỜ** kích hoạt lại User Data (trừ khi dùng cloud-init MIME multi-part đặc biệt).
+  - **Quyền hạn**: Script User Data luôn tự động chạy dưới quyền **root** -> Không bao giờ cần viết lệnh `sudo` trong script.
+
+#### 🪤 Bẫy 3: Khôi Phục Tự Động Máy Chủ Đơn Khối (Monolith) Với Chi Phí Rẻ Nhất — (U-PT6 Q44)
+- **Tình huống đề thi**: *"Một ứng dụng thương mại legacy không hỗ trợ chạy song song nhiều máy chủ (Single-Instance Monolith) và bắt buộc phải giữ nguyên một địa chỉ IP công khai cố định. Cần thiết lập giải pháp có khả năng phục hồi tự động khi máy chủ gặp sự cố với chi phí thấp nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Application Load Balancer đứng trước*: Tốn thêm chi phí duy trì ALB hàng tháng không cần thiết cho 1 máy chủ duy nhất.
+  - ❌ *Triển khai 2 máy chủ chạy song song*: Ứng dụng không hỗ trợ đồng bộ dữ liệu phiên, vi phạm kiến trúc.
+- **Giải pháp ĐÚNG**:
+  - Tạo một **Auto Scaling Group trải dài trên nhiều AZs** với cấu hình: `Min=1, Max=1, Desired=1`.
+  - Cấu hình đoạn script trong **User Data** sử dụng AWS CLI để tự động gán lại **Elastic IP (EIP)** cố định cho instance mới ngay khi instance đó vừa boot xong.
+  - Khi máy chủ hoặc AZ hiện tại sập, ASG sẽ tự động phát hiện instance Unhealthy và khởi tạo instance thay thế ở AZ khác, sau đó tự gắn lại đúng địa chỉ EIP cũ.
+
+#### 🪤 Bẫy 4: Chiến Lược Phân Bổ Spot Fleet Đa Dạng Hóa (Diversified Strategy) — (U-PT2 Q42)
+- **Tình huống đề thi**: *"Hệ thống chạy các tác vụ phân tích batch quy mô lớn trên hàng trăm máy chủ có thể linh hoạt sử dụng nhiều cấu hình CPU và RAM khác nhau. Cần đảm bảo hệ thống không bị dừng hoàn toàn khi một loại instance Spot bị AWS thu hồi đột ngột."*
+- **Giải pháp ĐÚNG**:
+  - Cấu hình **EC2 Spot Fleet** với chiến lược phân bổ **`diversified`**.
+  - Thay vì tập trung mua một loại máy chủ rẻ nhất (`lowestPrice`), chiến lược `diversified` sẽ tự động phân bổ số lượng máy chủ đều trên nhiều Spot Pools (nhiều instance types khác nhau như m5.large, c5.large, r5.large trải dài trên nhiều AZs).
+  - Khi một pool cụ thể bị quá tải giá hoặc bị AWS thu hồi, chỉ một phần nhỏ máy chủ bị ảnh hưởng, toàn bộ phần còn lại của fleet vẫn duy trì hoạt động bình thường.
+
+#### 🪤 Bẫy 5: Giới Hạn Cốt Lõi Của EC2 Ephemeral Instance Store — (U-PT6 Q50)
+- **Bẫy bất biến**:
+  - Instance Store là ổ đĩa vật lý gắn cứng vào bo mạch chủ của máy chủ EC2.
+  - **KHÔNG THỂ gỡ ra (Detach)** khỏi instance này để gắn vào instance khác (muốn tính năng này phải dùng EBS).
+  - Dữ liệu bị **xóa sạch vĩnh viễn** khi instance bị **STOP** hoặc **TERMINATE** hoặc máy chủ vật lý gặp sự cố phần cứng.
+  - Dữ liệu trong Instance Store **KHÔNG được lưu vào AMI** khi bạn tạo image sao lưu.
+
+---
+
+### 📊 III. Ma Trận Quyết Định EC2 & Tính Toán Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Bản quyền BYOL tính theo Socket/Core vật lý** | **EC2 Dedicated Hosts** | Dedicated Instances (không kiểm soát được socket/core) |
+| **Tính toán HPC mạng siêu nhanh, độ trễ thấp** | **Cluster Placement Group** (+ ENA/EFA) | Spread / Partition Placement Group |
+| **Ứng dụng cực kỳ quan trọng, chống sập phần cứng** | **Spread Placement Group** (tối đa 7 instances/AZ) | Cluster Placement Group (rủi ro sập chung rack) |
+| **Xử lý Batch chịu lỗi, tối thiểu chi phí 90%** | **EC2 Spot Fleet (Diversified Strategy)** | On-Demand Instances (chi phí quá cao) |
+| **Phục hồi tự động máy chủ đơn khối (Monolith) + EIP** | **ASG (Min=1, Max=1) + EIP re-attach qua User Data** | Dùng ALB (tốn thêm chi phí duy trì hàng tháng) |
+| **Tự động tắt máy chủ Dev ngoài giờ làm việc** | **AWS Instance Scheduler** | Viết script cron thủ công trên EC2 |
+| **Lưu trữ tạm thời tốc độ cực cao, mất khi tắt máy** | **EC2 Instance Store** | Amazon EBS (độ trễ cao hơn Instance Store) |
+
+---
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### 1. Sơ đồ kiến trúc Web Application chịu lỗi cao kết hợp ALB, ASG và Graviton EC2
@@ -382,122 +474,9 @@ sequenceDiagram
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Danh mục câu hỏi trắc nghiệm & Tình huống kiến trúc
-
-#### Câu 1 (Core Concept)
-Khi một máy ảo Amazon EC2 không được gán Elastic IP bị tắt (**Stop**) và sau đó được bật lại (**Start**), điều gì sẽ xảy ra với các địa chỉ IP của nó?
-- A. Cả Private IP và Public IP đều giữ nguyên không đổi.
-- B. Private IP bị thay đổi, nhưng Public IP giữ nguyên.
-- C. Private IP giữ nguyên không đổi, nhưng Public IP sẽ bị thay đổi thành một địa chỉ mới từ pool của AWS.
-- D. Cả Private IP và Public IP đều bị thay đổi.
-
-#### Câu 2 (Core Concept)
-Doanh nghiệp của bạn cần triển khai một cụm cơ sở dữ liệu phân tán Apache Cassandra gồm 6 nút trên cùng một Availability Zone. Để đảm bảo khả năng chịu lỗi tối đa, các nút này bắt buộc không được chia sẻ chung rack phần cứng vật lý (nguồn điện và switch mạng). Bạn nên sử dụng loại Placement Group nào?
-- A. Cluster Placement Group.
-- B. Spread Placement Group.
-- C. Partition Placement Group.
-- D. Auto Scaling Placement Group.
-
-#### Câu 3 (Core Concept - Day-2 Operations)
-Điều kiện kỹ thuật nào sau đây là **BẮT BUỘC** để một máy ảo Amazon EC2 có thể sử dụng tính năng **Hibernate (Ngủ đông)**?
-- A. Ổ đĩa EBS Root Volume bắt buộc phải được mã hóa (Encrypted) và dung lượng trống phải đủ chứa toàn bộ RAM.
-- B. Máy ảo phải thuộc dòng Accelerated Computing (GPU).
-- C. Máy ảo phải được gán ít nhất 2 Elastic IP.
-- D. Máy ảo phải chạy hệ điều hành Windows Server 2022.
-
-#### Câu 4 (Core Concept - Security)
-Để phòng chống triệt để các cuộc tấn công khai thác quyền hạn của IAM Role thông qua lỗ hổng **Server-Side Request Forgery (SSRF)** từ xa, thực hành an ninh nào sau đây là chuẩn mực nhất trên EC2?
-- A. Đổi cổng mặc định của web server từ 80 sang 8080.
-- B. Bắt buộc kích hoạt dịch vụ Instance Metadata Service Version 2 (**IMDSv2**) và đặt `http_put_response_hop_limit = 1`.
-- C. Cài đặt chứng chỉ SSL tự ký trên máy chủ EC2.
-- D. Gán Elastic IP vào máy ảo và mở toàn bộ cổng trên Security Group.
-
-#### Câu 5 (Core Concept - Architecture)
-Một kỹ sư DevOps muốn kết nối dòng lệnh (SSH/Terminal) vào một máy ảo EC2 Linux đang chạy trong Private Subnet (hoàn toàn không có Public IP và không có Internet Gateway). Phương thức nào sau đây đáp ứng yêu cầu mà **không cần mở bất kỳ cổng Inbound nào trên Security Group**?
-- A. Sử dụng công cụ Bastion Host đặt trong Public Subnet và mở cổng 22.
-- B. Sử dụng **AWS Systems Manager Session Manager** (thông qua SSM Agent và VPC Endpoints).
-- C. Sử dụng lệnh `curl` gửi request trực tiếp tới địa chỉ Private IP.
-- D. Cấu hình NAT Gateway và mở cổng 22 Outbound.
-
-#### Câu 6 (Scenario - HPC & Low Latency)
-Một phòng thí nghiệm nghiên cứu khí tượng thủy văn cần chạy mô phỏng dự báo bão trên cụm 30 máy chủ tính toán hiệu năng cao `c6i.32xlarge`. Ứng dụng đòi hỏi độ trễ mạng giữa các nút phải **dưới 1 mili-giây** và băng thông mạng liên kết tối đa lên tới 100 Gbps. Kiến trúc sư đám mây nên lựa chọn cấu hình nào?
-- A. Triển khai các máy chủ trong một **Spread Placement Group** trải rộng trên 3 AZ.
-- B. Triển khai các máy chủ trong một **Cluster Placement Group** nằm trong 1 Availability Zone duy nhất.
-- C. Đặt các máy chủ phân tán trên 3 Region khác nhau kết hợp Transit Gateway.
-- D. Sử dụng Partition Placement Group với 7 phân vùng.
-
-#### Câu 7 (Scenario - FinOps & Purchasing Strategy)
-Một doanh nghiệp SaaS có hệ thống backend gồm 50 máy chủ EC2 hoạt động ổn định 24/7 với chi phí điện toán tối thiểu là $15/giờ. Doanh nghiệp có kế hoạch hiện đại hóa ứng dụng trong 2 năm tới bằng cách chuyển dịch dần một phần sang AWS Fargate và AWS Lambda. Mô hình mua sắm nào sau đây giúp tiết kiệm chi phí tối đa (lên tới 66%) mà vẫn đảm bảo tính linh hoạt khi đổi sang Fargate và Lambda?
-- A. Standard Reserved Instances kỳ hạn 3 năm.
-- B. Convertible Reserved Instances kỳ hạn 1 năm.
-- C. **Compute Savings Plans** kỳ hạn 3 năm.
-- D. EC2 Instance Savings Plans kỳ hạn 1 năm.
-
-#### Câu 8 (Scenario - Cost Optimization for Batch Jobs)
-Một công ty phân tích dữ liệu cần chạy một tác vụ tính toán xử lý dữ liệu lớn (Big Data batch processing) kéo dài 6 tiếng vào mỗi cuối tuần. Ứng dụng được thiết kế không trạng thái (Stateless), có khả năng lưu checkpoint tiến độ vào DynamoDB và có thể chịu được việc máy chủ bị dừng đột ngột. Để tối ưu chi phí lên tới 80% – 90%, loại instance nào nên được lựa chọn?
-- A. On-Demand Instances.
-- B. Dedicated Hosts.
-- C. **Spot Instances** (kết hợp Spot Fleet đa dạng hóa cấu hình).
-- D. Capacity Reservations.
-
-#### Câu 9 (Scenario - Hardware Failure Auto-Recovery)
-Một máy chủ cơ sở dữ liệu quan trọng chạy trên EC2 bị cảnh báo lỗi **StatusCheckFailed_System (System Status Check Failed)** do sự cố hỏng hóc phần cứng trên cụm máy chủ vật lý của AWS. Giải pháp tự động hóa nào là chuẩn mực nhất để khôi phục máy ảo nhanh nhất mà vẫn giữ nguyên Private IP, Elastic IP và toàn bộ metadata?
-- A. Thiết lập Auto Scaling Group với Min = 1, Max = 1 để tạo máy mới.
-- B. Thiết lập một **CloudWatch Alarm** theo dõi metric `StatusCheckFailed_System` và kích hoạt hành động **EC2 Auto-Recovery**.
-- C. Viết cronjob chạy script snapshot ổ cứng mỗi 5 phút rồi restore thủ công.
-- D. Gọi điện hỗ trợ AWS Support yêu cầu thay ổ cứng vật lý.
-
-#### Câu 10 (Scenario - CPU Throttling on Burstable Instance)
-Ứng dụng API nội bộ chạy trên máy chủ `t4g.small` đột ngột bị chậm bất thường và không phản hồi requests vào cuối ngày, mặc dù CloudWatch báo cáo mức sử dụng CPU chỉ ở mức 20%. Khi kiểm tra, kỹ sư nhận thấy metric `CPUCreditBalance` đã về mức 0. Nguyên nhân gốc rễ và giải pháp xử lý lâu dài tối ưu nhất là gì?
-- A. Máy ảo bị tấn công từ chối dịch vụ DDoS; giải pháp là kích hoạt AWS Shield Advanced.
-- B. Máy ảo đã cạn kiệt CPU Credits và bị giới hạn ở mức xung nhịp cơ sở (Baseline Performance); giải pháp lâu dài là nâng cấp lên instance có CPU chuyên dụng như dòng **`c7g`** hoặc **`m7g`**.
-- C. Ổ đĩa EBS bị đầy dung lượng; giải pháp là xóa file log.
-- D. Card mạng ENI bị đứt kết nối; giải pháp là gán thêm ENI phụ.
-
 ---
 
-### B. Đáp án Chi Tiết Bộ Câu Hỏi Ôn Tập (Answer Key & Explanations)
-
-<details>
-<summary>👉 Nhấp vào đây để xem toàn bộ đáp án chi tiết và giải thích kiến trúc</summary>
-
-### Đáp án Câu 1: C
-- **Giải thích**: Địa chỉ Private IP của EC2 gắn liền với card mạng ENI và nằm cố định trong subnet suốt vòng đời máy ảo. Ngược lại, địa chỉ Public IPv4 thông thường được cấp động từ pool của AWS; khi instance ở trạng thái **Stopped**, AWS sẽ thu hồi IP này về pool chung; khi máy **Start** lại, nó sẽ nhận một Public IP hoàn toàn mới. Muốn giữ nguyên IP công khai, bắt buộc phải sử dụng **Elastic IP**.
-
-### Đáp án Câu 2: B
-- **Giải thích**: **Spread Placement Group** đặt từng máy ảo trên các rack phần cứng vật lý riêng biệt (khác biệt về nguồn điện, quạt tản nhiệt và switch mạng), với giới hạn tối đa 7 máy ảo/AZ. Đây là lựa chọn hoàn hảo cho cụm 6 nút Cassandra cần khả năng chịu lỗi cao trên 1 AZ.
-
-### Đáp án Câu 3: A
-- **Giải thích**: Khi máy ảo ngủ đông (**Hibernate**), toàn bộ dữ liệu đang có trong bộ nhớ RAM được ghi xuống ổ đĩa **EBS Root Volume**. Vì vậy, EBS Root Volume **bắt buộc phải được mã hóa (KMS Encryption)** để bảo vệ an toàn thông tin nhạy cảm trong RAM, và phải có đủ dung lượng trống để chứa trọn vẹn dữ liệu RAM.
-
-### Đáp án Câu 4: B
-- **Giải thích**: **IMDSv2** yêu cầu quy trình bắt tay token bằng phương thức HTTP `PUT` và thiết lập `http_put_response_hop_limit = 1`. Giới hạn hop limit = 1 ngăn chặn gói tin phản hồi token bị nhảy (hop) qua các tầng proxy hoặc lỗ hổng SSRF trên ứng dụng, triệt tiêu nguy cơ kẻ tấn công đánh cắp IAM credentials của instance.
-
-### Đáp án Câu 5: B
-- **Giải thích**: **AWS Systems Manager Session Manager** cho phép kết nối an toàn vào instance thông qua SSM Agent và kênh mã hóa HTTPS của AWS API (cổng 443 Outbound tới VPC Endpoint). Giải pháp này hoàn toàn không cần mở bất kỳ cổng Inbound nào trên Security Group, không cần Public IP và không cần Bastion Host.
-
-### Đáp án Câu 6: B
-- **Giải thích**: **Cluster Placement Group** gom toàn bộ máy chủ vào cùng một cụm rack trong một Availability Zone duy nhất, đem lại băng thông cực lớn (100–200 Gbps) và độ trễ mạng microsecond (< 1ms), đáp ứng hoàn hảo cho các tác vụ tính toán khoa học HPC.
-
-### Đáp án Câu 7: C
-- **Giải thích**: **Compute Savings Plans** đem lại mức chiết khấu cực cao (lên tới 66%) bằng cách cam kết chi tiêu tính theo $/giờ trong 1 hoặc 3 năm. Điểm vượt trội nhất là tính linh hoạt: cam kết này tự động áp dụng cho bất kỳ máy ảo EC2 nào (đổi Family, đổi OS, đổi Region) và **tự động bao phủ cả AWS Fargate và AWS Lambda**, hoàn toàn phù hợp với lộ trình hiện đại hóa của doanh nghiệp.
-
-### Đáp án Câu 8: C
-- **Giải thích**: **Spot Instances** tận dụng nguồn tài nguyên điện toán dư thừa của AWS với mức giảm giá từ 70% đến 90% so với On-Demand. Vì tác vụ batch processing là stateless và có khả năng lưu checkpoint vào DynamoDB, nó có thể chấp nhận việc máy ảo bị thu hồi bất ngờ mà không bị hỏng toàn bộ quy trình.
-
-### Đáp án Câu 9: B
-- **Giải thích**: Hành động **EC2 Auto-Recovery** tích hợp sẵn trong CloudWatch Alarm sẽ tự động phát hiện lỗi `StatusCheckFailed_System` và chuyển máy ảo sang một máy chủ phần cứng vật lý mới khỏe mạnh, trong khi **giữ nguyên toàn bộ Private IP, Elastic IP, Volume IDs và Metadata** mà không làm gián đoạn cấu hình mạng.
-
-### Đáp án Câu 10: B
-- **Giải thích**: Dòng máy `t3/t4g` (Burstable) tích lũy CPU Credits khi chạy dưới mức cơ sở (Baseline). Khi ứng dụng chạy tải cao liên tục làm cạn kiệt số Credits (`CPUCreditBalance = 0`), CPU sẽ bị bóp nghẹt về mức baseline khiến ứng dụng bị nghẽn (throttled). Giải pháp bền vững lâu dài cho các dịch vụ tải liên tục là chuyển sang dòng máy có vCPU chuyên dụng như **`c7g`** hoặc **`m7g`**.
-
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon EC2 (Golden Rules)
 1. **Quản lý địa chỉ IP chuẩn xác**: Public IP của EC2 sẽ thay đổi sau mỗi lần Stop/Start; chỉ sử dụng **Elastic IP** khi thực sự cần IP tĩnh công khai (lưu ý phí $0.005/giờ/IP).

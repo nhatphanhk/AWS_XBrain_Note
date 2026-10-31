@@ -134,6 +134,92 @@ flowchart TD
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Tải Lên Tệp Lớn Siêu Tốc Xuyên Lục Địa: S3 Transfer Acceleration + Multipart Uploads
+- **Tình huống thi**: Đội ngũ quay phim và phòng thí nghiệm tại Châu Âu và Châu Á cần tải các tệp video và dữ liệu khoa học dung lượng lớn (hàng Gigabytes tới Terabytes) lên một S3 bucket trung tâm tại Mỹ. Tốc độ tải lên qua Internet thông thường bị trễ và hay rớt kết nối.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Bật tính năng **Amazon S3 Transfer Acceleration (S3TA)** trên bucket: Tận dụng hơn 400+ Edge Locations toàn cầu của Amazon CloudFront. Dữ liệu từ client được định tuyến vào Edge gần nhất qua Internet ngắn, sau đó đi thẳng tới S3 bucket qua mạng trục cáp quang riêng tốc độ cao của AWS.
+  - Kết hợp sử dụng **Multipart Upload**: Chia nhỏ tệp tin thành nhiều phần (parts) và tải lên song song đồng thời. Bắt buộc đối với tệp tin $> 5 \text{ GB}$ và khuyến nghị sử dụng cho bất kỳ tệp tin nào $> 100 \text{ MB}$.
+  - **Quy tắc tính cước đặc biệt của S3TA**: Nếu tính năng S3TA không giúp tăng tốc độ truyền tải nhanh hơn so với Internet công cộng thông thường cho lượt truyền đó, **AWS sẽ hoàn toàn MIỄN PHÍ ($0.00)** cước phí Transfer Acceleration!
+
+#### 2. Vượt Qua Giới Hạn Tốc Độ API (Throttling 503 SlowDown) Bằng Tiền Tố (Custom Prefixes)
+- **Tình huống thi**: Ứng dụng phân tích dữ liệu lớn đọc/ghi hàng chục ngàn yêu cầu mỗi giây vào cùng một S3 bucket và liên tục bị lỗi `HTTP 503 SlowDown`.
+- **Nguyên lý phân vùng của S3**:
+  - AWS tự động mở rộng quy mô lưu trữ S3 dựa trên **Prefix** (tiền tố - đường dẫn thư mục ảo giữa tên bucket và tên tệp: `s3://bucket/prefix/object`).
+  - Mỗi Prefix hỗ trợ tối đa:
+    - **3,500 yêu cầu PUT / COPY / POST / DELETE mỗi giây**.
+    - **5,500 yêu cầu GET / HEAD mỗi giây**.
+  - **Giải pháp chuẩn**: Phân chia dữ liệu vào **nhiều Prefixes khác nhau** (ví dụ: chia theo `/folder1/`, `/folder2/`, hoặc băm hash MD5). Nếu chia dữ liệu ra 10 prefixes, throughput tổng thể của bucket sẽ tăng lên $10 \times 5,500 = 55,000 \text{ GET requests/s}$!
+
+#### 3. Chống Ghi Đè & Chống Xóa Vĩnh Viễn Bằng S3 Object Lock Legal Hold
+- **Tình huống thi**: Doanh nghiệp cần chuyển dữ liệu từ On-Premises lên S3 và phải đảm bảo dữ liệu không thể bị sửa đổi hoặc ghi đè vô thời hạn (indefinitely) để phục vụ điều tra pháp lý hoặc kiểm toán.
+- **Giải pháp chuẩn**:
+  - Bắt buộc **kích hoạt tính năng Versioning** trên S3 bucket trước (điều kiện tiên quyết để bật Object Lock).
+  - Cấu hình **S3 Object Lock** với chế độ **Legal Hold**.
+  - **Đặc tính**: Legal Hold không có ngày hết hạn cố định (no expiration date), duy trì tính bất biến vô thời hạn cho đến khi người có quyền hạn `s3:PutObjectLegalHold` chủ động gỡ bỏ.
+  - *So sánh*: Chế độ Retention Period (kể cả Compliance mode) luôn có mốc thời gian hết hạn cụ thể, không đáp ứng trọn vẹn yêu cầu "vô thời hạn" (indefinitely).
+
+#### 4. Khóa Chặt S3 Bucket Chỉ Cho Phép Phân Phối Qua Amazon CloudFront (OAC)
+- **Tình huống thi**: Trang web tĩnh hoặc nội dung đa phương tiện lưu trữ trong S3 được phân phối toàn cầu qua CloudFront. Yêu cầu ngăn chặn người dùng bypass CloudFront để truy cập trực tiếp vào link S3 URL.
+- **Giải pháp chuẩn**:
+  - Giữ nguyên S3 bucket ở trạng thái **Private** (Block all public access).
+  - Cấu hình **Origin Access Control (OAC)** (chuẩn khuyến nghị mới nhất, thay thế cho OAI cũ) trên CloudFront Distribution.
+  - Cập nhật S3 Bucket Policy: Chỉ cấp quyền `s3:GetObject` cho Principal `cloudfront.amazonaws.com` với điều kiện `aws:SourceArn` trỏ chính xác về ARN của CloudFront Distribution.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: S3 Glacier Instant Retrieval — Lưu Trữ Ít Truy Cập Với Độ Trễ Millisecond — (CM-PT1 Q46)
+- **Tình huống đề thi**: *"Doanh nghiệp cần lưu trữ dữ liệu y tế sau 30 ngày để tối ưu chi phí. Dữ liệu hiếm khi được đọc (vài tháng một lần), nhưng khi có ca cấp cứu thì bác sĩ bắt buộc phải truy xuất được tệp tin NGAY LẬP TỨC TRONG VÀI MILI-GIÂY (millisecond retrieval). Chọn tầng lưu trữ nào?"*
+- **Các phương án bẫy**:
+  - ❌ *Chọn S3 Glacier Flexible Retrieval*: Thời gian lấy dữ liệu mất từ 1 đến 5 phút (Expedited) hoặc 3 đến 5 giờ (Standard) -> Bác sĩ không thể chờ đợi.
+  - ❌ *Chọn S3 Standard-IA*: Chi phí lưu trữ đắt hơn Glacier Instant Retrieval gần 3 lần ($0.0125/GB so với $0.004/GB).
+- **Giải pháp ĐÚNG**: **S3 Glacier Instant Retrieval**.
+  - Cung cấp tốc độ truy xuất mili-giây giống như S3 Standard.
+  - Tiết kiệm tới 68% chi phí lưu trữ so với S3 Standard-IA.
+  - Lưu ý quy định: Minimum storage duration là **90 ngày**.
+
+#### 🪤 Bẫy 2: Sao Chép Đa Vùng S3 CRR Bắt Buộc Dùng AWS KMS Multi-Region Key — (U-PT2 Q46)
+- **Tình huống đề thi**: *"S3 Bucket ở Region A được mã hóa bằng SSE-KMS. Cấu hình S3 Cross-Region Replication sang Region B bị lỗi giải mã."*
+- **Nguyên nhân**: Khóa KMS tiêu chuẩn là tài nguyên Single-Region. Không thể giải mã ở Region B bằng khóa của Region A.
+- **Giải pháp ĐÚNG**: Khởi tạo **AWS KMS Multi-Region Key** (`mrk-xxxx`) để chia sẻ chung key material xuyên các AWS Regions.
+
+#### 🪤 Bẫy 3: Quy Tắc Chuyển Tầng Lifecycle Chỉ Đi Một Chiều Xuống (One-Way Downward) — (U-PT1 Q41)
+- **Bẫy bất biến**: Lifecycle Rules chỉ hỗ trợ chuyển object từ tầng nóng xuống tầng lạnh hơn:
+  $$\text{Standard} \rightarrow \text{Standard-IA} \rightarrow \text{Intelligent-Tiering} \rightarrow \text{Glacier Instant} \rightarrow \text{Glacier Flexible} \rightarrow \text{Deep Archive}$$
+- **TUYỆT ĐỐI KHÔNG THỂ**:
+  - Không thể cấu hình Lifecycle rule chuyển ngược từ Intelligent-Tiering lên Standard.
+  - Không thể chuyển ngược từ Standard-IA lên Standard.
+  - Không thể chuyển ngược từ Glacier lên các tầng trên bằng Lifecycle rule (chỉ có thể restore bản sao tạm thời).
+
+#### 🪤 Bẫy 4: Mô Hình Vòng Đời Dữ Liệu Cho Raw Data Lake Zone — (U-PT2 Q58)
+- **Mẫu kiến trúc chuẩn 3 giai đoạn**:
+  1. **Giai đoạn 1 (0 – 30 ngày)**: **S3 Standard** (dữ liệu được các Glue ETL Jobs đọc/ghi hàng ngày với hiệu năng cao nhất).
+  2. **Giai đoạn 2 (30 ngày – 5 năm)**: **S3 Standard-IA** (dữ liệu thô ít khi truy vấn, tiết kiệm chi phí, đáp ứng truy xuất nhanh khi kiểm toán đột xuất).
+  3. **Giai đoạn 3 (Sau 5 năm)**: **S3 Glacier Flexible / Deep Archive** (lưu trữ tuân thủ pháp lý với chi phí rẻ nhất $0.00099/GB).
+
+---
+
+### 📊 III. Ma Trận Quyết Định Lớp Lưu Trữ S3 Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Lớp lưu trữ S3 chuẩn | Lớp bị loại & Lý do |
+|:---|:---|:---|
+| **Dữ liệu đọc/ghi thường xuyên, độ trễ millisecond** | **S3 Standard** | Các lớp IA/Glacier (tốn phí per-request) |
+| **Mẫu truy cập không rõ hoặc biến động liên tục** | **S3 Intelligent-Tiering** | S3 Standard (bỏ lỡ cơ hội tự động giảm giá) |
+| **Dữ liệu ít đọc, cần lấy ngay tức thì (< 1s)** | **S3 Glacier Instant Retrieval** | Glacier Flexible (mất từ vài phút đến vài giờ) |
+| **Dữ liệu sao lưu lâu năm, chấp nhận chờ 3-5 giờ** | **S3 Glacier Flexible Retrieval** | Glacier Deep Archive (chờ 12 giờ) |
+| **Lưu trữ tuân thủ 7-10 năm, rẻ nhất thị trường** | **S3 Glacier Deep Archive** | Glacier Flexible (đắt hơn gấp 3 lần) |
+| **Dữ liệu phụ tái tạo được, tiết kiệm chi phí** | **S3 One Zone-IA** | Standard-IA (One Zone-IA rẻ hơn 20%) |
+| **Chống ghi đè vô thời hạn phục vụ pháp lý** | **S3 Object Lock (Legal Hold)** | Retention Period (có ngày hết hạn) |
+| **Tải file lớn > 100 MB xuyên lục địa nhanh nhất** | **S3 Transfer Acceleration + Multipart** | Direct Connect / VPN (tốn kém và chậm triển khai) |
+| **Bảo vệ nội dung S3 chỉ phát qua CloudFront** | **CloudFront Origin Access Control (OAC)** | CNAME / S3 Public Website Endpoint |
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### 1. Sơ đồ bảo vệ S3 Origin an toàn tuyệt đối với CloudFront Origin Access Control (OAC)
@@ -324,142 +410,9 @@ flowchart TD
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Danh mục câu hỏi trắc nghiệm & Tình huống kiến trúc
-
-#### Câu 1 (Core Concept)
-Độ bền vững dữ liệu (**Durability**) của dịch vụ lưu trữ Amazon S3 Standard được cam kết theo tiêu chuẩn công nghiệp là bao nhiêu?
-- A. 99.9% (3 số 9).
-- B. 99.99% (4 số 9).
-- C. 99.999999999% (11 số 9).
-- D. 100% tuyệt đối.
-
-#### Câu 2 (Core Concept)
-Kích thước tối đa cho phép của một đối tượng (**Object**) đơn lẻ có thể lưu trữ trong Amazon S3 là bao nhiêu, và ở kích thước nào AWS bắt buộc phải sử dụng cơ chế **Multi-part Upload**?
-- A. Tối đa 5 TB; bắt buộc Multi-part Upload khi tệp tin lớn hơn 5 GB.
-- B. Tối đa 5 GB; bắt buộc Multi-part Upload khi tệp tin lớn hơn 100 MB.
-- C. Tối đa 16 TB; bắt buộc Multi-part Upload khi tệp tin lớn hơn 5 TB.
-- D. Tối đa không giới hạn; bắt buộc Multi-part Upload cho mọi tệp tin.
-
-#### Câu 3 (Core Concept)
-Tầng lưu trữ nào của Amazon S3 được thiết kế chuyên biệt để mang lại **độ trễ truy xuất một chữ số mili-giây (single-digit millisecond latency)** và tốc độ xử lý nhanh hơn tới 10 lần so với S3 Standard cho các tác vụ huấn luyện AI/ML?
-- A. S3 Intelligent-Tiering.
-- B. S3 Glacier Instant Retrieval.
-- C. S3 Express One Zone.
-- D. S3 Standard-IA.
-
-#### Câu 4 (Core Concept - Security)
-Chế độ nào của tính năng **S3 Object Lock** đảm bảo rằng ngay cả tài khoản quản trị tối cao **AWS Root Account** cũng tuyệt đối không thể xóa hay ghi đè đối tượng trong suốt khoảng thời gian Retention đã thiết lập?
-- A. Governance Mode.
-- B. Legal Hold.
-- C. Compliance Mode.
-- D. Strict Mode.
-
-#### Câu 5 (Core Concept - Networking)
-Điểm khác biệt cốt lõi nhất về mặt cơ chế hoạt động giữa **Amazon CloudFront** và **AWS Global Accelerator** là gì?
-- A. CloudFront hoạt động ở Layer 4 không lưu cache; Global Accelerator hoạt động ở Layer 7 có lưu cache.
-- B. CloudFront là mạng CDN có khả năng lưu trữ bộ nhớ đệm (**Caching**) tại điểm biên; trong khi Global Accelerator là bộ tăng tốc mạng tầng truyền vận (TCP/UDP) **không lưu bộ nhớ đệm**, sử dụng 2 địa chỉ Anycast IP tĩnh.
-- C. CloudFront chỉ hỗ trợ giao thức UDP; Global Accelerator chỉ hỗ trợ HTTPS.
-- D. Cả hai dịch vụ đều có cơ chế lưu trữ bộ nhớ đệm giống hệt nhau.
-
-#### Câu 6 (Core Concept - Security Governance)
-Cơ chế nào được AWS khuyến nghị chuẩn mực nhất hiện nay để bảo vệ an toàn cho S3 Bucket làm Origin, chỉ cho phép duy nhất Amazon CloudFront truy cập dữ liệu và hỗ trợ mã hóa SSE-KMS (thay thế cho cơ chế cũ OAI)?
-- A. Origin Access Identity (OAI).
-- B. Origin Access Control (OAC).
-- C. S3 Bucket ACLs Public Read.
-- D. IAM Instance Profile.
-
-#### Câu 7 (Core Concept - Developer Utilities)
-Làm thế nào một ứng dụng web có thể cho phép người dùng cuối tải trực tiếp một video dung lượng 3 GB lên một S3 Bucket riêng tư mà không cần cấp quyền tài khoản AWS và không cần truyền dữ liệu qua máy chủ backend của ứng dụng?
-- A. Mở S3 Bucket sang chế độ Public cho toàn thế giới ghi đè.
-- B. Cung cấp AWS Root Access Key trong mã nguồn frontend của trình duyệt.
-- C. Máy chủ backend sinh một **S3 Pre-signed URL** với phương thức HTTP `PUT` và thời gian sống ngắn, sau đó gửi link đó cho trình duyệt người dùng tải file lên.
-- D. Cấu hình CloudFront mở cổng FTP.
-
-#### Câu 8 (Core Concept - Edge Compute)
-Khi bạn cần thực hiện một tác vụ cực nhẹ như chuyển hướng URL (URL Rewrite), chỉnh sửa HTTP Headers hoặc kiểm tra JWT Token đơn giản tại hơn 600+ điểm biên của CloudFront với độ trễ dưới 1 mili-giây và chi phí rẻ nhất, công nghệ nào là lựa chọn tối ưu nhất?
-- A. AWS Lambda@Edge.
-- B. CloudFront Functions.
-- C. Amazon EC2 Micro Instances.
-- D. AWS Fargate Tasks.
-
-#### Câu 9 (Scenario - FinOps Data Lake Cost Optimization)
-Một doanh nghiệp quản lý kho dữ liệu Data Lake 100 TB trên S3 Standard. Dữ liệu sau khi nạp vào có mô hình truy cập ngẫu nhiên, một số tệp được phân tích nhiều lần trong tuần đầu, sau đó không ai truy cập trong nhiều tháng. Giải pháp nào giúp tự động tối ưu hóa chi phí lên tới hơn 50% mà không phải trả phí phạt truy xuất dữ liệu?
-- A. Viết script cronjob chuyển toàn bộ sang S3 Standard-IA sau 30 ngày.
-- B. Cấu hình S3 Lifecycle chuyển đổi toàn bộ đối tượng sang tầng **S3 Intelligent-Tiering**.
-- C. Chuyển toàn bộ dữ liệu sang S3 Glacier Deep Archive ngay khi tải lên.
-- D. Xóa bỏ toàn bộ các tệp tin có dung lượng lớn hơn 1 GB.
-
-#### Câu 10 (Scenario - High-Volume KMS API Cost Reduction)
-Một ứng dụng Fintech thực hiện hàng trăm triệu lượt đọc/ghi tệp tin hàng tháng trên S3 Bucket được mã hóa bằng khóa KMS Customer Managed Key (`SSE-KMS`). Hóa đơn AWS Cost Explorer báo cáo chi phí gọi KMS API vượt quá $1,000/tháng. Giải pháp kỹ thuật nào giúp giảm ngay 99% chi phí KMS API mà không làm suy giảm cấp độ an ninh bảo mật?
-- A. Tắt hoàn toàn tính năng mã hóa trên S3 Bucket.
-- B. Chuyển đổi toàn bộ dữ liệu sang lưu trữ trên Amazon EBS.
-- C. Kích hoạt tính năng **S3 Bucket Keys** trên cấu hình mã hóa của S3 Bucket.
-- D. Đổi sang sử dụng khóa mã hóa bất đối xứng RSA.
-
-#### Câu 11 (Scenario - Incomplete Upload Cost Trap)
-Một công ty viễn thông phát hiện dung lượng lưu trữ trên hóa đơn S3 lớn hơn gấp đôi dung lượng thực tế hiển thị trong danh mục tệp tin của console. Nguyên nhân khả dĩ nhất bên dưới là gì và giải pháp khắc phục triệt để là gì?
-- A. S3 tính tiền gấp đôi cho tính năng mã hóa; giải pháp là tắt mã hóa.
-- B. Các phần dữ liệu phân đoạn tải dở dang (**Incomplete Multipart Uploads**) bị đứt mạng vẫn nằm ẩn trong S3; giải pháp là tạo S3 Lifecycle Rule bật tùy chọn `Abort incomplete multipart uploads` sau 7 ngày.
-- C. S3 tự động sao lưu dữ liệu sang Region khác; giải pháp là tắt Cross-Region Replication.
-- D. Hệ thống file bị phân mảnh; giải pháp là defragment lại bucket.
-
-#### Câu 12 (Scenario - Zero-Downtime Deployment Invalidation)
-Một đội ngũ DevOps deploy phiên bản giao diện mới của ứng dụng web lên S3 làm Origin cho CloudFront. Sau khi tải code mới lên, họ cần cập nhật ngay giao diện cho người dùng toàn cầu mà không phát sinh thêm chi phí xóa cache ngoài gói miễn phí của AWS. Thao tác nào là chuẩn mực nhất?
-- A. Gửi lệnh Invalidate toàn bộ 10,000 file riêng lẻ trong thư mục frontend.
-- B. Xóa CloudFront Distribution và tạo lại cái mới.
-- C. Áp dụng kỹ thuật gắn mã băm phiên bản vào tên file tĩnh (Hash Naming) và chỉ gửi 1 lệnh Invalidate duy nhất cho file gốc `/index.html` (chỉ tính 1 path).
-- D. Khởi động lại toàn bộ các máy chủ Edge Locations của CloudFront.
-
 ---
 
-### B. Đáp án Chi Tiết Bộ Câu Hỏi Ôn Tập (Answer Key & Explanations)
-
-<details>
-<summary>👉 Nhấp vào đây để xem toàn bộ đáp án chi tiết và giải thích kiến trúc</summary>
-
-### Đáp án Câu 1: C
-- **Giải thích**: Amazon S3 Standard cam kết độ bền dữ liệu đạt **99.999999999% (11 số 9)** mỗi năm bằng cách tự động nhân bản dữ liệu xuyên qua tối thiểu 3 Availability Zones độc lập về mặt địa lý.
-
-### Đáp án Câu 2: A
-- **Giải thích**: Giới hạn kích thước cho một object đơn lẻ trong S3 là **5 TB**. Đối với các tệp tin có dung lượng **lớn hơn 5 GB**, AWS bắt buộc người dùng phải sử dụng cơ chế **Multi-part Upload** (và khuyến nghị áp dụng cho mọi file > 100 MB để tăng tốc độ truyền tải và cho phép resume khi đứt mạng).
-
-### Đáp án Câu 3: C
-- **Giải thích**: **S3 Express One Zone** là tầng lưu trữ hiệu năng cao thế hệ mới, lưu trữ dữ liệu tại một AZ duy nhất được tối ưu hóa đặc biệt, cung cấp độ trễ phản hồi **mili-giây một chữ số** và thông lượng I/O cực đại cho các tác vụ AI/ML và Big Data.
-
-### Đáp án Câu 4: C
-- **Giải thích**: Trong **Compliance Mode** của S3 Object Lock, quy tắc khóa dữ liệu (WORM) được thực thi nghiêm ngặt tuyệt đối: không có bất kỳ ai, kể cả tài khoản Root của tài khoản AWS, có thể ghi đè hay xóa bỏ tệp tin trong suốt thời gian bảo vệ.
-
-### Đáp án Câu 5: B
-- **Giải thích**: **Amazon CloudFront** là mạng CDN tầng ứng dụng (Layer 7) có khả năng lưu trữ bộ nhớ đệm (**Caching**) tại điểm biên; trong khi **AWS Global Accelerator** là bộ tăng tốc mạng tầng truyền vận (Layer 4 TCP/UDP) **hoàn toàn không có tính năng Caching**, sử dụng 2 địa chỉ Anycast IP tĩnh để dẫn truyền lưu lượng vào mạng trục cáp quang riêng của AWS.
-
-### Đáp án Câu 6: B
-- **Giải thích**: **Origin Access Control (OAC)** là chuẩn mực bảo mật mới thay thế cho OAI cũ; OAC hỗ trợ đầy đủ các phương thức HTTP (GET, PUT, POST, DELETE), hỗ trợ mã hóa SSE-KMS với CMK và sử dụng chữ ký số bảo mật AWS SigV4.
-
-### Đáp án Câu 7: C
-- **Giải thích**: **S3 Pre-signed URL** cho phép chủ sở hữu bucket tạo ra một đường link tạm thời kèm chữ ký số xác thực để cấp quyền cho người dùng bên ngoài tải lên (HTTP `PUT`) hoặc tải xuống (HTTP `GET`) một tệp tin cụ thể mà không cần cung cấp tài khoản IAM.
-
-### Đáp án Câu 8: B
-- **Giải thích**: **CloudFront Functions** là môi trường điện toán siêu nhẹ tại hơn 600+ Edge PoPs của CloudFront, chuyên xử lý mã JavaScript với thời gian thực thi dưới 1 mili-giây, hoàn hảo cho các tác vụ như URL Rewrite, Header manipulation và kiểm tra token đơn giản với chi phí chỉ bằng 1/6 so với Lambda@Edge.
-
-### Đáp án Câu 9: B
-- **Giải thích**: **S3 Intelligent-Tiering** tự động theo dõi và di chuyển dữ liệu giữa các tầng lưu trữ (Frequent, Infrequent, Archive Instant) dựa trên tần suất truy cập thực tế, giúp tiết kiệm tới hơn 50% chi phí lưu trữ mà hoàn toàn không thu phí truy xuất dữ liệu phạt.
-
-### Đáp án Câu 10: C
-- **Giải thích**: Khi bật tính năng **S3 Bucket Keys**, Amazon S3 sẽ tự sinh ra một khóa tạm thời cấp bucket để mã hóa/giải mã các đối tượng trong cùng bucket, giúp cắt giảm tới **99% số lượng cuộc gọi API tới AWS KMS**, tiết kiệm hàng ngàn USD chi phí API.
-
-### Đáp án Câu 11: B
-- **Giải thích**: Khi tải tệp tin lớn bằng Multi-part Upload bị hủy giữa chừng, các phần dữ liệu đã nạp (Incomplete Parts) vẫn nằm âm thầm trong bucket và bị tính phí lưu trữ S3 Standard đầy đủ dù không hiển thị trên danh mục console. Giải pháp là tạo **S3 Lifecycle Rule** bật hành động `Abort incomplete multipart uploads` sau 7 ngày.
-
-### Đáp án Câu 12: C
-- **Giải thích**: Kỹ thuật **Hash Naming** đổi tên file tĩnh theo mã băm nội dung code giúp CloudFront tự động tải bản mới mà không cần xóa cache. DevOps chỉ cần invalidate duy nhất đường dẫn `/index.html`, vừa đảm bảo người dùng nhận bản mới tức thì vừa không bao giờ vượt quá hạn mức 1,000 paths miễn phí mỗi tháng của AWS.
-
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon S3 & CloudFront (Golden Rules)
 1. **Bảo mật Origin bằng CloudFront OAC**:  

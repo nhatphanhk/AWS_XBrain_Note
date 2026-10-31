@@ -165,6 +165,112 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Kiểm Soát Quyền Ủy Quyền Bằng Permissions Boundaries (Privilege Escalation Prevention)
+- **Tình huống thi**: Doanh nghiệp cho phép các Senior Developers tự tạo IAM Role và IAM Policy cho ứng dụng của họ, nhưng phải đảm bảo các developer này không thể tự cấp cho mình hoặc tài nguyên của mình quyền AdministratorAccess để xóa database hoặc sửa đổi hạ tầng bảo mật.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Thiết lập **Permissions Boundary** (Ranh giới quyền hạn) gán cố định cho các IAM Entity do developer tạo ra.
+  - **Nguyên lý hoạt động**: Quyền hạn thực tế của một Principal luôn là **giao điểm (Intersection)** giữa Policy được gắn và Permissions Boundary:
+    $$\text{Quyền hạn thực tế} = \text{Identity-based Policy} \cap \text{Permissions Boundary}$$
+  - Dù developer có cố tình gắn policy `AdministratorAccess` (`*.*`), quyền thực thi tối đa vẫn bị chặn lại ở ranh giới do Permissions Boundary quy định.
+
+#### 2. Phân Quyền Tinh Gọn Cấp Độ Pod Trong Amazon EKS Bằng IRSA
+- **Tình huống thi**: Cụm Amazon EKS chạy nhiều microservices trên các EC2 worker nodes. Dịch vụ UI chỉ được đọc DynamoDB, dịch vụ Xử lý dữ liệu chỉ được ghi vào S3. Yêu cầu tuân thủ nguyên tắc đặc quyền tối thiểu (Least Privilege).
+- **Giải pháp chuẩn**:
+  - Không bao giờ gán quyền DynamoDB và S3 lên EC2 Instance Profile của Node (Anti-pattern vì toàn bộ Pods trên Node sẽ thừa hưởng chung quyền hạn).
+  - Sử dụng **IAM Roles for Service Accounts (IRSA)**:
+    - Tạo các Kubernetes Service Accounts riêng biệt cho từng Pod service.
+    - Cấu hình OIDC Identity Provider giữa cụm EKS và AWS IAM.
+    - Gán IAM Role với chính sách tối thiểu trực tiếp cho Service Account tương ứng qua annotation `eks.amazonaws.com/role-arn`.
+
+#### 3. Quản Trị Đa Tài Khoản Doanh Nghiệp Với AWS Control Tower & Account Factory
+- **Tình huống thi**: Doanh nghiệp có nhiều nhóm phát triển cần các tài khoản AWS riêng biệt. Nhóm bảo mật yêu cầu tự động áp dụng bộ quy tắc kiểm soát chuẩn mực (baseline guardrails) và kiểm toán tập trung cho mọi tài khoản mới ngay tại thời điểm tạo.
+- **Giải pháp chuẩn**:
+  - Kích hoạt **AWS Organizations** và thiết lập **AWS Control Tower Landing Zone**.
+  - Bật **CloudTrail Organizational Trail** tại Management Account để tự động thu thập log kiểm toán toàn bộ các tài khoản thành viên.
+  - Tạo tài khoản mới thông qua **Account Factory**: Tự động áp dụng các Preventive Guardrails (bằng Service Control Policies - SCPs) và Detective Guardrails (bằng AWS Config Managed Rules).
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Giới Hạn Truy Cập S3 Cho Thành Viên Organization Bằng `aws:PrincipalOrgID` — (CM-PT1 Q09)
+- **Tình huống đề thi**: *"Doanh nghiệp có hàng chục tài khoản AWS thuộc cùng một AWS Organization. Họ muốn chia sẻ một S3 bucket trung tâm cho toàn bộ nhân viên nội bộ, nhưng phải ngăn chặn triệt để mọi truy cập từ bên ngoài tổ chức."*
+- **Các phương án bẫy**:
+  - ❌ *Liệt kê thủ công từng Account ID trong Bucket Policy*: Tốn công vận hành và dễ bỏ sót khi tổ chức tạo thêm tài khoản mới.
+  - ❌ *Dùng Service Control Policy (SCP)*: SCP chỉ áp dụng từ trên xuống dưới cho các tài khoản thành viên trong Org; SCP **không thể** kiểm soát hành vi truy cập của người dùng bên ngoài vào bucket của bạn!
+- **Giải pháp ĐÚNG**: Sử dụng S3 Bucket Policy kết hợp Condition Key **`aws:PrincipalOrgID`**:
+  ```json
+  {
+    "Sid": "EnforceOrgMembersOnly",
+    "Effect": "Deny",
+    "Principal": "*",
+    "Action": "s3:*",
+    "Resource": [
+      "arn:aws:s3:::my-corp-bucket",
+      "arn:aws:s3:::my-corp-bucket/*"
+    ],
+    "Condition": {
+      "StringNotEquals": {
+        "aws:PrincipalOrgID": "o-xxxxxxxxxx"
+      }
+    }
+  }
+  ```
+  - Mọi request không xuất phát từ thành viên của Organization `o-xxxxxxxxxx` đều bị chặn tức thì (`Explicit Deny`).
+
+#### 🪤 Bẫy 2: Giới Hạn Thao Tác API Theo Vùng Địa Lý Bằng `aws:RequestedRegion` — (U-PT2 Q23)
+- **Tình huống đề thi**: *"Chính sách bảo mật công ty yêu cầu lập trình viên chỉ được phép tạo tài nguyên tại Region Singapore (`ap-southeast-1`), cấm hoàn toàn việc khởi tạo tài nguyên ở các Region khác."*
+- **Phân biệt Condition Keys cốt lõi**:
+  - `aws:RequestedRegion`: Đại diện cho **AWS Region đích** mà lời gọi API đang tác động tới.
+  - `aws:SourceIp`: Đại diện cho địa chỉ IP công khai của máy trạm người gọi API.
+- **Giải pháp ĐÚNG**:
+  - Thiết lập SCP hoặc IAM Policy với `Effect: Deny`, `Condition: StringNotEquals: {"aws:RequestedRegion": ["ap-southeast-1"]}`.
+  - Lưu ý loại trừ các Global Services (IAM, CloudFront, Route 53, WAF) khỏi luật Deny này để không làm tê liệt hệ thống quản trị.
+
+#### 🪤 Bẫy 3: Phân Quyền Gọi Lambda Xuyên Tài Khoản Từ Amazon SNS — (CM-PT1 Q61)
+- **Tình huống đề thi**: *"Amazon SNS Topic nằm ở Tài khoản A. Hàm AWS Lambda xử lý sự kiện nằm ở Tài khoản B. Cần cấu hình phân quyền như thế nào để tin nhắn gửi tới SNS kích hoạt được hàm Lambda?"*
+- **Nguyên lý bắt buộc 2 chiều (Dual-Sided Policy)**:
+  1. **Chiều Đăng Ký (Account A - SNS Topic)**: Cấu hình **SNS Topic Access Policy** cho phép Principal của Account B thực hiện action `sns:Subscribe`.
+  2. **Chiều Thực Thi (Account B - Lambda Function)**: Cấu hình **Lambda Resource-based Policy** cho phép Principal `sns.amazonaws.com` thực hiện action `lambda:InvokeFunction` với điều kiện `aws:SourceArn` trỏ về ARN của Topic ở Account A.
+- **Bẫy thi**: Đề thi thường đưa ra đáp án chỉ cấu hình 1 bên (chỉ cấu hình SNS hoặc chỉ cấu hình Lambda) -> Cả hai đều không đủ điều kiện vận hành.
+
+#### 🪤 Bẫy 4: Quản Trị Danh Tính Đa Tài Khoản Với IAM Identity Center & Permission Sets — (U-PT6 Q43, U-PT1 Q03)
+- **Tình huống đề thi**: *"Doanh nghiệp quản lý hàng chục tài khoản AWS và đang sử dụng Microsoft Active Directory tại On-Premises. Cần cung cấp quyền truy cập tập trung theo vai trò (Role-based) cho các lập trình viên với ít công sức quản trị nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Tạo IAM Role thủ công trong từng tài khoản và yêu cầu user dùng AWS CLI AssumeRole*: Tốn công sức quản trị theo cấp số nhân ($M \text{ users} \times N \text{ accounts}$).
+  - ❌ *Triển khai AWS Directory Service for Microsoft AD (AWS Managed AD)*: Tốn chi phí hạ tầng bản quyền hàng tháng không cần thiết khi đã có Active Directory tại On-Premises.
+- **Giải pháp ĐÚNG**:
+  - Sử dụng **AWS Directory Service AD Connector** làm proxy chuyển tiếp xác thực về On-Premises Active Directory.
+  - Tích hợp AD Connector với **AWS IAM Identity Center (tiền thân là AWS SSO)**.
+  - Định nghĩa các **Permission Sets** tập trung và gán trực tiếp cho các Nhóm trong Active Directory (AD Groups).
+
+#### 🪤 Bẫy 5: Đánh Giá IAM Policy: Bẫy `aws:SourceIp` Khi Gọi Qua Mạng Đám Mây — (U-PT2 Q25)
+- **Bẫy thi tinh vi**: Một policy có điều kiện Deny nếu `aws:SourceIp` không nằm trong dải IP công ty `198.51.100.0/24`. Khi một hàm Lambda hoặc máy chủ EC2 gọi vào S3:
+  - Nếu EC2 nằm trong VPC và gọi qua **Gateway VPC Endpoint**, IP nguồn của request là **Private IP** trong VPC, không phải Public IP -> **Request sẽ bị DENY nhầm lẫn**!
+  - `aws:SourceIp` chỉ hoạt động chuẩn xác khi người dùng thực hiện API call từ máy trạm On-Premises trực tiếp qua Internet công cộng.
+
+---
+
+### 📊 III. Ma Trận Quyết Định Phân Quyền & Danh Tính Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Chặn developer tự cấp quyền Admin cho role mới** | **IAM Permissions Boundary** | SCP không phân biệt được role do ai tạo |
+| **Chỉ cho phép tài khoản trong Org truy cập S3** | **S3 Policy + `aws:PrincipalOrgID`** | Liệt kê từng Account ID không thể scale |
+| **Giới hạn Region được phép tạo tài nguyên** | **SCP / Policy + `aws:RequestedRegion`** | `aws:SourceIp` chỉ kiểm tra IP người gọi |
+| **Kích hoạt Lambda xuyên tài khoản từ SNS** | **Dual-Policy: SNS Topic Policy + Lambda Resource Policy** | Cấu hình 1 phía sẽ bị lỗi AccessDenied |
+| **Phân quyền Pod EKS đọc S3/DynamoDB độc lập** | **IAM Roles for Service Accounts (IRSA)** | Gán quyền vào Node Instance Profile vi phạm Least Privilege |
+| **Đăng nhập một lần đa tài khoản qua On-Prem AD** | **AD Connector + IAM Identity Center + Permission Sets** | Tự quản trị IAM Role thủ công tốn operational overhead |
+| **Kiểm toán tự động tài nguyên bị lộ ra ngoài Internet** | **AWS IAM Access Analyzer** | AWS CloudTrail chỉ ghi log, không phân tích quyền tự động |
+
+---
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### 1. Luồng Xác Thực Tạm Thời EC2 Instance Profile qua IMDSv2
@@ -326,152 +432,9 @@ sequenceDiagram
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Nhóm Câu Hỏi Cốt Lõi (Core Concepts)
-
-#### Câu 1: Dịch vụ AWS IAM là dịch vụ cấp vùng (Regional) hay cấp toàn cầu (Global)? Điều gì xảy ra khi có sự thay đổi quyền hạn?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: IAM là dịch vụ **Toàn cầu (Global)**.
-- **Giải thích**: Khi bạn tạo hoặc cập nhật một User, Group, Role hoặc Policy, thông tin này được lưu trữ tập trung tại endpoint toàn cầu (`iam.amazonaws.com`) và sau đó được truyền bá tự động đến tất cả các AWS Regions trên khắp thế giới.
-- **Lưu ý thực tế**: Cơ chế đồng bộ hóa toàn cầu hoạt động theo nguyên lý **Eventual Consistency** (Tính nhất quán sau cùng). Do đó, sau khi bạn vừa cập nhật một Policy, có thể mất từ vài giây đến tối đa 1 phút để thay đổi này có hiệu lực trên toàn bộ các Region.
-</details>
-
-#### Câu 2: Trong tài liệu IAM Policy JSON, phiên bản `"Version"` chuẩn hiện nay là gì? Nếu thiếu trường này điều gì sẽ xảy ra?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: Phiên bản chuẩn bắt buộc là `"2012-10-17"`.
-- **Giải thích**: Nếu không khai báo `"Version": "2012-10-17"`, AWS sẽ mặc định sử dụng phiên bản cũ `"2008-10-17"`. Phiên bản cũ không hỗ trợ các tính năng phân quyền hiện đại như Policy Variables (ví dụ: `${aws:username}`), điều kiện Tag ABAC (`aws:PrincipalTag`), và các hàm logic nâng cao.
-</details>
-
-#### Câu 3: Hãy giải thích sự khác biệt giữa Identity-Based Policy và Resource-Based Policy.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Identity-Based Policy**: Được gắn trực tiếp vào một thực thể định danh (IAM User, Group, Role). Nó xác định thực thể đó được phép thực hiện những hành động nào trên tài nguyên nào.
-- **Resource-Based Policy**: Được gắn trực tiếp vào chính tài nguyên (ví dụ: S3 Bucket Policy, KMS Key Policy, SQS Queue Policy). Điểm đặc thù là Resource-Based Policy **phải có trường `Principal`** để chỉ rõ *Ai* được phép truy cập tài nguyên đó.
-- **Khác biệt quan trọng**: Resource-Based Policy cho phép chia sẻ tài nguyên xuyên tài khoản (Cross-Account) mà người dùng bên ngoài không cần phải từ bỏ quyền hạn của mình để AssumeRole.
-</details>
-
-#### Câu 4: Một IAM User được gắn Policy cho phép `s3:GetObject` trên bucket `company-data`. Tuy nhiên, Bucket Policy của `company-data` lại có câu lệnh `Deny` đối với user này. User có đọc được file không?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: User **HOÀN TOÀN KHÔNG** thể đọc được file.
-- **Giải thích**: Theo logic đánh giá của AWS IAM: **Explicit Deny luôn luôn chiến thắng Explicit Allow** (Explicit Deny trumps all Allows). Khi có bất kỳ câu lệnh Deny nào khớp với ngữ cảnh yêu cầu, AWS lập tức từ chối request mà không cần xét thêm bất kỳ điều kiện nào khác.
-</details>
-
 ---
 
-### B. Nhóm Câu Hỏi Tình Huống & Xử Lý Sự Cố (Scenarios & Troubleshooting)
-
-#### Câu 5: Một kỹ sư DevOps cần cấp quyền cho ứng dụng chạy trên máy ảo Amazon EC2 đọc dữ liệu từ DynamoDB. Phương án thiết kế nào chuẩn bảo mật nhất?
-- (A) Tạo một IAM User với Access Key, sau đó lưu Access Key vào file `~/.aws/credentials` trên máy ảo EC2.
-- (B) Mã hóa Access Key và Secret Key bằng KMS rồi lưu vào biến môi trường hệ điều hành máy ảo.
-- (C) Khởi tạo một IAM Role có quyền đọc DynamoDB, tạo Instance Profile và gắn Role vào máy ảo EC2.
-- (D) Tạo S3 Bucket chứa thông tin đăng nhập và cấp quyền cho EC2 tải file này khi khởi động.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(C)**
-- **Giải thích chuyên sâu**:
-  - Lưu Access Key tĩnh trên máy ảo (phương án A, B, D) là vi phạm nghiêm trọng nguyên tắc an toàn thông tin AWS. Nếu máy ảo bị tấn công hoặc lộ bản sao lưu snapshot, khóa tĩnh có thể bị đánh cắp và sử dụng vô hạn.
-  - Sử dụng **IAM Role qua Instance Profile** tận dụng dịch vụ IMDSv2 và AWS STS để tự động cấp phát thông tin xác thực tạm thời (Temporary Credentials), tự động xoay vòng sau mỗi vài giờ và không bao giờ lưu trữ trên ổ đĩa.
-</details>
-
-#### Câu 6: Doanh nghiệp muốn đảm bảo rằng các kỹ sư quản trị tài khoản con trong AWS Organizations không bao giờ có thể tự ý tắt dịch vụ AWS CloudTrail hoặc xóa S3 Bucket lưu log kiểm toán. Giải pháp kiến trúc nào đáp ứng yêu cầu?
-- (A) Tạo IAM Policy có câu lệnh Deny trên từng tài khoản con.
-- (B) Áp dụng Service Control Policy (SCP) từ Root Organization chứa câu lệnh Deny các hành động `cloudtrail:StopLogging` và `s3:DeleteBucket`.
-- (C) Thiết lập Permissions Boundary trên tất cả các IAM Users ở tài khoản con.
-- (D) Cấu hình AWS Config Rule tự động bật lại CloudTrail khi bị tắt.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - **Service Control Policy (SCP)** là rào chắn bảo vệ (Guardrail) cấp tổ chức do tài khoản quản trị (Management Account) quản lý.
-  - SCP áp đặt quyền hạn tối đa lên toàn bộ tài khoản con, kể cả **Root Account** và tài khoản **Administrator** của tài khoản con đó cũng không thể vượt qua hoặc tự ý chỉnh sửa SCP.
-  - Phương án (A) không an toàn vì Admin tài khoản con có thể tự gỡ Policy. Phương án (D) mang tính chất phát hiện và khắc phục sau sự cố (Detective/Remediation) chứ không ngăn chặn từ đầu (Preventive).
-</details>
-
-#### Câu 7: Một công ty đối tác bên thứ 3 cung cấp giải pháp SaaS giám sát chi phí cần truy cập vào tài khoản AWS của bạn để đọc dữ liệu CloudWatch. Để phòng chống lỗ hổng Confused Deputy, bạn cần cấu hình điều gì?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: Cấu hình điều kiện `sts:ExternalId` trong Trust Policy của IAM Role.
-- **Giải thích**:
-  - Lỗ hổng **Confused Deputy** xảy ra khi bên thứ 3 (Deputy) bị một khách hàng xấu khác lợi dụng để ép buộc bên thứ 3 dùng chính Role của bạn để truy xuất dữ liệu trái phép của bạn.
-  - Khi bạn yêu cầu chuỗi bí mật `ExternalId` trong mệnh đề `Condition` của Trust Policy:
-    ```json
-    "Condition": {
-      "StringEquals": {
-        "sts:ExternalId": "SecretClient-UUID-987654"
-      }
-    }
-    ```
-  - Dịch vụ SaaS chỉ có thể AssumeRole thành công khi gửi kèm chính xác chuỗi External ID này trong cuộc gọi API `sts:AssumeRole`.
-</details>
-
-#### Câu 8: Sự khác biệt bản chất giữa Service Control Policy (SCP) và Permissions Boundary là gì?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Phạm vi áp dụng**:
-  - **SCP**: Áp dụng ở cấp độ Tổ chức (AWS Organizations), tác động lên toàn bộ tài khoản (Account-level), bao gồm cả Root User và tất cả Roles/Users trong tài khoản con.
-  - **Permissions Boundary**: Áp dụng ở cấp độ thực thể (Identity-level), gán cụ thể vào từng IAM User hoặc IAM Role riêng lẻ.
-- **Trường hợp sử dụng thực tế**:
-  - SCP dùng để cấm các Region không được phép sử dụng hoặc bảo vệ tài nguyên kiểm toán của tổ chức.
-  - Permissions Boundary dùng để ủy quyền an toàn (Delegated Administration): Cho phép lập trình viên tự do tạo IAM Role mới cho Lambda/ECS nhưng bị giới hạn trần quyền hạn tối đa, ngăn chặn hành vi tự cấp quyền Admin cho chính mình (Privilege Escalation).
-- **Điểm tương đồng**: Cả hai đều **KHÔNG TỰ MÌNH CẤP QUYỀN**; chúng chỉ đóng vai trò là ranh giới tối đa (Maximum Allowable Boundary).
-</details>
-
----
-
-### C. Nhóm Câu Hỏi Phỏng Vấn Chuyên Sâu (Solutions Architect & DevOps)
-
-#### Câu 9: "Hãy trình bày cơ chế hoạt động của AWS IAM Identity Center và giải thích vì sao doanh nghiệp nên chuyển đổi toàn bộ nhân sự từ IAM Users sang Identity Center?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Cơ chế hoạt động**:
-  - IAM Identity Center kết nối với Identity Provider (IdP) của doanh nghiệp (Microsoft Entra ID, Okta, Google Workspace) thông qua giao thức SAML 2.0 hoặc SCIM (để đồng bộ hóa tự động tài khoản người dùng và nhóm).
-  - Quản trị viên định nghĩa các **Permission Sets** (tập hợp IAM policies) và gán các nhóm người dùng vào các tài khoản AWS cụ thể.
-  - Khi nhân viên đăng nhập qua cổng AWS access portal, họ được cấp quyền truy cập tạm thời vào đúng các tài khoản được phân công mà không hề tồn tại bất kỳ IAM User tĩnh nào trên từng tài khoản con.
-- **Lý do chuyển đổi**:
-  1. **Bảo mật tuyệt đối**: Loại bỏ hoàn toàn Access Keys tĩnh dài hạn và nguy cơ rò rỉ khóa lên GitHub.
-  2. **Quản trị vòng đời tập trung**: Khi nhân viên nghỉ việc, chỉ cần vô hiệu hóa tài khoản trên Google/Entra ID là ngay lập tức mất quyền truy cập toàn bộ 100+ tài khoản AWS.
-  3. **Tối ưu trải nghiệm kỹ sư**: Đăng nhập 1 lần (SSO) và truy cập CLI cực kỳ dễ dàng qua `aws configure sso`.
-  4. **Miễn phí hoàn toàn**: Không phát sinh chi phí phần mềm.
-</details>
-
-#### Câu 10: "Làm thế nào để thiết lập một pipeline CI/CD trên GitHub Actions có thể deploy hạ tầng lên AWS mà hoàn toàn không cần lưu trữ AWS_ACCESS_KEY_ID và AWS_SECRET_ACCESS_KEY trong GitHub Secrets?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Giải pháp**: Sử dụng **OpenID Connect (OIDC) Federation** kết hợp với AWS IAM Role.
-- **Các bước thực hiện**:
-  1. **Khởi tạo OIDC Identity Provider trên AWS**: Tạo OIDC Provider trỏ tới `https://token.actions.githubusercontent.com` với Client ID là `sts.amazonaws.com`.
-  2. **Tạo IAM Role**: Viết Trust Policy cho phép OIDC provider gọi `sts:AssumeRoleWithWebIdentity`.
-  3. **Ràng buộc chặt chẽ trong Condition**: Chỉ cho phép assume role từ đúng tổ chức, kho lưu trữ và nhánh Git xác định:
-     ```json
-     "Condition": {
-       "StringEquals": {
-         "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-       },
-       "StringLike": {
-         "token.actions.githubusercontent.com:sub": "repo:my-org/my-app:ref:refs/heads/main"
-       }
-     }
-     ```
-  4. **Cấu hình GitHub Actions Workflow**: Sử dụng action chính thức `aws-actions/configure-aws-credentials` với tham số `role-to-assume`. Runner của GitHub sẽ nhận JWT token từ GitHub OIDC và tự động đổi lấy STS credentials tạm thời từ AWS.
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Quản Trị Định Danh AWS (Golden Rules)
 1. **Khóa chặt tài khoản Root**: Luôn bảo vệ bằng Hardware MFA (FIDO2) và không tạo Access Key cho Root.

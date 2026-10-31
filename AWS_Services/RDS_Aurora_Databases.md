@@ -289,6 +289,95 @@ sequenceDiagram
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Mở Rộng Quy Mô Đọc Dữ Liệu Bằng In-Region Read Replicas & Aurora Reader Endpoint
+- **Tình huống thi**: Ứng dụng thương mại điện tử hoặc phân tích dữ liệu bị chậm do các câu truy vấn báo cáo nặng (Heavy Reporting/Analytics Queries) chiếm dụng 100% tài nguyên CPU của Primary Database.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Với **Amazon RDS**: Tạo một hoặc nhiều **Read Replicas** (sử dụng sao chép bất đồng bộ - Asynchronous Replication) trong cùng Region. Cấu hình ứng dụng trỏ toàn bộ kết nối đọc (SELECT queries) vào endpoint của Read Replica.
+  - Với **Amazon Aurora**: Tạo các **Aurora Replicas** (chia sẻ chung tầng lưu trữ phân tán Cluster Volume) và cấu hình ứng dụng kết nối tới **Aurora Reader Endpoint**. Reader Endpoint sẽ tự động phân phối tải cân bằng (Load Balancing) qua toàn bộ các replicas sẵn có.
+
+#### 2. Tự Động Xoay Vòng Mật Khẩu Database Bằng AWS Secrets Manager (Least Operational Overhead)
+- **Tình huống thi**: Chính sách bảo mật yêu cầu tự động thay đổi (rotate) thông tin đăng nhập database định kỳ 30 ngày một lần. Giải pháp phải tích hợp tự động với RDS và yêu cầu ít công sức bảo trì nhất.
+- **Giải pháp chuẩn**:
+  - Lưu thông tin đăng nhập vào **AWS Secrets Manager**.
+  - Kích hoạt tính năng **Automatic Rotation** với chu kỳ 30 ngày.
+  - Secrets Manager cung cấp sẵn mẫu hàm Lambda được kiểm thử chính thức để tự động cập nhật mật khẩu trên cả Secrets Manager và RDS database. Ứng dụng chỉ cần gọi SDK Secrets Manager lấy mật khẩu mới nhất mà không cần khởi động lại.
+
+#### 3. Bộ Nhớ Đệm In-Memory Siêu Tốc: ElastiCache vs DynamoDB DAX
+- **Tình huống thi**: Cơ sở dữ liệu quan hệ (RDS) hoặc NoSQL (DynamoDB) bị quá tải khi xử lý 90% truy vấn đọc lặp lại đối với các dữ liệu phổ biến.
+- **Quy tắc phân định chuẩn**:
+  - Dữ liệu nằm trên **Amazon RDS / Aurora / MongoDB** -> Chọn **Amazon ElastiCache** (Valkey hoặc Redis) để cache kết quả truy vấn, giảm độ trễ xuống microsecond.
+  - Dữ liệu nằm trên **Amazon DynamoDB** -> Chọn **Amazon DynamoDB Accelerator (DAX)**: Cache native tương thích 100% với API DynamoDB, tăng tốc độ đọc lên tới 10 lần mà không cần viết lại mã nguồn ứng dụng (Zero Code Refactoring).
+
+#### 4. Mở Rộng Ổ Đĩa Tự Động Không Gián Đoạn Bằng RDS Storage Auto Scaling
+- **Tình huống thi**: Cơ sở dữ liệu sản xuất thường xuyên tăng trưởng dữ liệu không dự đoán trước, gây nguy cơ hết dung lượng ổ đĩa (Storage Full) làm sập hệ thống.
+- **Giải pháp chuẩn**:
+  - Kích hoạt tính năng **Amazon RDS Storage Auto Scaling**.
+  - Khi dung lượng trống giảm xuống dưới 10% và tình trạng kéo dài trên 5 phút, RDS sẽ tự động tăng kích thước ổ đĩa lên mức cần thiết (lên tới 64 TB) mà **hoàn toàn không gây gián đoạn hoạt động (Zero Downtime)**.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Khắc Phục Thảm Họa Đa Vùng Với RPO Dưới 1 Giây (Sub-Second RPO) — (CM-PT1 Q24, U-PT2 Q05, U-PT6 Q51)
+- **Tình huống đề thi**: *"Hệ thống ngân hàng yêu cầu cơ sở dữ liệu quan hệ phải có khả năng phục hồi sau thảm họa toàn vùng (Multi-Region DR) với RPO < 1 giây và RTO < 1 phút, hỗ trợ đọc cục bộ độ trễ thấp tại các chi nhánh quốc tế."*
+- **Các phương án bẫy**:
+  - ❌ *RDS Multi-AZ*: Multi-AZ chỉ bảo vệ trong **phạm vi 1 Region** (chống sập 1 Availability Zone), hoàn toàn không có khả năng chống thảm họa sập toàn bộ Region.
+  - ❌ *RDS Cross-Region Read Replica*: Sử dụng cơ chế sao chép binlog bất đồng bộ qua mạng WAN, độ trễ nhân bản (Replication Lag) thường từ vài giây tới vài phút -> không đảm bảo cam kết RPO < 1 giây.
+  - ❌ *DynamoDB Global Tables*: Là cơ sở dữ liệu NoSQL, không đáp ứng yêu cầu cơ sở dữ liệu quan hệ (Relational ACID).
+- **Giải pháp ĐÚNG**: **Amazon Aurora Global Database**.
+  - Sử dụng tầng lưu trữ phân tán phần cứng chuyên dụng nhân bản dữ liệu qua mạng trục riêng của AWS với độ trễ **dưới 1 giây (sub-second lag)**.
+  - Hỗ trợ chuyển vùng khẩn cấp (Managed Failover) hoàn tất trong chưa đầy 1 phút với RTO < 1m.
+
+#### 🪤 Bẫy 2: Nâng Cấp Phiên Bản Động Cơ (Engine Version Upgrade) Trên RDS Multi-AZ Gây Downtime — (U-PT2 Q65)
+- **Tình huống đề thi**: *"Một kiến trúc sư cho rằng việc triển khai RDS Multi-AZ sẽ giúp hệ thống không bao giờ bị gián đoạn (zero downtime) khi nâng cấp Major Version cho database engine. Nhận định này đúng hay sai?"*
+- **Bẫy thi cực kỳ phổ biến**:
+  - **SAI HOÀN TOÀN**! Khi thực hiện nâng cấp Engine Version (ví dụ: nâng cấp MySQL 5.7 lên 8.0, PostgreSQL 13 lên 15) trên mô hình Standard RDS Multi-AZ (1 Primary + 1 Standby), AWS sẽ **tiến hành nâng cấp đồng thời cả Primary và Standby cùng một lúc**, dẫn tới ứng dụng bị **DOWNTIME** trong suốt thời gian biên dịch và chuyển đổi dữ liệu.
+- **Giải pháp chuẩn để đạt Zero Downtime**:
+  - Sử dụng tính năng **Amazon RDS Blue/Green Deployments**.
+  - Tạo một môi trường Green độc lập đồng bộ dữ liệu với Blue -> Nâng cấp phiên bản trên Green -> Kiểm thử toàn diện -> Cắt chuyển luồng giao dịch (Switchover) trong dưới 1 phút không mất mát dữ liệu.
+
+#### 🪤 Bẫy 3: Tính Sẵn Sàng Cao Cho Microsoft SQL Server Trên AWS — (CM-PT1 Q64)
+- **Tình huống đề thi**: *"Doanh nghiệp chuyển đổi cơ sở dữ liệu Microsoft SQL Server lên AWS. Yêu cầu thiết lập kiến trúc có tính sẵn sàng cao (High Availability), tự động failover khi có sự cố phần cứng hoặc AZ bị sập với ít công sức vận hành nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Tự cài SQL Server lên 2 EC2 instances và cấu hình replication thủ công*: Tốn chi phí quản trị hệ điều hành, vá lỗi và không có cơ chế failover tự động của AWS.
+  - ❌ *Tạo SQL Server Single-AZ kết hợp lịch chụp snapshot hàng giờ*: RPO bị mất tới 1 giờ và failover thủ công mất nhiều thời gian.
+- **Giải pháp ĐÚNG**: Kích hoạt **Amazon RDS for SQL Server Multi-AZ** (sử dụng công nghệ Always On Availability Groups hoặc Database Mirroring tùy phiên bản). AWS tự động xử lý toàn bộ việc đồng bộ dữ liệu và chuyển đổi dự phòng trong suốt.
+
+#### 🪤 Bẫy 4: Tối Ưu Chi Phí Sao Chép Dữ Liệu Đa Vùng Khả Dụng (Cross-AZ Data Transfer) — (U-PT6 Q52)
+- **Tình huống đề thi**: *"Doanh nghiệp tự triển khai cụm cơ sở dữ liệu phân tán trên các máy chủ EC2 trải dài trên nhiều Availability Zones. Hóa đơn hàng tháng ghi nhận chi phí Data Transfer liên vùng rất cao. Làm sao để cắt giảm chi phí này?"*
+- **Nguyên nhân & Khắc phục**:
+  - Nếu các máy chủ database kết nối và đồng bộ với nhau thông qua **Public IP** hoặc **Elastic IP (EIP)**, AWS sẽ định tuyến lưu lượng ra Internet gateway và tính cước theo biểu phí truyền dữ liệu Internet (cả chiều gửi và nhận).
+  - **Giải pháp ĐÚNG**: Luôn cấu hình cụm cơ sở dữ liệu giao tiếp và đồng bộ thông qua **Private IP Address** trong VPC. Chi phí truyền dữ liệu Cross-AZ qua Private IP rẻ hơn rất nhiều ($0.01/GB).
+
+#### 🪤 Bẫy 5: Quy Trình Mã Hóa Database RDS Đang Chạy Chưa Được Mã Hóa — (U-PT2 Q16)
+- **Bẫy bất biến**: Không thể bật mã hóa trực tiếp (in-place) trên một RDS Database đang tồn tại.
+- **Quy tắc sao chép mã hóa**:
+  1. Instance Primary chưa mã hóa -> **KHÔNG THỂ** tạo Standby Multi-AZ được mã hóa hay Read Replica được mã hóa.
+  2. Muốn mã hóa: Bắt buộc chụp Snapshot của DB -> Copy Snapshot đó kèm theo lựa chọn kích hoạt AWS KMS Key -> Restore ra một cụm RDS mới từ Encrypted Snapshot -> Cắt chuyển ứng dụng sang cụm mới.
+
+---
+
+### 📊 III. Ma Trận Quyết Định Cơ Sở Dữ Liệu Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Multi-Region DR, RPO < 1s, RTO < 1m (Relational)** | **Amazon Aurora Global Database** | RDS Cross-Region Replica (lag > 1s) |
+| **Phân tích báo cáo nặng làm chậm DB chính** | **RDS / Aurora Read Replicas** | Multi-AZ Standby (chỉ để dự phòng, không đọc được) |
+| **Tự động xoay mật khẩu database định kỳ 30 ngày** | **AWS Secrets Manager** (Automatic Rotation) | Systems Manager Parameter Store (không có built-in rotation) |
+| **Tăng tốc độ đọc DynamoDB lên 10x, zero-code** | **Amazon DynamoDB Accelerator (DAX)** | ElastiCache Redis (phải sửa mã nguồn ứng dụng) |
+| **Nâng cấp Major Engine Version không gián đoạn** | **RDS Blue/Green Deployments** | Nâng cấp trực tiếp trên Multi-AZ (bị downtime) |
+| **High Availability tự động failover cho SQL Server** | **Amazon RDS for SQL Server Multi-AZ** | Tự dựng cluster trên EC2 (quá nhiều overhead) |
+| **Tối ưu chi phí truyền dữ liệu sao chép giữa các AZ** | **Sử dụng Private IP Address** | Dùng Public IP / EIP (bị tính cước Internet) |
+| **Mở rộng dung lượng ổ đĩa tự động không downtime** | **RDS Storage Auto Scaling** | Tăng thủ công (nguy cơ sập khi cạn disk đột ngột) |
+
+---
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### 1. Sơ đồ luồng ứng dụng Microservices kết hợp RDS Proxy, Aurora và ElastiCache
@@ -532,142 +621,9 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Danh mục câu hỏi trắc nghiệm & Tình huống kiến trúc
-
-#### Câu 1 (Core Concept)
-Amazon RDS hỗ trợ cơ chế phục hồi cơ sở dữ liệu theo thời gian thực (**Point-in-Time Recovery - PITR**) trong khoảng thời gian lưu giữ (Retention Period) tối đa là bao nhiêu ngày?
-- A. 7 ngày.
-- B. 14 ngày.
-- C. 35 ngày.
-- D. 90 ngày.
-
-#### Câu 2 (Core Concept)
-Trong mô hình triển khai **RDS Multi-AZ DB Instance** truyền thống (sử dụng 1 Standby node), máy chủ Standby có thể phục vụ các truy vấn đọc (`SELECT`) để giảm tải cho máy chủ chính không? Điều này khác gì so với **RDS Multi-AZ DB Cluster**?
-- A. Có thể đọc được trên cả hai mô hình thông qua Reader Endpoint.
-- B. Multi-AZ DB Instance KHÔNG cho phép đọc trên Standby; trong khi Multi-AZ DB Cluster có 2 Standby đều ĐỌC ĐƯỢC.
-- C. Multi-AZ DB Instance cho phép đọc, nhưng Multi-AZ DB Cluster thì không.
-- D. Cả hai mô hình đều không cho phép đọc trên các Standby nodes.
-
-#### Câu 3 (Core Concept - Under-the-hood)
-Kiến trúc lưu trữ phân tán của **Amazon Aurora** nhân bản dữ liệu thành bao nhiêu bản sao (copies), trên bao nhiêu Availability Zones (AZs), và quy tắc Quorum tối thiểu để đảm bảo hoạt động Ghi (Write) và Đọc (Read) thành công là bao nhiêu?
-- A. 3 bản sao trên 3 AZs; Write Quorum 2/3, Read Quorum 2/3.
-- B. 6 bản sao trên 3 AZs; Write Quorum 4/6, Read Quorum 3/6.
-- C. 4 bản sao trên 2 AZs; Write Quorum 3/4, Read Quorum 2/4.
-- D. 6 bản sao trên 6 AZs; Write Quorum 4/6, Read Quorum 4/6.
-
-#### Câu 4 (Core Concept - Day-2 Operations)
-Một cơ sở dữ liệu Amazon RDS PostgreSQL đang hoạt động trên môi trường Production nhưng chưa được bật tính năng mã hóa lưu trữ (**KMS Encryption at Rest**). Theo chính sách bảo mật mới, doanh nghiệp bắt buộc phải mã hóa toàn bộ dữ liệu. Phương án nào sau đây là chuẩn mực và khả thi nhất?
-- A. Chỉnh sửa thuộc tính của DB Instance hiện tại trên RDS Console và tích chọn "Enable Encryption", sau đó reboot instance.
-- B. Chụp Snapshot thủ công từ DB hiện tại -> Sao chép (Copy) Snapshot đó và tích chọn bật mã hóa với KMS CMK -> Khôi phục (Restore) một DB mới từ Snapshot đã mã hóa -> Chuyển hướng ứng dụng sang DB mới.
-- C. Sử dụng AWS CLI chạy lệnh `aws rds modify-db-instance --storage-encrypted` trong khung giờ bảo trì.
-- D. Bật mã hóa trực tiếp trên ổ đĩa Amazon EBS gắn kèm máy chủ RDS thông qua AWS EC2 Console.
-
-#### Câu 5 (Core Concept - Configuration Governance)
-Trong việc quản trị tham số hệ thống bằng **DB Parameter Groups**, khi bạn thay đổi giá trị của một **Static Parameter**, thao tác nào sau đây là bắt buộc để tham số có hiệu lực?
-- A. Tham số có hiệu lực tức thì sau 5 phút mà không cần làm gì.
-- B. Chỉ cần nhấn nút "Save changes" trên RDS Console.
-- C. Phải chủ động thực hiện khởi động lại máy chủ (**Reboot DB Instance**).
-- D. Bắt buộc phải tạo lại DB Parameter Group mới và gán vào DB Instance.
-
-#### Câu 6 (Core Concept - In-Memory Cache)
-Từ năm 2024–2026, AWS bổ sung dịch vụ **Amazon ElastiCache for Valkey**. Đâu là lý do chính đáng nhất về mặt kỹ thuật và chi phí để kiến trúc sư lựa chọn Valkey thay vì Redis?
-- A. Valkey là bản phân nhánh nguồn mở (open-source fork) do Linux Foundation dẫn dắt, tương thích hoàn toàn mã nguồn với Redis nhưng có chi phí bản quyền/hạ tầng rẻ hơn 33%.
-- B. Valkey hỗ trợ SQL query phức tạp trong khi Redis chỉ hỗ trợ Key-Value.
-- C. Valkey lưu trữ dữ liệu vĩnh viễn trên ổ cứng từ tính thay vì lưu trong RAM.
-- D. Valkey không cần cấu hình mạng VPC và tự động mở cổng ra ngoài Internet.
-
-#### Câu 7 (Scenario - FinOps & High I/O)
-Một ứng dụng thương mại điện tử chạy trên **Amazon Aurora MySQL Standard** phát sinh chi phí hàng tháng tăng vọt. Khi kiểm tra hóa đơn AWS Cost Explorer, Solutions Architect nhận thấy chi phí tính toán (**Compute**) là $800/tháng, lưu trữ (**Storage**) là $150/tháng, nhưng phí **I/O Requests** lên tới $1,800/tháng do các đợt Flash Sale quét dữ liệu liên tục. Giải pháp kiến trúc nào giúp tối ưu chi phí ngay lập tức mà không phải thay đổi mã nguồn ứng dụng?
-- A. Nâng cấp cỡ máy chủ Compute lên gấp đôi để xử lý I/O nhanh hơn.
-- B. Chuyển đổi cấu hình cụm Aurora sang **Amazon Aurora I/O-Optimized**.
-- C. Chuyển đổi dữ liệu từ Aurora sang Amazon DynamoDB On-Demand.
-- D. Tắt tính năng tự động sao lưu Automated Backups để giảm lượt ghi I/O.
-
-#### Câu 8 (Scenario - Serverless Architecture & Connection Storm)
-Một ứng dụng đặt vé máy bay xây dựng theo kiến trúc Serverless gồm **Amazon API Gateway** kích hoạt hàng ngàn hàm **AWS Lambda** chạy song song. Trong các khung giờ mở bán vé giá rẻ, cơ sở dữ liệu **Amazon RDS PostgreSQL** liên tục bị sập và trả về mã lỗi `FATAL: remaining connection slots are reserved for non-replication superuser connections`. Giải pháp kiến trúc nào sau đây là tối ưu nhất để khắc phục triệt để sự cố?
-- A. Tăng dung lượng RAM của máy chủ RDS lên cấu hình lớn nhất để chứa thêm kết nối.
-- B. Đặt một hàng đợi Amazon SQS trước database để giới hạn tốc độ truy vấn.
-- C. Triển khai **Amazon RDS Proxy** đứng giữa Lambda và RDS để quản lý và tái sử dụng nhóm kết nối (Connection Pooling).
-- D. Chuyển tất cả các hàm Lambda sang chạy trên Amazon EC2 với Elastic Load Balancer.
-
-#### Câu 9 (Scenario - Zero-Downtime Major Upgrade)
-Doanh nghiệp của bạn cần nâng cấp phiên bản cơ sở dữ liệu sản xuất **MySQL 5.7 lên MySQL 8.0** trên Amazon RDS. Ban giám đốc yêu cầu thời gian gián đoạn dịch vụ (**Downtime**) phải dưới 1 phút và bắt buộc phải có cơ chế Rollback an toàn nếu phát hiện lỗi ứng dụng sau nâng cấp. Phương án kỹ thuật nào đáp ứng hoàn hảo yêu cầu này?
-- A. Chọn nâng cấp trực tiếp (In-place upgrade) trong khung giờ bảo trì Maintenance Window.
-- B. Chụp Snapshot thủ công, khôi phục ra một instance mới rồi đổi DNS thủ công.
-- C. Sử dụng tính năng **RDS Blue/Green Deployments**: nâng cấp và kiểm thử trên môi trường Green, sau đó thực hiện Switchover với thời gian chuyển giao dưới 1 phút.
-- D. Dùng dịch vụ AWS Snowball để sao chép dữ liệu ra thiết bị phần cứng rồi nạp lại.
-
-#### Câu 10 (Scenario - Disaster Recovery & Cross-Region RPO)
-Một công ty dịch vụ tài chính đa quốc gia yêu cầu thiết kế hệ thống cơ sở dữ liệu có khả năng chống chịu thảm họa trên phạm vi địa lý xuyên lục địa. Hệ thống yêu cầu mục tiêu thời gian khôi phục (**RTO**) dưới 1 phút và mục tiêu mất mát dữ liệu (**RPO**) dưới 1 giây giữa Tokyo và Singapore. Dịch vụ nào sau đây là sự lựa chọn kiến trúc chuẩn mực nhất?
-- A. Amazon RDS Multi-AZ với Standby đặt tại Singapore.
-- B. Amazon RDS MySQL với cơ chế Cross-Region Read Replica.
-- C. **Amazon Aurora Global Database** kết hợp Primary tại Tokyo và Secondary tại Singapore.
-- D. Tạo cronjob chạy Lambda chụp snapshot mỗi giờ và sao chép sang Singapore.
-
-#### Câu 11 (Scenario - Performance Troubleshooting)
-Kỹ sư DevOps nhận thấy một **Read Replica** của Amazon RDS PostgreSQL bị ứng dụng phản ánh là dữ liệu trả về bị chậm hơn so với dữ liệu vừa cập nhật trên Master. Khi kiểm tra CloudWatch, metric nào phản ánh chính xác nhất hiện tượng này và giải pháp xử lý kỹ thuật tương ứng là gì?
-- A. Metric `CPUUtilization`; giải pháp là khởi động lại Master DB.
-- B. Metric **`ReplicaLag`**; giải pháp là kiểm tra tải ghi trên Master và nâng cấp cấu hình phần cứng/IOPS cho Read Replica tương đương hoặc mạnh hơn Master.
-- C. Metric `FreeStorageSpace`; giải pháp là xóa bớt các bảng dữ liệu cũ trên Replica.
-- D. Metric `NetworkReceiveThroughput`; giải pháp là mở thêm cổng trên Security Group.
-
-#### Câu 12 (Scenario - Client DNS Cache & Failover Latency)
-Một ứng dụng Java chạy trên Amazon EC2 kết nối tới cụm **Amazon Aurora MySQL**. Khi xảy ra sự cố lỗi phần cứng trên Writer Node, Aurora đã hoàn tất việc thăng cấp một Reader Node thành Writer mới trong vòng 20 giây. Tuy nhiên, ứng dụng Java vẫn liên tục báo lỗi mất kết nối kéo dài tới 10 phút. Nguyên nhân khả dĩ nhất bên dưới là gì?
-- A. Aurora Writer mới chưa được mở Security Group cho EC2.
-- B. Máy ảo Java (JVM) đã lưu cache địa chỉ IP của DNS Endpoint vĩnh viễn (hoặc TTL quá dài), dẫn tới việc ứng dụng liên tục cố kết nối vào địa chỉ IP cũ đã ngừng hoạt động.
-- C. Bộ lưu trữ Aurora Shared Storage bị mất dữ liệu trong quá trình failover.
-- D. RDS Subnet Group của Aurora bị xóa mất một Subnet.
-
 ---
 
-### B. Đáp án Chi Tiết Bộ Câu Hỏi Ôn Tập (Answer Key & Explanations)
-
-<details>
-<summary>👉 Nhấp vào đây để xem toàn bộ đáp án chi tiết và giải thích kiến trúc</summary>
-
-### Đáp án Câu 1: C
-- **Giải thích**: Thời gian lưu giữ các bản sao lưu tự động (**Automated Backups Retention Period**) trên Amazon RDS và Amazon Aurora được cấu hình linh hoạt từ **1 ngày đến tối đa 35 ngày** (mặc định là 7 ngày). Tính năng PITR cho phép khôi phục về bất kỳ giây nào trong khoảng thời gian này.
-
-### Đáp án Câu 2: B
-- **Giải thích**: Trong kiến trúc **RDS Multi-AZ DB Instance** truyền thống, node Standby chỉ chạy ngầm để phục vụ đồng bộ dữ liệu mức đĩa và sẵn sàng failover, hoàn toàn không mở cổng kết nối cho người dùng đọc. Ngược lại, **RDS Multi-AZ DB Cluster** (chuẩn mới) triển khai 1 Primary và 2 Standby trên 3 AZ, trong đó **cả 2 Standby đều mở Reader Endpoint** cho phép ứng dụng đọc dữ liệu giảm tải cho Primary.
-
-### Đáp án Câu 3: B
-- **Giải thích**: Amazon Aurora lưu trữ **6 bản sao (6 copies)** dữ liệu phân tán trên **3 Availability Zones** (2 bản sao mỗi AZ). Để đảm bảo tính nhất quán (Quorum), Aurora yêu cầu **4/6 bản sao** xác nhận để ghi dữ liệu thành công (Write Quorum, cho phép mất 1 AZ nguyên vẹn mà vẫn ghi được), và cần **3/6 bản sao** để đọc dữ liệu thành công (Read Quorum, cho phép mất 1 AZ + 1 node ở AZ khác mà vẫn đọc được).
-
-### Đáp án Câu 4: B
-- **Giải thích**: Quy tắc an toàn bất biến của AWS: **Không thể bật mã hóa trực tiếp trên một RDS Instance đang chạy chưa mã hóa**. Quy trình chuẩn mực duy nhất là: Tạo Snapshot thủ công $\rightarrow$ Copy Snapshot kèm tùy chọn bật mã hóa với KMS CMK $\rightarrow$ Khởi tạo (Restore) Database mới từ snapshot đã mã hóa $\rightarrow$ Chuyển ứng dụng sang DB mới.
-
-### Đáp án Câu 5: C
-- **Giải thích**: Trong DB Parameter Groups, các tham số được chia thành hai loại: **Dynamic Parameters** (có hiệu lực ngay lập tức sau khi lưu) và **Static Parameters** (bắt buộc phải khởi động lại máy chủ - **Reboot DB Instance** thì tham số mới được nạp vào bộ nhớ tiến trình của database).
-
-### Đáp án Câu 6: A
-- **Giải thích**: **Valkey** là dự án mã nguồn mở độc lập do Linux Foundation bảo trợ sau khi Redis chuyển đổi giấy phép phần mềm độc quyền. AWS hỗ trợ **ElastiCache for Valkey** với khả năng tương thích 100% API của Redis nhưng áp dụng chính sách giá **rẻ hơn 33%** so với Redis trên cùng kích thước node.
-
-### Đáp án Câu 7: B
-- **Giải thích**: Trên **Aurora Standard**, mỗi 1 triệu request I/O tốn $0.20; với các hệ thống có I/O khổng lồ (như trường hợp đề bài tốn tới $1,800 riêng tiền I/O, chiếm hơn 65% hóa đơn), chuyển sang **Aurora I/O-Optimized** sẽ miễn phí 100% tiền I/O ($0.00/request), giúp giảm hóa đơn ngay lập tức mà không cần sửa bất kỳ dòng mã nguồn nào.
-
-### Đáp án Câu 8: C
-- **Giải thích**: Hàng ngàn instance Lambda chạy song song có thể đồng thời mở hàng ngàn kết nối độc lập, nhanh chóng vượt quá ngưỡng `max_connections` của PostgreSQL. **Amazon RDS Proxy** đóng vai trò tập trung kết nối (**Connection Pooling & Multiplexing**), gom hàng ngàn kết nối từ Lambda vào một nhóm kết nối cố định tới RDS, loại bỏ hoàn toàn lỗi cạn kiệt kết nối.
-
-### Đáp án Câu 9: C
-- **Giải thích**: **RDS Blue/Green Deployments** tạo ra một bản sao song song (Green) đồng bộ replication liên tục từ Blue. Bạn có thể nâng cấp MySQL 8.0 và test thoải mái trên Green. Khi sẵn sàng, quá trình switchover hoàn tất trong **dưới 1 phút** mà **không mất dữ liệu (Zero Data Loss)**, đồng thời nếu có lỗi xảy ra vẫn có thể rollback ngay về Blue.
-
-### Đáp án Câu 10: C
-- **Giải thích**: **Amazon Aurora Global Database** sử dụng công nghệ sao chép vật lý ở tầng lưu trữ chuyên dụng (**Storage Replication**), đem lại độ trễ sao chép xuyên lục địa **dưới 1 giây (RPO < 1s)** và hỗ trợ thăng cấp Secondary Region thành Master trong **dưới 1 phút (RTO < 1min)**, vượt trội hoàn toàn so với Cross-Region Read Replica của RDS thông thường.
-
-### Đáp án Câu 11: B
-- **Giải thích**: Metric CloudWatch **`ReplicaLag`** đo lường độ trễ thời gian (tính bằng giây) mà bản sao Read Replica bị tụt hậu so với Master. Khi lag cao, nguyên nhân thường do Master có quá nhiều tác vụ ghi nặng hoặc cấu hình của Replica quá yếu không xử lý kịp bản tin replication; giải pháp là nâng cấu hình Compute/IOPS của Replica ngang bằng Master.
-
-### Đáp án Câu 12: B
-- **Giải thích**: Mặc định máy ảo Java (JVM) thường cấu hình lưu cache kết quả phân giải DNS vô hạn (**DNS TTL = infinity** hoặc giá trị rất lớn để tối ưu hiệu năng mạng). Khi Aurora thăng cấp node mới và đổi IP của CNAME Endpoint, JVM vẫn tiếp tục gửi các gói tin socket tới địa chỉ IP cũ đã chết. Khắc phục bằng cách chỉnh TTL trong JVM về 1–5 giây hoặc sử dụng **Amazon RDS Proxy**.
-
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" (Golden Architectural Rules)
 1. **Phân biệt rạch ròi HA vs Scalability**:  

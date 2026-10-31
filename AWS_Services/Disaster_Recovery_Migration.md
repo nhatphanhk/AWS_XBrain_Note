@@ -102,6 +102,90 @@ flowchart LR
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Di Chuyển Máy Chủ Toàn Diện Bằng AWS Application Migration Service (AWS MGN)
+- **Tình huống thi**: Doanh nghiệp cần di chuyển hàng trăm máy chủ vật lý (Physical Servers) và máy ảo VMware/Hyper-V từ Datacenter On-Premises lên AWS EC2 với thời gian gián đoạn chuyển đổi (Cutover Downtime) tối thiểu dưới vài phút.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Triển khai **AWS Application Migration Service (AWS MGN)** (dịch vụ kế nhiệm chính thức của CloudEndure Migration).
+  - Cài đặt AWS Replication Agent lên các máy chủ nguồn.
+  - Dữ liệu ổ đĩa được sao chép liên tục ở cấp độ khối (**Block-level Replication**) lên AWS qua kênh mã hóa an toàn mà không làm gián đoạn ứng dụng đang chạy.
+  - Khi đến ngày chuyển giao, chỉ cần kích hoạt quy trình Cutover: AWS MGN tự động khởi tạo máy ảo EC2 mới từ dữ liệu đã đồng bộ gần nhất trong vài phút.
+
+#### 2. Di Chuyển Cơ Sở Dữ Liệu Khác Loại Với Bộ Đôi: AWS SCT + AWS DMS
+- **Tình huống thi**: Doanh nghiệp muốn chuyển đổi hệ quản trị cơ sở dữ liệu thương mại tốn kém bản quyền (Oracle hoặc Microsoft SQL Server tại On-Premises) sang cơ sở dữ liệu mã nguồn mở đám mây trên AWS (Amazon Aurora PostgreSQL / MySQL).
+- **Quy trình 2 bước chuẩn mực**:
+  - **Bước 1 (Chuyển đổi Schema)**: Sử dụng **AWS Schema Conversion Tool (AWS SCT)** để tự động phân tích và chuyển đổi cấu trúc bảng, views, stored procedures và triggers từ Oracle/MSSQL sang định dạng tương thích với PostgreSQL/MySQL.
+  - **Bước 2 (Chuyển đổi Dữ liệu)**: Sử dụng **AWS Database Migration Service (AWS DMS)**:
+    - Thực hiện Full Load dữ liệu ban đầu.
+    - Kích hoạt tính năng **Change Data Capture (CDC)** để liên tục bắt các giao dịch thay đổi mới nhất từ database nguồn sang database đích cho đến khi thời điểm cắt chuyển chính thức diễn ra với Zero Downtime.
+
+#### 3. Tối Ưu Tốc Độ Truyền Dữ Liệu Lớn Bằng AWS DataSync
+- **Tình huống thi**: Doanh nghiệp cần định kỳ đồng bộ hàng chục Terabytes dữ liệu nghiên cứu từ các hệ thống lưu trữ mạng On-Premises (NFS, SMB) lên Amazon S3 hoặc Amazon EFS.
+- **Giải pháp chuẩn**:
+  - Cài đặt **AWS DataSync Agent** tại trung tâm dữ liệu On-Premises.
+  - DataSync tự động tăng tốc truyền dữ liệu gấp **10 lần** so với rsync/scp truyền thống bằng cách sử dụng giao thức truyền thông đa luồng được thiết kế riêng của AWS.
+  - Tự động nén dữ liệu, mã hóa trong quá trình truyền (TLS), và kiểm tra tính toàn vẹn dữ liệu (Data Integrity Verification) tự động sau mỗi lần truyền.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Nâng Cấp Amazon FSx for Windows Từ Single-AZ Lên Multi-AZ — (CM-PT1 Q05)
+- **Tình huống đề thi**: *"Doanh nghiệp thử nghiệm Amazon FSx for Windows File Server trên một Availability Zone duy nhất (Single-AZ). Sau giai đoạn thử nghiệm thành công, công ty quyết định nâng cấp hệ thống này lên cấu hình Multi-AZ để đảm bảo tính chịu lỗi cao. Giải pháp nào đúng và không gây gián đoạn hoạt động?"*
+- **Các phương án bẫy**:
+  - ❌ *Tắt file system cũ và đổi cấu hình sang Multi-AZ*: AWS **KHÔNG hỗ trợ** sửa đổi trực tiếp (in-place modification) một hệ thống FSx từ Single-AZ thành Multi-AZ. Lựa chọn này là bất khả thi về mặt kỹ thuật.
+  - ❌ *Dùng AWS DMS để chuyển dữ liệu*: DMS chỉ dùng cho cơ sở dữ liệu quan hệ/NoSQL, hoàn toàn không hỗ trợ hệ thống tệp tin mạng FSx.
+  - ❌ *Dùng AWS Transfer Family*: Transfer Family là cổng kết nối SFTP/FTPS, không phải công cụ đồng bộ tệp tin đám mây.
+- **Giải pháp ĐÚNG**:
+  - Khởi tạo một hệ thống **Amazon FSx for Windows File Server MỚI** với kiểu triển khai **Multi-AZ**.
+  - Sử dụng **AWS DataSync** để đồng bộ toàn bộ dữ liệu từ hệ thống Single-AZ cũ sang hệ thống Multi-AZ mới. Sau khi đồng bộ xong, cập nhật DNS/DFS trỏ sang hệ thống mới.
+
+#### 🪤 Bẫy 2: Di Chuyển Hệ Thống Tệp Tin Windows DFS Doanh Nghiệp — (U-PT2 Q10, U-PT1 Q64)
+- **Tình huống đề thi**: *"Ứng dụng doanh nghiệp chạy trên máy chủ Windows yêu cầu chia sẻ tệp tin thông qua giao thức SMB, tích hợp xác thực với Microsoft Active Directory hiện có, và hỗ trợ Microsoft Distributed File System (DFS) Namespaces."*
+- **Giải pháp ĐÚNG DUY NHẤT**: **Amazon FSx for Windows File Server**.
+  - Xây dựng trên nền tảng Windows Server native của AWS.
+  - Hỗ trợ đầy đủ các tính năng nâng cao của hệ sinh thái Windows: SMB v2/v3, AD Domain Join, DFS Namespaces, DFS Replication, NTFS permissions (ACLs), và tự động sao lưu Volume Shadow Copy (VSS).
+
+#### 🪤 Bẫy 3: Phân Biệt 4 Chiến Lược Disaster Recovery Theo RPO và RTO
+- **Bẫy thi kinh điển**: Đề bài đưa ra yêu cầu về RPO (thời gian mất mát dữ liệu tối đa chấp nhận được) và RTO (thời gian phục hồi dịch vụ tối đa chấp nhận được) cùng ngân sách chi phí để bắt thí sinh chọn đúng chiến lược:
+
+```
+Chi Phí Rẻ Nhất / RTO-RPO Lâu Nhất                Chi Phí Đắt Nhất / RTO-RPO Tức Thì
+┌──────────────────┐    ┌──────────────┐    ┌──────────────┐    ┌─────────────────────────┐
+│ Backup & Restore │───▶│ Pilot Light  │───▶│ Warm Standby │───▶│ Multi-Region Act-Act    │
+└──────────────────┘    └──────────────┘    └──────────────┘    └─────────────────────────┘
+  RPO: Hàng giờ           RPO: Vài phút       RPO: Vài giây       RPO: Gần như bằng 0 (Real-time)
+  RTO: 24h+               RTO: Hàng chục phút RTO: Vài phút       RTO: Tức thì (Dưới 1 giây)
+  Compute: Tắt 100%       Compute: Tắt 100%   Compute: Chạy 20%   Compute: Chạy 100% ở cả 2 vùng
+```
+
+- **Quy tắc thi cử**:
+  - *"Chi phí thấp nhất, chấp nhận RTO/RPO tính bằng giờ"* -> **Backup & Restore**.
+  - *"Dữ liệu được nhân bản liên tục, tài nguyên tính toán tắt hoàn toàn chỉ bật khi sự cố"* -> **Pilot Light**.
+  - *"Một phiên bản thu nhỏ (scaled-down copy) luôn chạy 24/7 ở Region thứ hai, sẵn sàng tăng tải"* -> **Warm Standby**.
+  - *"Hệ thống chạy song song 100% công suất ở 2 Region, RTO/RPO dưới 1 phút"* -> **Multi-Region Active-Active** (Aurora Global DB + Route 53 / Global Accelerator).
+
+---
+
+### 📊 III. Ma Trận Quyết Định Công Cụ Di Chuyển & DR Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Di chuyển máy ảo/vật lý Lift-and-Shift lên EC2** | **AWS Application Migration Service (MGN)** | AWS DMS (chỉ dành cho database) |
+| **Đổi engine Oracle/MSSQL sang Aurora PostgreSQL** | **AWS SCT (Schema) + AWS DMS (Dữ liệu)** | AWS DataSync (không chuyển đổi schema DB) |
+| **Truyền Terabytes dữ liệu từ NFS/SMB On-Prem lên S3** | **AWS DataSync** | AWS Snowball (chỉ dùng khi mạng quá chậm) |
+| **Tập tin Windows SMB, tích hợp AD, DFS** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ giao thức Linux NFS) |
+| **Đồng bộ FSx Single-AZ sang Multi-AZ** | **Tạo FSx Multi-AZ mới + AWS DataSync** | Sửa in-place trên FSx cũ (AWS không hỗ trợ) |
+| **Ứng dụng On-Premises mount S3 như ổ NFS cục bộ** | **AWS Storage Gateway (S3 File Gateway)** | AWS Direct Connect đơn thuần |
+| **Di chuyển hàng trăm Petabytes không có mạng cáp** | **AWS Snowball Edge / AWS Snowmobile** | Truyền qua Internet / Direct Connect (mất nhiều tháng) |
+
+---
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Quy Trình Tự Động Chuyển Đổi Dự Phòng Đa Vùng (Cross-Region DR Failover) với Route 53 & RDS
@@ -252,102 +336,9 @@ sequenceDiagram
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Nhóm Câu Hỏi Cốt Lõi (Core Concepts)
-
-#### Câu 1: Hãy định nghĩa chính xác sự khác nhau giữa hai chỉ số RPO (Recovery Point Objective) và RTO (Recovery Time Objective)?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **RPO (Recovery Point Objective - Mục tiêu điểm phục hồi)**: Là khoảng thời gian mất mát dữ liệu tối đa mà doanh nghiệp chấp nhận được khi có sự cố thảm họa xảy ra. RPO đo lường bằng đơn vị thời gian dữ liệu (giây, phút, giờ). Ví dụ: RPO = 5 phút nghĩa là doanh nghiệp chấp nhận mất tối đa 5 phút dữ liệu giao dịch gần nhất.
-- **RTO (Recovery Time Objective - Mục tiêu thời gian phục hồi)**: Là khoảng thời gian gián đoạn dịch vụ tối đa cho phép kể từ khi thảm họa xảy ra cho đến khi hệ thống được khôi phục và sẵn sàng phục vụ người dùng trở lại. RTO đo lường thời gian ngừng hoạt động (Downtime).
-</details>
-
-#### Câu 2: Trong 4 chiến lược Disaster Recovery kinh điển của AWS, chiến lược nào mang lại RPO và RTO gần bằng 0 nhưng có chi phí vận hành đắt nhất?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: Chiến lược **Multi-Site Active-Active**.
-- **Giải thích**: Hệ thống được triển khai ở quy mô sản xuất đầy đủ (Full production scale) đồng thời tại từ 2 AWS Regions trở lên. Dữ liệu được đồng bộ hóa hai chiều theo thời gian thực (ví dụ: Amazon Aurora Global Database, DynamoDB Global Tables). Khi một Region bị sập, Route 53 sẽ tự động chuyển toàn bộ người dùng sang Region còn lại ngay lập tức mà không có bất kỳ thời gian downtime hay mất mát dữ liệu nào. Chi phí vận hành gấp đôi so với chạy đơn vùng.
-</details>
-
-#### Câu 3: Sự khác biệt bản chất giữa chiến lược Pilot Light và Warm Standby là gì?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Pilot Light**: Dữ liệu cốt lõi (Database) luôn được sao chép liên tục sang Region dự phòng; tuy nhiên toàn bộ các máy chủ tính toán (Web/App tier) **hoàn toàn TẮT** (chỉ lưu sẵn AMI hoặc template CloudFormation/Terraform). Khi có thảm họa, mất từ 10 đến 30 phút để Auto Scaling khởi chạy các máy ảo mới lên.
-- **Warm Standby**: Luôn luôn duy trì một cụm máy chủ tính toán thu nhỏ (**Scaled-down minimal version**) chạy 24/7 ở Region dự phòng. Khi có thảm họa, chỉ mất vài phút để mở rộng quy mô máy chủ (Scale-out) và chuyển hướng lưu lượng người dùng, mang lại RTO nhanh hơn đáng kể so với Pilot Light.
-</details>
-
 ---
 
-### B. Nhóm Câu Hỏi Tình Huống & Xử Lý Sự Cố (Scenarios & Troubleshooting)
-
-#### Câu 4: Một doanh nghiệp muốn di chuyển cơ sở dữ liệu Microsoft SQL Server đặt tại Data Center lên Amazon Aurora PostgreSQL trên AWS mà không làm gián đoạn các giao dịch của khách hàng. Bộ công cụ nào của AWS bắt buộc phải được sử dụng?
-- (A) AWS DataSync kết hợp với Amazon S3.
-- (B) AWS Database Migration Service (AWS DMS) kết hợp với AWS Schema Conversion Tool (AWS SCT).
-- (C) AWS Snowball Edge Storage Optimized.
-- (D) AWS Elastic Disaster Recovery (AWS DRS).
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - Đây là kịch bản di chuyển cơ sở dữ liệu không đồng nhất (**Heterogeneous Database Migration**): Chuyển đổi giữa 2 engine cơ sở dữ liệu hoàn toàn khác nhau (SQL Server sang PostgreSQL).
-  - **AWS SCT** bắt buộc phải được sử dụng trước để tự động phân tích và chuyển đổi cấu trúc bảng, lược đồ (Schema), stored procedures, functions và triggers từ cú pháp T-SQL sang PL/pgSQL.
-  - **AWS DMS** thực hiện việc nạp dữ liệu ban đầu (Full Load) và liên tục đồng bộ các giao dịch mới phát sinh (CDC) cho đến ngày chính thức chuyển hướng kết nối.
-</details>
-
-#### Câu 5: Một công ty dầu khí tại khu vực hẻo lánh ngoài khơi thu thập được 6 TB dữ liệu địa chất mỗi tuần. Vị trí này hoàn toàn không có đường truyền Internet cáp quang. Giải pháp nào tối ưu nhất để định kỳ chuyển dữ liệu về trung tâm phân tích trên Amazon S3?
-- (A) Thiết lập đường truyền vệ tinh kết nối AWS Direct Connect.
-- (B) Đặt hàng thiết bị vật lý AWS Snowcone gửi qua đường bưu điện/trực thăng hàng tuần.
-- (C) Sử dụng AWS DataSync chạy qua mạng 3G di động.
-- (D) Nén dữ liệu và gửi qua email.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - **AWS Snowcone** là thiết bị lưu trữ vật lý nhỏ gọn nhất trong dòng Snow Family (trọng lượng chỉ 2.1 kg, chống va đập, đạt chuẩn quân đội), dung lượng khả dụng tối đa lên tới **8 TB** (hoặc 14 TB SSD).
-  - Rất phù hợp để nhân viên tại các giàn khoan ngoài khơi nạp dữ liệu cục bộ vào thiết bị và gửi về bờ bằng đường trực thăng/bưu điện để AWS nạp dữ liệu trực tiếp vào Amazon S3.
-</details>
-
----
-
-### C. Nhóm Câu Hỏi Phỏng Vấn Chuyên Sâu (Solutions Architect & DevOps)
-
-#### Câu 6: "Hãy phân tích cơ chế hoạt động của AWS Elastic Disaster Recovery (AWS DRS) và giải thích vì sao nó giúp doanh nghiệp tiết kiệm tới 70% chi phí so với mô hình DR truyền thống?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Cơ chế hoạt động**:
-  - Cài đặt một phần mềm nhẹ (**AWS Replication Agent**) lên các máy chủ nguồn (On-Premises, VMware, hoặc EC2).
-  - Agent đọc trực tiếp các khối dữ liệu thay đổi ở cấp độ block ổ đĩa (Block-level replication), nén và mã hóa gửi về vùng đệm (**Staging Area**) trên AWS qua cổng TCP 1500.
-  - Tại Staging Area: Chỉ có một máy ảo sao chép nhỏ (`t3.small`) tiếp nhận dữ liệu và ghi vào các ổ đĩa EBS chi phí thấp (gp3 hoặc st1).
-- **Lý do tiết kiệm 70% chi phí**:
-  - Trong mô hình DR truyền thống (Warm Standby), doanh nghiệp phải chi trả tiền thuê 100% số lượng máy chủ cấu hình lớn (như `m5.2xlarge`, `c5.4xlarge`) chạy liên tục 24/7 ở Region dự phòng.
-  - Với **AWS DRS**, trong 99.9% thời gian bình thường, bạn **hoàn toàn không trả tiền cho máy chủ compute mạnh mẽ nào cả**. Chi phí chỉ bao gồm phí bản quyền DRS ($0.03/server/giờ) và tiền lưu trữ ổ đĩa EBS giá rẻ.
-  - Khi có sự cố thảm họa xảy ra (hoặc khi diễn tập), DRS mới tự động kích hoạt API khởi chạy các máy chủ EC2 mạnh mẽ tương đương trong vòng chưa đầy 10 phút.
-</details>
-
-#### Câu 7: "AWS Backup Vault Lock hoạt động như thế nào và nó bảo vệ doanh nghiệp khỏi các cuộc tấn công mã độc tống tiền (Ransomware) ra sao?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Bản chất**: **AWS Backup Vault Lock** là tính năng bảo vệ an ninh cấp độ chính sách, áp đặt mô hình **WORM (Write Once, Read Many)** lên toàn bộ các bản sao lưu lưu trữ bên trong Backup Vault.
-- **Cơ chế chống Ransomware**:
-  - Một cuộc tấn công Ransomware hiện đại tinh vi thường tìm cách chiếm quyền quản trị tối cao (Root Account hoặc Admin IAM Role) và thực hiện xóa toàn bộ các bản sao lưu dự phòng trước khi mã hóa máy chủ sản xuất.
-  - Khi kích hoạt Vault Lock ở chế độ **Compliance Mode**:
-    1. Thiết lập khoảng thời gian lưu trữ tối thiểu và tối đa (Retention Period).
-    2. Sau khi thời gian ân hạn (Cooling-off Period) kết thúc, chính sách khóa trở thành **bất biến (Immutable)**.
-    3. **Tuyệt đối không một ai**, kể cả tài khoản **Root của tài khoản AWS**, kỹ sư an ninh, hay nhân viên hỗ trợ của AWS (AWS Support), có thể xóa bỏ, rút ngắn thời gian lưu trữ hay sửa đổi các bản sao lưu trong Vault.
-  - Doanh nghiệp luôn nắm chắc 100% khả năng khôi phục lại dữ liệu sạch khi toàn bộ hệ thống sản xuất bị hacker mã hóa tống tiền.
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Khắc Phục Thảm Họa & Di Chuyển AWS (Golden Rules)
 1. **RPO & RTO là kim chỉ nam**: Mọi quyết định kiến trúc DR đều là sự đánh đổi trực tiếp giữa ngân sách tài chính và tốc độ phục hồi.

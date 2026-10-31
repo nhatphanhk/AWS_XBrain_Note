@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Amazon SQS, SNS, EventBridge & Kinesis (Kiến Trúc Tách Rời & Hướng Sự Kiện)
+﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon SQS, SNS, EventBridge & Kinesis (Kiến Trúc Tách Rời & Hướng Sự Kiện)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -134,6 +134,85 @@ flowchart LR
   - Cung cấp kết nối điểm-điểm (Point-to-Point) tích hợp sẵn giữa Nguồn (Source: DynamoDB Streams, Kinesis, SQS) và Đích (Target: Step Functions, Lambda, API Destinations) với các bước lọc (**Filtering**) và làm giàu dữ liệu (**Enrichment**) mà không cần viết mã nguồn trung gian.
 - **EventBridge Scheduler**:
   - Dịch vụ đặt lịch tác vụ phi máy chủ thế hệ mới, cho phép lập lịch hàng triệu tác vụ định kỳ (Cron/Rate) hoặc tác vụ kích hoạt một lần duy nhất (**One-time Schedules**) với độ trễ thấp và độ tin cậy cao.
+
+---
+
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Đảm Bảo Thứ Tự Tuyệt Đối & Chống Trùng Lặp Bằng SQS FIFO Queues
+- **Tình huống thi**: Ứng dụng ngân hàng giao dịch tài chính hoặc hệ thống đặt vé xem phim trực tuyến yêu cầu các lệnh đặt hàng phải được xử lý chính xác theo đúng thứ tự gửi đến (First-In, First-Out) và tuyệt đối không được phép có tin nhắn xử lý lặp lại (No Duplicates).
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Khởi tạo hàng đợi **Amazon SQS FIFO Queue** (tên hàng đợi bắt buộc có đuôi `.fifo`).
+  - **Cơ chế chống trùng lặp (Exactly-Once Processing)**: Sử dụng **Message Deduplication ID** (hoặc kích hoạt tính năng Content-Based Deduplication sử dụng thuật toán hash SHA-256). Các tin nhắn gửi trong khoảng thời gian cửa sổ 5 phút (5-minute deduplication interval) mang cùng deduplication ID sẽ bị loại bỏ tự động.
+  - **Cơ chế gom nhóm xử lý tuần tự**: Sử dụng **Message Group ID**: Các tin nhắn trong cùng một Group ID sẽ được xử lý tuần tự nghiêm ngặt, trong khi các Group ID khác nhau có thể được xử lý song song đồng thời bởi nhiều worker.
+
+#### 2. Tăng Tốc Thông Lượng SQS FIFO Lên Tới 70,000 Tin Nhắn/Giây
+- **Tình huống thi**: Ứng dụng thanh toán quy mô lớn sử dụng SQS FIFO nhưng gặp giới hạn thông lượng mặc định của hàng đợi FIFO là 300 giao dịch/giây (Transactions Per Second - TPS).
+- **Giải pháp chuẩn**:
+  - **Kỹ thuật Batching**: Gửi hoặc nhận tin nhắn theo lô (tối đa 10 tin nhắn/lô) -> Nâng thông lượng lên **3,000 tin nhắn/giây**.
+  - **Kích hoạt High Throughput Mode for FIFO Queues**: Chuyển đổi sang chế độ Deduplication Scope theo Group ID và FIFO Throughput Limit theo từng Message Group ID -> Mở rộng thông lượng co giãn lên tới **70,000 tin nhắn/giây**!
+
+#### 3. Mô Hình Kiến Trúc Fan-Out (Amazon SNS + Nhiều Hàng Đợi Amazon SQS)
+- **Tình huống thi**: Khi người dùng tải lên một video mới, video đó cần được xử lý đồng thời bởi 3 dịch vụ độc lập: (1) Dịch vụ tạo ảnh đại diện Thumbnail, (2) Dịch vụ trích xuất phụ đề AI, và (3) Dịch vụ quét nội dung vi phạm bản quyền. Nếu 1 dịch vụ bị lỗi, 2 dịch vụ còn lại không được phép bị ảnh hưởng.
+- **Giải pháp chuẩn**:
+  - Khi có sự kiện upload, ứng dụng xuất bản một thông điệp duy nhất vào **Amazon SNS Topic**.
+  - Tạo **3 SQS Queues riêng biệt** đại diện cho 3 dịch vụ và đăng ký (Subscribe) cả 3 queues này vào cùng một SNS Topic.
+  - SNS tự động nhân bản (**Fan-Out**) thông điệp thành 3 bản gửi vào 3 hàng đợi. Mỗi worker xử lý với tốc độ riêng của mình và có hàng đợi DLQ riêng nếu gặp lỗi.
+
+#### 4. Trì Hoãn Thời Gian Xử Lý Tin Nhắn Bằng SQS Delay Queues
+- **Tình huống thi**: Ứng dụng cần hoãn việc xử lý đơn hàng mới trong vòng 10 phút sau khi người dùng đăng ký để cho phép người dùng có thời gian chỉnh sửa thông tin hoặc hủy đơn.
+- **Giải pháp chuẩn**:
+  - Sử dụng tính năng **SQS Delay Queues**: Cấu hình tham số `DelaySeconds` (tối đa 900 giây / 15 phút, mặc định là 0).
+  - Mọi tin nhắn gửi vào hàng đợi sẽ ở trạng thái vô hình (Invisible) đối với các workers trong suốt khoảng thời gian Delay này và chỉ xuất hiện sẵn sàng để poll sau khi hết thời gian hoãn.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Phân Ưu Tiên Tin Nhắn SQS — Multiple Queues, KHÔNG phải FIFO — (U-PT6 Q20)
+- **Tình huống đề thi**: *"Hệ thống xử lý tin nhắn cần phân tầng ưu tiên (tin nhắn từ khách hàng VIP/Pro được xử lý ngay lập tức trước tin nhắn của khách hàng miễn phí/Lite). Giải pháp SQS nào đúng?"*
+- **Bẫy thi cực kỳ phổ biến**: Chọn SQS FIFO vì nghĩ FIFO = "ưu tiên thứ tự". **SAI HOÀN TOÀN** — FIFO chỉ đảm bảo First-In-First-Out theo thời gian gửi, hoàn toàn không có khái niệm độ ưu tiên giữa các tin nhắn.
+- **Giải pháp ĐÚNG (Priority Queue Pattern)**:
+  - Tạo **2 SQS Standard Queue riêng biệt**: `pro-queue` và `lite-queue`.
+  - Cấu hình worker (EC2 hoặc Lambda): **Luôn poll `pro-queue` trước**, chỉ khi `pro-queue` hoàn toàn trống mới chuyển sang poll `lite-queue`.
+
+#### 🪤 Bẫy 2: Migrate Hệ Thống SFTP Truyền Thống Lên AWS — AWS Transfer Family — (U-PT2 Q04)
+- **Tình huống đề thi**: *"Ứng dụng on-premises sử dụng giao thức SFTP để truyền các tệp báo cáo đối tác. Doanh nghiệp cần di chuyển kho lưu trữ lên AWS S3 mà không phải sửa đổi mã nguồn client của đối tác và không muốn quản lý máy chủ."*
+- **Các phương án bẫy**:
+  - ❌ *Tự dựng EC2 cài OpenSSH SFTP server*: Tốn công vá lỗi OS, quản trị máy chủ, rủi ro bảo mật.
+  - ❌ *Dùng AWS DataSync*: DataSync là công cụ đồng bộ dữ liệu định kỳ, không cung cấp giao diện endpoint SFTP cho các client bên ngoài kết nối.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Transfer Family**.
+  - Dịch vụ Fully-Managed cung cấp endpoint SFTP/FTPS/FTP chuẩn.
+  - Các client kết nối vào SFTP endpoint như bình thường, AWS Transfer Family tự động chuyển đổi và lưu trữ tệp trực tiếp vào **Amazon S3** hoặc **Amazon EFS**.
+
+#### 🪤 Bẫy 3: Các Giao Thức Chuẩn Ngành AMQP / MQTT / JMS — Amazon MQ, KHÔNG phải SQS — (U-PT2 Q33)
+- **Tình huống đề thi**: *"Doanh nghiệp chuyển đổi ứng dụng sử dụng RabbitMQ hoặc Apache ActiveMQ lên AWS mà không muốn tái cấu trúc lại mã nguồn giao thức."*
+- **Nguyên lý bất biến**:
+  - Amazon SQS là dịch vụ độc quyền của AWS, sử dụng giao thức HTTPS và AWS SDK riêng. SQS **HOÀN TOÀN KHÔNG HỖ TRỢ** các giao thức nhắn tin chuẩn ngành như: **AMQP, MQTT, STOMP, OpenWire, hay JMS**.
+  - **Giải pháp ĐÚNG**: Sử dụng **Amazon MQ** (dịch vụ message broker được quản lý hỗ trợ Apache ActiveMQ và RabbitMQ).
+
+#### 🪤 Bẫy 4: Chuyển Đổi Lưu Lượng Tức Thì Bypass DNS Cache — Global Accelerator Traffic Dial — (U-PT2 Q43, CM-PT1 Q40)
+- **Tình huống đề thi**: *"Doanh nghiệp cần triển khai Blue-Green toàn cầu, yêu cầu chuyển đổi hoặc rollback 100% lưu lượng sang môi trường mới trong vài giây mà không bị cản trở bởi việc lưu cache DNS của các client."*
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Global Accelerator với Traffic Dial**.
+  - Route 53 phụ thuộc vào DNS caching của client và ISP, rollback có thể mất hàng giờ.
+  - Global Accelerator sử dụng 2 IP Anycast tĩnh và điều phối luồng tại các máy chủ Edge của mạng trục AWS, giúp chuyển đổi lưu lượng tức thì trong vài giây.
+
+---
+
+### 📊 III. Ma Trận Quyết Định Tách Rời Kiến Trúc Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Đảm bảo thứ tự tuyệt đối, chống lặp tin nhắn** | **Amazon SQS FIFO Queue** | SQS Standard (chỉ đảm bảo At-Least-Once) |
+| **Phân tầng ưu tiên tin nhắn (Pro vs Lite)** | **Multiple SQS Queues** (Priority Pattern) | SQS FIFO (không có khái niệm priority) |
+| **1 sự kiện cần gửi tới nhiều dịch vụ độc lập** | **Mô hình Fan-Out: Amazon SNS + SQS** | Gửi tuần tự từ app (dễ lỗi và chậm trễ) |
+| **Migrate RabbitMQ / ActiveMQ không sửa code** | **Amazon MQ** (hỗ trợ AMQP, MQTT, JMS) | Amazon SQS (chỉ hỗ trợ AWS SDK/HTTPS) |
+| **Khách hàng legacy kết nối SFTP đẩy file vào S3** | **AWS Transfer Family** | Tự dựng EC2 SFTP (tốn công quản trị) |
+| **Hoãn thời gian xử lý tin nhắn tới 15 phút** | **SQS Delay Queues** | Viết lệnh sleep trong code worker |
+| **Chuyển đổi lưu lượng tức thì, bypass DNS cache** | **AWS Global Accelerator (Traffic Dial)** | Route 53 Weighted (bị nghẽn bởi DNS cache) |
+| **Điều phối các sự kiện định dạng JSON phân tán** | **Amazon EventBridge** | Amazon SQS (không có bộ lọc rules JSON native) |
+
+---
 
 ---
 
@@ -290,109 +369,9 @@ sequenceDiagram
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Nhóm Câu Hỏi Cốt Lõi (Core Concepts)
-
-#### Câu 1: Thời gian lưu trữ tối đa (Maximum Message Retention Period) cho phép của một tin nhắn trong Amazon SQS là bao nhiêu ngày?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: Tối đa là **14 ngày** (giá trị mặc định là 4 ngày).
-- **Giải thích**: Người dùng có thể tùy chỉnh thời gian lưu trữ tin nhắn trong khoảng từ 1 phút đến 14 ngày. Nếu sau 14 ngày tin nhắn chưa được tiêu thụ và xóa bỏ bởi bất kỳ consumer nào, SQS sẽ tự động xóa vĩnh viễn tin nhắn đó khỏi hàng đợi.
-</details>
-
-#### Câu 2: Khái niệm Visibility Timeout trong Amazon SQS có ý nghĩa gì đối với các consumer khác trong hệ thống?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: Là khoảng thời gian mà một tin nhắn sau khi được nhận bởi một consumer sẽ tạm thời **bị ẩn đi đối với tất cả các consumer khác**.
-- **Giải thích**: Cơ chế này ngăn chặn việc nhiều worker cùng nhận và xử lý trùng lặp một tin nhắn tại cùng một thời điểm. Sau khi hết thời gian Visibility Timeout (mặc định 30 giây), nếu worker ban đầu chưa gọi lệnh `DeleteMessage` (ví dụ do máy chủ bị sập), tin nhắn sẽ tự động hiện lại trong hàng đợi để worker khác tiếp nhận và xử lý lại.
-</details>
-
-#### Câu 3: Để đảm bảo các giao dịch mua bán chứng khoán luôn được xử lý theo đúng trình tự thời gian và không bao giờ bị trùng lặp, bạn phải sử dụng loại hàng đợi SQS nào và đuôi tên bắt buộc là gì?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: **Amazon SQS FIFO Queue**, và đuôi tên bắt buộc phải kết thúc bằng **`.fifo`** (ví dụ: `stock-orders.fifo`).
-- **Giải thích**: SQS FIFO đảm bảo thứ tự First-In, First-Out chính xác tuyệt đối và loại bỏ tin nhắn trùng lặp trong cửa sổ 5 phút dựa trên Message Deduplication ID.
-</details>
-
 ---
 
-### B. Nhóm Câu Hỏi Tình Huống & Xử Lý Sự Cố (Scenarios & Troubleshooting)
-
-#### Câu 4: Một ứng dụng thương mại điện tử cần phát tán thông tin đơn hàng mới đồng thời tới 4 hệ thống backend độc lập (Thanh toán, Trừ kho, Gửi email, và Chống gian lận). Nếu một hệ thống bị nghẽn mạng thì không được phép làm ảnh hưởng tới các hệ thống còn lại. Mô hình kiến trúc nào tối ưu nhất?
-- (A) Order Service gọi đồng thời 4 API REST qua giao thức HTTPS.
-- (B) Mô hình Fan-Out: Order Service xuất bản tin nhắn vào một Amazon SNS Topic; 4 hàng đợi Amazon SQS độc lập của 4 hệ thống đăng ký (Subscribe) vào Topic này.
-- (C) Lưu toàn bộ đơn hàng vào một bảng DynamoDB và cho 4 hệ thống quét (Scan) bảng liên tục.
-- (D) Tạo một cụm Amazon MQ và mở 4 kết nối WebSocket tới 4 dịch vụ.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - Mô hình **Fan-Out (SNS kết hợp SQS)** là mẫu thiết kế kinh điển trên AWS.
-  - Order Service chỉ cần gửi 1 request duy nhất vào SNS Topic. SNS tự động nhân bản thông điệp vào 4 hàng đợi SQS riêng biệt.
-  - Mỗi hệ thống tiêu thụ tin nhắn từ hàng đợi của riêng mình với tốc độ độc lập. Nếu hệ thống Email bị chậm hoặc sập, tin nhắn vẫn được lưu an toàn trong Email Queue tối đa 14 ngày mà không gây nghẽn dịch vụ Thanh toán hay Trừ kho.
-</details>
-
-#### Câu 5: Hệ thống xử lý ảnh trên EC2 sử dụng Auto Scaling Group. Ban giám đốc nhận thấy khi lưu lượng tăng đột biến, hệ thống bị chậm mất 30 phút mới bật thêm máy chủ mới, vì CPU của máy chủ hiện tại chưa vượt ngưỡng 80%. Bạn sẽ đề xuất cải tiến chỉ số giám sát nào cho Auto Scaling?
-- (A) Chuyển sang theo dõi chỉ số Network In của máy ảo EC2.
-- (B) Thiết lập Target Tracking Policy dựa trên chỉ số tùy biến `BacklogPerInstance` (bằng tổng số tin nhắn chờ trong SQS chia cho số lượng máy ảo hiện có).
-- (C) Tăng dung lượng RAM của máy chủ EC2 lên gấp đôi.
-- (D) Đổi sang dùng hàng đợi SQS FIFO.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - Theo dõi CPU thường có độ trễ lớn và không phản ánh chính xác khối lượng công việc đang ùn ứ trong hàng đợi (đặc biệt khi tác vụ bị nghẽn do I/O disk hoặc mạng).
-  - Sử dụng chỉ số **`BacklogPerInstance = ApproximateNumberOfMessagesVisible / RunningInstancesCount`** trên CloudWatch giúp ASG tính toán chính xác cần thêm bao nhiêu máy chủ ngay khi hàng đợi bắt đầu tăng, giúp hệ thống mở rộng kịp thời trước khi người dùng bị ảnh hưởng.
-</details>
-
----
-
-### C. Nhóm Câu Hỏi Phỏng Vấn Chuyên Sâu (Solutions Architect & DevOps)
-
-#### Câu 6: "Hãy phân tích sự khác nhau bản chất giữa Amazon SQS và Amazon Kinesis Data Streams, và đưa ra các tiêu chí quyết định khi nào nên chọn dịch vụ nào?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Sự khác biệt bản chất**:
-  - **Amazon SQS**:
-    - Mô hình điểm-điểm (Queue): Một tin nhắn chỉ được tiêu thụ bởi **một consumer duy nhất**, sau đó tin nhắn bị xóa khỏi hàng đợi.
-    - Không thể đọc lại (Replay) tin nhắn đã xử lý.
-    - Quản lý co giãn tự động theo từng tin nhắn, không cần quy hoạch dung lượng trước.
-  - **Amazon Kinesis Data Streams**:
-    - Mô hình luồng dữ liệu (Data Stream): Dữ liệu được lưu trữ trong luồng theo chuỗi thời gian (từ 1 đến 365 ngày).
-    - Hỗ trợ **nhiều consumer khác nhau đọc song song cùng một luồng dữ liệu** ở các vị trí và tốc độ độc lập mà không ảnh hưởng lẫn nhau.
-    - Hỗ trợ **Replay**: Có thể tua lại quá khứ để chạy lại thuật toán phân tích dữ liệu.
-    - Cần quản lý dung lượng qua Shards (1MB/s vào, 2MB/s ra trên mỗi Shard) hoặc dùng chế độ On-Demand.
-- **Tiêu chí quyết định**:
-  - Chọn **SQS**: Cho các bài toán Decoupling microservices thông thường, xử lý đơn hàng, background workers, hấp thụ tải đột biến, gửi việc theo từng tác vụ riêng rẽ.
-  - Chọn **Kinesis**: Cho các bài toán Big Data Streaming, thu thập log thời gian thực hàng triệu sự kiện/giây, phân tích clickstream website, cảm biến IoT telemetry cần nạp liên tục vào Data Lake.
-</details>
-
-#### Câu 7: "EventBridge Pipes là gì và nó giúp đơn giản hóa kiến trúc Serverless như thế nào so với việc tự viết Lambda trung gian?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Bản chất**: **EventBridge Pipes** là tính năng cung cấp kết nối điểm-điểm (Point-to-Point Integration) tích hợp sẵn giữa một Nguồn sự kiện (Source) và một Đích xử lý (Target).
-- **Quy trình 4 bước tích hợp sẵn**:
-  1. **Source**: Nhận sự kiện từ SQS, Kinesis, DynamoDB Streams, Kafka.
-  2. **Filter**: Lọc sự kiện bằng JSON syntax (loại bỏ dữ liệu không cần thiết hoàn toàn miễn phí).
-  3. **Enrichment**: Làm giàu dữ liệu bằng cách tự động gọi Lambda, Step Functions hoặc API Destination để bổ sung thông tin từ database ngoài.
-  4. **Target**: Đẩy dữ liệu vào Step Functions, Kinesis, SQS, SNS, hoặc Event Bus.
-- **Lợi ích so với tự viết Lambda**:
-  - **Loại bỏ "Glue Code"**: Không cần phải viết, duy trì, kiểm thử và vá lỗi các hàm Lambda trung gian chỉ làm nhiệm vụ đọc queue rồi đẩy sang dịch vụ khác.
-  - **Tiết kiệm chi phí**: Không tốn cước compute của Lambda.
-  - **Giảm độ trễ**: Tích hợp hạ tầng gốc của AWS mang lại độ trễ xử lý cực thấp và độ tin cậy tuyệt đối.
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Kiến Trúc Hướng Sự Kiện AWS (Golden Rules)
 1. **Luôn bật Long Polling (20s)**: Thiết lập `ReceiveMessageWaitTimeSeconds = 20` trên SQS để triệt tiêu 99% chi phí API nhận tin rỗng.

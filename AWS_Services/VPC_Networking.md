@@ -145,6 +145,109 @@ flowchart LR
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Kiến trúc Bảo mật Đa Tầng Tham Chiếu Security Group ID (Security Group Chaining)
+- **Tình huống thi**: Ứng dụng Web nhiều tầng (Web Tier -> App Tier -> Database Tier). Yêu cầu đảm bảo Database chỉ nhận kết nối từ Web/App instances, không cho phép truy cập từ bất kỳ nguồn nào khác kể cả trong cùng VPC.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Không bao giờ mở IP CIDR (ví dụ: `10.0.0.0/16`) cho Database Security Group.
+  - Tại Inbound Rule của **Database SG**: Cấu hình Source là **ID của Web SG** (ví dụ: `sg-01234567web`) trên cổng 3306 (MySQL) hoặc 5432 (PostgreSQL) hoặc 1433 (MSSQL).
+  - **Lợi ích**: Dù Auto Scaling Group của Web Tier co giãn thêm hàng trăm instances với IP động, Database vẫn tự động chấp nhận kết nối an toàn mà không cần cập nhật rule thủ công.
+
+#### 2. Kết Nối Riêng Tư Không Cần Internet Bằng VPC Endpoints
+- **Tình huống thi**: EC2 / Lambda trong Private Subnet cần đọc/ghi S3 hoặc DynamoDB với chi phí thấp nhất và không có Internet Gateway / NAT Gateway.
+- **Giải pháp chuẩn**:
+  - Sử dụng **Gateway VPC Endpoints** cho **Amazon S3** và **Amazon DynamoDB**.
+  - **Đặc tính**: Miễn phí cước phí hoàn toàn ($0.00/tháng), cấu hình bằng cách thêm Prefix List route vào Route Table của Private Subnet.
+  - Đối với các dịch vụ khác (SQS, SNS, Kinesis, Secrets Manager, CloudWatch): Bắt buộc dùng **Interface VPC Endpoints (AWS PrivateLink)** (tính phí theo ENI giờ + GB dữ liệu).
+
+#### 3. Quản Trị EC2 Trong Private Subnet Bằng Systems Manager Session Manager (Zero Bastion)
+- **Tình huống thi**: Quản trị viên cần SSH/RDP vào máy chủ EC2 trong Isolated Private Subnet (không có Internet Gateway, không có NAT Gateway) mà không vi phạm nguyên tắc an ninh.
+- **Giải pháp chuẩn**:
+  - Triển khai **3 Interface VPC Endpoints** trong VPC:
+    1. `com.amazonaws.<region>.ssm`
+    2. `com.amazonaws.<region>.ssmmessages` (bắt buộc cho Session Manager interactive channel)
+    3. `com.amazonaws.<region>.ec2messages`
+  - Gán IAM Role với policy `AmazonSSMManagedInstanceCore` cho EC2 instance.
+  - Kết nối thông qua AWS Console hoặc AWS CLI (`aws ssm start-session`). Không cần mở cổng 22/3389 ở Security Group Inbound.
+
+#### 4. Mạng Hub-and-Spoke Quy Mô Doanh Nghiệp Với AWS Transit Gateway
+- **Tình huống thi**: Doanh nghiệp mở rộng lên hàng chục đến hàng trăm VPCs cần kết nối với nhau và kết nối về Datacenter On-Premises qua Direct Connect hoặc VPN.
+- **Giải pháp chuẩn**:
+  - Thay thế mô hình Full-Mesh VPC Peering phức tạp (cần $N(N-1)/2$ kết nối) bằng **AWS Transit Gateway (TGW)**.
+  - Transit Gateway đóng vai trò Cloud Router hỗ trợ **Transitive Routing** (VPC A -> TGW -> VPC B hoặc On-Premises), chia sẻ tập trung qua AWS RAM (Resource Access Manager).
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Hai VPC Trùng Dải IP CIDR Cần Kết Nối Bảo Mật (Overlapping CIDRs) — (CM-PT1 Q02)
+- **Tình huống đề thi**: *"Đội IT chạy ứng dụng trong VPC A, đội Vận hành chạy trên VPC B. Cả 2 VPC đều dùng dải IP trùng nhau (ví dụ: cùng là `10.0.0.0/16`). Làm sao để đội Vận hành gọi API sang ứng dụng của IT an toàn?"*
+- **Các phương án bẫy**:
+  - ❌ *VPC Peering*: Giới hạn kỹ thuật bất biến của AWS: VPC Peering **không bao giờ hỗ trợ overlapping CIDRs** vì bảng định tuyến không thể phân biệt đích đến.
+  - ❌ *AWS Transit Gateway*: TGW định tuyến dựa trên IP CIDR, cũng sẽ bị xung đột route table.
+  - ❌ *IPsec VPN Tunnel giữa 2 VPC*: Vẫn phụ thuộc routing IP truyền thống.
+- **Giải pháp ĐÚNG duy nhất**: **AWS PrivateLink**.
+  - VPC A tạo Network Load Balancer (NLB) đứng trước ứng dụng và tạo **Endpoint Service**.
+  - VPC B tạo **Interface VPC Endpoint (ENI)** trỏ tới Endpoint Service đó.
+  - Giao tiếp diễn ra qua IP cục bộ của ENI trong VPC B, hoàn toàn che giấu dải IP của VPC A và bỏ qua xung đột CIDR.
+
+#### 🪤 Bẫy 2: Phân Giải DNS Lai Hai Chiều Giữa AWS & On-Premises (Hybrid DNS) — (CM-PT1 Q41, U-PT1 Q20)
+- **Tình huống đề thi**: *"Doanh nghiệp cần thiết lập phân giải DNS hai chiều giữa mạng văn phòng On-Premises và AWS VPC. Cần cấu hình Route 53 Resolver như thế nào?"*
+- **Quy tắc nhớ chiều bất biến (nhìn từ góc độ AWS)**:
+  - 📥 **Inbound Endpoint**: Dành cho luồng truy vấn **ĐI VÀO** AWS (On-Premises DNS Server forward truy vấn tên miền `*.aws.internal` tới IP của Inbound Endpoint để Route 53 giải quyết).
+  - 📤 **Outbound Endpoint**: Dành cho luồng truy vấn **ĐI RA NGOÀI** AWS (Máy chủ EC2 trong VPC muốn phân giải tên miền nội bộ `*.corp.local` của On-Premises -> Route 53 Resolver dùng Outbound Endpoint + Forwarding Rules chuyển tiếp về DNS Server của On-Premises).
+- **Bẫy thi phổ biến**: Đề bài tráo đổi Inbound và Outbound hoặc chỉ cấu hình 1 chiều mà yêu cầu phân giải hai chiều.
+
+#### 🪤 Bẫy 3: Mạng IPv6 Trong Private Subnet Chỉ Cho Phép Ra Internet — (CM-PT1 Q33)
+- **Tình huống đề thi**: *"Ứng dụng chạy trên dải IPv6 trong private subnet cần tải các bản vá từ Internet nhưng phải ngăn chặn hoàn toàn mọi kết nối khởi tạo từ Internet vào máy chủ."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng NAT Gateway*: NAT Gateway chỉ hỗ trợ dịch địa chỉ cho **IPv4**, hoàn toàn không hoạt động với IPv6 (IPv6 vốn là địa chỉ toàn cầu công khai, không cần NAT).
+  - ❌ *Dùng Internet Gateway*: IGW thông thường cho phép kết nối 2 chiều (cả Inbound và Outbound), vi phạm yêu cầu bảo mật.
+- **Giải pháp ĐÚNG**: **Egress-Only Internet Gateway (outbound-only IGW)**.
+  - Cho phép lưu lượng IPv6 từ instance khởi tạo đi ra ngoài Internet.
+  - Chặn triệt để mọi luồng kết nối khởi tạo từ bên ngoài Internet đi vào instance.
+
+#### 🪤 Bẫy 4: Truy Cập S3/DynamoDB Từ On-Premises Qua AWS Direct Connect — (U-PT6 Q03)
+- **Tình huống đề thi**: *"Doanh nghiệp có đường truyền AWS Direct Connect từ On-Premises. Họ muốn sao lưu lượng lớn dữ liệu lên Amazon S3 qua đường truyền riêng tư này với băng thông cao và không đi qua mạng Internet công cộng."*
+- **Các phương án bẫy**:
+  - ❌ *Cấu hình Private VIF*: Private VIF chỉ định tuyến tới Private IP bên trong VPC (EC2, RDS). Amazon S3 là dịch vụ Public của AWS, nằm ngoài VPC.
+  - ❌ *Dùng Gateway VPC Endpoint qua Private VIF*: Gateway Endpoint không thể định tuyến qua Direct Connect / VPN / Peering.
+- **Giải pháp ĐÚNG**: Cấu hình **Public Virtual Interface (Public VIF)** trên Direct Connect connection.
+  - Public VIF quảng bá các dải IP công khai của AWS (bao gồm S3, DynamoDB) tới router của On-Premises qua giao thức BGP.
+  - Lưu lượng đi trực tiếp từ On-Premises tới S3 qua đường cáp vật lý Direct Connect mà không chạm vào Internet công cộng.
+
+#### 🪤 Bẫy 5: Yêu Cầu Bắt Buộc Để Route 53 Private Hosted Zone Hoạt Động Trong VPC — (U-PT2 Q60)
+- **Tình huống đề thi**: *"Sau khi tạo Route 53 Private Hosted Zone và liên kết với VPC, các máy chủ EC2 vẫn không phân giải được tên miền nội bộ."*
+- **Nguyên nhân cốt lõi**: Bắt buộc phải bật đồng thời cả 2 cờ cấu hình mạng trên VPC:
+  1. `enableDnsHostnames = true` (gán DNS hostname cho instances có public IP).
+  2. `enableDnsSupport = true` (cho phép VPC sử dụng máy chủ AmazonProvidedDNS tại địa chỉ IP cơ sở `10.x.x.2`).
+- Nếu `enableDnsSupport = false`, mọi truy vấn phân giải Private Hosted Zone đều bị từ chối.
+
+---
+
+### 📊 III. Ma Trận Quyết Định Kết Nối Mạng Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **2 VPC trùng IP CIDR cần giao tiếp an toàn** | **AWS PrivateLink** (NLB + Interface Endpoint) | Loại VPC Peering / TGW (lỗi xung đột route) |
+| **Kết nối ít VPC (< 10 VPCs), chi phí tối thiểu** | **VPC Peering** ($0 cước kết nối) | Loại Transit Gateway (tốn phí attachment hàng tháng) |
+| **Hàng chục VPCs + On-Prem, Transitive Routing** | **AWS Transit Gateway** | Loại VPC Peering (không hỗ trợ bắc cầu) |
+| **EC2 Private truy cập S3 / DynamoDB miễn phí** | **Gateway VPC Endpoint** | Loại NAT Gateway (tốn phí data processing) |
+| **EC2 Private truy cập SQS / SSM / Secrets Manager** | **Interface VPC Endpoint** (PrivateLink) | Gateway Endpoint không hỗ trợ các dịch vụ này |
+| **Quản trị EC2 không mở port 22 / không Public IP** | **Systems Manager Session Manager** | Loại Bastion Host (tốn chi phí & rủi ro bảo mật) |
+| **On-Prem giải quyết DNS của AWS** | **Route 53 Resolver Inbound Endpoint** | Loại Outbound Endpoint (sai chiều truy vấn) |
+| **AWS VPC giải quyết DNS nội bộ của On-Prem** | **Route 53 Resolver Outbound Endpoint** | Loại Inbound Endpoint (sai chiều truy vấn) |
+| **IPv6 trong Private Subnet cần ra Internet** | **Egress-Only Internet Gateway** | Loại NAT Gateway (chỉ hỗ trợ IPv4) |
+| **On-Premises truy cập S3 qua Direct Connect** | **Direct Connect Public VIF** | Loại Private VIF (chỉ truy cập VPC nội bộ) |
+| **Truyền dữ liệu nhạy cảm qua Direct Connect an toàn** | **Direct Connect + Site-to-Site VPN (IPsec)** | Direct Connect đơn thuần chưa được mã hóa at-transit |
+
+---
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Sơ đồ kiến trúc VPC chuẩn Enterprise Multi-AZ 3-Tier kết hợp Transit Gateway và Direct Connect
@@ -332,142 +435,9 @@ flowchart TD
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Danh mục câu hỏi trắc nghiệm & Tình huống kiến trúc
-
-#### Câu 1 (Core Concept)
-Trong một Subnet có dải mạng `10.0.1.0/24`, tổng số địa chỉ IPv4 khả dụng thực tế mà kỹ sư có thể cấp phát cho các máy ảo EC2 là bao nhiêu?
-- A. 256 địa chỉ IP.
-- B. 254 địa chỉ IP.
-- C. 251 địa chỉ IP.
-- D. 250 địa chỉ IP.
-
-#### Câu 2 (Core Concept)
-Điểm khác biệt cốt lõi nhất về mặt cơ chế trạng thái (**Stateful vs Stateless**) giữa Security Groups và Network ACLs là gì?
-- A. Security Groups là Stateless; Network ACLs là Stateful.
-- B. **Security Groups là Stateful (Có trạng thái)**: Khi kết nối Inbound được cho phép, kết nối Outbound phản hồi tự động được thông qua; trong khi **Network ACLs là Stateless (Phi trạng thái)**: Bắt buộc phải mở cả 2 chiều Inbound và Outbound riêng biệt.
-- C. Cả hai đều có cơ chế Stateful giống nhau.
-- D. Cả hai đều là Stateless.
-
-#### Câu 3 (Core Concept)
-Hai dịch vụ nào của AWS được hỗ trợ kết nối riêng tư nội bộ **hoàn toàn MIỄN PHÍ ($0.00)** thông qua **VPC Gateway Endpoints**?
-- A. Amazon S3 và Amazon SQS.
-- B. Amazon S3 và Amazon DynamoDB.
-- C. Amazon RDS và Amazon ElastiCache.
-- D. AWS KMS và AWS Secrets Manager.
-
-#### Câu 4 (Core Concept - Networking)
-Điều kiện kỹ thuật bắt buộc khi cấu hình một **NAT Gateway** để các máy ảo trong Private Subnet có thể kết nối ra ngoài Internet là gì?
-- A. NAT Gateway phải đặt trong Private Subnet và không cần IP.
-- B. NAT Gateway **bắt buộc phải được đặt trong một Public Subnet** (Subnet có Route trỏ ra Internet Gateway) và **phải được gắn một Elastic IP**.
-- C. NAT Gateway phải được gắn vào tất cả các máy ảo EC2.
-- D. Phải tắt tính năng Source/Destination Check trên NAT Gateway.
-
-#### Câu 5 (Core Concept - Hybrid & Multi-VPC)
-Dịch vụ nào của AWS đóng vai trò như một bộ định tuyến trung tâm theo mô hình **Hub-and-Spoke**, cho phép kết nối hàng ngàn VPC và mạng trung tâm dữ liệu On-Premises lại với nhau và hỗ trợ định tuyến bắc cầu (**Transitive Routing**)?
-- A. VPC Peering.
-- B. Virtual Private Gateway (VGW).
-- C. AWS Transit Gateway (TGW).
-- D. AWS Direct Connect Gateway.
-
-#### Câu 6 (Core Concept - Architecture Limitations)
-Tại sao kết nối **VPC Peering** lại không hỗ trợ tính năng định tuyến bắc cầu (**Non-transitive Routing**)?
-- A. Vì giới hạn phần cứng của cáp mạng AWS.
-- B. Vì VPC Peering được thiết kế là kết nối điểm-điểm trực tiếp giữa 2 VPC; nếu VPC A nối với B và B nối với C, traffic từ A không thể tự động đi xuyên qua B để sang C được.
-- C. Vì VPC Peering chỉ hoạt động trên giao thức UDP.
-- D. Vì VPC Peering bắt buộc phải dùng địa chỉ Public IP.
-
-#### Câu 7 (Core Concept - Security Auditing)
-Tính năng nào của Amazon VPC cho phép bạn ghi lại toàn bộ thông tin các gói tin IP mạng đi vào và đi ra khỏi các card mạng ảo ENI (bao gồm địa chỉ IP nguồn/đích, cổng, và cờ ACCEPT/REJECT) để phục vụ kiểm toán an ninh?
-- A. AWS CloudTrail.
-- B. Amazon VPC Flow Logs.
-- C. Amazon Inspector.
-- D. AWS Trusted Advisor.
-
-#### Câu 8 (Core Concept - Physical Connectivity)
-Dịch vụ nào cung cấp một đường truyền cáp quang vật lý chuyên dụng riêng biệt từ trung tâm dữ liệu On-Premises của doanh nghiệp tới điểm hiện diện của AWS mà hoàn toàn không đi qua mạng Internet công cộng?
-- A. AWS Site-to-Site VPN.
-- B. AWS Direct Connect.
-- C. Amazon CloudFront.
-- D. AWS Client VPN.
-
-#### Câu 9 (Scenario - S3 High Data Transfer Cost Through NAT)
-Một ứng dụng phân tích dữ liệu chạy trên 20 máy ảo EC2 trong Private Subnet tải 40 TB dữ liệu từ Amazon S3 mỗi tháng, làm phát sinh hóa đơn gần $1,800 riêng tiền phí NAT Gateway Data Processing. Giải pháp kiến trúc nào giúp triệt tiêu 100% chi phí xử lý dữ liệu này mà không cần di chuyển máy chủ sang Public Subnet?
-- A. Nâng cấp NAT Gateway lên băng thông 100 Gbps.
-- B. Tạo một **VPC Gateway Endpoint cho Amazon S3** và gắn vào Route Table của Private Subnet.
-- C. Tạo Interface Endpoint cho S3.
-- D. Cấp phát Elastic IP cho từng máy ảo EC2 trong Private Subnet.
-
-#### Câu 10 (Scenario - Overlapping CIDR Inter-Service Communication)
-Hai công ty vừa sáp nhập và cần kết nối các dịch vụ Microservices giữa VPC của Công ty A (`10.0.0.0/16`) và VPC của Công ty B (`10.0.0.0/16`). Do hai VPC bị trùng lặp hoàn toàn dải địa chỉ IP (Overlapping CIDR), kết nối VPC Peering và Transit Gateway đều báo lỗi. Giải pháp kỹ thuật nào cho phép các dịch vụ giao tiếp với nhau mà không cần cấu hình lại IP của toàn bộ mạng?
-- A. Sử dụng Internet Gateway kết nối qua mạng công cộng.
-- B. Triển khai **AWS PrivateLink** (tạo Endpoint Service phía Provider và Interface Endpoint phía Consumer) hoặc sử dụng **Amazon VPC Lattice**.
-- C. Thay đổi Subnet Mask từ /16 sang /24.
-- D. Cài đặt thêm card mạng phụ ENI trên máy chủ.
-
-#### Câu 11 (Scenario - Zero Public Exposure Security Mandate)
-Một ngân hàng yêu cầu toàn bộ máy chủ EC2 quản trị cơ sở dữ liệu và backend phải nằm trong mạng hoàn toàn cô lập, không có địa chỉ Public IP và không được mở cổng SSH 22, nhưng các kỹ sư DevOps vẫn phải truy cập được vào shell máy chủ để bảo trì. Giải pháp kiến trúc nào đáp ứng hoàn hảo yêu cầu này?
-- A. Đặt một Bastion Host trong Public Subnet và mở cổng 22.
-- B. Sử dụng **AWS Systems Manager Session Manager** kết hợp các **VPC Interface Endpoints** (cho SSM, SSMMessages và EC2Messages).
-- C. Cấu hình phần mềm TeamViewer trên máy chủ.
-- D. Mở cổng RDP 3389 ra Internet.
-
-#### Câu 12 (Scenario - Cost-Effective Multi-VPC Architecture)
-Một doanh nghiệp có 4 VPCs trong cùng một Region cần trao đổi dữ liệu với nhau với lưu lượng thấp (dưới 2 TB/tháng). Giải pháp kết nối nào mang lại chi phí duy trì cố định rẻ nhất ($0.00/tháng)?
-- A. AWS Transit Gateway với 4 attachments.
-- B. **VPC Peering** (thiết lập các kết nối Peering trực tiếp giữa các cặp VPC).
-- C. AWS Site-to-Site VPN dạng Mesh.
-- D. AWS Direct Connect.
-
 ---
 
-### B. Đáp án Chi Tiết Bộ Câu Hỏi Ôn Tập (Answer Key & Explanations)
-
-<details>
-<summary>👉 Nhấp vào đây để xem toàn bộ đáp án chi tiết và giải thích kiến trúc</summary>
-
-### Đáp án Câu 1: C
-- **Giải thích**: Dải mạng `/24` có tổng cộng $2^{32-24} = 256$ địa chỉ IP. Theo quy định bất biến của AWS, luôn có **5 địa chỉ IP bị giữ lại** trên mỗi Subnet (Network, VPC Router, DNS, Future use, Broadcast). Do đó, số lượng IP thực tế có thể sử dụng là $256 - 5 = \mathbf{251}$ địa chỉ IP.
-
-### Đáp án Câu 2: B
-- **Giải thích**: **Security Groups là Stateful**: Nếu gói tin Inbound được chấp thuận đi vào, gói tin phản hồi Outbound tự động được phép đi ra. Ngược lại, **Network ACLs là Stateless**: Bắt buộc phải khai báo tường minh cả luật Inbound và luật Outbound (kèm mở dải cổng tạm thời Ephemeral Ports 1024–65535) thì gói tin mới truyền thông được hai chiều.
-
-### Đáp án Câu 3: B
-- **Giải thích**: **VPC Gateway Endpoints** là tính năng định tuyến miễn phí 100% của AWS và **chỉ hỗ trợ duy nhất 2 dịch vụ: Amazon S3 và Amazon DynamoDB**. Toàn bộ các dịch vụ AWS khác (KMS, SQS, Secrets Manager...) đều sử dụng **Interface Endpoints (AWS PrivateLink)** và có tính phí duy trì ENI + phí dữ liệu.
-
-### Đáp án Câu 4: B
-- **Giải thích**: Để có thể chuyển tiếp gói tin từ Private Subnet ra ngoài Internet và nhận gói tin phản hồi, **NAT Gateway bắt buộc phải được đặt trong một Public Subnet** (Subnet có Route Table trỏ trực tiếp `0.0.0.0/0` ra Internet Gateway) và **phải được gắn một địa chỉ IP tĩnh công khai (Elastic IP)**.
-
-### Đáp án Câu 5: C
-- **Giải thích**: **AWS Transit Gateway (TGW)** hoạt động như một bộ định tuyến ảo trung tâm hỗ trợ mô hình hình sao (Hub-and-Spoke), có khả năng liên kết hàng ngàn VPC và hỗ trợ tính năng định tuyến bắc cầu (**Transitive Routing**), giải quyết triệt để sự phức tạp của mạng lưới kết nối chéo VPC Peering.
-
-### Đáp án Câu 6: B
-- **Giải thích**: Bản chất của **VPC Peering** là kết nối điểm-điểm trực tiếp (Point-to-Point) giữa 2 VPC riêng biệt và **không hỗ trợ định tuyến bắc cầu (Non-transitive)**. Nếu VPC A kết nối với B, và B kết nối với C, gói tin từ A không thể mượn đường B để sang C; muốn kết nối, bạn bắt buộc phải tạo kết nối Peering trực tiếp giữa A và C.
-
-### Đáp án Câu 7: B
-- **Giải thích**: **Amazon VPC Flow Logs** là tính năng giám sát mạng chuyên dụng, ghi lại toàn bộ siêu dữ liệu (metadata) của các luồng gói tin IP đi qua các card mạng ảo ENI trong VPC (bao gồm IP nguồn/đích, Port nguồn/đích, Protocol, Action: ACCEPT hoặc REJECT), hỗ trợ đẩy log về S3 hoặc CloudWatch Logs.
-
-### Đáp án Câu 8: B
-- **Giải thích**: **AWS Direct Connect** là giải pháp mạng vật lý chuyên dụng, kết nối trực tiếp từ trung tâm dữ liệu của khách hàng tới điểm hiện diện của AWS thông qua đường cáp quang viễn thông riêng biệt, đem lại băng thông lớn, độ trễ cực thấp và bảo mật tối đa mà không đi qua Internet công cộng.
-
-### Đáp án Câu 9: B
-- **Giải thích**: Khi sử dụng **VPC Gateway Endpoint cho S3**, toàn bộ lưu lượng giữa EC2 trong Private Subnet và S3 sẽ đi thẳng qua mạng trục AWS Backbone mà không đi qua NAT Gateway. Gateway Endpoint hoàn toàn **MIỄN PHÍ ($0.00)**, giúp cắt giảm 100% chi phí xử lý dữ liệu của NAT Gateway.
-
-### Đáp án Câu 10: B
-- **Giải thích**: Khi hai VPC bị trùng lặp dải địa chỉ IP (**Overlapping CIDRs**), các giải pháp định tuyến ở tầng mạng IP như Peering hay Transit Gateway đều không thể hoạt động. **AWS PrivateLink** hoặc **Amazon VPC Lattice** hoạt động bằng cách ánh xạ dịch vụ sang một ENI riêng hoặc định tuyến ở tầng ứng dụng (Layer 7), cho phép giao tiếp an toàn mà không cần thay đổi cấu trúc IP mạng.
-
-### Đáp án Câu 11: B
-- **Giải thích**: **AWS Systems Manager Session Manager** cho phép kết nối terminal bảo mật vào EC2 thông qua kênh mã hóa của AWS API mà không cần mở cổng 22 và không cần Public IP. Khi kết hợp với các **VPC Interface Endpoints**, toàn bộ lưu lượng quản trị sẽ nằm hoàn toàn bên trong mạng nội bộ VPC (Zero Public Exposure).
-
-### Đáp án Câu 12: B
-- **Giải thích**: Với số lượng nhỏ (4 VPCs trong cùng Region), **VPC Peering** là giải pháp tiết kiệm nhất vì **hoàn toàn MIỄN PHÍ cước duy trì kết nối ($0.00/tháng)** và miễn phí cước xử lý dữ liệu; trong khi Transit Gateway sẽ tốn tối thiểu $144/tháng tiền cước duy trì các attachments.
-
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon VPC (Golden Rules)
 1. **Luôn trừ 5 địa chỉ IP dành riêng**:  

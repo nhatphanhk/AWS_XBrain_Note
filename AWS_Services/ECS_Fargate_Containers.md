@@ -91,6 +91,69 @@ classDiagram
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Điều Phối Container Không Máy Chủ Với AWS Fargate (Minimal Operational Overhead)
+- **Tình huống thi**: Doanh nghiệp muốn đóng gói ứng dụng web microservices thành các Docker containers. Đội ngũ không muốn tốn thời gian quản lý cụm máy chủ, vá lỗi hệ điều hành EC2, hay cấu hình dung lượng cụm.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Triển khai ứng dụng trên **Amazon ECS (Elastic Container Service)** với kiểu khởi chạy **AWS Fargate (Serverless Launch Type)**.
+  - AWS tự động cấp phát, cấu hình và mở rộng hạ tầng tính toán theo từng Task.
+  - Bạn chỉ cần trả tiền cho số lượng vCPU và dung lượng RAM được cấp phát chính xác theo từng giây chạy của Task.
+
+#### 2. Phân Định Rạch Ròi Giữa ECS Task Role và ECS Task Execution Role
+- **Bẫy thi phổ biến**: Đề bài yêu cầu phân quyền để container kéo ảnh từ ECR hoặc phân quyền để code đọc DynamoDB và đưa ra 2 loại role này:
+
+| Loại IAM Role trong ECS | Đối tượng sử dụng | Các quyền hạn điển hình được gán |
+|:---|:---|:---|
+| **ECS Task Execution Role** | Dành cho **hạ tầng ECS Agent** (AWS infrastructure agent) | - Kéo Docker image từ **Amazon ECR** (`ecr:GetAuthorizationToken`, `ecr:BatchGetImage`)<br>- Đẩy log ứng dụng vào **CloudWatch Logs** (`logs:CreateLogStream`, `logs:PutLogEvents`)<br>- Lấy biến môi trường nhạy cảm từ **Secrets Manager** hoặc **SSM Parameter Store** |
+| **ECS Task Role** | Dành cho **mã nguồn ứng dụng** chạy bên trong Container | - Gọi AWS SDK từ code Python/Java/NodeJS<br>- Đọc/ghi dữ liệu vào **Amazon S3** (`s3:GetObject`, `s3:PutObject`)<br>- Truy vấn cơ sở dữ liệu **Amazon DynamoDB**<br>- Gửi tin nhắn vào hàng đợi **Amazon SQS** |
+
+#### 3. Chạy Tác Vụ Dài Hạn > 15 Phút Không Quản Trị Server (EventBridge + Fargate)
+- **Tình huống thi**: Báo cáo tài chính định kỳ vào 2h sáng mỗi ngày cần chạy từ 30 đến 45 phút để tổng hợp dữ liệu. Yêu cầu kiến trúc Serverless, không quản lý EC2.
+- **Giải pháp chuẩn**:
+  - Không thể dùng Lambda (do giới hạn cứng 15 phút).
+  - Sử dụng **Amazon EventBridge Scheduler** kích hoạt một tác vụ **ECS on AWS Fargate** theo lịch cron (`RunTask` API). Fargate chạy xong sẽ tự động tắt và dừng tính phí.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Ứng Dụng Container Có Trạng Thái Cần Bộ Nhớ Chia Sẻ (Stateful Microservices Với EFS) — (CM-PT1 Q36)
+- **Tình huống đề thi**: *"Doanh nghiệp chuyển đổi ứng dụng xử lý nội dung số chạy trên Docker containers lên AWS Fargate. Nhiều container tasks cần đọc và ghi đồng thời vào một không gian lưu trữ tệp tin dùng chung có tính bền vững cao và tự động co giãn."*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng Amazon EBS Volume*: Trước đây Fargate không hỗ trợ EBS; hiện tại dù đã hỗ trợ EBS mount cho từng task đơn lẻ, EBS **hoàn toàn không hỗ trợ chia sẻ đồng thời nhiều máy chủ (Multi-Attach qua nhiều AZ)** cho ứng dụng tệp tin tiêu chuẩn.
+  - ❌ *Sử dụng bộ nhớ Ephemeral Storage mặc định của Fargate*: Bộ nhớ này chỉ tồn tại tạm thời cùng vòng đời của Task, khi Task tắt hoặc scale-in toàn bộ dữ liệu sẽ bị xóa sạch!
+- **Giải pháp ĐÚNG**: Tích hợp **Amazon Elastic File System (Amazon EFS)** vào ECS Task Definition.
+  - EFS là hệ thống tệp tin mạng tiêu chuẩn POSIX.
+  - Cho phép hàng trăm ECS Fargate Tasks trải dài trên nhiều Availability Zones cùng mount và đọc/ghi đồng thời với tính nhất quán cao.
+
+#### 🪤 Bẫy 2: Kéo Image Từ Amazon ECR Cho Fargate Trong Private Subnet Tuyệt Đối
+- **Tình huống đề thi**: *"Các tác vụ ECS Fargate được triển khai trong Private Subnet hoàn toàn không có Internet Gateway và không có NAT Gateway. Tác vụ bị lỗi không thể khởi động được (CannotPullContainerError)."*
+- **Nguyên nhân & Bộ 3 VPC Endpoints bắt buộc**:
+  - Để Fargate trong mạng cô lập kéo được Docker image từ ECR, bắt buộc phải cấu hình:
+    1. **Interface VPC Endpoint**: `com.amazonaws.<region>.ecr.api` (cho các lệnh gọi điều khiển ECR API).
+    2. **Interface VPC Endpoint**: `com.amazonaws.<region>.ecr.dkr` (cho luồng tải các image layer Docker).
+    3. **Gateway VPC Endpoint cho Amazon S3**: Đây là **bẫy tinh vi nhất** — toàn bộ các layer nhị phân của Docker image trong Amazon ECR thực tế được lưu trữ trên Amazon S3! Nếu thiếu S3 Gateway Endpoint, lệnh kéo image vẫn sẽ thất bại.
+
+---
+
+### 📊 III. Ma Trận Quyết Định Container Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Chạy Container không quản trị OS, trả tiền theo giây** | **Amazon ECS on AWS Fargate** | ECS on EC2 (phải quản trị, vá lỗi máy ảo) |
+| **Workload Kubernetes hiện có, di chuyển lên AWS** | **Amazon EKS** (+ Fargate hoặc EC2 nodes) | Amazon ECS (phải viết lại Task Definition) |
+| **Phân quyền cho code trong container gọi DynamoDB/S3** | **ECS Task Role** | ECS Task Execution Role (chỉ dành cho ECS agent) |
+| **Container cần chia sẻ file system đọc/ghi đồng thời** | **ECS on Fargate + Amazon EFS** | Amazon EBS (không chia sẻ nhiều AZ đồng thời) |
+| **Script chạy 30-60 phút cần serverless** | **EventBridge Scheduler + ECS Fargate Task** | AWS Lambda (hard limit timeout 15 phút) |
+| **Kéo image ECR trong Private Subnet không có NAT** | **VPC Endpoints cho ECR API, DKR + S3 Gateway** | Chỉ tạo ECR endpoints (thiếu S3 endpoint) |
+
+---
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Quy Trình Triển Khai Blue/Green Không Gián Đoạn trên ECS Fargate với AWS CodeDeploy
@@ -246,104 +309,9 @@ sequenceDiagram
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Nhóm Câu Hỏi Cốt Lõi (Core Concepts)
-
-#### Câu 1: Sự khác biệt then chốt nhất giữa ECS Task Execution Role và ECS Task Role là gì?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **ECS Task Execution Role**: Được sử dụng bởi chính hạ tầng của AWS (tiến trình **ECS Container Agent** hoặc nền tảng Fargate) trước và trong khi khởi động container. Mục đích: Đăng nhập và kéo Docker image từ Amazon ECR, tạo Log Stream và đẩy log lên Amazon CloudWatch Logs, và lấy các thông tin bí mật từ AWS Secrets Manager nạp vào biến môi trường.
-- **ECS Task Role**: Được sử dụng bởi chính mã nguồn ứng dụng chạy bên trong container. Mục đích: Cấp quyền cho ứng dụng thực thi các API nghiệp vụ của AWS (ví dụ: container Order Service được phép đọc/ghi bảng DynamoDB hoặc upload file lên S3 Bucket).
-</details>
-
-#### Câu 2: Khi chạy các container ECS trên AWS Fargate trong một Private Subnet không có Internet Gateway hay NAT Gateway, bạn cần cấu hình những thành phần mạng nào để Task có thể kéo ảnh thành công từ Amazon ECR?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: Cần cấu hình tối thiểu 3 VPC Endpoints:
-  1. **VPC Interface Endpoint** cho `com.amazonaws.[region].ecr.api` (để gọi các API quản lý của ECR).
-  2. **VPC Interface Endpoint** cho `com.amazonaws.[region].ecr.dkr` (để thực hiện lệnh docker pull).
-  3. **VPC Gateway Endpoint** cho **Amazon S3** (bắt buộc, vì các layer nhị phân của Docker image thực tế được lưu trữ trên hạ tầng Amazon S3).
-</details>
-
-#### Câu 3: Tham số `HealthCheckGracePeriodSeconds` trong cấu hình Amazon ECS Service giải quyết vấn đề kỹ thuật nào?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: Giải quyết vấn đề **Task bị tiêu hủy sớm khi chưa kịp khởi động xong**.
-- **Giải thích**: Nhiều ứng dụng doanh nghiệp (như Java Spring Boot, ứng dụng nạp model máy học) mất từ 30 đến 90 giây để nạp xong các thư viện và mở cổng lắng nghe. Nếu không có tham số này, ALB sẽ kiểm tra sức khỏe ngay sau 10 giây đầu tiên, đánh dấu Task là "Unhealthy" và ECS Service sẽ lập tức tiêu hủy Task rồi tạo Task mới, dẫn đến vòng lặp sập/tạo vô tận (Crash Loop). `HealthCheckGracePeriodSeconds` ra lệnh cho ALB bỏ qua kiểm tra sức khỏe trong khoảng thời gian ân hạn ban đầu.
-</details>
-
 ---
 
-### B. Nhóm Câu Hỏi Tình Huống & Xử Lý Sự Cố (Scenarios & Troubleshooting)
-
-#### Câu 4: Một kỹ sư DevOps muốn chạy nhiều Task của cùng một microservice trên cùng một máy chủ ảo EC2 bằng cụm ECS EC2 Launch Type kết hợp với Application Load Balancer. Làm thế nào để tránh xung đột cổng mạng giữa các container?
-- (A) Gán nhiều địa chỉ Elastic IP vào máy ảo EC2.
-- (B) Trong Task Definition, đặt `hostPort` là `0` để kích hoạt tính năng Dynamic Port Mapping của ALB.
-- (C) Chuyển Network Mode của Task Definition sang `host`.
-- (D) Tạo riêng biệt mỗi container một Classic Load Balancer.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - Khi cấu hình `hostPort = 0` (hoặc để trống), Docker daemon sẽ tự động cấp phát một cổng ngẫu nhiên trong dải cổng tạm thời (Ephemeral Ports: 32768 - 61000) trên máy chủ EC2 cho mỗi container khi khởi chạy.
-  - ECS Service tự động đăng ký cổng động này vào Target Group của ALB, cho phép nhiều bản sao container chạy song song trên cùng 1 máy ảo mà không bị xung đột.
-</details>
-
-#### Câu 5: Hệ thống xử lý ảnh nhận tin nhắn từ SQS và chạy các tác vụ nền kéo dài từ 2 đến 5 phút. Để tối ưu hóa chi phí đến mức tối đa trên AWS Fargate mà vẫn đảm bảo tin nhắn không bị mất khi có sự cố, giải pháp nào là tối ưu nhất?
-- (A) Chuyển toàn bộ hệ thống sang chạy trên EC2 On-Demand.
-- (B) Sử dụng ECS Service với Fargate Spot Capacity Provider kết hợp xử lý Visibility Timeout trên SQS.
-- (C) Chuyển sang chạy trên AWS Lambda với thời gian timeout 30 phút.
-- (D) Mua Fargate Reserved Instances 1 năm.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - **AWS Fargate Spot** giảm tới **70% chi phí** so với Fargate On-Demand.
-  - Vì các worker là phi trạng thái (Stateless) tiêu thụ từ hàng đợi SQS, nếu một task Spot bị AWS thu hồi (sau khi gửi cảnh báo 2 phút), tin nhắn chưa được xóa khỏi SQS sẽ tự động quay trở lại hàng đợi sau khi hết `VisibilityTimeout` để một worker khác tiếp quản xử lý.
-  - Lambda không hỗ trợ chạy quá 15 phút, và Fargate không có khái niệm Reserved Instances (chỉ có Compute Savings Plans).
-</details>
-
----
-
-### C. Nhóm Câu Hỏi Phỏng Vấn Chuyên Sâu (Solutions Architect & DevOps)
-
-#### Câu 6: "Hãy phân tích sự khác nhau giữa việc sử dụng Application Load Balancer nội bộ và ECS Service Connect trong việc kết nối giữa các microservices trên Amazon ECS?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Khi dùng Application Load Balancer (ALB) nội bộ**:
-  - Mỗi microservice backend cần 1 ALB nội bộ riêng biệt.
-  - Nhược điểm: Tốn chi phí cố định ($0.0225/giờ/ALB + cước LCU), lưu lượng phải nhảy thêm một chặng mạng (Extra Network Hop: Task ➔ ALB ➔ Task), tăng độ trễ mạng và tăng độ phức tạp quản trị target groups.
-- **Khi dùng ECS Service Connect**:
-  - Không cần tạo Load Balancer nào cả; AWS tự động triển khai một Envoy proxy sidecar gọn nhẹ trong từng task.
-  - Ưu điểm:
-    1. **Chi phí $0.00**: Hoàn toàn miễn phí dịch vụ.
-    2. **Độ trễ thấp**: Giao tiếp trực tiếp peer-to-peer giữa các tasks thông qua proxy nội bộ.
-    3. **Quản trị dễ dàng**: Microservice A gọi Microservice B đơn giản qua tên miền nội bộ (ví dụ: `http://inventory-service:8080`).
-    4. **Giám sát nâng cao**: Tích hợp sẵn việc thu thập metrics chi tiết về số lượng request, mã lỗi HTTP và độ trễ phản hồi (P50, P90, P99) trên CloudWatch.
-</details>
-
-#### Câu 7: "Làm thế nào để cấp quyền IAM cho từng Pod riêng lẻ chạy trên Amazon EKS mà không cần chia sẻ quyền của Worker Node?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Giải pháp**:
-  - **Cách truyền thống**: Sử dụng **IAM Roles for Service Accounts (IRSA)**. Phương pháp này yêu cầu tạo OIDC Identity Provider cho cụm EKS, tạo IAM Role với Trust Policy liên kết với OIDC, và gắn chú thích (Annotation) tên Role vào Kubernetes ServiceAccount.
-  - **Cách hiện đại nhất (2024 - 2026)**: Sử dụng **EKS Pod Identity**.
-    - EKS Pod Identity là tính năng thế hệ mới của AWS giúp đơn giản hóa hoàn toàn quy trình phân quyền: Không cần cấu hình OIDC Identity Provider cho cụm EKS.
-    - Bạn chỉ cần cài đặt EKS Pod Identity Agent add-on trên cụm, sau đó tạo một liên kết (**Pod Identity Association**) giữa IAM Role và Kubernetes ServiceAccount trực tiếp qua AWS Console, CLI hoặc Terraform.
-    - Phương pháp này an toàn hơn, dễ tự động hóa hơn và hỗ trợ tái sử dụng Role trên nhiều cụm EKS khác nhau.
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Quản Trị Container AWS (Golden Rules)
 1. **Fargate cho Microservices**: Ưu tiên chọn Fargate để triệt tiêu hoàn toàn công việc quản trị máy chủ và vá lỗi hệ điều hành.

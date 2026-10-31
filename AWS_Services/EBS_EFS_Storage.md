@@ -187,6 +187,95 @@ sequenceDiagram
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Lựa Chọn Đúng 4 Loại Ổ Đĩa Amazon EBS Phổ Biến Theo Khối Lượng Công Việc
+- **Bảng so sánh 4 loại ổ đĩa EBS cốt lõi trong đề thi**:
+
+| Loại Ổ Đĩa EBS | Công nghệ | IOPS / Băng Thông tối đa | Trường hợp sử dụng tối ưu (Use Case) |
+|:---|:---|:---|:---|
+| **General Purpose SSD (`gp3`)** | SSD | 16,000 IOPS / 1,000 MB/s | **Lựa chọn mặc định tốt nhất**: Cung cấp baseline 3,000 IOPS và 125 MB/s miễn phí độc lập với dung lượng đĩa. Rẻ hơn `gp2` tới 20%. |
+| **Provisioned IOPS SSD (`io2 Block Express`)** | SSD | **256,000 IOPS** / 4,000 MB/s | **Cơ sở dữ liệu nhiệm vụ sống còn (Mission-Critical)**: Oracle, SAP HANA, MSSQL yêu cầu độ trễ dưới 1 millisecond và độ tin cậy 99.999%. |
+| **Throughput Optimized HDD (`st1`)** | HDD | 500 IOPS / 500 MB/s | **Dữ liệu lớn tuần tự, thông lượng cao**: Big Data, Data Warehousing, Log Processing, Kafka, Hadoop. Không dùng làm ổ boot OS. |
+| **Cold HDD (`sc1`)** | HDD | 250 IOPS / 250 MB/s | **Lưu trữ tuần tự ít truy cập, chi phí rẻ nhất**: Sao lưu dự phòng, dữ liệu lưu trữ lịch sử dạng file lớn. |
+
+#### 2. Tự Động Hóa Vòng Đời Bản Chụp EBS Bằng Amazon Data Lifecycle Manager (DLM)
+- **Tình huống thi**: Doanh nghiệp cần tự động hóa quy trình chụp snapshot hàng ngày cho toàn bộ các ổ đĩa EBS của máy chủ EC2, lưu giữ trong vòng 30 ngày rồi tự động xóa các bản cũ, và sao chép snapshot sang Region dự phòng để khắc phục thảm họa với ít công sức nhất.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Không tự viết script Python/Lambda và EventBridge (Anti-pattern tốn công vận hành).
+  - Sử dụng dịch vụ **Amazon Data Lifecycle Manager (Amazon DLM)**.
+  - Tạo một **EBS Snapshot Lifecycle Policy**: Áp dụng dựa trên Resource Tags (ví dụ: `Environment=Prod`), thiết lập lịch biểu chạy (hàng ngày lúc 0h), chu kỳ lưu giữ (Retention Rule: 30 ngày) và kích hoạt tính năng **Cross-Region Copy** tự động.
+
+#### 3. Hệ Thống Tệp Tin Tốc Độ Cực Cao Cho HPC & Machine Learning (Amazon FSx for Lustre)
+- **Tình huống thi**: Khối lượng công việc tính toán hiệu năng cao (HPC), huấn luyện mô hình học máy (Machine Learning), hoặc tự động hóa thiết kế điện tử (EDA) cần hệ thống tệp tin tuân chuẩn POSIX có khả năng đọc/ghi với băng thông hàng trăm Gigabytes/giây và độ trễ sub-millisecond.
+- **Giải pháp chuẩn**:
+  - Triển khai **Amazon FSx for Lustre**.
+  - **Tích hợp Native với Amazon S3**: FSx for Lustre có thể liên kết trực tiếp với một S3 bucket, tự động nạp dữ liệu từ S3 vào hệ thống tệp tin khi cần và đẩy kết quả tính toán ngược trở lại S3 khi hoàn tất.
+
+#### 4. Hệ Cấp Bậc Chi Phí Lưu Trữ: S3 vs EFS vs EBS
+- **Quy tắc phân tầng chi phí**:
+  $$\text{Amazon S3 Standard (\$0.023/GB)} < \text{Amazon EFS Standard-IA (\$0.025/GB)} < \text{Amazon EBS gp3 (\$0.08/GB)} < \text{Amazon EFS Standard (\$0.30/GB)}$$
+- *Lưu ý quan trọng*: EBS tính tiền theo **dung lượng cấp phát tĩnh (Provisioned Storage)** dù bạn có dùng hết hay không; trong khi S3 và EFS tính tiền theo **dung lượng thực tế sử dụng (Pay-as-you-go)**.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Hệ Thống Tệp Tin Chia Sẻ Cho Cụm ASG: EFS vs EBS — (U-PT2 Q21)
+- **Tình huống đề thi**: *"Ứng dụng chia sẻ video chạy trên một cụm máy chủ EC2 được quản lý bởi Auto Scaling Group. Người dùng tải video lên một máy chủ bất kỳ, nhưng video đó phải được hiển thị ngay lập tức cho toàn bộ các máy chủ khác trong cụm."*
+- **Nguyên lý bất biến**:
+  - **Amazon EBS**: Ổ cứng gắn trực tiếp vào **1 máy chủ duy nhất** trong **1 Availability Zone duy nhất** (trừ io1/io2 Multi-Attach trong cùng AZ). Khi ASG sinh thêm máy chủ ở các AZ khác nhau, mỗi máy chủ mang ổ đĩa riêng -> Dữ liệu tải lên máy A hoàn toàn vô hình đối với máy B!
+  - **Amazon EFS**: Hệ thống tệp tin mạng chuẩn **POSIX NFSv4**, hỗ trợ mount đồng thời trên hàng trăm máy chủ EC2 trải dài trên nhiều AZs trong cùng Region -> **Tất cả các máy chủ đều nhìn thấy chung một thư mục chia sẻ**.
+
+#### 🪤 Bẫy 2: Tiết Kiệm Tới 91% Chi Phí Cho EFS Bằng EFS Standard-IA — (U-PT2 Q38)
+- **Tình huống đề thi**: *"Doanh nghiệp sử dụng Amazon EFS để lưu trữ tệp tin chia sẻ giữa các máy chủ. Qua phân tích, hơn 85% tệp tin sau 30 ngày hầu như không còn được truy cập nữa. Cần tối ưu chi phí lưu trữ mà ứng dụng không phải thay đổi đường dẫn tệp."*
+- **Giải pháp ĐÚNG**: Kích hoạt **EFS Lifecycle Management** chuyển đổi sang lớp lưu trữ **EFS Standard-IA (Infrequent Access)** sau 30 ngày không truy cập.
+  - Chi phí lưu trữ giảm từ $0.30/GB xuống chỉ còn **$0.025/GiB/tháng** (tiết kiệm ~91%).
+  - Đường dẫn tệp tin trên hệ điều hành Linux vẫn giữ nguyên, trong suốt hoàn toàn với ứng dụng.
+
+#### 🪤 Bẫy 3: Đặc Tính Vòng Đời Của EC2 Ephemeral Instance Store — (U-PT6 Q50)
+- **Bẫy bất biến**:
+  - Instance Store là ổ cứng NVMe vật lý gắn trực tiếp vào bo mạch chủ của máy chủ EC2.
+  - **KHÔNG THỂ gỡ ra (Detach)** khỏi instance này để gắn vào instance khác.
+  - Dữ liệu bị **xóa sạch hoàn toàn** khi instance bị **STOP** hoặc **TERMINATE** hoặc gặp sự cố phần cứng máy chủ vật lý.
+  - Dữ liệu trong Instance Store **KHÔNG được lưu vào AMI**.
+  - *Chỉ dùng cho*: Cache, swap, buffer, và dữ liệu tạm thời cần IOPS cực cao.
+
+#### 🪤 Bẫy 4: Quy Trình 4 Bước Bắt Buộc Để Mã Hóa EBS Volume Đang Tồn Tại — (U-PT2 Q16)
+- **Quy tắc**: AWS **KHÔNG cho phép bật mã hóa trực tiếp (in-place)** trên một EBS volume đang unencrypted.
+- **Quy trình 4 bước chuẩn xác**:
+  1. Chụp **Snapshot** từ volume chưa mã hóa hiện tại.
+  2. **Copy Snapshot** đó và tích hợp bật cờ mã hóa kèm chọn **KMS Key**.
+  3. Tạo **EBS Volume MỚI** từ Encrypted Snapshot vừa copy.
+  4. Stop máy chủ EC2 -> Detach volume cũ -> Attach volume mới mã hóa -> Start lại máy chủ.
+
+#### 🪤 Bẫy 5: Điều Kiện Khắt Khe Của Tính Năng EBS Multi-Attach — (U-PT6 Q45)
+- **Bẫy thi**: Đề thi hỏi về việc gắn một EBS volume vào nhiều máy chủ EC2 cùng một lúc.
+- **Ràng buộc kỹ thuật**:
+  - Chỉ hỗ trợ trên các dòng ổ đĩa cao cấp: **`io1`** hoặc **`io2`**.
+  - Các máy chủ EC2 và ổ đĩa EBS **bắt buộc phải nằm trong CÙNG MỘT Availability Zone** (không hỗ trợ Cross-AZ Multi-Attach).
+  - Hệ điều hành trên các máy chủ bắt buộc phải sử dụng **Cluster-Aware File System** (ví dụ: GFS2, OCFS2) để điều phối ghi đĩa, tránh xung đột hỏng dữ liệu.
+
+---
+
+### 📊 III. Ma Trận Quyết Định Lưu Trữ Khối & Tệp Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Hệ thống tệp tin chia sẻ nhiều máy chủ Linux** | **Amazon EFS** | Amazon EBS (chỉ gắn 1 máy chủ/1 AZ) |
+| **Hệ thống tệp tin Windows SMB, tích hợp AD** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ giao thức Linux NFS) |
+| **Tính toán HPC, Machine Learning, kết nối S3** | **Amazon FSx for Lustre** | Amazon EFS (băng thông thấp hơn Lustre) |
+| **Ổ đĩa hệ điều hành EC2 đa dụng rẻ nhất** | **Amazon EBS `gp3`** | `gp2` (đắt hơn 20%, bị trói buộc IOPS theo GB) |
+| **Cơ sở dữ liệu Oracle/SAP cần > 100,000 IOPS** | **Amazon EBS `io2 Block Express`** | `gp3` (giới hạn tối đa 16,000 IOPS) |
+| **Xử lý dữ liệu lớn tuần tự (Hadoop, Kafka, Logs)** | **Amazon EBS `st1` (Throughput Optimized)** | `sc1` (băng thông thấp hơn) |
+| **Tự động chụp và dọn dẹp snapshot định kỳ** | **Amazon Data Lifecycle Manager (DLM)** | Viết Lambda cron script thủ công |
+| **Bộ nhớ tạm IOPS hàng triệu, mất khi tắt máy** | **EC2 Instance Store** | Amazon EBS (độ trễ cao hơn Instance Store) |
+| **Gắn 1 ổ đĩa EBS vào nhiều EC2 cùng lúc** | **EBS Multi-Attach (`io1`/`io2`, cùng 1 AZ)** | `gp3` (không hỗ trợ Multi-Attach) |
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Sơ đồ luồng chia sẻ tệp tin đa vùng cho cụm Web Farm Container kết hợp EFS và EBS
@@ -366,142 +455,9 @@ flowchart TD
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Danh mục câu hỏi trắc nghiệm & Tình huống kiến trúc
-
-#### Câu 1 (Core Concept)
-Phạm vi hoạt động địa lý của một ổ đĩa Amazon EBS thông thường bị ràng buộc ở cấp độ nào trong cấu trúc hạ tầng đám mây của AWS?
-- A. Toàn cầu (Global).
-- B. Toàn bộ Region (Regional).
-- C. Duy nhất một Availability Zone (AZ-locked).
-- D. Giới hạn trong một Edge Location của CloudFront.
-
-#### Câu 2 (Core Concept)
-Dòng ổ đĩa Amazon EBS nào hiện nay là lựa chọn mặc định tối ưu nhất, cho phép kỹ sư cấu hình độc lập giữa dung lượng (GiB), số lượng IOPS và băng thông Throughput (MB/s)?
-- A. General Purpose SSD `gp2`.
-- B. General Purpose SSD `gp3`.
-- C. Throughput Optimized HDD `st1`.
-- D. Cold HDD `sc1`.
-
-#### Câu 3 (Core Concept)
-Hai dòng ổ đĩa nào sau đây của Amazon EBS thuộc công nghệ đĩa từ tính HDD và **TUYỆT ĐỐI KHÔNG THỂ** sử dụng làm ổ đĩa khởi động hệ điều hành (OS Boot Volume)?
-- A. `gp2` và `gp3`.
-- B. `io1` và `io2`.
-- C. `st1` và `sc1`.
-- D. `gp3` và `st1`.
-
-#### Câu 4 (Core Concept)
-Điều gì sẽ xảy ra với toàn bộ dữ liệu đang lưu trữ trên một ổ đĩa **EC2 Instance Store** khi bạn thực hiện thao tác **Stop** máy ảo và sau đó **Start** lại?
-- A. Dữ liệu được tự động sao lưu sang S3 và nạp lại nguyên vẹn.
-- B. Dữ liệu vẫn tồn tại nguyên vẹn trên máy ảo.
-- C. Toàn bộ dữ liệu bị xóa sạch hoàn toàn và không thể khôi phục lại được.
-- D. Máy ảo chuyển sang chế độ Hibernate.
-
-#### Câu 5 (Core Concept - Day-2 Operations)
-Một ổ đĩa Amazon EBS thông thường đang hoạt động tại Availability Zone `us-east-1a`. Bạn có thể gắn (attach) trực tiếp ổ đĩa này vào một máy ảo EC2 đang chạy tại `us-east-1b` không? Nếu không, quy trình chuẩn mực để di chuyển là gì?
-- A. Có thể gắn trực tiếp mà không cần làm gì thêm.
-- B. Không thể gắn trực tiếp; phải chụp Snapshot $\rightarrow$ Tạo Volume mới từ Snapshot tại `us-east-1b` $\rightarrow$ Gắn vào máy ảo.
-- C. Không thể gắn trực tiếp; phải dùng AWS DataSync để đồng bộ qua mạng.
-- D. Có thể gắn thông qua dịch vụ AWS Storage Gateway.
-
-#### Câu 6 (Core Concept - Storage Architecture)
-Hệ thống tệp tin nào của AWS tuân thủ chuẩn POSIX, hỗ trợ giao thức NFSv4, tự động nhân bản dữ liệu xuyên qua nhiều Availability Zones và cho phép hàng ngàn máy ảo Linux gắn kết đồng thời?
-- A. Amazon EBS.
-- B. Amazon EFS.
-- C. Amazon S3 Glacier.
-- D. AWS Storage Gateway Volume Gateway.
-
-#### Câu 7 (Core Concept - Security)
-Doanh nghiệp có một ổ đĩa Amazon EBS chứa dữ liệu tài chính đang chạy nhưng chưa được bật tính năng mã hóa (Unencrypted). Để tuân thủ an toàn an ninh, giải pháp chuẩn mực duy nhất để chuyển đổi sang ổ đĩa được mã hóa bằng AWS KMS là gì?
-- A. Chỉnh sửa thuộc tính volume trên console và tích chọn "Enable Encryption", sau đó khởi động lại máy ảo.
-- B. Chụp Snapshot từ ổ đĩa $\rightarrow$ Sao chép (Copy) Snapshot đó kèm tùy chọn mã hóa với KMS CMK $\rightarrow$ Tạo Volume mới từ Snapshot đã mã hóa $\rightarrow$ Gắn vào EC2.
-- C. Sử dụng lệnh Linux `cryptsetup` chạy trực tiếp trên hệ điều hành máy ảo.
-- D. Gắn thêm một card mạng ENI thứ hai có bật tính năng mã hóa đường truyền.
-
-#### Câu 8 (Scenario - Cluster File System & Multi-Attach)
-Một cụm 4 máy ảo EC2 chạy phần mềm phân cụm Red Hat Enterprise Linux trong cùng một Availability Zone cần truy cập đồng thời vào cùng một ổ đĩa lưu trữ khối chia sẻ chung. Dòng ổ đĩa nào hỗ trợ tính năng **EBS Multi-Attach** và yêu cầu bắt buộc đối với hệ điều hành là gì?
-- A. Dòng `gp3`; yêu cầu định dạng tệp tin chuẩn EXT4.
-- B. Dòng `io1` hoặc `io2 Block Express`; yêu cầu ứng dụng phải sử dụng hệ thống tệp tin có khả năng nhận biết phân cụm (Cluster-aware File System như GFS2).
-- C. Dòng `st1`; yêu cầu định dạng tệp tin XFS.
-- D. Mọi dòng ổ đĩa EBS đều hỗ trợ Multi-Attach mà không cần điều kiện gì.
-
-#### Câu 9 (Scenario - FinOps Database Tuning)
-Một kỹ sư cơ sở dữ liệu đã cấu hình một ổ đĩa `io2` dung lượng 500 GiB với 10,000 Provisioned IOPS cho database MySQL, làm phát sinh hóa đơn hơn $700/tháng riêng cho ổ đĩa này. Phương án nào sau đây giúp giảm tới 85% chi phí lưu trữ mà cơ sở dữ liệu vẫn đảm bảo nhận đủ 10,000 IOPS hiệu năng?
-- A. Giảm dung lượng ổ đĩa xuống còn 100 GiB.
-- B. Chuyển đổi ổ đĩa sang dòng **`gp3` 500 GiB và cấp phát 10,000 IOPS** (tận dụng 3,000 IOPS miễn phí và mua thêm 7,000 IOPS với giá rẻ).
-- C. Chuyển database sang chạy trên EC2 Instance Store.
-- D. Bật tính năng Fast Snapshot Restore trên ổ đĩa io2.
-
-#### Câu 10 (Scenario - Shared File Storage Lifecycle)
-Một trang web tin tức lớn lưu trữ 15 TB tài nguyên hình ảnh bài viết trên **Amazon EFS Standard**. Ban giám đốc yêu cầu cắt giảm ít nhất 60% chi phí lưu trữ EFS mà không làm mất liên kết hình ảnh của các bài viết cũ đã đăng từ nhiều tháng trước. Giải pháp kiến trúc nào là tối ưu nhất?
-- A. Tải toàn bộ ảnh cũ về nén zip lại và lưu trên máy chủ web.
-- B. Kích hoạt tính năng **EFS Lifecycle Management** để tự động di chuyển các tệp tin không được truy cập sau 30 ngày sang tầng **EFS Infrequent Access (IA)**.
-- C. Chuyển đổi toàn bộ hệ thống tệp sang Amazon EBS `sc1`.
-- D. Xóa các hình ảnh có kích thước lớn hơn 5 MB.
-
-#### Câu 11 (Scenario - Performance Troubleshooting)
-Một ứng dụng xử lý dữ liệu lớn chạy trên EC2 ghi dữ liệu liên tục vào ổ đĩa `gp2` dung lượng 200 GiB. Sau 3 tiếng chạy ổn định với tốc độ cao, thông lượng I/O đột ngột bị giảm xuống nghiêm trọng khiến ứng dụng bị nghẽn. Khi kiểm tra CloudWatch, metric nào phản ánh đúng nhất tình trạng này và giải pháp xử lý là gì?
-- A. Metric `CPUUtilization`; giải pháp là tăng kích cỡ instance.
-- B. Metric **`BurstBalance`** giảm về 0%; giải pháp là nâng cấp trực tiếp ổ đĩa lên dòng **`gp3`** để nhận thông lượng và IOPS ổn định không phụ thuộc vào burst credit.
-- C. Metric `DiskQueueDepth`; giải pháp là format lại ổ đĩa.
-- D. Metric `VolumeReadBytes`; giải pháp là xóa bớt dữ liệu tạm.
-
-#### Câu 12 (Scenario - HPC Storage Selection)
-Một dự án nghiên cứu trí tuệ nhân tạo (AI/ML) cần một hệ thống tệp tin phân tán hiệu năng cực cao, có khả năng kết nối đồng bộ trực tiếp hai chiều với dữ liệu lưu trữ trên Amazon S3 Data Lake và cung cấp thông lượng hàng trăm GB/s cho hàng chục máy ảo GPU huấn luyện mô hình. Dịch vụ lưu trữ tệp nào sau đây đáp ứng hoàn hảo yêu cầu này?
-- A. Amazon EFS Standard.
-- B. Amazon EBS `gp3`.
-- C. **Amazon FSx for Lustre**.
-- D. AWS Storage Gateway File Gateway.
-
 ---
 
-### B. Đáp án Chi Tiết Bộ Câu Hỏi Ôn Tập (Answer Key & Explanations)
-
-<details>
-<summary>👉 Nhấp vào đây để xem toàn bộ đáp án chi tiết và giải thích kiến trúc</summary>
-
-### Đáp án Câu 1: C
-- **Giải thích**: Ổ đĩa Amazon EBS là tài nguyên lưu trữ gắn liền với phần cứng trong một Availability Zone duy nhất (**AZ-locked**). Nó không thể tự động co giãn hay mount trực tiếp sang một Availability Zone khác nếu không qua bước chụp Snapshot.
-
-### Đáp án Câu 2: B
-- **Giải thích**: Dòng **`gp3`** là chuẩn mực hiện đại nhất của AWS, cho phép tùy chỉnh độc lập 3 thông số: dung lượng, IOPS (tặng sẵn 3,000 IOPS miễn phí) và Throughput (tặng sẵn 125 MB/s miễn phí), đồng thời giá rẻ hơn dòng cũ `gp2` tới 20%.
-
-### Đáp án Câu 3: C
-- **Giải thích**: Hai dòng ổ cứng từ tính HDD là **`st1`** (Throughput Optimized) và **`sc1`** (Cold HDD) chỉ được thiết kế cho việc lưu trữ luồng dữ liệu tuần tự lớn. AWS **hoàn toàn không hỗ trợ boot hệ điều hành** từ 2 loại ổ đĩa này (chỉ các dòng SSD `gp2, gp3, io1, io2` mới boot được).
-
-### Đáp án Câu 4: C
-- **Giải thích**: **EC2 Instance Store** là ổ cứng vật lý gắn trên máy chủ chứa máy ảo. Khi bạn thực hiện **Stop** máy ảo, AWS sẽ giải phóng máy ảo khỏi máy chủ vật lý đó; do đó toàn bộ dữ liệu trên Instance Store **bị xóa sạch vĩnh viễn (Ephemeral)**.
-
-### Đáp án Câu 5: B
-- **Giải thích**: Do EBS bị khóa chặt trong một AZ (`us-east-1a`), nó không thể gắn sang máy ảo ở `us-east-1b`. Quy trình bắt buộc là: Chụp **EBS Snapshot** (snapshot được lưu ở S3 ngầm cấp Region) $\rightarrow$ Tạo Volume mới từ snapshot đó và chọn AZ đích là `us-east-1b` $\rightarrow$ Gắn vào máy ảo tại `us-east-1b`.
-
-### Đáp án Câu 6: B
-- **Giải thích**: **Amazon EFS** là hệ thống tệp tin quản trị tương thích chuẩn POSIX NFSv4, có tính sẵn sàng cao tự nhiên nhờ nhân bản dữ liệu qua nhiều AZs trong Region và hỗ trợ hàng ngàn kết nối đồng thời từ EC2, Container và Lambda.
-
-### Đáp án Câu 7: B
-- **Giải thích**: Quy tắc an toàn bất biến của AWS: **Không thể bật mã hóa trực tiếp trên một ổ đĩa EBS đang chạy mà chưa được mã hóa**. Chuỗi thao tác chuẩn duy nhất: Snapshot $\rightarrow$ Copy Snapshot kèm tùy chọn Encrypt với KMS CMK $\rightarrow$ Tạo Volume mới từ Encrypted Snapshot $\rightarrow$ Gán vào máy ảo.
-
-### Đáp án Câu 8: B
-- **Giải thích**: Tính năng **EBS Multi-Attach** chỉ hỗ trợ trên dòng Provisioned IOPS **`io1`** và **`io2 Block Express`** trong cùng 1 AZ. Để nhiều máy cùng đọc ghi vào 1 block device mà không làm hỏng cấu trúc dữ liệu, hệ điều hành bắt buộc phải sử dụng **Cluster-aware File System** (như GFS2, OCFS2).
-
-### Đáp án Câu 9: B
-- **Giải thích**: Ổ đĩa `gp3` cho phép cấp phát độc lập lên tới 16,000 IOPS với chi phí bổ sung cực rẻ ($0.005/IOPS). Khi chuyển sang `gp3` 500 GiB + 10,000 IOPS, chi phí chỉ còn khoảng $93/tháng (so với $780/tháng của `io2`), giúp tiết kiệm gần 89% chi phí mà hiệu năng vẫn tương đương.
-
-### Đáp án Câu 10: B
-- **Giải thích**: **EFS Lifecycle Management** tự động chuyển các tệp không truy cập sau 30 ngày sang tầng **EFS Infrequent Access (IA)** với giá rẻ hơn 91% ($0.025/GiB so với $0.30/GiB). Đường dẫn tệp tin trên hệ điều hành vẫn giữ nguyên 100%, không làm ảnh hưởng tới website.
-
-### Đáp án Câu 11: B
-- **Giải thích**: Ổ đĩa `gp2` nhỏ tích lũy I/O Credits trong bình chứa `BurstBalance` để có thể bứt phá lên 3,000 IOPS. Khi chạy tác vụ ghi nặng liên tục làm cạn bình chứa (`BurstBalance = 0%`), hiệu năng bị bóp nghẹt về baseline (với 200 GiB chỉ còn 600 IOPS). Nâng cấp sang **`gp3`** sẽ loại bỏ hoàn toàn cơ chế bình chứa credit này.
-
-### Đáp án Câu 12: C
-- **Giải thích**: **Amazon FSx for Lustre** là hệ thống tệp tin hiệu năng cao chuẩn POSIX chuyên biệt cho HPC và Machine Learning, cung cấp thông lượng hàng trăm GB/s và tích hợp liền mạch hai chiều với **Amazon S3** để nạp dữ liệu huấn luyện thần tốc.
-
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Lưu Trữ Đám Mây (Golden Rules)
 1. **Phân biệt ranh giới EBS vs EFS vs Instance Store**:  

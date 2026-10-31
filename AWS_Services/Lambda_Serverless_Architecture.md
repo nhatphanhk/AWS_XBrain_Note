@@ -107,6 +107,106 @@ flowchart TD
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Pipeline Ingestion Serverless Hoàn Toàn: SQS Standard + Lambda + DynamoDB Auto-Scaling
+- **Tình huống thi**: Hệ thống IoT nhận telemetry dữ liệu cảm biến xe hơi với lưu lượng thay đổi thất thường. Yêu cầu kiến trúc 100% serverless, không cần cấu hình dung lượng thủ công (no manual capacity provisioning).
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Dữ liệu cảm biến đẩy vào **Amazon SQS Standard Queue**.
+  - **AWS Lambda** tự động poll tin nhắn theo lô (batches) thông qua cơ chế Event Source Mapping (ESM).
+  - Lambda ghi dữ liệu vào bảng **Amazon DynamoDB** được cấu hình chế độ **On-Demand Capacity** hoặc **Provisioned Mode kèm Auto-Scaling**.
+  - **Lợi ích**: Toàn bộ hệ thống tự động co giãn từ 0 đến hàng ngàn request/s mà không cần can thiệp vận hành.
+
+#### 2. Điều Phối Quy Trình Serverless Phức Tạp Bằng AWS Step Functions (Orchestration vs Choreography)
+- **Tình huống thi**: Quy trình xử lý ảnh/video hoặc pipeline Data Lake ETL cần chạy tuần tự nhiều bước, kiểm tra điều kiện, xử lý lỗi (retry/catch), và có các tác vụ batch kéo dài.
+- **Giải pháp chuẩn**:
+  - Không viết một hàm Lambda "khổng lồ" chứa toàn bộ logic (Anti-pattern).
+  - Sử dụng **AWS Step Functions (Standard Workflow)** làm bộ điều phối trạng thái (State Machine):
+    - Bước 1: Lambda validate input.
+    - Bước 2: Trigger **AWS Glue ETL Job** hoặc **AWS Batch** để xử lý nặng.
+    - Bước 3: Đợi tác vụ hoàn tất (sử dụng service integration `.sync`).
+    - Bước 4: Gửi thông báo SNS khi thành công hoặc đẩy vào DLQ khi thất bại.
+
+#### 3. Quản Trị Concurrency Bảo Vệ Database Phía Sau (RDS / Aurora)
+- **Tình huống thi**: Ứng dụng Serverless gọi vào cơ sở dữ liệu quan hệ (Amazon RDS/Aurora). Khi traffic tăng đột biến, hàng ngàn Lambda instance khởi tạo đồng thời làm cạn kiệt connection pool của Database.
+- **Giải pháp chuẩn**:
+  - Cấu hình **Reserved Concurrency** trên hàm Lambda (ví dụ: giới hạn tối đa 50 concurrent executions) để tạo trần chặn quá tải database.
+  - Kết hợp sử dụng **Amazon RDS Proxy**: Quản lý connection pool tập trung, chia sẻ kết nối giữa các hàm Lambda, giảm thiểu 90% chi phí mở kết nối mới.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Giới Hạn Thời Gian 15 Phút Của Lambda (Execution Timeout) — (U-PT2 Q02)
+- **Tình huống đề thi**: *"Doanh nghiệp có một script phân tích dữ liệu cần chạy định kỳ mỗi đêm, thời gian thực thi mất từ 25 đến 30 phút. Giải pháp Serverless nào tối ưu và tốn ít công quản trị nhất?"*
+- **Các phương án bẫy**:
+  - ❌ *Dùng AWS Lambda*: Giới hạn cứng bất biến của Lambda là **tối đa 15 phút (900 giây)**. Bất kỳ tác vụ nào vượt quá 15 phút đều bị Lambda hủy bỏ bắt buộc (Force Kill). Không thể cấu hình timeout lớn hơn 15m.
+  - ❌ *Chia nhỏ hàm Lambda thành nhiều hàm lồng nhau*: Gây phức tạp mã nguồn và khó bảo trì không cần thiết.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon ECS Task chạy trên AWS Fargate**, được lập lịch kích hoạt bởi **Amazon EventBridge Scheduler**.
+  - AWS Fargate là serverless container (không cần quản lý máy chủ EC2).
+  - Không có giới hạn thời gian chạy (có thể chạy bao lâu tùy ý).
+
+#### 🪤 Bẫy 2: Tái Sử Dụng Mã Nguồn & Thư Viện Giữa Nhiều Lambda (Lambda Layers) — (CM-PT1 Q17)
+- **Tình huống đề thi**: *"Đội ngũ phát triển xây dựng nhiều microservices bằng AWS Lambda. Có một bộ thư viện tiện ích (common utilities/logging) cần được dùng chung giữa tất cả các hàm và phải cập nhật phiên bản dễ dàng với chi phí vận hành thấp nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Đóng gói thư viện vào từng file ZIP của mỗi hàm*: Mỗi lần sửa 1 dòng code tiện ích phải build và redeploy toàn bộ hàng chục hàm Lambda.
+  - ❌ *Lưu file code trên S3 và cho Lambda tải về khi chạy*: Tăng đáng kể độ trễ Cold Start và chi phí request S3.
+  - ❌ *Chuyển toàn bộ sang Container Image*: Tăng kích thước package và overhead quy trình CI/CD.
+- **Giải pháp ĐÚNG**: Đóng gói thư viện vào **AWS Lambda Layers**.
+  - Một Layer có thể được chia sẻ giữa nhiều Lambda functions trong cùng tài khoản hoặc xuyên tài khoản.
+  - Hỗ trợ đánh số phiên bản (Versioning) rõ ràng. Mỗi hàm Lambda có thể gắn tối đa 5 Layers.
+
+#### 🪤 Bẫy 3: Trùng Lặp Định Danh Ngẫu Nhiên (UUID) Trong Lambda SnapStart — (CM-PT1 Q27)
+- **Tình huống đề thi**: *"Ứng dụng Java sử dụng AWS Lambda SnapStart để tối ưu Cold Start. Sau khi triển khai, hệ thống phát hiện các mã giao dịch ngẫu nhiên (UUID) tạo ra từ các execution environments khác nhau bị trùng lặp nhau hoàn toàn."*
+- **Nguyên nhân cốt lõi**:
+  - SnapStart khởi động container, thực thi toàn bộ giai đoạn `Init`, sau đó chụp snapshot bộ nhớ RAM và lưu trữ.
+  - Nếu mã nguồn sinh UUID hoặc thiết lập random seed ngay trong giai đoạn `Init` tĩnh trước snapshot, trạng thái bộ nhớ đó sẽ được giữ nguyên cho mọi instance khôi phục sau này -> **toàn bộ các instance mới đều mang cùng 1 giá trị ID**!
+- **Giải pháp ĐÚNG**: Sử dụng **CRaC (Coordinated Restore at Checkpoint) API**:
+  - Gọi `org.crac.Core.getGlobalContext().register(resource)` để đăng ký **pre-snapshot hook** hoặc **post-restore hook**.
+  - Đảm bảo các giá trị ngẫu nhiên, UUID, hoặc kết nối mạng được tạo mới lại tại thời điểm runtime sau khi restore.
+
+#### 🪤 Bẫy 4: Phân Biệt Tuyệt Đối Cognito User Pools vs Cognito Identity Pools — (U-PT6 Q39, U-PT2 Q14)
+- **Bẫy thi kinh điển**: Đề thi thường yêu cầu người dùng ứng dụng di động tải file trực tiếp lên S3 hoặc đăng nhập vào Web. Thí sinh rất dễ nhầm lẫn giữa User Pool và Identity Pool.
+
+| Tiêu chuẩn so sánh | Amazon Cognito User Pool | Amazon Cognito Identity Pool (Federated Identities) |
+|:---|:---|:---|
+| **Mục đích chính** | **Xác thực danh tính (Authentication)** | **Cấp quyền truy cập tài nguyên AWS (Authorization)** |
+| **Đầu ra (Output)** | Trả về các **JWT Tokens** (ID Token, Access Token, Refresh Token) | Trả về **AWS Temporary Credentials** (Access Key, Secret Key, Session Token) |
+| **Cấp quyền AWS** | ❌ **KHÔNG** cấp quyền truy cập tài nguyên AWS trực tiếp | ✅ **Gán IAM Role** cho user để gọi thẳng API AWS (S3, DynamoDB) |
+| **Tích hợp ALB** | ✅ **ALB hỗ trợ native** xác thực người dùng qua User Pool listener rules | ❌ Không gắn trực tiếp vào ALB listener rules |
+| **Đăng nhập xã hội** | Hỗ trợ Sign-in with Apple, Google, Facebook, SAML, OIDC | Nhận token từ User Pool hoặc Google/Facebook để đổi lấy IAM Role |
+
+- **Quy tắc thi cử**:
+  - Người dùng đăng nhập web qua ALB -> **Cognito User Pool**.
+  - App di động cần upload trực tiếp lên S3 bucket riêng của user -> **Cognito User Pool (đăng nhập) + Cognito Identity Pool (lấy quyền IAM Role ghi vào S3)**.
+
+#### 🪤 Bẫy 5: Nghẽn Lưu Lượng Khi SNS Gửi Tin Tới Lambda (SNS-to-Lambda Delivery Bottlenecks) — (U-PT1 Q34)
+- **Tình huống đề thi**: *"Amazon SNS fan-out tin nhắn tới hàng ngàn subscribers, trong đó có một hàm AWS Lambda. Đội ngũ phát hiện một lượng lớn tin nhắn bị chậm trễ hoặc thất bại khi invoke Lambda."*
+- **Nguyên nhân & Khắc phục**:
+  - Khi SNS invoke Lambda (theo mô hình Asynchronous), số lượng concurrency của Lambda tăng vọt. Nếu tài khoản đạt ngưỡng giới hạn **Account Concurrency Limit** (mặc định 1,000 unreserved concurrency/Region), các yêu cầu invoke tiếp theo sẽ bị throttle.
+  - **Giải pháp**: Yêu cầu AWS Support tăng **Account Concurrency Quota** hoặc cấu hình SQS làm buffer đệm giữa SNS và Lambda.
+
+---
+
+### 📊 III. Ma Trận Quyết Định Công Nghệ Serverless Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Tác vụ tính toán chạy > 15 phút (20-60 phút)** | **ECS on AWS Fargate** (+ EventBridge) | Loại Lambda (hard limit timeout 15 phút) |
+| **Chia sẻ mã tiện ích/lib giữa nhiều Lambda** | **AWS Lambda Layers** | Loại S3 download (tăng Cold Start & chi phí) |
+| **Giảm Cold Start cho ứng dụng Java 90%** | **AWS Lambda SnapStart** | Provisioned Concurrency tốn chi phí 24/7 |
+| **Xác thực người dùng Web trên ALB không viết code** | **ALB + Cognito User Pool** | Loại tự dựng IdP server trên EC2 |
+| **Cấp quyền cho Mobile App ghi trực tiếp vào S3** | **Cognito Identity Pool** (+ User Pool) | User Pool đơn thuần không sinh AWS IAM credentials |
+| **Bảo vệ RDS không bị sập kết nối bởi Lambda** | **Amazon RDS Proxy** (+ Reserved Concurrency) | Loại tăng RAM Lambda (không giải quyết connection pool) |
+| **Điều phối luồng nghiệp vụ phân tán, có retry** | **AWS Step Functions** | Loại viết code logic lồng nhau trong 1 hàm Lambda |
+| **Xử lý luồng dữ liệu thời gian thực hàng ngàn record** | **Kinesis Data Streams + Lambda** | SQS không hỗ trợ replay dữ liệu theo shard |
+
+---
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Kiến trúc Webhook & Xử Lý Đơn Hàng Phi Máy Chủ Bất Đồng Bộ
@@ -254,97 +354,9 @@ sequenceDiagram
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Nhóm Câu Hỏi Cốt Lõi (Core Concepts)
-
-#### Câu 1: Thời gian thực thi tối đa (Maximum Execution Timeout) cho phép của một hàm AWS Lambda là bao nhiêu? Nếu tác vụ kéo dài hơn thì giải pháp là gì?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: Tối đa là **15 phút (900 giây)**.
-- **Giải thích**: AWS Lambda được thiết kế cho các tác vụ xử lý sự kiện ngắn hạn. Nếu một tác vụ tính toán hoặc xử lý dữ liệu đòi hỏi thời gian chạy dài hơn 15 phút, bạn không thể sử dụng Lambda trực tiếp mà phải chuyển sang các giải pháp container hóa phi máy chủ như **AWS Fargate (Amazon ECS/EKS)** hoặc dịch vụ tính toán theo lô **AWS Batch**.
-</details>
-
-#### Câu 2: Khi bạn tăng dung lượng bộ nhớ RAM cho hàm AWS Lambda từ 128 MB lên 1,024 MB, yếu tố tài nguyên phần cứng nào khác được tự động tăng tương ứng?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: **Năng lực tính toán vCPU** và **Băng thông mạng (Network Throughput)**.
-- **Giải thích**: Trong AWS Lambda, bạn chỉ có thể trực tiếp cấu hình dung lượng bộ nhớ RAM (từ 128 MB đến 10,240 MB). AWS sẽ tự động phân bổ tỷ lệ sức mạnh CPU tương ứng với dung lượng RAM. Tại mốc **1,769 MB RAM**, hàm Lambda nhận được đúng 1 vCPU trọn vẹn.
-</details>
-
-#### Câu 3: Hãy phân biệt sự khác nhau giữa Amazon Cognito User Pools và Amazon Cognito Identity Pools.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Cognito User Pools (Authentication - Xác thực)**: Là một thư mục người dùng (User Directory) quản lý việc đăng ký, đăng nhập, khôi phục mật khẩu, MFA và liên kết mạng xã hội (Google, Facebook, Apple). Kết quả trả về cho client là các **mã thông báo chuẩn JSON Web Tokens (JWT: ID Token, Access Token, Refresh Token)**.
-- **Cognito Identity Pools (Authorization - Phân quyền)**: Nhận token từ User Pool hoặc nhà cung cấp định danh bên ngoài để đổi lấy các **thông tin xác thực AWS tạm thời (Temporary AWS Credentials qua STS)**. Điều này cho phép client trực tiếp gọi các API của AWS (như tải file lên S3, đọc ghi DynamoDB) dựa trên quyền hạn của IAM Role được gán.
-</details>
-
 ---
 
-### B. Nhóm Câu Hỏi Tình Huống & Xử Lý Sự Cố (Scenarios & Troubleshooting)
-
-#### Câu 4: Một kỹ sư cấu hình hàm Lambda kết nối vào VPC để truy vấn dữ liệu từ Amazon Aurora PostgreSQL. Sau khi kết nối vào VPC, hàm không thể gọi được các API thanh toán bên ngoài Internet. Nguyên nhân và cách xử lý là gì?
-- (A) Lambda phải được gắn vào Public Subnet có gắn Internet Gateway và bật Auto-assign Public IP.
-- (B) Lambda phải được đặt trong Private Subnet và Route Table của Subnet đó phải trỏ đường truyền `0.0.0.0/0` tới NAT Gateway đặt tại Public Subnet.
-- (C) Mở toàn bộ cổng Inbound trên Security Group của Lambda.
-- (D) Tạo VPC Peering kết nối VPC với Internet.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - Khi gắn Lambda vào VPC, AWS sẽ gắn các Elastic Network Interfaces (ENI) vào các subnet được chỉ định. Lambda ENI **không bao giờ sở hữu địa chỉ Public IP**, do đó dù có đặt Lambda vào Public Subnet thì lưu lượng cũng không thể đi thẳng ra Internet Gateway.
-  - Kiến trúc chuẩn: Đặt Lambda vào **Private Subnet**, lưu lượng Internet của Lambda được định tuyến qua **NAT Gateway** (nằm ở Public Subnet) để đi ra ngoài mạng Internet.
-</details>
-
-#### Câu 5: Hệ thống thương mại điện tử gặp sự cố vào dịp khuyến mãi lớn: Hàng ngàn container Lambda đồng thời khởi chạy và đồng loạt mở kết nối tới cơ sở dữ liệu Amazon RDS PostgreSQL, làm cạn kiệt connection pool của cơ sở dữ liệu và gây sập hệ thống. Giải pháp kiến trúc nào giải quyết triệt để vấn đề này?
-- (A) Tăng dung lượng máy chủ RDS lên instance lớn hơn.
-- (B) Giảm thời gian timeout của Lambda xuống 1 giây.
-- (C) Triển khai dịch vụ Amazon RDS Proxy đứng giữa Lambda và cơ sở dữ liệu RDS.
-- (D) Chuyển toàn bộ database sang SQLite nhúng trong code Lambda.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(C)**
-- **Giải thích chuyên sâu**:
-  - Bản chất của Lambda là co giãn tự động theo từng request (mỗi container là một tiến trình độc lập). Khi có 1,000 requests đồng thời, 1,000 container Lambda sẽ cố gắng mở 1,000 kết nối TCP tới cơ sở dữ liệu quan hệ, gây tràn bộ nhớ và sập DB (**Connection Exhaustion**).
-  - **Amazon RDS Proxy** duy trì một nhóm kết nối dùng chung (Connection Pooling) bền vững với RDS, cho phép hàng ngàn hàm Lambda chia sẻ lại một số lượng nhỏ các kết nối cơ sở dữ liệu, đồng thời giảm thời gian chuyển đổi dự phòng (failover) của Aurora xuống tới 66%.
-</details>
-
----
-
-### C. Nhóm Câu Hỏi Phỏng Vấn Chuyên Sâu (Solutions Architect & DevOps)
-
-#### Câu 6: "Hãy phân tích ưu và nhược điểm của việc sử dụng Amazon API Gateway HTTP API so với REST API, và khi nào bắt buộc phải giữ lại REST API?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Ưu điểm của HTTP API**:
-  - Chi phí cực rẻ: $1.00/1M requests (tiết kiệm 71% so với $3.50 của REST API).
-  - Độ trễ thấp hơn đáng kể vì kiến trúc gọn nhẹ, tối ưu hóa cho serverless proxy.
-  - Hỗ trợ native JWT Authorizer (tích hợp trực tiếp với Cognito/OIDC mà không cần viết custom Lambda Authorizer tốn tiền và trễ).
-- **Khi nào BẮT BUỘC phải dùng REST API**:
-  1. **Tích hợp AWS WAF**: Cần lọc và chặn các cuộc tấn công Layer 7 ngay tại API Gateway.
-  2. **API Caching**: Cần lưu cache phản hồi của backend ngay tại gateway để giảm tải server.
-  3. **Quản trị API thương mại**: Cần sử dụng tính năng **Usage Plans**, **API Keys**, và phân bổ hạn ngạch (Throttling) theo từng nhóm khách hàng B2B.
-  4. **Request/Response Transformation**: Cần chuyển đổi dữ liệu từ XML sang JSON hoặc chỉnh sửa payload trước khi gửi về backend.
-</details>
-
-#### Câu 7: "Làm thế nào để xử lý các tin nhắn lỗi khi Lambda tiêu thụ dữ liệu từ SQS Queue mà không làm tắc nghẽn toàn bộ hàng đợi?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Giải pháp**: Sử dụng **Dead-Letter Queue (DLQ)** kết hợp với **ReportBatchItemFailures**:
-  1. **Cấu hình DLQ trên SQS**: Thiết lập thuộc tính `maxReceiveCount` (ví dụ: 3 lần). Nếu một tin nhắn được tiêu thụ thất bại quá 3 lần, SQS sẽ tự động tách tin nhắn đó ra khỏi hàng đợi chính và chuyển vào DLQ để không làm nghẽn các tin nhắn phía sau (Head-of-Line Blocking).
-  2. **Sử dụng `ReportBatchItemFailures` trong Lambda**: Khi Lambda nhận một batch gồm 10 tin nhắn từ SQS, nếu chỉ có tin nhắn số 4 bị lỗi, thay vì làm cả batch bị fail và SQS phải retry lại cả 10 tin nhắn, hàm Lambda chỉ trả về ID của đúng tin nhắn số 4 (`itemIdentifier`). SQS sẽ chỉ retry đúng tin nhắn bị lỗi đó, giúp tối ưu hóa hiệu năng và chi phí xử lý.
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Kiến Trúc Serverless AWS (Golden Rules)
 1. **Tuân thủ giới hạn 15 phút**: Lambda chỉ dành cho tác vụ ngắn dưới 900 giây; tác vụ dài hơn bắt buộc chuyển sang ECS Fargate.

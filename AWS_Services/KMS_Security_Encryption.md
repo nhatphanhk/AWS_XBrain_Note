@@ -180,6 +180,79 @@ flowchart LR
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Bộ Ba Dịch Vụ An Ninh Tình Báo Tự Động: GuardDuty vs Inspector vs Macie
+- **Tình huống thi**: Đề thi thường yêu cầu xây dựng cơ chế phát hiện mối đe dọa, lỗ hổng phần mềm hoặc rò rỉ dữ liệu cá nhân nhạy cảm tự động trên diện rộng.
+- **Quy tắc phân công chuẩn xác**:
+  - **Amazon GuardDuty**: Dịch vụ phát hiện mối đe dọa thông minh (Threat Detection) dựa trên Machine Learning. Liên tục phân tích CloudTrail Events, VPC Flow Logs, DNS Query Logs, và EKS Audit Logs để phát hiện hành vi bất thường như: máy chủ EC2 đào tiền ảo (crypto-mining), tài khoản IAM bị rò rỉ credential, hoặc S3 bucket bị truy cập từ IP của mạng Tor.
+  - **Amazon Inspector**: Dịch vụ quét lỗ hổng bảo mật tự động (Vulnerability Assessment). Tự động quét các lỗ hổng mã nguồn (CVE), cấu hình sai và lỗ hổng mạng trên các máy chủ EC2, Container Images lưu trữ trong Amazon ECR, và mã nguồn hàm AWS Lambda.
+  - **Amazon Macie**: Dịch vụ bảo vệ quyền riêng tư dữ liệu dựa trên AI. Tự động quét và phát hiện các thông tin định danh cá nhân nhạy cảm (PII - Personally Identifiable Information) như: số thẻ tín dụng, số hộ chiếu, số an sinh xã hội, hoặc hồ sơ bệnh án được lưu trữ trong Amazon S3.
+
+#### 2. Ngăn Chặn Tấn Công Lớp Ứng Dụng (Layer 7) Bằng AWS WAF
+- **Tình huống thi**: Ứng dụng web công khai bị tấn công bằng kỹ thuật SQL Injection (SQLi), Cross-Site Scripting (XSS), hoặc bị tấn công từ chối dịch vụ dạng HTTP Flood (hàng triệu HTTP GET request gửi tới làm cạn kiệt tài nguyên máy chủ).
+- **Giải pháp chuẩn**:
+  - Triển khai **AWS WAF (Web Application Firewall)** gắn trước Application Load Balancer hoặc CloudFront.
+  - Bật các bộ luật quản lý sẵn **AWS Managed Rules** (chống SQLi, XSS, Common Rule Set).
+  - Cấu hình **Rate-Based Rule**: Ví dụ, tự động chặn tạm thời bất kỳ địa chỉ IP nào gửi vượt quá 2,000 yêu cầu trong vòng 5 phút.
+
+#### 3. Pipeline ETL Mã Hóa Đầu-Cuối Với AWS Glue & AWS KMS
+- **Tình huống thi**: Doanh nghiệp tài chính cần trích xuất và biến đổi dữ liệu nhạy cảm (ETL) từ S3 data lake mà không muốn tự quản trị cụm máy chủ Spark/Hadoop, đồng thời phải đảm bảo toàn bộ dữ liệu được mã hóa cả khi lưu trữ và truyền tải.
+- **Giải pháp chuẩn**:
+  - Sử dụng **AWS Glue ETL Jobs (Serverless Spark)**.
+  - Cấu hình **Glue Security Configuration** tích hợp với **AWS KMS Customer Managed Key (CMK)**: Tự động mã hóa dữ liệu ghi vào S3 target, mã hóa metadata catalog, và mã hóa shuffle storage tạm thời trên các node Glue.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Khóa Bất Biến Chống Xóa Bản Sao Lưu Bằng AWS Backup Vault Lock — (CM-PT1 Q58)
+- **Tình huống đề thi**: *"Doanh nghiệp thuộc ngành tài chính bắt buộc phải tuân thủ quy định bảo lưu dữ liệu khắt khe (WORM - Write Once, Read Many). Yêu cầu đảm bảo không một ai, KỂ CẢ TÀI KHOẢN ROOT, có thể xóa hoặc sửa đổi các bản sao lưu trong thời gian bảo lưu quy định."*
+- **Phân biệt hai chế độ Vault Lock**:
+  - **Governance Mode (Chế độ Quản trị)**: Vẫn cho phép người dùng có các quyền IAM đặc quyền (`backup:DeleteRecoveryPoint`) hoặc tài khoản Root gỡ bỏ khóa và xóa bản sao lưu trước hạn.
+  - **Compliance Mode (Chế độ Tuân thủ)**: Một khi đã kích hoạt và hết thời gian ân hạn (Grace Period), **KHÔNG MỘT AI, KỂ CẢ TÀI KHOẢN ROOT CỦA TỔ CHỨC HOẶC AWS SUPPORT**, có thể xóa hoặc thay đổi bản sao lưu trước khi hết thời hạn lưu trữ quy định!
+- **Bẫy thi**: Đề bài yêu cầu "không ai xóa được kể cả root" -> Bắt buộc chọn **AWS Backup Vault Lock ở chế độ Compliance Mode** (chọn Governance Mode là sai).
+
+#### 🪤 Bẫy 2: Giới Hạn Dịch Vụ Có Thể Gắn AWS WAF (Attachment Points) — (U-PT2 Q36)
+- **Bẫy thi cực kỳ phổ biến**: Đề bài yêu cầu bảo vệ một dịch vụ bằng AWS WAF và đưa ra các lựa chọn gắn WAF vào Network Load Balancer (NLB) hoặc gắn trực tiếp vào EC2 instance.
+- **Nguyên lý bất biến**:
+  - AWS WAF là tường lửa **tầng Layer 7 (HTTP/HTTPS)**.
+  - WAF **KHÔNG THỂ** gắn vào Network Load Balancer (NLB - Layer 4) và **KHÔNG THỂ** gắn vào máy chủ EC2 trực tiếp.
+  - **Danh sách duy nhất các dịch vụ hỗ trợ gắn AWS WAF**:
+    1. Application Load Balancer (ALB)
+    2. Amazon CloudFront
+    3. Amazon API Gateway (REST API)
+    4. AWS AppSync
+    5. Amazon Cognito User Pools
+    6. AWS App Runner
+
+#### 🪤 Bẫy 3: Yêu Cầu KMS Multi-Region Key Khi Dùng S3 Cross-Region Replication (CRR) — (U-PT2 Q46)
+- **Tình huống đề thi**: *"Dữ liệu trong S3 bucket tại Region A được mã hóa bằng SSE-KMS. Doanh nghiệp cấu hình S3 Cross-Region Replication để tự động sao chép sang S3 bucket tại Region B. Quá trình sao chép bị lỗi không thể giải mã dữ liệu tại Region B."*
+- **Nguyên nhân & Khắc phục**:
+  - Khóa KMS thông thường là **tài nguyên cục bộ trong 1 Region (Regional Resource)**. Khóa tạo ở Region A hoàn toàn không tồn tại và không thể dùng để giải mã ở Region B.
+  - **Giải pháp ĐÚNG**: Sử dụng **AWS KMS Multi-Region Key (`mrk-xxxxxxxx`)**. Khóa này chia sẻ cùng một Key ID và Key Material trên nhiều Region, cho phép mã hóa ở Region A và giải mã liền mạch tại Region B.
+
+---
+
+### 📊 III. Ma Trận Quyết Định An Ninh & Mã Hóa Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Dịch vụ / Giải pháp chuẩn | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Chống xóa bản sao lưu tuyệt đối (kể cả Root)** | **AWS Backup Vault Lock (Compliance Mode)** | Governance Mode (Root vẫn có thể xóa) |
+| **Phát hiện máy chủ bị hack đào crypto / IP độc** | **Amazon GuardDuty** | Amazon Inspector (chỉ quét CVE, không monitor traffic) |
+| **Quét lỗ hổng CVE trên EC2, ECR, Lambda** | **Amazon Inspector** | GuardDuty (không quét lỗ hổng phần mềm) |
+| **Tự động tìm kiếm số thẻ tín dụng/PII trong S3** | **Amazon Macie** | AWS IAM Access Analyzer (chỉ phân tích quyền) |
+| **Chống tấn công SQL Injection, XSS, HTTP Flood** | **AWS WAF** (gắn trên ALB/CloudFront) | AWS Shield Standard (chỉ bảo vệ Layer 3/4) |
+| **Mã hóa S3 CRR xuyên nhiều AWS Regions** | **AWS KMS Multi-Region Key** | Single-Region KMS Key (không giải mã được ở Region khác) |
+| **Quản lý & xoay vòng chứng chỉ SSL tự động** | **AWS Certificate Manager (ACM)** | Tự upload cert bên thứ 3 (không tự renew được) |
+| **Truy vết ai đã sử dụng khóa để giải mã dữ liệu** | **SSE-KMS** (ghi log vào CloudTrail) | SSE-S3 (không có audit trail chi tiết cho từng object) |
+
+---
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Quy trình tự động xoay vòng mật khẩu RDS bằng Secrets Manager & Lambda
@@ -326,107 +399,9 @@ sequenceDiagram
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Nhóm Câu Hỏi Cốt Lõi (Core Concepts)
-
-#### Câu 1: Sự khác biệt bản chất giữa Customer Managed Keys (CMK) và AWS Managed Keys trong AWS KMS là gì?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **AWS Managed Keys**: Khóa mặc định do AWS tự động tạo riêng cho từng dịch vụ (`aws/s3`, `aws/ebs`, `aws/rds`). Người dùng **không thể chỉnh sửa Key Policy**, không thể xóa thủ công, không thể chia sẻ xuyên tài khoản, chu kỳ xoay vòng cố định 1 năm, và hoàn toàn miễn phí phí duy trì hàng tháng.
-- **Customer Managed Keys (CMK)**: Khóa do người dùng tự tạo ($1.00/tháng). Người dùng nắm toàn quyền kiểm soát Key Policy, có thể bật/tắt, chia sẻ xuyên tài khoản (Cross-Account), tùy biến chu kỳ xoay vòng linh hoạt từ 90 đến 2560 ngày, và có thể đặt lịch xóa khóa (7 - 30 ngày).
-</details>
-
-#### Câu 2: Nếu một quản trị viên vô tình xóa vĩnh viễn một khóa KMS Key dùng để mã hóa cơ sở dữ liệu RDS hoặc ổ đĩa EBS, dữ liệu có thể khôi phục lại được không?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: **HOÀN TOÀN KHÔNG THỂ KHÔI PHỤC**.
-- **Giải thích**: Khi vật liệu khóa mật mã của KMS Key bị xóa vĩnh viễn, toàn bộ dữ liệu đã được mã hóa bằng khóa đó sẽ trở thành chuỗi nhị phân vô nghĩa (Ciphertext không thể giải mã). Không có bất kỳ ai trên thế giới, kể cả đội ngũ kỹ sư bảo mật của AWS, có thể khôi phục lại dữ liệu này. Đó là lý do AWS bắt buộc thời gian chờ xóa an toàn từ 7 đến 30 ngày (Pending Deletion) và cho phép khôi phục khóa trong khoảng thời gian này.
-</details>
-
-#### Câu 3: Tính năng nào của AWS KMS cho phép mã hóa dữ liệu tại Region Singapore và giải mã cục bộ tại Region Tokyo với độ trễ thấp mà không cần gọi API xuyên Region?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: **KMS Multi-Region Keys**.
-- **Giải thích**: Multi-Region Keys cho phép tạo một Primary Key tại một Region và nhân bản (Replicate) các Replica Keys sang các Region khác. Tất cả các khóa này có **cùng Key ID và cùng vật liệu khóa**. Khi dữ liệu được mã hóa tại Singapore và đồng bộ sang Tokyo (qua S3 CRR hoặc Aurora Global DB), ứng dụng tại Tokyo sử dụng Replica Key để giải mã ngay trong mạng nội bộ Tokyo với độ trễ <5ms.
-</details>
-
 ---
 
-### B. Nhóm Câu Hỏi Tình Huống & Xử Lý Sự Cố (Scenarios & Troubleshooting)
-
-#### Câu 4: Một ứng dụng di động thanh toán cần gửi dữ liệu thẻ tín dụng của người dùng từ điện thoại lên đám mây AWS. Doanh nghiệp muốn mã hóa dữ liệu ngay trên điện thoại trước khi truyền đi nhưng không muốn nhúng AWS Access Keys vào ứng dụng di động. Giải pháp nào tối ưu nhất?
-- (A) Sử dụng Symmetric KMS Key và lưu Secret Access Key trong file mã nguồn app di động.
-- (B) Tạo Asymmetric KMS Key (RSA-4096), tải Public Key nhúng vào ứng dụng di động để mã hóa client-side, và giữ Private Key trong KMS để backend giải mã.
-- (C) Sử dụng AWS Secrets Manager để ứng dụng di động tải mật khẩu mã hóa về máy mỗi lần khởi động.
-- (D) Tạo AWS CloudHSM và mở cổng công khai cho ứng dụng di động gọi API trực tiếp.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - Với **Asymmetric KMS Key**, Public Key có thể được công khai và tải về máy client ngoài AWS mà không làm lộ tính bảo mật của thuật toán.
-  - Ứng dụng di động dùng Public Key tự mã hóa dữ liệu thẻ ngay trên thiết bị người dùng.
-  - Chỉ có dịch vụ backend trên AWS với IAM Role hợp lệ mới có quyền gọi API KMS sử dụng **Private Key** (được lưu an toàn tuyệt đối bên trong KMS HSM) để giải mã dữ liệu.
-</details>
-
-#### Câu 5: Hệ thống tài chính yêu cầu phải có cơ chế ngắt khẩn cấp ("Emergency Kill-Switch") để ngăn chặn việc giải mã dữ liệu trong vòng 1 giây nếu phát hiện tài khoản AWS bị tấn công chiếm quyền. Loại khóa nào đáp ứng tiêu chuẩn này?
-- (A) Customer Managed Key mặc định sinh từ AWS KMS.
-- (B) AWS Managed Key `aws/s3`.
-- (C) Customer Managed Key với Imported Key Material (BYOK).
-- (D) Multi-Region KMS Key.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(C)**
-- **Giải thích chuyên sâu**:
-  - Khóa KMS thông thường khi thực hiện xóa bắt buộc phải trải qua thời gian ân hạn từ 7 đến 30 ngày (không thể xóa ngay).
-  - Với **Imported Key Material (BYOK)**, quản trị viên có thể gọi API `kms:DeleteKeyMaterial`. Toàn bộ vật liệu khóa bị xóa sạch khỏi KMS ngay lập tức trong vòng **1 giây**, khiến mọi yêu cầu giải mã dữ liệu bị từ chối tức thì trên toàn hệ thống. Sau khi đã khắc phục sự cố, quản trị viên có thể nạp lại (re-import) vật liệu khóa ban đầu để khôi phục hoạt động bình thường.
-</details>
-
-#### Câu 6: Doanh nghiệp muốn bảo vệ website thương mại điện tử khỏi các cuộc tấn công DDoS quy mô lớn và muốn được AWS hoàn tiền chi phí phát sinh nếu các máy chủ Auto Scaling tự động mở rộng để chống đỡ tấn công. Gói dịch vụ nào cung cấp tính năng này?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án**: **AWS Shield Advanced**.
-- **Giải thích**:
-  - AWS Shield Advanced ($3,000/tháng, cam kết 1 năm) cung cấp tính năng độc quyền **DDoS Cost Protection**: AWS sẽ hoàn lại toàn bộ hóa đơn chi phí điện toán tăng đột biến (EC2, CloudFront, ALB) do Auto Scaling kích hoạt trong suốt quá trình chống đỡ cuộc tấn công DDoS.
-  - Ngoài ra, khách hàng còn được hỗ trợ 24/7 trực tiếp từ đội ngũ chuyên gia an ninh **Shield Response Team (SRT)** và miễn phí 100% chi phí sử dụng AWS WAF.
-</details>
-
----
-
-### C. Nhóm Câu Hỏi Phỏng Vấn Chuyên Sâu (Solutions Architect & DevOps)
-
-#### Câu 7: "Hãy phân biệt vai trò và sự phối hợp giữa KMS Key Policy, IAM Policy và KMS Grants trong việc kiểm soát quyền truy cập khóa mã hóa?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **KMS Key Policy**: Là chính sách bảo mật tối cao gắn liền với khóa. Mọi khóa KMS bắt buộc phải có một Key Policy. Nếu Key Policy không cấp quyền cho một Principal (kể cả tài khoản Root của tài khoản đó), thì không một IAM Policy nào có thể cấp quyền được.
-- **IAM Policy**: Được gắn vào User/Role. Để một IAM Principal sử dụng được khóa KMS trong cùng một tài khoản, phải có sự phối hợp: Key Policy cho phép tài khoản ủy quyền cho IAM Policy, VÀ IAM Policy cấp action cụ thể (`kms:Decrypt`).
-- **KMS Grants**: Là cơ chế ủy quyền quyền hạn tạm thời, có phạm vi hẹp và có thể thu hồi nhanh chóng (thay thế cho việc phải sửa đổi Key Policy liên tục). Được sử dụng phổ biến bởi các dịch vụ AWS nội bộ (ví dụ: Amazon EBS sử dụng Grant để giải mã ổ đĩa khi EC2 khởi chạy).
-</details>
-
-#### Câu 8: "Làm thế nào để thiết kế một hệ thống quản lý bí mật cho cụm microservices lớn vừa đáp ứng yêu cầu bảo mật cao nhất, vừa tối ưu hóa chi phí vận hành hàng tháng dưới $20?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Kiến trúc giải pháp**:
-  1. **Phân loại dữ liệu cấu hình**:
-     - **Secrets Manager**: Chỉ dùng cho các thông tin đăng nhập cơ sở dữ liệu quan trọng (RDS Aurora Master Password) yêu cầu **Auto-rotation**. Giữ số lượng secret tối thiểu (ví dụ 10 secrets = $4.00/tháng).
-     - **SSM Parameter Store (Standard Tier)**: Dùng cho toàn bộ các API keys, token bên thứ 3 và cấu hình microservices khác. Sử dụng kiểu dữ liệu **`SecureString`** mã hóa bằng KMS CMK. Chi phí lưu trữ trên Parameter Store là **$0.00**.
-  2. **Tối ưu tầng ứng dụng**:
-     - Cài đặt thư viện **AWS Secrets Manager Caching Library** và SSM Caching trên các container microservices. Cache các bí mật trên bộ nhớ RAM với thời gian TTL = 300 giây.
-     - Triệt tiêu 99% số cuộc gọi API lên KMS và Secrets Manager.
-  3. **Tổng chi phí**: 10 secrets ($4.00) + 1 CMK ($1.00) + cước API (~$0.50) = **~$5.50/tháng**, đáp ứng trọn vẹn ngân sách dưới $20.
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Bảo Mật & Mã Hóa AWS (Golden Rules)
 1. **KMS Key Policy là tối thượng**: IAM Policy chỉ có hiệu lực khi được KMS Key Policy cho phép; mất khóa KMS là mất dữ liệu vĩnh viễn.

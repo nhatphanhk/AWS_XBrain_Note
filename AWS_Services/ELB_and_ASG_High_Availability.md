@@ -137,6 +137,91 @@ flowchart TD
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Kiến Trúc Chịu Lỗi Cao Đa Tầng Mẫu Mực (ALB + Multi-AZ ASG + Multi-AZ RDS)
+- **Tình huống thi**: Xây dựng kiến trúc cho ứng dụng Web quan trọng của doanh nghiệp. Yêu cầu tính sẵn sàng cao (High Availability), tự động chịu lỗi (Fault-Tolerant) khi toàn bộ một Availability Zone bị sập mà không làm gián đoạn dịch vụ của người dùng cuối.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - **Tầng Web / Load Balancer**: **Application Load Balancer (ALB)** được cấu hình triển khai trên tối thiểu 2 Public Subnets ở 2 AZs khác nhau.
+  - **Tầng Ứng Dụng (Compute Tier)**: Máy chủ EC2 chạy trong Private Subnets, được quản lý bởi **Auto Scaling Group (ASG)** trải dài qua tối thiểu 2 hoặc 3 AZs.
+  - **Tầng Cơ Sở Dữ Liệu**: Sử dụng **Amazon RDS Multi-AZ** (chế độ đồng bộ dữ liệu thời gian thực sang Standby replica ở AZ khác và tự động failover trong 60–120s).
+
+#### 2. Định Tuyến Nhiều Dịch Vụ Trên Một ALB Duy Nhất (Path-Based & Host-Based Routing)
+- **Tình huống thi**: Doanh nghiệp chuyển đổi kiến trúc Monolith sang Microservices gồm 3 dịch vụ: Giao diện web, API thanh toán, và Quản lý người dùng. Cần định tuyến yêu cầu tới đúng nhóm máy chủ với chi phí hạ tầng thấp nhất.
+- **Giải pháp chuẩn**:
+  - Triển khai **DUY NHẤT một Application Load Balancer**.
+  - Thiết lập các **Listener Rules** với điều kiện định tuyến:
+    - Path Pattern `/api/payment/*` -> Chuyển tiếp tới Target Group Thanh Toán.
+    - Path Pattern `/api/users/*` -> Chuyển tiếp tới Target Group Người Dùng.
+    - Host Header `admin.example.com` -> Chuyển tiếp tới Target Group Quản Trị.
+  - Tiết kiệm 66% chi phí so với việc tạo mỗi microservice một Load Balancer riêng.
+
+#### 3. Co Giãn Động Theo Tải Thực Tế Bằng Target Tracking Scaling Policy
+- **Tình huống thi**: Ứng dụng có lưu lượng truy cập biến động liên tục trong ngày. Cần tự động bổ sung máy chủ khi nhu cầu tăng và tự động tắt máy chủ khi nhu cầu giảm để tiết kiệm chi phí, không cần tính toán thủ công ngưỡng CloudWatch Alarm.
+- **Giải pháp chuẩn**:
+  - Cấu hình chính sách **Target Tracking Scaling Policy** trên ASG.
+  - Chọn các chỉ số định sẵn:
+    - `ASGAverageCPUUtilization` = 50% (giữ CPU trung bình của cụm ở mức 50%).
+    - `ALBRequestCountPerTarget` = 1000 (mỗi instance chịu tối đa 1000 requests/phút).
+  - ASG tự động tính toán số lượng instances cần thêm hoặc bớt để giữ chỉ số bám sát mục tiêu.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Tạm Dừng Tiến Trình ASG Khi Khắc Phục Sự Cố Máy Chủ (Suspend Processes) — (U-PT1 Q22)
+- **Tình huống đề thi**: *"Một máy chủ EC2 trong Auto Scaling Group bị đánh dấu là Unhealthy do ứng dụng bị crash. Kỹ sư cần giữ nguyên trạng thái máy chủ này để kết nối vào thu thập log và điều tra nguyên nhân cốt lõi (troubleshoot). Cần làm gì trước tiên?"*
+- **Các phương án bẫy**:
+  - ❌ *Không làm gì cả và nhanh chóng SSH vào*: ASG sẽ lập tức kích hoạt quy trình thay thế và **hủy diệt (Terminate)** máy chủ lỗi ngay sau đó -> Toàn bộ dữ liệu log trong bộ nhớ và ổ đĩa bị mất sạch!
+  - ❌ *Tháo máy chủ ra khỏi ASG (Detach)*: Tốn công và có thể kích hoạt ASG sinh instance mới làm sai lệch số lượng desired capacity.
+- **Giải pháp ĐÚNG**: Tạm dừng (Suspend) tiến trình **`ReplaceUnhealthy`** trong Auto Scaling Group.
+  - Thao tác này ngăn chặn ASG xóa máy chủ bị lỗi. Kỹ sư có toàn bộ thời gian cần thiết để điều tra sự cố. Sau khi sửa xong, kích hoạt lại (Resume) tiến trình.
+
+#### 🪤 Bẫy 2: Tính Toán Dung Lượng Dự Phòng Chịu Lỗi Khi Mất 1 AZ (N+1 Capacity Sizing) — (U-PT2 Q19, U-PT2 Q37)
+- **Tình huống đề thi**: *"Hệ thống yêu cầu bắt buộc phải duy trì tối thiểu 8 máy chủ hoạt động 100% công suất kể cả trong trường hợp xấu nhất là toàn bộ một Availability Zone bị sập. Cấu hình nào đáp ứng yêu cầu với CHI PHÍ THẤP NHẤT?"*
+- **Phân tích toán học kiến trúc**:
+  - **Phương án 2 AZs**: Mỗi AZ phải gánh $8 \text{ instances}$ (Tổng cộng = 16 instances). Khi 1 AZ sập, AZ còn lại còn đúng 8 instances -> Đạt yêu cầu nhưng tốn chi phí 16 máy.
+  - **Phương án 3 AZs**: Mỗi AZ chỉ cần bố trí **$4 \text{ instances}$** (Tổng cộng = 12 instances). Khi 1 AZ bất kỳ bị sập (mất 4 instances), 2 AZs còn lại vẫn có $4 + 4 = 8 \text{ instances}$ -> **Đạt 100% công suất**!
+  - **Kết luận**: Triển khai trên **3 AZs với 4 instances/AZ** tiết kiệm hơn phương án 2 AZs tới **25% chi phí phần cứng dự phòng** ($12 \text{ máy}$ so với $16 \text{ máy}$).
+
+#### 🪤 Bẫy 3: Elastic Load Balancing KHÔNG PHẢI Là Dịch Vụ Toàn Cầu (ELB Is Regional) — (U-PT6 Q48)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn sử dụng Elastic Load Balancing để cân bằng tải giữa các máy chủ Web đặt tại Region Singapore (ap-southeast-1) và Region Tokyo (ap-northeast-1)."*
+- **Nguyên lý bất biến**:
+  - Mọi Load Balancer của AWS (ALB, NLB, Classic LB) đều là **tài nguyên thuộc phạm vi 1 Region (Regional Resource)**.
+  - ELB **KHÔNG THỂ** phân phối lưu lượng hoặc kiểm tra sức khỏe trực tiếp xuyên qua 2 Region khác nhau.
+- **Giải pháp ĐÚNG**:
+  - Triển khai ALB riêng biệt tại từng Region.
+  - Sử dụng **Amazon Route 53** (với chính sách Latency-based Routing hoặc Geolocation Routing kèm Health Check) hoặc **AWS Global Accelerator** để điều phối lưu lượng toàn cầu giữa 2 Region.
+
+#### 🪤 Bẫy 4: Thứ Tự Ưu Tiên Của Chính Sách Hủy Máy Chủ Mặc Định (Default Termination Policy) — (U-PT2 Q18)
+- **Tình huống đề thi**: *"Khi Auto Scaling Group kích hoạt sự kiện Scale-In (giảm tải), máy chủ EC2 nào sẽ bị chọn để chấm dứt (terminate) đầu tiên?"*
+- **Quy trình đánh giá 4 bước chuẩn xác**:
+  1. **Bước 1 (Chọn AZ)**: Xác định Availability Zone nào đang có **nhiều instance nhất** và có ít nhất một instance không được bật tính năng Scale-In Protection.
+  2. **Bước 2 (Chọn cấu hình cũ)**: Trong AZ đó, tìm instance được khởi tạo từ **Launch Template / Launch Configuration cũ nhất**.
+  3. **Bước 3 (Tối ưu giờ thanh toán)**: Nếu vẫn có nhiều instance trùng cấu hình, chọn instance **gần tới mốc chu kỳ tính cước giờ tiếp theo nhất** (Closest to the next billing hour).
+  4. **Bước 4 (Ngẫu nhiên)**: Nếu tất cả các tiêu chí trên đều như nhau, chọn ngẫu nhiên một instance.
+
+---
+
+### 📊 III. Ma Trận Quyết Định Cân Bằng Tải & Co Giãn Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Định tuyến HTTP/HTTPS, Path-based, microservices** | **Application Load Balancer (ALB)** | Network Load Balancer (chỉ hoạt động ở Layer 4) |
+| **Giao thức TCP/UDP, độ trễ cực thấp, Static IP** | **Network Load Balancer (NLB)** | Application Load Balancer (chỉ hoạt động ở Layer 7) |
+| **Giữ máy chủ lỗi để điều tra root cause** | **Suspend `ReplaceUnhealthy` process** | Để mặc định (instance bị terminate mất log) |
+| **Cân bằng tải toàn cầu giữa nhiều AWS Regions** | **Route 53 DNS / Global Accelerator** | Dùng ELB (ELB chỉ hoạt động trong 1 Region) |
+| **Co giãn tự động bám sát mức CPU trung bình** | **Target Tracking Scaling Policy** | Simple Scaling (phải tính toán thủ công alarm) |
+| **Đáp ứng tăng tải đột biến theo từng nấc** | **Step Scaling Policy** | Scheduled Scaling (không dự đoán được thời điểm) |
+| **Chuẩn bị hạ tầng trước đợt sale Black Friday** | **Scheduled Scaling Actions** | Dynamic Scaling (bị trễ khi lưu lượng ùa vào đột ngột) |
+| **Dung lượng dự phòng chịu sập 1 AZ rẻ nhất** | **Triển khai 3 AZs (mỗi AZ gánh N/2 instances)** | Triển khai 2 AZs (tốn thêm 25% chi phí máy) |
+
+---
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### 1. Sơ đồ kiến trúc Web Tier chịu lỗi cao kết hợp ALB, ASG và cơ chế Self-Healing
@@ -325,142 +410,9 @@ sequenceDiagram
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Danh mục câu hỏi trắc nghiệm & Tình huống kiến trúc
-
-#### Câu 1 (Core Concept)
-Bộ cân bằng tải nào của AWS hoạt động ở **Tầng 7 (Application Layer)** của mô hình OSI, hỗ trợ định tuyến thông minh theo đường dẫn URL, hostname, HTTP headers và hỗ trợ Dynamic Port Mapping cho Docker containers?
-- A. Network Load Balancer (NLB).
-- B. Application Load Balancer (ALB).
-- C. Gateway Load Balancer (GWLB).
-- D. Classic Load Balancer (CLB).
-
-#### Câu 2 (Core Concept)
-Bộ cân bằng tải nào có khả năng cấp phát **địa chỉ IP tĩnh công khai (Elastic IP) trên mỗi Availability Zone** và xử lý hàng chục triệu requests/giây với độ trễ ở mức microsecond?
-- A. Application Load Balancer.
-- B. Network Load Balancer.
-- C. Classic Load Balancer.
-- D. Amazon Route 53.
-
-#### Câu 3 (Core Concept - Security & TLS)
-Tính năng **Server Name Indication (SNI)** trên Application Load Balancer giải quyết bài toán kỹ thuật nào sau đây?
-- A. Tự động mã hóa ổ đĩa cứng của các máy chủ backend.
-- B. Cho phép một Load Balancer duy nhất có thể phục vụ **nhiều chứng chỉ số SSL/TLS khác nhau cho nhiều tên miền độc lập** trên cùng một cổng HTTPS (Port 443).
-- C. Chuyển đổi giao thức từ IPv4 sang IPv6.
-- D. Cấp phát địa chỉ IP tĩnh cho máy chủ web.
-
-#### Câu 4 (Core Concept - Operations)
-Khái niệm **Deregistration Delay** (trước đây gọi là Connection Draining) trên Target Group có tác dụng gì trong quá trình vận hành?
-- A. Giữ kết nối SSH mở liên tục trong 24 giờ.
-- B. Cho phép các yêu cầu đang thực thi dở dang (in-flight requests) có đủ thời gian hoàn tất trước khi máy chủ bị gỡ khỏi Target Group hoặc bị ASG tắt bỏ.
-- C. Trì hoãn việc kiểm tra sức khỏe máy chủ khi có lỗi xảy ra.
-- D. Tự động chuyển hướng traffic sang một Region khác.
-
-#### Câu 5 (Core Concept - Health Checks)
-Sự khác biệt cốt lõi giữa việc cấu hình thuộc tính **Health Check Type** của Auto Scaling Group là `EC2` so với `ELB` là gì?
-- A. `EC2` chỉ kiểm tra phần cứng/OS của máy ảo; trong khi `ELB` sẽ kiểm tra thêm mã phản hồi HTTP của ứng dụng web bên trong máy ảo để kích hoạt thay thế máy chủ lỗi.
-- B. `ELB` chỉ kiểm tra CPU; `EC2` kiểm tra bộ nhớ RAM.
-- C. `EC2` là bắt buộc; `ELB` là tùy chọn không thể dùng độc lập.
-- D. Cả hai cấu hình đều hoạt động hoàn toàn giống nhau.
-
-#### Câu 6 (Core Concept - Networking)
-Để cấu hình tên miền từ **Amazon Route 53** trỏ trực tiếp vào một Application Load Balancer, bạn phải sử dụng loại bản ghi DNS nào?
-- A. CNAME Record thông thường trỏ vào IP của ALB.
-- B. **Alias Record** (bản ghi bí danh loại A hoặc AAAA) trỏ vào DNS Name của ALB.
-- C. TXT Record chứa mã xác thực.
-- D. PTR Record định tuyến ngược.
-
-#### Câu 7 (Core Concept - ASG Scaling)
-Chính sách co giãn (**Scaling Policy**) nào của Auto Scaling Group cho phép kỹ sư chỉ cần chỉ định một chỉ số mục tiêu (ví dụ: *"Luôn duy trì mức sử dụng CPU trung bình ở 50%"*) và để AWS tự động tính toán số lượng máy chủ cần tăng hoặc giảm?
-- A. Simple Scaling Policy.
-- B. Step Scaling Policy.
-- C. Target Tracking Scaling Policy.
-- D. Scheduled Scaling Policy.
-
-#### Câu 8 (Core Concept - Cross-Zone)
-Cơ chế **Cross-Zone Load Balancing** có trạng thái mặc định và chính sách tính phí dữ liệu như thế nào trên Application Load Balancer so với Network Load Balancer?
-- A. Mặc định BẬT và miễn phí trên ALB; Mặc định TẮT và có tính phí truyền dữ liệu liên AZ trên NLB.
-- B. Mặc định TẮT trên cả hai dịch vụ.
-- C. Mặc định BẬT và có tính phí trên cả hai dịch vụ.
-- D. Mặc định TẮT trên ALB; Mặc định BẬT trên NLB.
-
-#### Câu 9 (Scenario - Blue/Green Deployment with ALB)
-Đội ngũ DevOps cần thực hiện kiểm thử phiên bản ứng dụng mới (Version 2) trên môi trường Production bằng cách chuyển thử nghiệm **10% lưu lượng người dùng** vào cụm máy chủ mới và giữ 90% lưu lượng trên cụm máy chủ cũ. Tính năng nào của Application Load Balancer đáp ứng yêu cầu này một cách chuẩn mực nhất?
-- A. Sticky Sessions dựa trên Duration cookie.
-- B. **Weighted Target Groups (Phân bổ trọng số Target Groups)** trong Listener Rules.
-- C. Chuyển hướng HTTP Redirect sang cổng 8080.
-- D. Cấu hình hai CloudFront Distributions độc lập.
-
-#### Câu 10 (Scenario - Unhealthy Host Due to Slow Startup)
-Một ứng dụng Java Microservices chạy trên EC2 mất 3 phút để nạp dữ liệu khởi động ứng dụng. Khi Auto Scaling Group khởi chạy máy ảo mới, ALB gửi Health Check ngay sau 30 giây và đánh dấu máy ảo là `Unhealthy`, dẫn tới việc ASG liên tục hủy và bật lại máy ảo trong một vòng lặp vô tận. Giải pháp xử lý triệt để là gì?
-- A. Tăng dung lượng ổ đĩa EBS lên gấp đôi.
-- B. Tăng thông số **Health Check Grace Period** trên Auto Scaling Group lên 300 giây (5 phút).
-- C. Đổi loại Load Balancer sang Network Load Balancer.
-- D. Tắt hoàn toàn tính năng Health Check trên Target Group.
-
-#### Câu 11 (Scenario - Client IP Preservation)
-Ứng dụng phân tích gian lận chạy trên máy chủ EC2 phía sau Application Load Balancer nhận thấy toàn bộ các gói tin HTTP gửi đến đều mang địa chỉ IP nguồn là địa chỉ IP riêng của ALB thay vì IP thật của khách hàng trên Internet. Để lấy được địa chỉ IP công khai thực sự của khách hàng, ứng dụng cần đọc thông tin từ đâu?
-- A. Đọc trường `Remote_Addr` trong TCP Socket.
-- B. Đọc tiêu đề HTTP Header **`X-Forwarded-For`** do ALB tự động chèn vào.
-- C. Cấu hình lại ALB sang chế độ Transparent Proxy.
-- D. Gắn thêm một Elastic IP thứ hai vào máy chủ EC2.
-
-#### Câu 12 (Scenario - Cost-Optimized Background Processing)
-Một hệ thống xử lý tác vụ chuyển đổi mã hóa video sử dụng Auto Scaling Group gồm 30 máy chủ EC2. Ứng dụng được thiết kế không trạng thái và nhận việc từ hàng đợi Amazon SQS. Để tối ưu hóa chi phí lên tới 60% – 70% mà vẫn đảm bảo luôn có máy chủ xử lý các video ưu tiên cao của khách hàng VIP, kiến trúc sư nên áp dụng giải pháp nào?
-- A. Mua 100% On-Demand Instances và tắt máy vào ban đêm.
-- B. Cấu hình ASG sử dụng **Mixed Instances Policy**: duy trì một lượng nhỏ On-Demand cho tải cơ sở (Base Capacity) và sử dụng 80%–90% **Spot Instances** cho phần dung lượng còn lại.
-- C. Chuyển toàn bộ các máy chủ sang chạy trên một máy chủ vật lý Dedicated Host duy nhất.
-- D. Giảm số lượng Availability Zones từ 3 xuống còn 1.
-
 ---
 
-### B. Đáp án Chi Tiết Bộ Câu Hỏi Ôn Tập (Answer Key & Explanations)
-
-<details>
-<summary>👉 Nhấp vào đây để xem toàn bộ đáp án chi tiết và giải thích kiến trúc</summary>
-
-### Đáp án Câu 1: B
-- **Giải thích**: **Application Load Balancer (ALB)** hoạt động ở Tầng 7 của mô hình OSI, có khả năng phân tích nội dung gói tin HTTP/HTTPS để định tuyến dựa trên đường dẫn URL, Hostname, HTTP Headers, Query Parameters và hỗ trợ Dynamic Port Mapping cho các container trên Amazon ECS.
-
-### Đáp án Câu 2: B
-- **Giải thích**: **Network Load Balancer (NLB)** hoạt động ở Tầng 4, có khả năng cấp phát một **địa chỉ IP tĩnh cố định (Elastic IP)** trên mỗi Availability Zone và xử lý hàng chục triệu requests/giây với độ trễ microsecond cực thấp.
-
-### Đáp án Câu 3: B
-- **Giải thích**: **Server Name Indication (SNI)** là phần mở rộng của giao thức TLS, cho phép client gửi tên miền muốn kết nối ngay trong quá trình bắt tay SSL ban đầu. Nhờ đó, một ALB duy nhất có thể phục vụ **nhiều chứng chỉ SSL độc lập cho nhiều tên miền khác nhau** trên cùng một cổng 443.
-
-### Đáp án Câu 4: B
-- **Giải thích**: **Deregistration Delay** giúp các kết nối đang thực thi dở dang (in-flight requests) có đủ thời gian hoàn tất trước khi máy chủ bị rút khỏi Target Group hoặc bị ASG terminate, ngăn ngừa tình trạng người dùng bị ngắt kết nối đột ngột hoặc nhận mã lỗi 502/504.
-
-### Đáp án Câu 5: A
-- **Giải thích**: Nếu chọn Health Check Type là `EC2`, ASG chỉ biết máy hỏng khi phần cứng vật lý hoặc OS sập (System/Instance check failed). Nếu chọn `ELB`, ASG sẽ dựa vào kết quả kiểm tra sức khỏe của Load Balancer: nếu ứng dụng web bị treo hoặc trả về mã lỗi 5xx, ASG sẽ lập tức tiêu hủy máy chủ đó và bật máy mới thay thế (**Self-healing**).
-
-### Đáp án Câu 6: B
-- **Giải thích**: Do địa chỉ IP của Application Load Balancer thay đổi liên tục, Route 53 cung cấp bản ghi đặc biệt **Alias Record (Bí danh)** loại A hoặc AAAA để trỏ trực tiếp tên miền gốc (`example.com`) vào tên miền DNS của ALB một cách tự động và hoàn toàn miễn phí truy vấn DNS.
-
-### Đáp án Câu 7: C
-- **Giải thích**: **Target Tracking Scaling Policy** cho phép bạn chỉ cần đặt ra con số mục tiêu mong muốn (ví dụ: CPU = 50%), AWS sẽ tự động tính toán thêm bớt số lượng instance để giữ cho chỉ số luôn xoay quanh mục tiêu đó, loại bỏ việc phải tự tính toán các ngưỡng cảnh báo phức tạp.
-
-### Đáp án Câu 8: A
-- **Giải thích**: **Cross-Zone Load Balancing** được **BẬT mặc định và hoàn toàn MIỄN PHÍ** trên Application Load Balancer. Ngược lại, trên Network Load Balancer, tính năng này **TẮT mặc định** và nếu người dùng chủ động bật sẽ bị tính phí cước dữ liệu truyền xuyên AZ ($0.01/GiB).
-
-### Đáp án Câu 9: B
-- **Giải thích**: Tính năng **Weighted Target Groups** trên Listener Rules của ALB cho phép phân bổ lưu lượng theo tỷ lệ phần trăm tùy ý (ví dụ: 90% vào Target Group Blue và 10% vào Target Group Green), hoàn hảo cho các đợt phát hành Canary Deployments.
-
-### Đáp án Câu 10: B
-- **Giải thích**: Khi ứng dụng khởi động chậm, thông số **Health Check Grace Period** trên ASG xác định khoảng thời gian ân hạn (ví dụ 300 giây) mà trong đó ASG sẽ bỏ qua các kết quả kiểm tra sức khỏe Unhealthy ban đầu, cho phép ứng dụng đủ thời gian nạp bộ nhớ và sẵn sàng phục vụ.
-
-### Đáp án Câu 11: B
-- **Giải thích**: Khi đi qua Load Balancer, địa chỉ IP nguồn trong gói tin TCP bị đổi thành IP riêng của ALB. Để ứng dụng biết được IP thật của người dùng, ALB tự động chèn thêm tiêu đề HTTP **`X-Forwarded-For`** chứa IP gốc của client.
-
-### Đáp án Câu 12: B
-- **Giải thích**: Cấu hình **ASG Mixed Instances Policy** kết hợp một phần nhỏ On-Demand cho tải nền và 80%–90% Spot Instances cho phần tải còn lại là giải pháp kiến trúc tối ưu kinh điển của AWS, giúp tiết kiệm tới 70% chi phí mà hệ thống vẫn duy trì khả năng xử lý liên tục.
-
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của ELB & ASG (Golden Rules)
 1. **Lựa chọn đúng loại Load Balancer**:  

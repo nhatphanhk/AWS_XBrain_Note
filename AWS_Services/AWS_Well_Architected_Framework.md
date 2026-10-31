@@ -109,6 +109,80 @@ flowchart TD
 
 ---
 
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+
+#### 1. Quản Trị Chi Phí Đa Dự Án Bằng Cost Allocation Tags & AWS Cost Explorer
+- **Tình huống thi**: Doanh nghiệp triển khai hàng ngàn tài nguyên trên AWS phục vụ nhiều dự án (Projects) và phòng ban (Cost Centers) khác nhau. Giám đốc Tài chính (CFO) yêu cầu xuất báo cáo phân bổ chi tiết chi phí hàng tháng cho từng dự án cụ thể.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Thiết lập chiến lược gắn thẻ tài nguyên chuẩn mực: Bắt buộc gắn các thẻ như `Project=Alpha`, `CostCenter=HR101`, `Environment=Production`.
+  - Truy cập mục **Billing & Cost Management** tại Management Account và kích hoạt các thẻ này thành **User-Defined Cost Allocation Tags**.
+  - Sử dụng công cụ **AWS Cost Explorer**: Lọc và nhóm chi phí theo các thẻ đã kích hoạt để theo dõi xu hướng, phân tích ROI, và tạo các báo cáo chi phí trực quan xuất ra file CSV.
+
+#### 2. Giám Sát Chi Phí Bất Thường Thời Gian Thực Bằng AWS Cost Anomaly Detection
+- **Tình huống thi**: Đội ngũ phát triển vô tình khởi tạo nhầm các cụm máy chủ GPU đắt tiền hoặc bị tấn công làm phát sinh hóa đơn đám mây tăng vọt ngoài dự kiến. Cần giải pháp tự động phát hiện và cảnh báo ngay lập tức.
+- **Giải pháp chuẩn**:
+  - Kích hoạt dịch vụ **AWS Cost Anomaly Detection** (dịch vụ miễn phí tích hợp Machine Learning của AWS).
+  - Dịch vụ liên tục phân tích thói quen chi tiêu lịch sử của tài khoản và tự động nhận diện các đợt tăng vọt chi phí bất thường (Cost Anomalies).
+  - Cấu hình gửi thông báo cảnh báo tức thời qua **Amazon SNS** hoặc tích hợp vào kênh Slack của đội FinOps/DevOps kèm theo phân tích nguyên nhân gốc rễ (Root Cause Analysis - chỉ rõ service và account nào gây ra).
+
+#### 3. Tối Ưu Cấu Hình Máy Chủ Chuẩn Xác Bằng AWS Compute Optimizer
+- **Tình huống thi**: Doanh nghiệp nghi ngờ nhiều máy chủ EC2, Auto Scaling Groups, EBS volumes và hàm Lambda đang bị cấp phát thừa tài nguyên (Over-provisioned - gây lãng phí tiền) hoặc thiếu tài nguyên (Under-provisioned - gây nghẽn hiệu năng).
+- **Giải pháp chuẩn**:
+  - Kích hoạt **AWS Compute Optimizer** trên toàn bộ tổ chức AWS Organizations.
+  - Dịch vụ sử dụng Machine Learning phân tích các chỉ số CloudWatch trong 14 ngày (hoặc 90 ngày với gói nâng cao) và đưa ra khuyến nghị cụ thể:
+    - Đổi sang dòng instance thế hệ mới hơn (ví dụ: từ `t3.large` sang `t4g.medium` Graviton để tiết kiệm 40% chi phí).
+    - Giảm cấu hình RAM cho hàm Lambda chạy không hết tài nguyên.
+    - Điều chỉnh IOPS và Throughput cho ổ đĩa EBS gp3.
+
+---
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+#### 🪤 Bẫy 1: Tự Động Hóa Chặn Chi Phí Vượt Ngưỡng Bằng AWS Budgets Actions — (U-PT6 Q62)
+- **Tình huống đề thi**: *"Doanh nghiệp cấp một tài khoản AWS Sandbox cho các lập trình viên thử nghiệm với hạn mức ngân sách $100/tháng. Khi chi phí thực tế chạm mốc $100, hệ thống phải TỰ ĐỘNG ngăn chặn người dùng khởi tạo thêm tài nguyên mới với ÍT CÔNG VẬN HÀNH NHẤT."*
+- **Các phương án bẫy**:
+  - ❌ *Cấu hình AWS Budgets gửi email cảnh báo để quản trị viên vào xóa tài nguyên thủ công*: Quá muộn, chi phí vẫn tiếp tục tăng trong khi chờ xử lý.
+  - ❌ *Viết script Lambda tùy chỉnh kích hoạt bởi SNS để revoke IAM permissions*: Hoạt động được nhưng tốn công viết code, kiểm thử và bảo trì.
+- **Giải pháp ĐÚNG**: Sử dụng tính năng **AWS Budgets Actions**.
+  - AWS Budgets tích hợp sẵn khả năng thực thi hành động tự động: Gán một **IAM Policy** (chặn quyền `ec2:RunInstances`, v.v.) hoặc gán một **Service Control Policy (SCP)** có nội dung `DenyAll` áp dụng trực tiếp lên tài khoản Sandbox ngay khi vượt ngưỡng ngân sách.
+
+#### 🪤 Bẫy 2: Ràng Buộc Thời Gian Lưu Trữ Tối Thiểu (Minimum Storage Duration Trap) — (CM-PT1 Q55)
+- **Tình huống đề thi**: *"Ứng dụng xử lý ảnh sinh ra hàng triệu tệp tin tạm thời có kích thước nhỏ. Các tệp này chỉ cần được lưu trữ trong vòng 10 đến 15 ngày rồi sẽ bị ứng dụng xóa bỏ vĩnh viễn. Lớp lưu trữ S3 nào tối ưu chi phí nhất?"*
+- **Các phương án bẫy**:
+  - ❌ *Chọn S3 Standard-IA*: Giá lưu trữ $0.0125/GB rẻ hơn S3 Standard ($0.023/GB). Tuy nhiên, Standard-IA có quy định **thời gian lưu trữ tối thiểu là 30 ngày** (Minimum Storage Duration = 30 days). Dù bạn xóa file sau 10 ngày, AWS vẫn tính tiền lưu trữ đủ 30 ngày!
+  - ❌ *Chọn S3 Glacier Instant Retrieval*: Tương tự, Glacier Instant có quy định thời gian tối thiểu lên tới **90 ngày**!
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon S3 Standard**.
+  - S3 Standard **hoàn toàn không có ràng buộc thời gian lưu trữ tối thiểu** (xóa lúc nào dừng tính tiền lúc đó). Đối với dữ liệu tạm có vòng đời dưới 30 ngày, S3 Standard luôn mang lại tổng chi phí thấp nhất!
+
+#### 🪤 Bẫy 3: Tiết Kiệm Chi Phí CDN Bằng CloudFront Price Classes — (CM-PT1 Q39)
+- **Tình huống đề thi**: *"Doanh nghiệp kinh doanh bán lẻ chỉ phục vụ khách hàng tại thị trường Hoa Kỳ và Châu Âu. Họ sử dụng Amazon CloudFront để phân phối trang web và muốn cắt giảm hóa đơn truyền dữ liệu CDN mà không ảnh hưởng tới trải nghiệm người dùng mục tiêu."*
+- **Phân loại Price Classes chuẩn**:
+  - **Price Class All (Mặc định)**: Sử dụng toàn bộ các Edge Locations của CloudFront trên toàn thế giới (bao gồm cả các khu vực có chi phí đắt đỏ như Úc, Nam Mỹ, Châu Phi).
+  - **Price Class 200**: Sử dụng hầu hết các địa điểm biên (Bắc Mỹ, Châu Âu, Châu Á, Trung Đông, Châu Phi), loại bỏ các điểm đắt nhất.
+  - **Price Class 100**: **Chỉ sử dụng các Edge Locations tại Bắc Mỹ, Châu Âu và Israel**. Đây là lựa chọn có chi phí thấp nhất!
+- **Giải pháp ĐÚNG**: Chuyển đổi cấu hình CloudFront Distribution sang **Price Class 100**.
+
+---
+
+### 📊 III. Ma Trận Quyết Định Tối Ưu Chi Phí & Trụ Cột Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
+|:---|:---|:---|
+| **Linh hoạt nhất: EC2, Fargate, Lambda giảm 66%** | **Compute Savings Plans** | EC2 Instance Savings Plans (bị khóa loại instance) |
+| **Tiết kiệm tối đa 72% cho 1 dòng máy cố định** | **EC2 Instance Savings Plans** | On-Demand / Spot (không phù hợp ứng dụng 24/7) |
+| **Tự động áp dụng policy chặn tạo máy khi quá ngân sách** | **AWS Budgets Actions** | Viết code Lambda tùy chỉnh (overhead cao) |
+| **Phát hiện chi phí tăng vọt thời gian thực bằng ML** | **AWS Cost Anomaly Detection** | CloudWatch Billing Alarm (chỉ báo khi vượt tổng tiền) |
+| **Gợi ý đổi dòng máy EC2 tiết kiệm 40% bằng AI** | **AWS Compute Optimizer** | Tự rà soát thủ công (dễ phán đoán sai) |
+| **Dữ liệu tạm thời vòng đời < 30 ngày** | **Amazon S3 Standard** | S3 Standard-IA (bị phạt tính tiền tối thiểu 30 ngày) |
+| **Giảm chi phí CloudFront cho khách Mỹ & Châu Âu** | **CloudFront Price Class 100** | Price Class All (phải trả phí cho Edge Location đắt đỏ) |
+| **Phân bổ chi phí theo phòng ban/dự án** | **Cost Allocation Tags + Cost Explorer** | Xem hóa đơn tổng (không lọc theo dự án được) |
+
+---
+
+---
+
+---
+
 ## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Quy Trình Rà Soát Kiến Trúc Định Kỳ & Tự Động Hóa Vá Lỗi
@@ -248,109 +322,9 @@ sequenceDiagram
 
 ---
 
-## 6.8. Bộ Câu Hỏi Ôn Tập và Kiểm Tra Kiến Thức (Knowledge Review)
-
-### A. Nhóm Câu Hỏi Cốt Lõi (Core Concepts)
-
-#### Câu 1: Hãy liệt kê đầy đủ 6 Trụ Cột của AWS Well-Architected Framework và nêu mục tiêu cốt lõi của từng trụ cột?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-1. **Operational Excellence (Vận hành xuất sắc)**: Vận hành và giám sát hệ thống dưới dạng mã nguồn (Operations as Code) để liên tục cải tiến quy trình.
-2. **Security (Bảo mật)**: Bảo vệ thông tin, dữ liệu và tài sản kỹ thuật số qua phòng thủ nhiều lớp (Defense-in-Depth) và đặc quyền tối thiểu (Least Privilege).
-3. **Reliability (Độ tin cậy)**: Khả năng hệ thống tự phục hồi sau lỗi (Self-healing), phân tán đa vùng (Multi-AZ), và ngừng phỏng đoán dung lượng.
-4. **Performance Efficiency (Hiệu quả hiệu năng)**: Sử dụng tài nguyên điện toán hiệu quả bằng kiến trúc Serverless và dịch vụ quản trị sẵn.
-5. **Cost Optimization (Tối ưu chi phí)**: Chạy hệ thống mang lại giá trị cao nhất với chi phí thấp nhất thông qua văn hóa FinOps và loại bỏ lãng phí.
-6. **Sustainability (Tính bền vững)**: Giảm thiểu tác động môi trường và lượng phát thải carbon bằng cách tối ưu hóa hiệu suất phần cứng và sử dụng chip tiết kiệm năng lượng AWS Graviton.
-</details>
-
-#### Câu 2: Trụ cột Tính Bền Vững (Sustainability) khuyến khích các kiến trúc sư thực hiện những hành động kỹ thuật nào?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Hành động kỹ thuật**:
-  1. **Đo lường phát thải**: Sử dụng công cụ **AWS Customer Carbon Footprint Tool** để theo dõi lượng khí thải carbon hàng tháng.
-  2. **Tối ưu hóa phần cứng**: Chuyển đổi các máy ảo sang vi xử lý **AWS Graviton (Arm64)** (tiết kiệm điện năng tới 60% so với máy chủ x86 tương đương).
-  3. **Tối đa hóa hiệu suất sử dụng (Utilization)**: Không để máy chủ chạy rỗng; gom cụm container với mật độ cao hoặc dùng Serverless co giãn về 0 khi không có tải.
-  4. **Quản trị vòng đời dữ liệu**: Thiết lập S3 Lifecycle Rules để chuyển dữ liệu cũ sang Glacier hoặc xóa các dữ liệu rác không còn giá trị.
-</details>
-
-#### Câu 3: Khái niệm "Lens" trong AWS Well-Architected Tool có ý nghĩa gì và kể tên 3 Lenses chuyên biệt phổ biến?
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Ý nghĩa**: **Lens (Thấu kính)** cung cấp bộ câu hỏi, ngữ cảnh và tiêu chuẩn thực hành tốt nhất được "may đo" riêng cho từng loại hình công nghệ hoặc ngành nghề đặc thù (bổ sung cho thấu kính tổng quát 6 trụ cột).
-- **3 Lenses phổ biến**:
-  1. **Generative AI Lens**: Đánh giá các ứng dụng sử dụng mô hình nền tảng (LLMs), tối ưu hóa prompt, bảo mật dữ liệu training và chi phí inference.
-  2. **Serverless Lens**: Tập trung sâu vào Lambda cold starts, concurrency limits, API Gateway caching, và DynamoDB partition design.
-  3. **SaaS Lens**: Đánh giá kiến trúc phần mềm đa người thuê (Multi-tenant isolation, tenant onboarding, metering & billing).
-</details>
-
 ---
 
-### B. Nhóm Câu Hỏi Tình Huống & Xử Lý Sự Cố (Scenarios & Troubleshooting)
-
-#### Câu 4: Một kỹ sư DevOps muốn nhận thông báo tức thời vào kênh Slack mỗi khi có một bài kiểm tra bảo mật trong AWS Trusted Advisor chuyển sang trạng thái cảnh báo vàng (Warning) hoặc đỏ (Error). Kiến trúc giải pháp nào tối ưu nhất?
-- (A) Viết script Python chạy cron job mỗi 5 phút gọi DescribeTrustedAdvisorChecks.
-- (B) Thiết lập Amazon EventBridge Rule bắt sự kiện từ `aws.trustedadvisor` khi `status` là WARN hoặc ERROR, kích hoạt Target là AWS Chatbot liên kết với kênh Slack.
-- (C) Mua phần mềm giám sát bên thứ 3 cài agent lên toàn bộ máy ảo.
-- (D) Bật tính năng CloudWatch Logs Live Tail.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - AWS Trusted Advisor tích hợp gốc với **Amazon EventBridge**. Mỗi khi trạng thái của một bài kiểm tra thay đổi, Trusted Advisor tự động phát ra một sự kiện (Event).
-  - Cấu hình EventBridge Rule lọc đúng các sự kiện có `status = WARN` hoặc `ERROR` và chuyển tiếp tới **AWS Chatbot** (hoặc Lambda kết nối Webhook) để bắn thông báo vào Slack trong vòng vài giây.
-  - Phương án (A) tốn chi phí gọi API và có độ trễ lớn.
-</details>
-
-#### Câu 5: Doanh nghiệp muốn cắt giảm chi phí điện toán máy ảo EC2 ngay trong tuần tới mà không làm ảnh hưởng tới hiệu năng của ứng dụng. Công cụ nào của AWS cung cấp phân tích học máy và đề xuất chính xác loại máy ảo nên nâng/hạ (Right-sizing) hoàn toàn miễn phí?
-- (A) AWS Well-Architected Tool.
-- (B) AWS Compute Optimizer.
-- (C) AWS Trusted Advisor gói Basic Support.
-- (D) AWS CloudTrail Insights.
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Đáp án đúng**: **(B)**
-- **Giải thích chuyên sâu**:
-  - **AWS Compute Optimizer** sử dụng các thuật toán học máy phân tích dữ liệu hiệu năng CloudWatch (CPU, Memory, Disk I/O, Network) của các tài nguyên EC2, EBS, Lambda trong suốt 14 ngày qua.
-  - Dịch vụ đưa ra danh sách các máy ảo bị dư thừa cấu hình (**Over-provisioned**) và đề xuất chính xác các loại máy ảo tối ưu hơn (bao gồm cả dòng máy Graviton), kèm theo dự báo số tiền tiết kiệm hàng tháng cụ thể.
-  - Dịch vụ này hoàn toàn **MIỄN PHÍ ($0.00)** cho mọi tài khoản AWS.
-</details>
-
----
-
-### C. Nhóm Câu Hỏi Phỏng Vấn Chuyên Sâu (Solutions Architect & DevOps)
-
-#### Câu 6: "Bạn hiểu thế nào về nguyên tắc 'Stop guessing your capacity needs' trong Well-Architected Framework, và bạn áp dụng nó như thế nào vào thực tế?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Bản chất nguyên tắc**:
-  - Trong môi trường truyền thống (On-Premises), doanh nghiệp buộc phải phỏng đoán nhu cầu tải trong tương lai 3 - 5 năm để mua sắm máy chủ vật lý. Hậu quả là hoặc mua quá nhiều gây lãng phí hàng triệu USD tiền nhàn rỗi, hoặc mua quá ít dẫn đến sập hệ thống khi có lưu lượng đột biến.
-  - "Ngừng phỏng đoán nhu cầu dung lượng" nghĩa là tận dụng tối đa tính đàn hồi (**Elasticity**) của điện toán đám mây.
-- **Ứng dụng thực tế trên AWS**:
-  1. **Tự động co giãn (Auto Scaling)**: Sử dụng Auto Scaling Groups kết hợp với Application Load Balancer để tự động thêm máy ảo khi tải tăng và tự động thu hồi khi tải giảm.
-  2. **Điện toán phi máy chủ (Serverless)**: Ứng dụng AWS Lambda, Amazon DynamoDB On-Demand Mode và Amazon Aurora Serverless v2 – các dịch vụ này tự động co giãn từ 0 đến hàng ngàn request mà không cần người dùng cấp phát dung lượng trước.
-  3. **Chỉ trả tiền theo tài nguyên thực tế**: Giúp doanh nghiệp tối ưu hóa chi phí đến từng mili-giây và loại bỏ hoàn toàn rủi ro nghẽn tải.
-</details>
-
-#### Câu 7: "Game Day trong trụ cột Operational Excellence là gì và tại sao doanh nghiệp cần tổ chức Game Days định kỳ?"
-<details>
-<summary>👉 Nhấp để xem đáp án chi tiết</summary>
-
-- **Bản chất**: **Game Day** là buổi diễn tập thực chiến có kế hoạch, trong đó đội ngũ kỹ thuật chủ động tạo ra các tình huống sự cố giả lập quy mô lớn trong môi trường Staging hoặc Production (ví dụ: tắt đột ngột 1 Availability Zone, cắt đứt kết nối mạng giữa các microservices, bơm lỗi vào database, giả lập lượng truy cập gấp 10 lần ngày thường bằng Chaos Engineering / AWS Fault Injection Simulator).
-- **Mục tiêu và lý do tổ chức**:
-  1. **Kiểm chứng quy trình tự động hóa**: Xác minh xem cơ chế tự phục hồi (Self-healing), Auto Scaling và Failover của hệ thống có hoạt động đúng như thiết kế hay không.
-  2. **Hoàn thiện Runbook/Playbook**: Đánh giá xem tài liệu hướng dẫn ứng cứu sự cố của kỹ sư có rõ ràng, chính xác và cập nhật hay không.
-  3. **Rèn luyện phản xạ con người**: Giúp các kỹ sư trực ban (On-call engineers) làm quen với áp lực xử lý sự cố trong môi trường có kiểm soát, từ đó phản ứng nhanh chóng và chính xác khi thảm họa thật xảy ra.
-</details>
-
----
-
-## 6.9. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Kiến Trúc AWS Well-Architected (Golden Rules)
 1. **Bám sát 6 Trụ Cột**: Luôn đối chiếu mọi thiết kế kiến trúc với 6 trụ cột (Vận hành, Bảo mật, Tin cậy, Hiệu năng, Chi phí, Bền vững).
