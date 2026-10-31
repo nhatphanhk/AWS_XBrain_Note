@@ -1,4 +1,4 @@
-# 🛠️ Bộ Công Cụ Chuẩn Hóa Đề Thi Thử AWS (Practice Test Formatter)
+﻿# 🛠️ Bộ Công Cụ Chuẩn Hóa Đề Thi Thử AWS (Practice Test Formatter)
 
 Thư mục này chứa toàn bộ mã nguồn và cấu hình tự động hóa để chuẩn hóa các đề thi thử AWS Solutions Architect Associate (SAA-C03) từ dạng copy thô trên Udemy sang định dạng Markdown cấu trúc chuyên sâu, phục vụ ôn tập hiệu quả.
 

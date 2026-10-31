@@ -1,0 +1,4397 @@
+﻿# Bộ Đề Thi Thử AWS Certified Solutions Architect - Associate (SAA-C03) - Cloud Mentor Practice Test 1
+
+> **Nền tảng luyện thi**: Cloud Mentor AWS Practice Exams (SAA-C03)  
+> **Bộ đề**: Practice Test 01 - Results & In-Depth Architecture Review (65 Questions)  
+> **Tài liệu học tập liên quan**: [Ghi chú Chương 32: Chiến lược thi & Đề thi thử (32_Preparing_for_the_Exam.md)](../Lesson_Notes/32_Preparing_for_the_Exam.md) | [Bảng thuật ngữ AWS (GLOSSARY.md)](../GLOSSARY.md)
+
+---
+
+## 📊 1. Báo Cáo Kết Quả Thực Hành (Exam Performance Summary)
+
+| Chỉ số đánh giá (Metric) | Kết quả đạt được | Tiêu chuẩn đạt của AWS | Trạng thái (Status) |
+| :--- | :---: | :---: | :---: |
+| **Tổng số câu hỏi (Total Questions)** | **65 câu** | 65 câu | Hoàn thành 100% |
+| **Số câu trả lời đúng (Correct Answers)** | **44 câu** | $\ge 47$  câu (72%) | Chưa đạt tiêu chuẩn ❌ |
+| **Số câu trả lời sai / bỏ qua (Incorrect & Skipped)** | **21 câu** | $\le 18$  câu | Cần tập trung ôn tập ⚠️ |
+| **Tỷ lệ chính xác (Overall Score)** | **67.69% (~677 / 1000)** | $\ge 72.0\%$ (720 / 1000) | ⚠️ **FAILED (CHƯA ĐẠT - CẦN ÔN TẬP)** |
+
+---
+
+### 📈 Ma Trận Phân Bổ Điểm Số Theo 4 Miền Kiến Thức (Domains Breakdown)
+
+| Miền kiến thức (AWS Domain) | Trọng số thi | Tổng số câu | Số câu đúng | Số câu sai | Tỷ lệ chính xác | Đánh giá năng lực |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Domain 1: Design Secure Architectures**<br>*Thiết kế kiến trúc an toàn (Security)* | **30%** | 21 câu | 12 câu | 9 câu | **57.1%** | Cần củng cố 🔴 |
+| **Domain 2: Design Resilient Architectures**<br>*Thiết kế kiến trúc kiên cường chịu lỗi (Resilience)* | **26%** | 14 câu | 8 câu | 6 câu | **57.1%** | Cần củng cố 🔴 |
+| **Domain 3: Design High-Performing Architectures**<br>*Thiết kế kiến trúc hiệu năng cao (Performance)* | **24%** | 18 câu | 14 câu | 4 câu | **77.8%** | Tốt 🟡 |
+| **Domain 4: Design Cost-Optimized Architectures**<br>*Thiết kế kiến trúc tối ưu chi phí (Cost Optimization)* | **20%** | 12 câu | 10 câu | 2 câu | **83.3%** | Tốt 🟡 |
+| **TỔNG CỘNG (OVERALL)** | **100%** |  **65 câu** | **44 câu** | **21 câu** | **67.69%** | ⚠️ **FAILED (CHƯA ĐẠT - CẦN ÔN TẬP)** |
+
+---
+
+## 🎯 2. Danh Sách 21 Câu Cần Tập Trung Ôn Tập (Focused Revision for Incorrect Answers)
+
+Dưới đây là tổng hợp 21 câu trả lời chưa chính xác và bỏ qua trong bài thi thử này. Hãy rà soát kỹ các bẫy đề bài, nguyên lý kiến trúc cốt lõi và bài học thực tế trước khi bước vào kỳ thi thật:
+
+| Câu số | Miền kiến thức | Chủ đề câu hỏi | Kiến thức cốt lõi & Bẫy đề bài cần lưu ý | Xem lại |
+| :---: | :--- | :--- | :--- | :---: |
+| **Câu 02** | Domain 1 | **Secure Inter-VPC Connectivity with Overlapping CIDRs via AWS PrivateLink** | Khi 2 VPC có dải IP CIDR trùng nhau (overlapping CIDRs) và cần kết nối an toàn, mọi giải pháp định tuyến IP truyền thống như VPC Peering, Transit Gateway, IPsec tunnel đều KHÔNG khả dụng.<br>Giải pháp chuẩn của AWS luôn là **AWS PrivateLink** (giao tiếp qua Interface VPC Endpoint ENI độc lập CIDR). | [👉 Xem](#question-02) |
+| **Câu 05** | Domain 2 | **Zero-Downtime Migration to Multi-AZ Amazon FSx for Windows File Server using AWS DataSync** | Để chuyển đổi hệ thống file Amazon FSx for Windows File Server từ Single-AZ sang Multi-AZ mà không gây gián đoạn hoạt động, không thể sửa đổi in-place trên volume cũ.<br>Cần tạo file system Multi-AZ mới và đồng bộ dữ liệu bằng **AWS DataSync**. | [👉 Xem](#question-05) |
+| **Câu 09** | Domain 1 | **Restricting S3 Access to AWS Organization Members using aws:PrincipalOrgID in Bucket Policy** | Để ngăn chặn triệt để người dùng bên ngoài truy cập vào S3 bucket và chỉ cho phép các thành viên trong cùng AWS Organization, sử dụng S3 Bucket Policy với điều kiện `StringNotEquals` kết hợp condition key **`aws:PrincipalOrgID`** và Effect `Deny`. | [👉 Xem](#question-09) |
+| **Câu 17** | Domain 3 | **Cross-Microservice Code Sharing and Versioning using AWS Lambda Layers** | Để chia sẻ và tái sử dụng mã nguồn/thư viện tiện ích (shared utilities) giữa nhiều hàm AWS Lambda với chi phí vận hành thấp nhất, giải pháp chuẩn là đóng gói vào **AWS Lambda Layers** và đánh version cho layer mỗi khi cập nhật mã nguồn. | [👉 Xem](#question-17) |
+| **Câu 19** | Domain 1 | **Private Subnet EC2 Session Management via Interface VPC Endpoints for Systems Manager (ssmmessages)** | Khi các EC2 instances trong private subnet không có Internet Gateway/NAT Gateway cần kết nối an toàn với AWS Systems Manager Session Manager, giải pháp là tạo Interface VPC Endpoints cho **`ssmmessages`**, `ssm`, và `ec2messages` trong từng AZ của VPC. | [👉 Xem](#question-19) |
+| **Câu 21** | Domain 3 | **Serverless Distributed Tracing and Latency Bottleneck Detection with AWS X-Ray in CloudFormation** | Để truy vết phân tán (distributed tracing) và phát hiện các điểm nghẽn độ trễ trong kiến trúc microservices/serverless với chi phí vận hành thấp nhất, kích hoạt tính năng **AWS X-Ray** ngay trong mẫu CloudFormation. | [👉 Xem](#question-21) |
+| **Câu 22** | Domain 2 | **Highly Available Fault-Tolerant Web Architecture with ALB, Multi-AZ ASG, and Multi-AZ RDS** | Để xây dựng kiến trúc web có tính sẵn sàng cao (High Availability), chịu được thảm họa toàn bộ một Availability Zone mà không bị gián đoạn, cần triển khai Auto Scaling Group trải dài trên **Multi-AZ** phía sau Application Load Balancer và cơ sở dữ liệu **Amazon RDS Multi-AZ**. | [👉 Xem](#question-22) |
+| **Câu 24** | Domain 2 | **Multi-Region Disaster Recovery with Sub-Second RPO using Amazon Aurora Global Database** | Để đáp ứng RPO ngắn (vài giây) và RTO nhanh khi xảy ra thảm họa toàn Region, giải pháp cơ sở dữ liệu tối ưu là **Amazon Aurora Global Database** (nhân bản dữ liệu liên vùng trong < 1 giây) kết hợp duy trì AMIs tại Region dự phòng. | [👉 Xem](#question-24) |
+| **Câu 27** | Domain 3 | **Preventing Duplicate Random Identifiers in AWS Lambda SnapStart using Pre-Snapshot Hooks** | Khi sử dụng AWS Lambda SnapStart, các giá trị ngẫu nhiên hoặc UUID khởi tạo trong quá trình initialization trước snapshot sẽ bị trùng lặp giữa các execution environments.<br>Cần sử dụng **pre-snapshot hook (CRaC Runtime.register)** để tạo lại các ID duy nhất tại thời điểm runtime. | [👉 Xem](#question-27) |
+| **Câu 31** | Domain 1 | **Automated Backup Compliance Auditing across Multi-Account Fleets with AWS Backup Audit Manager** | Để tự động hóa việc kiểm tra, đối soát và báo cáo tuân thủ chính sách sao lưu định kỳ trên toàn bộ tài khoản AWS, giải pháp chuẩn là kết hợp **AWS Backup Audit Manager** với các quy tắc được quản lý của **AWS Config**. | [👉 Xem](#question-31) |
+| **Câu 33** | Domain 1 | **Restricting Outbound-Only Internet Egress for IPv6 Workloads using Egress-Only Internet Gateways** | Đối với dải địa chỉ IPv6, không sử dụng NAT Gateway (vốn chỉ dành cho IPv4).<br>Để cho phép các instances chỉ định tuyến IPv6 ra Internet nhưng chặn hoàn toàn kết nối khởi tạo từ Internet vào, phải sử dụng **Egress-Only Internet Gateway (outbound-only IGW)**. | [👉 Xem](#question-33) |
+| **Câu 35** | Domain 2 | **Decoupling Burst News Ingestion and Processing using AWS Lambda and Amazon SQS Standard** | Để xử lý khối lượng lớn tin tức/bài viết không đồng bộ mà không làm quá tải hệ thống xử lý hạ nguồn, giải pháp phân rã kiến trúc tiêu chuẩn là sử dụng hàm **AWS Lambda để ingest** và đẩy từng bài viết vào hàng đợi **Amazon SQS** để xử lý tuần tự/theo lô. | [👉 Xem](#question-35) |
+| **Câu 36** | Domain 2 | **Stateful Containerized Microservices on AWS Fargate with Shared Persistent Amazon EFS Volumes** | Để chạy ứng dụng dạng container vừa có tính năng tự động mở rộng không cần quản lý máy chủ, vừa cần chia sẻ hệ thống tệp lưu trữ trạng thái có khả năng đọc/ghi đồng thời, giải pháp là **Amazon ECS on AWS Fargate kết hợp Amazon EFS volume**. | [👉 Xem](#question-36) |
+| **Câu 40** | Domain 3 | **Accelerating Global TCP/UDP Application Ingress and Bypassing DNS Caching via AWS Global Accelerator** | Để tăng tốc truy cập toàn cầu cho cả giao thức TCP/UDP trên nhiều cổng, hạn chế độ trễ và bỏ qua bộ đệm DNS của client, giải pháp tối ưu là **AWS Global Accelerator** sử dụng 2 địa chỉ Anycast IP tĩnh định tuyến qua mạng trục toàn cầu của AWS. | [👉 Xem](#question-40) |
+| **Câu 41** | Domain 1 | **Bidirectional Hybrid DNS Resolution using Route 53 Resolver Inbound and Outbound Endpoints** | Để thiết lập phân giải DNS hai chiều giữa mạng On-Premises và AWS:<br>- On-premises resolve domain AWS cần **Route 53 Resolver Inbound Endpoint**.<br>- AWS VPCs resolve domain nội bộ on-premises cần **Route 53 Resolver Outbound Endpoint** với forwarding rules. | [👉 Xem](#question-41) |
+| **Câu 44** | Domain 1 | **End-to-End Encrypted Serverless ETL Pipeline using AWS Glue and AWS KMS** | Để mã hóa dữ liệu nhạy cảm trong quá trình trích xuất và biến đổi ETL mà không phải tự quản lý hạ tầng tính toán, sử dụng **AWS Glue ETL jobs** tích hợp khóa mã hóa **AWS KMS** để tự động mã hóa dữ liệu cả khi lưu trữ lẫn truyền tải. | [👉 Xem](#question-44) |
+| **Câu 46** | Domain 4 | **Cost-Effective 30-Day Archival with Millisecond Retrieval using S3 Glacier Instant Retrieval** | Khi cần lưu trữ dữ liệu sau 30 ngày để tối ưu chi phí nhưng yêu cầu thời gian truy xuất ngay lập tức trong vài mili-giây (millisecond retrieval) khi có yêu cầu, lựa chọn chính xác là chuyển đổi sang lớp lưu trữ **S3 Glacier Instant Retrieval**. | [👉 Xem](#question-46) |
+| **Câu 58** | Domain 1 | **Enforcing WORM Immutability and Compliance Protection on Backups via AWS Backup Vault Lock** | Để tuân thủ các quy định bảo lưu dữ liệu nghiêm ngặt (WORM - Write Once, Read Many) và ngăn chặn việc xóa bản sao lưu kể cả bởi tài khoản root, sử dụng **AWS Backup Vault Lock ở chế độ Compliance Mode**. | [👉 Xem](#question-58) |
+| **Câu 61** | Domain 1 | **Cross-Account SNS-to-Lambda Invocation via Lambda Resource Policy and SNS Topic Policy** | Để một Amazon SNS topic ở Account A có thể invoke một hàm AWS Lambda ở Account B (cross-account), cần đồng thời 2 cấu hình: (1) **Resource-based policy trên Lambda** cho phép Principal `sns.amazonaws.com` invoke, và (2) **Access policy trên SNS topic** cho phép Account B/Lambda quyền subscribe. | [👉 Xem](#question-61) |
+| **Câu 64** | Domain 2 | **High Availability and Automated Database Failover for Microsoft SQL Server using RDS Multi-AZ** | Để đảm bảo cơ sở dữ liệu Microsoft SQL Server trên AWS có khả năng phục hồi cao, tự động chuyển đổi dự phòng (failover) khi gặp sự cố phần cứng hoặc AZ bị sập, giải pháp chuẩn là kích hoạt **Amazon RDS for SQL Server Multi-AZ**. | [👉 Xem](#question-64) |
+| **Câu 65** | Domain 4 | **Automating EBS Snapshot Lifecycles and Retention Policies using Amazon Data Lifecycle Manager (DLM)** | Để tự động hóa quy trình quản lý vòng đời của EBS snapshots, dọn dẹp các snapshot không cần thiết và thực hiện snapshot định kỳ theo lịch trình mà không cần viết script Lambda, sử dụng **Amazon Data Lifecycle Manager (DLM)**. | [👉 Xem](#question-65) |
+
+---
+
+## 📑 3. Mục Lục Điều Hướng Nhanh (Question Quick Index)
+
+<details>
+<summary>👉 <b>Nhấp vào đây để mở rộng danh sách 65 câu hỏi</b></summary>
+
+| STT | Trạng thái | Chủ đề câu hỏi | Miền kiến thức |
+| :---: | :---: | :--- | :--- |
+| [01](#question-01) | ✅ Đúng | [Indefinite Object Immutability and Overwrite Protection via S3 Object Lock Legal Hold](#question-01) | Domain 1 |
+| [02](#question-02) | ❌ Sai | [Secure Inter-VPC Connectivity with Overlapping CIDRs via AWS PrivateLink](#question-02) | Domain 1 |
+| [03](#question-03) | ✅ Đúng | [Automated RDS Database Credential Rotation with AWS Secrets Manager](#question-03) | Domain 1 |
+| [04](#question-04) | ✅ Đúng | [Multi-Account Auditing and Baseline Governance with AWS Control Tower & CloudTrail](#question-04) | Domain 1 |
+| [05](#question-05) | ❌ Sai | [Zero-Downtime Migration to Multi-AZ Amazon FSx for Windows File Server using AWS DataSync](#question-05) | Domain 2 |
+| [06](#question-06) | ✅ Đúng | [Serverless Data Lake ETL Pipeline Orchestration with AWS Glue and AWS Step Functions](#question-06) | Domain 3 |
+| [07](#question-07) | ✅ Đúng | [Configuring Public Internet Ingress for EC2 instances via Internet Gateway and Subnet Routes](#question-07) | Domain 2 |
+| [08](#question-08) | ✅ Đúng | [Decoupled Asynchronous Order Processing with Amazon SQS and AWS Lambda](#question-08) | Domain 2 |
+| [09](#question-09) | ❌ Sai | [Restricting S3 Access to AWS Organization Members using aws:PrincipalOrgID in Bucket Policy](#question-09) | Domain 1 |
+| [10](#question-10) | ✅ Đúng | [High-Throughput Serverless Financial API with Amazon API Gateway and AWS Lambda](#question-10) | Domain 3 |
+| [11](#question-11) | ✅ Đúng | [Hybrid Global DNS Routing with Amazon Route 53 Latency-Based Routing](#question-11) | Domain 3 |
+| [12](#question-12) | ✅ Đúng | [Remediating Hardcoded Application Database Credentials using AWS Secrets Manager](#question-12) | Domain 1 |
+| [13](#question-13) | ✅ Đúng | [Custom Project Cost Allocation and Reporting using Cost Allocation Tags & AWS Cost Explorer](#question-13) | Domain 4 |
+| [14](#question-14) | ✅ Đúng | [Secure Private In-VPC Amazon S3 Access using Gateway VPC Endpoints](#question-14) | Domain 1 |
+| [15](#question-15) | ✅ Đúng | [Cost-Effective Non-Production Managed MySQL Database using RDS Reserved Instances](#question-15) | Domain 4 |
+| [16](#question-16) | ✅ Đúng | [Automated Non-Production EC2 Cost Optimization using AWS Instance Scheduler](#question-16) | Domain 4 |
+| [17](#question-17) | ❌ Sai | [Cross-Microservice Code Sharing and Versioning using AWS Lambda Layers](#question-17) | Domain 3 |
+| [18](#question-18) | ✅ Đúng | [Highly Available Shared Linux File System across Multiple AZs using Amazon EFS](#question-18) | Domain 2 |
+| [19](#question-19) | ❌ Sai | [Private Subnet EC2 Session Management via Interface VPC Endpoints for Systems Manager (ssmmessages)](#question-19) | Domain 1 |
+| [20](#question-20) | ✅ Đúng | [Automatic Storage Cost Optimization for Dynamic Access Patterns via S3 Intelligent-Tiering](#question-20) | Domain 4 |
+| [21](#question-21) | ❌ Sai | [Serverless Distributed Tracing and Latency Bottleneck Detection with AWS X-Ray in CloudFormation](#question-21) | Domain 3 |
+| [22](#question-22) | ❌ Sai | [Highly Available Fault-Tolerant Web Architecture with ALB, Multi-AZ ASG, and Multi-AZ RDS](#question-22) | Domain 2 |
+| [23](#question-23) | ✅ Đúng | [Configuring Lambda VPC Access and Security Groups for Private RDS Database Ingestion](#question-23) | Domain 1 |
+| [24](#question-24) | ❌ Sai | [Multi-Region Disaster Recovery with Sub-Second RPO using Amazon Aurora Global Database](#question-24) | Domain 2 |
+| [25](#question-25) | ✅ Đúng | [Automated Continuous Resource Inventory and Compliance Tracking using AWS Config Recorder](#question-25) | Domain 1 |
+| [26](#question-26) | ✅ Đúng | [Proactive Application Error Alerting via CloudWatch Metric Filters and Amazon SNS](#question-26) | Domain 2 |
+| [27](#question-27) | ❌ Sai | [Preventing Duplicate Random Identifiers in AWS Lambda SnapStart using Pre-Snapshot Hooks](#question-27) | Domain 3 |
+| [28](#question-28) | ✅ Đúng | [Managed SMB File Share Options on AWS: Amazon FSx for Windows File Server and FSx for NetApp ONTAP](#question-28) | Domain 3 |
+| [29](#question-29) | ✅ Đúng | [Offloading Heavy Reporting Queries from RDS PostgreSQL using Read Replicas](#question-29) | Domain 3 |
+| [30](#question-30) | ✅ Đúng | [Handling Sudden Unpredictable Traffic Surges with EC2 Auto Scaling Step Scaling Policies](#question-30) | Domain 3 |
+| [31](#question-31) | ❌ Sai | [Automated Backup Compliance Auditing across Multi-Account Fleets with AWS Backup Audit Manager](#question-31) | Domain 1 |
+| [32](#question-32) | ✅ Đúng | [Automated Sensitive Data (PII) Discovery and Protection in S3 Buckets using Amazon Macie](#question-32) | Domain 1 |
+| [33](#question-33) | ❌ Sai | [Restricting Outbound-Only Internet Egress for IPv6 Workloads using Egress-Only Internet Gateways](#question-33) | Domain 1 |
+| [34](#question-34) | ✅ Đúng | [Multi-Tier Web Security Architecture: ALB Inbound HTTPS (443) and Web Tier Inbound HTTP (80)](#question-34) | Domain 1 |
+| [35](#question-35) | ❌ Sai | [Decoupling Burst News Ingestion and Processing using AWS Lambda and Amazon SQS Standard](#question-35) | Domain 2 |
+| [36](#question-36) | ❌ Sai | [Stateful Containerized Microservices on AWS Fargate with Shared Persistent Amazon EFS Volumes](#question-36) | Domain 2 |
+| [37](#question-37) | ✅ Đúng | [Enforcing Organizational Multi-Account Service Restrictions using Service Control Policies (SCPs)](#question-37) | Domain 1 |
+| [38](#question-38) | ✅ Đúng | [Asynchronous Batch Image Processing Pipeline using AWS Batch and AWS Step Functions](#question-38) | Domain 3 |
+| [39](#question-39) | ✅ Đúng | [Optimizing Global CDN Distribution Costs by Adjusting Amazon CloudFront Price Classes](#question-39) | Domain 4 |
+| [40](#question-40) | ❌ Sai | [Accelerating Global TCP/UDP Application Ingress and Bypassing DNS Caching via AWS Global Accelerator](#question-40) | Domain 3 |
+| [41](#question-41) | ❌ Sai | [Bidirectional Hybrid DNS Resolution using Route 53 Resolver Inbound and Outbound Endpoints](#question-41) | Domain 1 |
+| [42](#question-42) | ✅ Đúng | [Multi-Account Cost Governance and Budget Overrun Alerts using AWS Budgets](#question-42) | Domain 4 |
+| [43](#question-43) | ✅ Đúng | [High-Throughput Dedicated Kinesis Data Streams Ingestion with Enhanced Fan-Out](#question-43) | Domain 3 |
+| [44](#question-44) | ❌ Sai | [End-to-End Encrypted Serverless ETL Pipeline using AWS Glue and AWS KMS](#question-44) | Domain 1 |
+| [45](#question-45) | ✅ Đúng | [Cost-Effective Analytics for Intermittent and Spiky Workloads with Amazon Redshift Serverless](#question-45) | Domain 4 |
+| [46](#question-46) | ❌ Sai | [Cost-Effective 30-Day Archival with Millisecond Retrieval using S3 Glacier Instant Retrieval](#question-46) | Domain 4 |
+| [47](#question-47) | ✅ Đúng | [Proactive Hybrid Network Path and Packet Loss Monitoring using CloudWatch Network Monitor](#question-47) | Domain 3 |
+| [48](#question-48) | ✅ Đúng | [Accelerating Database Read Performance with In-Memory Caching using Amazon ElastiCache for Redis](#question-48) | Domain 3 |
+| [49](#question-49) | ✅ Đúng | [Zero-Downtime Database Storage Expansion using Amazon RDS Storage Auto Scaling](#question-49) | Domain 2 |
+| [50](#question-50) | ✅ Đúng | [Handling Asynchronous Lambda Failures and Retry Poison Pills with Amazon SQS Dead-Letter Queues (DLQ)](#question-50) | Domain 2 |
+| [51](#question-51) | ✅ Đúng | [Establishing Well-Architected Multi-Account Landing Zones and Guardrails with AWS Control Tower](#question-51) | Domain 1 |
+| [52](#question-52) | ✅ Đúng | [Auditing Unintended Public and Cross-Account S3 Access using IAM Access Analyzer](#question-52) | Domain 1 |
+| [53](#question-53) | ✅ Đúng | [Long-Term Cost-Effective Document Archival with Flexible Retrieval using S3 Glacier Flexible Retrieval](#question-53) | Domain 4 |
+| [54](#question-54) | ✅ Đúng | [Ultra-Low Latency Inter-Node HPC Clustering using Cluster Placement Groups and ENA](#question-54) | Domain 3 |
+| [55](#question-55) | ✅ Đúng | [Cost-Effective Storage Selection for Temporary Files with Unpredictable Lifespans under 30 Days (S3 Standard)](#question-55) | Domain 4 |
+| [56](#question-56) | ✅ Đúng | [Multi-Region Active-Active High Availability with Route 53 and In-Region Application Fleets](#question-56) | Domain 2 |
+| [57](#question-57) | ✅ Đúng | [Centralized Enterprise Cross-Account Backup Automation for EC2 Instances using AWS Backup](#question-57) | Domain 2 |
+| [58](#question-58) | ❌ Sai | [Enforcing WORM Immutability and Compliance Protection on Backups via AWS Backup Vault Lock](#question-58) | Domain 1 |
+| [59](#question-59) | ✅ Đúng | [Scalable Data Pre-processing for Large ML Datasets using AWS Glue and SageMaker AI](#question-59) | Domain 3 |
+| [60](#question-60) | ✅ Đúng | [Scaling Multi-VPC and Hybrid Direct Connect Connectivity with AWS Transit Gateway](#question-60) | Domain 3 |
+| [61](#question-61) | ❌ Sai | [Cross-Account SNS-to-Lambda Invocation via Lambda Resource Policy and SNS Topic Policy](#question-61) | Domain 1 |
+| [62](#question-62) | ✅ Đúng | [Cost-Minimizing Fault-Tolerant Batch Processing with Diversified EC2 Spot Fleets (CreateFleet)](#question-62) | Domain 4 |
+| [63](#question-63) | ✅ Đúng | [Serverless Container Orchestration with Minimal Operational Overhead using Amazon ECS on AWS Fargate](#question-63) | Domain 3 |
+| [64](#question-64) | ❌ Sai | [High Availability and Automated Database Failover for Microsoft SQL Server using RDS Multi-AZ](#question-64) | Domain 2 |
+| [65](#question-65) | ❌ Sai | [Automating EBS Snapshot Lifecycles and Retention Policies using Amazon Data Lifecycle Manager (DLM)](#question-65) | Domain 4 |
+
+</details>
+
+---
+
+## 📝 4. Nội Dung Chi Tiết 65 Câu Hỏi & Phân Tích Kiến Trúc (Detailed Questions & Explanations)
+
+<div id="question-01"></div>
+
+### Question 01: Indefinite Object Immutability and Overwrite Protection via S3 Object Lock Legal Hold
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (D) | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company is moving data from an on-premises data center to the AWS Cloud. The company must store all its data in an Amazon S3 bucket. To comply with regulations, the company must also ensure that the data will be protected against overwriting indefinitely.
+
+Which solution will ensure that the data in the S3 bucket cannot be overwritten?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Configure S3 Storage Lens for the S3 bucket. Use server-side encryption with customer-provided keys (SSE-C) to protect the data.
+- **(B)** Enable versioning for the S3 bucket. Use server-side encryption with Amazon S3 managed keys (SSE-S3) to protect the data.
+- **(C)** Disable versioning for the S3 bucket. Configure S3 Object Lock for the S3 bucket with a retention period of 1 year.
+- **(D)** Enable versioning for the S3 bucket. Configure S3 Object Lock for the S3 bucket with a legal hold. `[Lựa chọn của bạn - Chính xác ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Di chuyển data từ on-premises lên S3
+> - Yêu cầu dữ liệu trong bucket không bị overwrite (protected against overwriting) indefinitely (vô thời hạn)
+> - → Yêu cầu: chọn giải pháp bảo vệ object khỏi bị ghi đè vĩnh viễn
+
+**Phân tích giải pháp tối ưu:**
+Enable versioning for the S3 bucket. Configure S3 Object Lock for the S3 bucket with a legal hold.
+
+Object Lock bắt buộc phải bật versioning trước mới cấu hình được → khớp bước 1 của đáp án
+
+Legal hold không có thời hạn cố định (no expiration date), chỉ mất hiệu lực khi người có quyền s3:PutObjectLegalHold chủ động gỡ → đúng nghĩa "indefinitely"
+
+Retention period (kể cả Compliance mode) vẫn có ngày hết hạn xác định, không phải "indefinitely" thuần túy như legal hold
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Enable versioning for the S3 bucket. Use server-side encryption with Amazon S3 managed keys (SSE-S3) to protect the data.**:
+  SSE-S3 chỉ mã hoá dữ liệu, không ngăn việc ghi đè/xoá object - đây là 2 khái niệm khác nhau (encryption vs immutability)
+
+- **(C) Disable versioning for the S3 bucket. Configure S3 Object Lock for the S3 bucket with a retention period of 1 year.**:
+  Object Lock yêu cầu bucket phải bật versioning, không thể cấu hình khi versioning bị disable → phương án này không khả thi kỹ thuật
+  Retention period 1 năm cũng chỉ có hạn, không phải "indefinitely"
+
+- **(A) Configure S3 Storage Lens for the S3 bucket. Use server-side encryption with customer-provided keys (SSE-C) to protect the data.**:
+  Storage Lens là công cụ phân tích/báo cáo usage, không liên quan bảo vệ object khỏi ghi đè
+  SSE-C cũng chỉ là mã hoá, không phải kiểm soát ghi đè
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "cannot be overwritten indefinitely" / "vô thời hạn" → S3 Object Lock Legal Hold (không phải retention period có hạn)
+- "Object Lock" luôn đi kèm điều kiện: bucket phải bật Versioning trước - nếu đề nói "disable versioning" + Object Lock → loại ngay
+- Nếu đề chỉ nói "mã hoá dữ liệu" (SSE-S3/SSE-C) → không liên quan yêu cầu chống ghi đè/xoá, loại ngay
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Locking objects with Object Lock](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html)
+
+</details>
+
+---
+
+<div id="question-02"></div>
+
+### Question 02: Secure Inter-VPC Connectivity with Overlapping CIDRs via AWS PrivateLink
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+An IT team runs an application on Amazon EC2 instances in VPC A. An operations team uses EC2 instances in VPC B. The operations team needs the ability to make secure calls to the IT team's application from VPC B. Both VPCs have overlapping IPv4 CIDR blocks.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use AWS PrivateLink. Create an endpoint service in VPC A and a VPC endpoint in VPC B. `[Đáp án đúng ✅]`
+- **(B)** Create a VPC peering connection between the two VPCs. Update the route tables for both VPCs by using the peering connection ID.
+- **(C)** Create a transit gateway. Attach both VPCs to the transit gateway. Configure routing appropriately.
+- **(D)** Create an IPsec tunnel between the two VPCs. Update the route tables for both VPCs by using the virtual gateway ID.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - IT team chạy app trên EC2 trong VPC A; Operations team dùng EC2 trong VPC B
+> - Operations team cần thực hiện secure calls đến app của IT team từ VPC B
+> - Hai VPC có CIDR block trùng nhau (overlapping)
+> - → Yêu cầu: kết nối 2 VPC an toàn dù CIDR trùng nhau
+
+**Phân tích giải pháp tối ưu:**
+Use AWS PrivateLink. Create an endpoint service in VPC A and a VPC endpoint in VPC B.
+
+PrivateLink hoạt động qua Interface VPC Endpoint (ENI), không định tuyến theo IP CIDR giữa 2 VPC → không bị ảnh hưởng bởi CIDR trùng nhau
+
+Traffic đi hoàn toàn trong AWS network, không qua internet → đáp ứng "secure calls"
+
+Đây là giải pháp chuẩn của AWS cho case "connecting networks with overlapping IP ranges"
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Create a VPC peering connection between the two VPCs. Update the route tables for both VPCs by using the peering connection ID.**:
+  VPC Peering không hỗ trợ khi 2 VPC có CIDR block trùng nhau - giới hạn kỹ thuật, route table không thể phân biệt đích đến
+
+- **(C) Create a transit gateway. Attach both VPCs to the transit gateway. Configure routing appropriately.**:
+  Transit Gateway định tuyến dựa trên IP, cũng không hoạt động được khi CIDR 2 VPC trùng nhau
+
+- **(D) Create an IPsec tunnel between the two VPCs. Update the route tables for both VPCs by using the virtual gateway ID.**:
+  Vẫn phụ thuộc route table theo IP - cùng vấn đề CIDR trùng nhau như 2 đáp án trên
+  IPsec qua virtual private gateway thường dùng cho kết nối on-premises, không phải kết nối VPC-to-VPC nội bộ AWS
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "overlapping CIDR blocks" + kết nối 2 VPC → loại ngay VPC Peering, Transit Gateway, mọi giải pháp dựa trên route table theo IP
+- "overlapping CIDR" + cần secure connectivity → luôn nghĩ đến AWS PrivateLink (Interface Endpoint không quan tâm CIDR)
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [AWS PrivateLink concepts](https://docs.aws.amazon.com/vpc/latest/privatelink/concepts.html)
+- 🌐 [Connecting Networks with Overlapping IP Ranges](https://aws.amazon.com/blogs/networking-and-content-delivery/connecting-networks-with-overlapping-ip-ranges/)
+
+</details>
+
+---
+
+<div id="question-03"></div>
+
+### Question 03: Automated RDS Database Credential Rotation with AWS Secrets Manager
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A solutions architect needs to configure automatic rotation for Amazon RDS database credentials. The credentials must rotate every 30 days. The solution must integrate with Amazon RDS.
+
+Which solution will meet these requirements with the LEAST operational overhead?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Store the credentials in AWS Secrets Manager. Deploy an AWS Lambda function to automatically rotate the credentials every 30 days.
+- **(B)** Store the credentials in a file in an Amazon S3 bucket. Deploy an AWS Lambda function to automatically rotate the credentials every 30 days.
+- **(C)** Store the credentials in AWS Secrets Manager. Configure automatic rotation with a rotation interval of 30 days. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Store the credentials in AWS Systems Manager Parameter Store as a secure string. Configure automatic rotation with a rotation interval of 30 days.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Cần automatic rotation cho RDS database credentials
+> - Rotate mỗi 30 ngày
+> - Solution phải integrate với Amazon RDS
+> - → Yêu cầu: chọn giải pháp có LEAST operational overhead
+
+**Phân tích giải pháp tối ưu:**
+Store the credentials in AWS Secrets Manager. Configure automatic rotation with a rotation interval of 30 days.
+
+Secrets Manager có built-in integration sẵn với RDS (MySQL, PostgreSQL, Aurora...) - chỉ cần bật "Enable automatic rotation" và chọn interval, Secrets Manager tự tạo Lambda rotation function cho mình
+
+Không cần tự viết/deploy Lambda → đúng nghĩa "least operational overhead"
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Store the credentials in AWS Systems Manager Parameter Store as a secure string. Configure automatic rotation with a rotation interval of 30 days.**:
+  Parameter Store không có tính năng automatic rotation tích hợp sẵn cho RDS như Secrets Manager - phải tự xây dựng cơ chế rotation, tăng operational overhead
+
+- **(B) Store the credentials in a file in an Amazon S3 bucket. Deploy an AWS Lambda function to automatically rotate the credentials every 30 days.**:
+  S3 không phải dịch vụ quản lý secret chuyên dụng, phải tự viết toàn bộ logic rotation bằng Lambda → overhead cao nhất trong 4 lựa chọn
+
+- **(A) Store the credentials in AWS Secrets Manager. Deploy an AWS Lambda function to automatically rotate the credentials every 30 days.**:
+  Dùng đúng Secrets Manager nhưng lại tự deploy Lambda riêng thay vì dùng rotation function có sẵn - thừa công sức, vi phạm yêu cầu "least operational overhead"
+  Đáp án này chỉ đúng khi cần rotation logic tùy chỉnh cho database/API mà Secrets Manager không hỗ trợ rotation sẵn
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "LEAST operational overhead" + rotate credentials cho RDS/Aurora → Secrets Manager với automatic rotation built-in, không tự deploy Lambda
+- Nếu đề nói rotate cho database/service không được Secrets Manager hỗ trợ sẵn → khi đó mới cần tự deploy Lambda rotation function
+- Parameter Store phù hợp cho config thường, không phải lựa chọn chuẩn cho rotation credentials tự động
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Set up automatic rotation for Amazon RDS, Amazon Aurora, Amazon Redshift, or Amazon DocumentDB secrets](https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotate-secrets_turn-on-for-db.html)
+
+</details>
+
+---
+
+<div id="question-04"></div>
+
+### Question 04: Multi-Account Auditing and Baseline Governance with AWS Control Tower & CloudTrail
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (D) | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company uses an existing AWS account that is dedicated to management. The company needs to create separate accounts for multiple developer teams. Then, the developer accounts can host resources outside of the management account.
+
+A security team requires a centralized capability to audit user activity and to identify the resources that the teams create. Additionally, the company must apply a standard set of controls to any new accounts upon creation.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Enable AWS Organizations. Create a new security account. Configure AWS Config as an aggregator. Create new developer accounts as aggregator sources.
+- **(B)** Enable AWS Organizations. Set up an AWS CloudTrail organizational trail in the management account. Create new developer accounts by using AWS Organizations.
+- **(C)** Create an Amazon S3 bucket in the management account. Create new developer accounts by using Organizations. Configure AWS Cloudtrail in each new account. Use the S3 bucket in the management acocunt as the target.
+- **(D)** Enable AWS Organizations. Configure an AWS Control Tower landing zone. Set up an AWS CloudTrail organizational trail in management account. Create new developer accounts by using Account Factory. `[Lựa chọn của bạn - Chính xác ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Có sẵn management account; cần tạo nhiều developer accounts riêng cho từng team
+> - Developer accounts host resource ngoài management account
+> - Security team cần centralized capability để audit user activity + xác định resource các team tạo ra
+> - Công ty phải áp dụng standard set of controls cho account mới ngay khi tạo (upon creation)
+> - → Yêu cầu: multi-account governance + centralized audit + tự động áp dụng control chuẩn cho account mới
+
+**Phân tích giải pháp tối ưu:**
+Enable AWS Organizations. Configure an AWS Control Tower landing zone. Set up an AWS CloudTrail organizational trail in management account. Create new developer accounts by using Account Factory.
+
+Control Tower landing zone tự động áp dụng guardrails (standard controls) cho mọi account mới tạo qua Account Factory → đúng "apply standard set of controls... upon creation"
+
+Organizational trail trong management account tự động ghi log CloudTrail cho tất cả account thành viên → đáp ứng centralized audit
+
+Control Tower cũng tự động bật AWS Config để theo dõi resource các team tạo ra
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Enable AWS Organizations. Create a new security account. Configure AWS Config as an aggregator. Create new developer accounts as aggregator sources.**:
+  AWS Config aggregator chỉ tổng hợp compliance/resource inventory, không tạo CloudTrail audit tập trung, và không tự áp dụng standard controls khi tạo account mới
+
+- **(C) Create an Amazon S3 bucket in the management account. Create new developer accounts by using Organizations. Configure AWS Cloudtrail in each new account. Use the S3 bucket in the management acocunt as the target.**:
+  Phải tự cấu hình CloudTrail thủ công cho từng account thay vì tự động, tốn operational overhead, và vẫn không có cơ chế áp standard controls tự động cho account mới
+
+- **(B) Enable AWS Organizations. Set up an AWS CloudTrail organizational trail in the management account. Create new developer accounts by using AWS Organizations.**:
+  Có centralized audit (org trail) nhưng thiếu Control Tower/Account Factory → không có cơ chế tự động áp standard set of controls cho account mới khi tạo, chỉ tạo account "trần" qua Organizations
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "standard set of controls... upon creation" (account mới) → luôn nghĩ đến AWS Control Tower + Account Factory (guardrails tự động), không phải Organizations đơn thuần
+- "centralized audit toàn bộ member account" → CloudTrail organizational trail đặt tại management account
+- Nếu đề chỉ nói tạo account bằng Organizations mà không nhắc "chuẩn hoá control tự động" → Organizations đơn thuần đủ dùng; nếu có "standard controls upon creation" → phải là Control Tower
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [About logging in AWS Control Tower](https://docs.aws.amazon.com/controltower/latest/userguide/about-logging.html)
+
+</details>
+
+---
+
+<div id="question-05"></div>
+
+### Question 05: Zero-Downtime Migration to Multi-AZ Amazon FSx for Windows File Server using AWS DataSync
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company is migrating an on-premises data center to the AWS Cloud. The company is using Amazon FSx for Windows File Server to perform test deployments into a single Availability Zone. After testing, the company determines that it needs to improve availability and fault tolerance for its shared Windows file system.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Set up a new FSx for Windows File Server file system in a second Availability Zone. Use AWS Transfer Family to replicate data from the original file system. Use the new file system as a failover option.
+- **(B)** Shut down the existing FSx for Windows File Server file system. Change the deployment configuration to a Multi-AZ deployment type. Restart the file system.
+- **(C)** Set up a new FSx for Windows File Server file system that has a Multi-AZ deployment type. Use AWS DMS to transfer data from the original file system to the new file system.
+- **(D)** Set up a new FSx for Windows File Server file system that has a Multi-AZ deployment type. Use AWS DataSync to transfer data from the original file system to the new file system. `[Đáp án đúng ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Company dùng FSx for Windows File Server, deploy test ở 1 Availability Zone (Single-AZ)
+> - Sau test, cần cải thiện availability và fault tolerance cho shared Windows file system
+> - → Yêu cầu: nâng cấp từ Single-AZ sang kiến trúc chịu lỗi cao hơn
+
+**Phân tích giải pháp tối ưu:**
+Set up a new FSx for Windows File Server file system that has a Multi-AZ deployment type. Use AWS DataSync to transfer data from the original file system to the new file system.
+
+Multi-AZ deployment type là tính năng native của FSx for Windows để tự động failover giữa các AZ → đúng "improve availability and fault tolerance"
+
+AWS DataSync là công cụ AWS khuyến nghị chính thức để migrate dữ liệu giữa 2 file system FSx, kể cả từ Single-AZ sang Multi-AZ
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Set up a new FSx for Windows File Server file system in a second Availability Zone. Use AWS Transfer Family to replicate data from the original file system. Use the new file system as a failover option.**:
+  Đây là 2 file system Single-AZ riêng biệt với failover thủ công, không phải kiến trúc Multi-AZ native của FSx - không tự động failover, tốn thêm công sức vận hành
+  AWS Transfer Family dùng cho SFTP/FTPS transfer, không phải công cụ chuẩn để đồng bộ dữ liệu giữa 2 FSx file system
+
+- **(B) Shut down the existing FSx for Windows File Server file system. Change the deployment configuration to a Multi-AZ deployment type. Restart the file system.**:
+  Không thể đổi trực tiếp deployment type của 1 file system đang chạy từ Single-AZ sang Multi-AZ bằng cách tắt/bật lại - đây không phải thao tác được AWS hỗ trợ, phải tạo file system Multi-AZ mới
+
+- **(C) Set up a new FSx for Windows File Server file system that has a Multi-AZ deployment type. Use AWS DMS to transfer data from the original file system to the new file system.**:
+  AWS DMS dùng để migrate database, không phải công cụ để transfer dữ liệu file system - sai loại service
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "cải thiện availability/fault tolerance" cho FSx → Multi-AZ deployment type, không phải tạo thêm file system Single-AZ thủ công
+- "chuyển đổi deployment type Single-AZ → Multi-AZ" → luôn phải tạo file system mới, không thể đổi tại chỗ bằng restart
+- "Migrate dữ liệu giữa 2 FSx file system" → AWS DataSync (không phải DMS - chỉ dành cho database, không phải Transfer Family - dành cho SFTP)
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Migrating existing files to FSx for Windows File Server using AWS DataSync](https://docs.aws.amazon.com/fsx/latest/WindowsGuide/migrate-files-to-fsx-datasync.html)
+
+</details>
+
+---
+
+<div id="question-06"></div>
+
+### Question 06: Serverless Data Lake ETL Pipeline Orchestration with AWS Glue and AWS Step Functions
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (B) | **Đáp án đúng**: (B)
+
+#### 📋 Đề bài (Scenario)
+A company receives data from several sources and stores the data in an Amazon S3 data lake. The company transforms the data and ingests it into multiple downstream data stores, including databases and data warehouses.
+
+A solutions architect wants to design an extract, transform, and load (ETL) pipeline to orchestrate a process to prepare and load the data for analytics activities. The processed data must also be available for stakeholders through dashboards and visualizations.
+
+Which solution will meet these requirements with the LEAST development effort?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use custom scripts that run on Amazon EC2 instances to create ETL pipelines. Use AWS Glue to orchestrate the workflow. Use AWS Glue DataBrew to generate dashboards and visualizations.
+- **(B)** Use AWS Glue to create ETL pipelines. Use AWS Step Functions to orchestrate the workflow. Use Amazon QuickSight to generate dashboards and visualizations. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(C)** Use an AWS Lambda function to create ETL pipelines. Use AWS Step Functions to orchestrate the workflow. Use Amazon QuickSight to generate dashboards and visualizations.
+- **(D)** Use Amazon EMR and a custom Scala script to create ETL pipelines. Use an AWS Lambda function to orchestrate the workflow. Use Amazon OpenSearch Service to generate dashboards and visualizations.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(B)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Dữ liệu nằm trong S3 data lake, cần chuyển vào nhiều downstream data stores (database, data warehouse)
+> - Cần thiết kế ETL pipeline có orchestration (điều phối quy trình)
+> - Dữ liệu sau xử lý phải hiển thị được qua dashboards and visualizations cho stakeholders
+> - → Yêu cầu: xây dựng ETL pipeline + orchestration + dashboard với LEAST development effort
+
+**Phân tích giải pháp tối ưu:**
+Use AWS Glue to create ETL pipelines. Use AWS Step Functions to orchestrate the workflow. Use Amazon QuickSight to generate dashboards and visualizations.
+
+AWS Glue là dịch vụ ETL serverless, được quản lý hoàn toàn (fully managed), hỗ trợ tạo job ETL bằng giao diện kéo-thả (Glue Studio) hoặc script tự sinh, không cần code Scala/Spark thủ công
+
+Step Functions là dịch vụ orchestration serverless, tích hợp sẵn với Glue để điều phối workflow bằng cấu hình (low-code) thay vì viết Lambda function riêng để orchestrate
+
+QuickSight là dịch vụ BI serverless của AWS, kết nối trực tiếp tới S3/Redshift/RDS để tạo dashboard mà không cần code
+
+Cả 3 dịch vụ đều serverless, managed, giảm tối đa effort phát triển và vận hành hạ tầng
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Use Amazon EMR and a custom Scala script to create ETL pipelines. Use an AWS Lambda function to orchestrate the workflow. Use Amazon OpenSearch Service to generate dashboards and visualizations.**:
+  EMR yêu cầu viết custom Scala script và quản lý cluster Spark/Hadoop → effort phát triển cao hơn nhiều so với Glue (low-code)
+  Dùng 1 Lambda function để orchestrate cả workflow là cách làm thủ công, không có state machine, khó xử lý lỗi/retry
+  OpenSearch Service phục vụ tìm kiếm/log analytics, không phải công cụ BI dashboard chuẩn như QuickSight
+
+- **(C) Use an AWS Lambda function to create ETL pipelines. Use AWS Step Functions to orchestrate the workflow. Use Amazon QuickSight to generate dashboards and visualizations.**:
+  Dùng Lambda để tự viết toàn bộ logic ETL đòi hỏi code thủ công, không có sẵn connector/transform như Glue, lại bị giới hạn thời gian chạy (15 phút) không phù hợp xử lý dữ liệu lớn
+
+- **(A) Use custom scripts that run on Amazon EC2 instances to create ETL pipelines. Use AWS Glue to orchestrate the workflow. Use AWS Glue DataBrew to generate dashboards and visualizations.**:
+  Custom script trên EC2 = effort cao nhất (phải tự quản lý server, code, scaling)
+  AWS Glue không phải công cụ orchestration workflow (đó là vai trò của Step Functions)
+  Glue DataBrew là công cụ chuẩn bị/làm sạch dữ liệu (data preparation), không phải công cụ tạo dashboard/visualization
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "LEAST development effort" + "ETL" → ưu tiên AWS Glue (serverless, low-code) thay vì EMR/Lambda/EC2 tự viết code
+- "Orchestrate workflow" + "serverless" → AWS Step Functions, không phải Lambda đơn lẻ hay Glue
+- "Dashboards and visualizations" cho stakeholders → Amazon QuickSight (BI service chuẩn của AWS)
+- Nếu đề có "custom script" hoặc "custom Scala/Python code" trong đáp án → thường là dấu hiệu effort cao, loại trừ khi đề yêu cầu LEAST effort
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [What is AWS Glue?](https://docs.aws.amazon.com/glue/latest/dg/what-is-glue.html)
+- 🌐 [Visualize, analyze, and share data with Amazon Quick Sight (QuickSight)](https://docs.aws.amazon.com/quick/latest/userguide/quick-bi.html)
+
+</details>
+
+---
+
+<div id="question-07"></div>
+
+### Question 07: Configuring Public Internet Ingress for EC2 instances via Internet Gateway and Subnet Routes
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Multiple Choice (Chọn 2 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A), (D) | **Đáp án đúng**: (A), (D)
+
+#### 📋 Đề bài (Scenario)
+A solutions architect launches an Amazon EC2 instance inside a new VPC. The solutions architect configures network ACL rules and security group rules that allow the appropriate traffic to flow to and from the instance. An Elastic IP address is associated with the instance. The solutions architect needs to be able to access the instance from the internet.
+
+Which combination of actions should the solutions architect take to accomplish this goal? (Select TWO.)
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create an internet gateway. Attach the internet gateway to the VPC. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Create an internet gateway. Attach the internet gateway to the instance's subnet.
+- **(C)** Create an internet gateway. Attach the internet gateway to the instance.
+- **(D)** Add a route to the route table of the instance's subnet. Route traffic from the instance's subnet to the internet gateway. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(E)** Add a route to the route table of the instance's subnet. Route traffic from the internet gateway to the instance's subnet.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A), (D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - EC2 instance nằm trong VPC mới, đã có security group và network ACL cho phép traffic phù hợp
+> - Instance đã được gán Elastic IP address
+> - → Yêu cầu: truy cập được instance từ internet (Select TWO)
+> - Câu này có 2 đáp án đúng:
+
+**Phân tích giải pháp tối ưu:**
+Create an internet gateway. Attach the internet gateway to the VPC.
+
+Internet gateway (IGW) chỉ có thể được attach vào cấp VPC, không phải vào subnet hay instance
+
+IGW là thành phần bắt buộc để VPC có kết nối hai chiều với internet
+
+Add a route to the route table of the instance's subnet. Route traffic from the instance's subnet to the internet gateway.
+
+Route table của subnet chứa instance phải có route (thường là 0.0.0.0/0) trỏ đến internet gateway để traffic đi ra được internet
+
+Đây là điều kiện thứ hai (cùng với IGW) để biến subnet thành public subnet - thiếu route này thì dù có IGW, instance vẫn không truy cập được internet
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Create an internet gateway. Attach the internet gateway to the instance's subnet.**:
+  Sai đối tượng attach - IGW không gắn vào subnet, chỉ gắn vào VPC
+
+- **(C) Create an internet gateway. Attach the internet gateway to the instance.**:
+  Sai đối tượng attach - IGW không gắn vào từng instance riêng lẻ, chỉ gắn vào VPC
+
+- **(E) Add a route to the route table of the instance's subnet. Route traffic from the internet gateway to the instance's subnet.**:
+  Sai chiều route - route table cần route outbound traffic từ subnet đến IGW (destination = 0.0.0.0/0, target = IGW), không phải khai báo chiều ngược lại từ IGW vào subnet (route table không hoạt động theo hướng đó)
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Access EC2 from the internet" → cần đủ 2 điều kiện: (1) IGW attach vào VPC, (2) route table của subnet có route đến IGW
+- "Attach internet gateway to..." → chỉ có 1 đáp án đúng là VPC, loại ngay các lựa chọn attach vào subnet/instance
+- Route table luôn định nghĩa theo hướng "từ subnet đi đến đích (target)", không phải "từ gateway vào subnet"
+- Elastic IP + security group + NACL đã đủ đúng trong đề - đây là các điều kiện distractor không cần thay đổi, tập trung vào phần networking còn thiếu (IGW + route)
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Enable internet access for a VPC using an internet gateway](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html)
+- 🌐 [Getting started with Amazon VPC using the AWS CLI](https://docs.aws.amazon.com/vpc/latest/userguide/getting-started-with-amazon-vpc-using-the-aws-cli.html)
+
+</details>
+
+---
+
+<div id="question-08"></div>
+
+### Question 08: Decoupled Asynchronous Order Processing with Amazon SQS and AWS Lambda
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A) | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A media publishing company is building an application on AWS to give users the ability to print their own books. The application frontend runs on a Docker container.
+
+The amount of incoming orders varies significantly. The incoming orders can temporarily exceed the throughput of the company's book printing machines. Order-processing payloads are up to 4 MB in size.
+
+The company needs to develop a solution that can scale to handle incoming orders.
+
+Which solution will meet this requirement?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use Amazon SQS to queue incoming orders. Create an AWS Lambda function to process orders. Deploy the frontend application on Amazon ECS with the AWS Fargate launch type. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Use Amazon SNS to queue incoming orders. Create an AWS Lambda@Edge function to process orders. Deploy the frontend application on Amazon EC2 instances.
+- **(C)** Use Amazon SNS to queue incoming orders. Create an AWS Lambda function to process orders. Deploy the frontend application on AWS Fargate.
+- **(D)** Use Amazon SQS to queue incoming orders. Create an AWS Lambda@Edge function to process orders. Deploy the frontend application on Amazon EKS.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Frontend chạy trên Docker container
+> - Lượng đơn hàng vào (incoming orders) biến động mạnh, có lúc vượt throughput của máy in sách (downstream processing capacity)
+> - Payload xử lý đơn hàng lên tới 4 MB
+> - → Yêu cầu: giải pháp có khả năng scale để xử lý đơn hàng biến động, đệm (buffer) khi vượt throughput
+
+**Phân tích giải pháp tối ưu:**
+Use Amazon SQS to queue incoming orders. Create an AWS Lambda function to process orders. Deploy the frontend application on Amazon ECS with the AWS Fargate launch type.
+
+SQS là dịch vụ queue point-to-point phù hợp để "đệm" (buffer) đơn hàng khi tốc độ đơn hàng vào vượt throughput máy in - loại bỏ competing consumers khỏi tình trạng quá tải, không như SNS (pub/sub, không giữ message chờ xử lý)
+
+Lambda function tiêu thụ message từ SQS, tự động scale theo số lượng message trong queue, không cần quản lý server
+
+Ứng dụng chạy trên Docker container → Amazon ECS với Fargate launch type là lựa chọn tự nhiên vì Fargate chạy trực tiếp container mà không cần quản lý EC2 instance bên dưới
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Use Amazon SQS to queue incoming orders. Create an AWS Lambda@Edge function to process orders. Deploy the frontend application on Amazon EKS.**:
+  Lambda@Edge chỉ dùng để xử lý request/response tại CloudFront edge locations (ví dụ: modify header, redirect), không phải để xử lý business logic như order processing
+  EKS đòi hỏi quản lý control plane/cluster phức tạp hơn Fargate cho một use case đơn giản là deploy frontend container
+
+- **(C) Use Amazon SNS to queue incoming orders. Create an AWS Lambda function to process orders. Deploy the frontend application on AWS Fargate.**:
+  SNS là dịch vụ pub/sub (fan-out), không giữ message lại để "đệm" throughput - message bị mất nếu không có subscriber nhận ngay, không phù hợp làm queue buffer khi downstream chậm hơn upstream
+  SNS phù hợp khi cần gửi 1 message đến nhiều subscriber độc lập, không phải khi cần hàng đợi công việc (task queue)
+
+- **(B) Use Amazon SNS to queue incoming orders. Create an AWS Lambda@Edge function to process orders. Deploy the frontend application on Amazon EC2 instances.**:
+  Sai cả 2 điểm: SNS không phải service queue phù hợp, và Lambda@Edge không dùng để xử lý order
+  Deploy trên EC2 instances thuần đòi hỏi tự quản lý server, không tối ưu bằng container orchestration
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Buffer traffic that exceeds downstream throughput" → Amazon SQS (queue giữ message lại đến khi được xử lý), không phải SNS
+- "Pub/sub, fan-out to multiple subscribers" → SNS; "Task queue, decouple, buffer" → SQS
+- "Lambda@Edge" chỉ áp dụng cho CloudFront/edge processing (header, redirect, request routing) - nếu đề nói xử lý business logic (process orders) → loại Lambda@Edge, dùng Lambda function thường
+- "Ứng dụng chạy trên Docker container" → ưu tiên ECS/Fargate (ít operational overhead) hơn EKS hoặc EC2 thuần khi đề không có yêu cầu đặc biệt về Kubernetes
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Amazon SQS standard queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues.html)
+- 🌐 [Amazon SQS queue types](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-queue-types.html)
+
+</details>
+
+---
+
+<div id="question-09"></div>
+
+### Question 09: Restricting S3 Access to AWS Organization Members using aws:PrincipalOrgID in Bucket Policy
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A solutions architect has designed an application that gives users the ability to access images that are stored in an Amazon S3 bucket. The application uses an Amazon EC2 instance hosted in a private VPC that has a VPC ID of vpc-11aabb22. The solutions architect enabled the block public access feature on the S3 bucket. The bucket is hosted in the us-west-2 Region of account 123456789012.
+
+The solutions architect needs to ensure that only resources within the VPC that hosts the EC2 instance can access the S3 bucket.
+
+Which solution will meet this requirement?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create an S3 bucket policy statement that has a Deny effect and a Condition that includes "StringNotEquals": {"aws:PrincipalAccount": "123456789012"}.
+- **(B)** Create an S3 bucket policy statement that has an Allow effect and a Condition that includes "StringNotEquals": {"aws:SourceVpc": "vpc-11aabb22"}.
+- **(C)** Create an S3 bucket policy statement that has an Allow effect and a Resource of "arn:aws:ec2:us-west-2:123456789012:vpc/vpc-11aabb22".
+- **(D)** Create an S3 bucket policy statement that has a Deny effect and a Condition that includes "StringNotEquals": {"aws:SourceVpc": "vpc-11aabb22"}. `[Đáp án đúng ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - EC2 instance nằm trong private VPC có VPC ID vpc-11aabb22
+> - S3 bucket đã bật block public access
+> - → Yêu cầu: chỉ cho phép tài nguyên trong VPC đó truy cập bucket (VPC-only access)
+
+**Phân tích giải pháp tối ưu:**
+Create an S3 bucket policy statement that has a Deny effect and a Condition that includes "StringNotEquals": {"aws:SourceVpc": "vpc-11aabb22"}.
+
+Dùng Deny effect kết hợp điều kiện StringNotEquals trên khóa aws:SourceVpc = chặn tất cả request không đến từ VPC chỉ định - đây là pattern chuẩn để giới hạn truy cập bucket theo VPC
+
+aws:SourceVpc chỉ xuất hiện trong request context khi request đi qua VPC endpoint, nên điều kiện này chỉ khớp (và không Deny) khi truy cập đúng từ VPC endpoint của vpc-11aabb22
+
+Cách tiếp cận "Deny mọi thứ trừ điều kiện mong muốn" đảm bảo chặt chẽ hơn "Allow có điều kiện", vì Deny luôn override mọi Allow khác trong đánh giá policy
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Create an S3 bucket policy statement that has an Allow effect and a Resource of "arn:aws:ec2:us-west-2:123456789012:vpc/vpc-11aabb22".**:
+  Sai loại ARN cho Resource của bucket policy - Resource trong bucket policy phải là ARN của S3 bucket/object (arn:aws:s3:::...), không thể là ARN của VPC (arn:aws:ec2:...)
+
+- **(B) Create an S3 bucket policy statement that has an Allow effect and a Condition that includes "StringNotEquals": {"aws:SourceVpc": "vpc-11aabb22"}.**:
+  Logic ngược: dùng Allow + StringNotEquals nghĩa là "cho phép mọi request KHÔNG đến từ VPC này" - hoàn toàn trái với yêu cầu (phải là Deny để chặn các request không đến từ VPC đó)
+
+- **(A) Create an S3 bucket policy statement that has a Deny effect and a Condition that includes "StringNotEquals": {"aws:PrincipalAccount": "123456789012"}.**:
+  Sai điều kiện - aws:PrincipalAccount kiểm tra request đến từ AWS account nào, không liên quan gì đến việc request có đi qua VPC cụ thể hay không. Một request trong cùng account nhưng đi qua internet vẫn được Allow, không đáp ứng yêu cầu "chỉ VPC mới truy cập được"
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Chỉ cho phép truy cập từ 1 VPC cụ thể" → Deny + StringNotEquals + aws:SourceVpc (pattern chuẩn, học thuộc)
+- "Chỉ cho phép từ 1 VPC endpoint cụ thể" (không phải cả VPC) → dùng khóa aws:SourceVpce thay vì aws:SourceVpc
+- Nếu điều kiện dùng "StringNotEquals" mà Effect lại là "Allow" → gần như luôn sai vì logic bị đảo ngược, cần Deny mới đúng ý "chặn phần còn lại"
+- Resource trong S3 bucket policy luôn phải là ARN dạng arn:aws:s3:::bucket-name hoặc .../* - không bao giờ là ARN của service khác (VPC, EC2...)
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [AWS global condition context keys (aws:SourceVpc)](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html)
+- 🌐 [How do I restrict access to AWS resources based on the AWS Region, source IP address, or Amazon VPC?](https://repost.aws/knowledge-center/iam-restrict-access-policy)
+
+</details>
+
+---
+
+<div id="question-10"></div>
+
+### Question 10: High-Throughput Serverless Financial API with Amazon API Gateway and AWS Lambda
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (B) | **Đáp án đúng**: (B)
+
+#### 📋 Đề bài (Scenario)
+A company is building a solution to provide customers with an API that accesses financial data. The API backend needs to compute tax data for each request. The company anticipates greater demand to access the data during the last 3 months of each year.
+
+A solutions architect needs to design a scalable solution that can meet the regular demand and the peak demand at the end of each year.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Host the API on an Amazon EC2 instance that runs third-party software. Configure the EC2 instance to perform tax computations.
+- **(B)** Deploy an Amazon API Gateway REST API. Create an AWS Lambda function to perform tax computations. Integrate the Lambda function with the REST API. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(C)** Create an Application Load Balancer (ALB) in front of two Amazon EC2 instances. Configure the EC2 instances to perform tax computations.
+- **(D)** Deploy an Amazon API Gateway REST API. Configure an Amazon EC2 instance to perform tax computations. Integrate the EC2 instance with the REST API.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(B)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - API cung cấp dữ liệu tài chính (financial data), backend cần compute tax data cho mỗi request
+> - Nhu cầu truy cập tăng cao vào 3 tháng cuối năm (peak demand theo mùa)
+> - → Yêu cầu: thiết kế scalable solution đáp ứng cả demand thường ngày lẫn peak cuối năm
+
+**Phân tích giải pháp tối ưu:**
+Deploy an Amazon API Gateway REST API. Create an AWS Lambda function to perform tax computations. Integrate the Lambda function with the REST API.
+
+API Gateway tự động scale để xử lý lượng request thay đổi, không cần provision capacity trước
+
+Lambda tự động scale theo số lượng request đồng thời (concurrency), phù hợp hoàn hảo với workload có peak demand không thể dự đoán chính xác trước độ lớn
+
+Kết hợp API Gateway + Lambda = kiến trúc serverless hoàn toàn, không cần quản lý server, tự scale từ 0 đến hàng nghìn request mà không cần can thiệp thủ công khi vào mùa cao điểm
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Host the API on an Amazon EC2 instance that runs third-party software. Configure the EC2 instance to perform tax computations.**:
+  Một EC2 instance đơn lẻ không tự scale được khi traffic tăng vào peak season → nghẽn cổ chai (bottleneck), không đáp ứng yêu cầu "scalable solution"
+
+- **(C) Create an Application Load Balancer (ALB) in front of two Amazon EC2 instances. Configure the EC2 instances to perform tax computations.**:
+  Chỉ có 2 EC2 instance cố định (fixed capacity), không có Auto Scaling Group → không tự scale khi traffic tăng đột biến vào 3 tháng cuối năm, phải tự tay thêm instance
+
+- **(D) Deploy an Amazon API Gateway REST API. Configure an Amazon EC2 instance to perform tax computations. Integrate the EC2 instance with the REST API.**:
+  API Gateway có scale nhưng backend vẫn là 1 EC2 instance đơn lẻ không tự scale → toàn bộ hệ thống vẫn bị giới hạn bởi khả năng của EC2 instance đó khi vào peak
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Traffic có mùa cao điểm/peak không dự đoán được" + "cần scale tự động" → ưu tiên kiến trúc serverless (API Gateway + Lambda) thay vì EC2 cố định
+- "Configure EC2 instance to..." (số ít, không có Auto Scaling Group) → dấu hiệu KHÔNG scale được, thường là đáp án sai khi đề yêu cầu scalability
+- Nếu đề chỉ có ALB + vài EC2 instance mà không đề cập Auto Scaling Group → không đáp ứng yêu cầu scale linh hoạt như Lambda
+- API Gateway luôn cần một backend compute - nếu backend đó không tự scale (EC2 đơn) thì cả kiến trúc vẫn không đạt yêu cầu
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Lambda integrations for REST APIs in API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-integrations.html)
+- 🌐 [Integration with AWS Lambda](https://docs.aws.amazon.com/whitepapers/latest/serverless-multi-tier-architectures-api-gateway-lambda/integration-with-aws-lambda.html)
+
+</details>
+
+---
+
+<div id="question-11"></div>
+
+### Question 11: Hybrid Global DNS Routing with Amazon Route 53 Latency-Based Routing
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company uses Amazon Route 53 as its DNS provider. The company hosts a website both on premises and in the AWS Cloud. The company's on-premises data center is near the us-west-1 Region. The company hosts the website on AWS in the eu-central-1 Region.
+
+The company wants to optimize load times for the website as much as possible.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create a DNS record with an IP-based routing policy. Configure specific IP ranges to return the value for the eu-central-1 website. Configure all other IP ranges to return the value for the on-premises website.
+- **(B)** Create a DNS record with a weighted routing policy. Split the traffic evenly between eu-central-1 and the on-premises data center.
+- **(C)** Create a DNS record with a latency-based routing policy. Associate the record for the on-premises data center with us-west-1. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Create a DNS record with a failover routing policy that routes all primary traffic to eu-central-1. Configure the routing policy to use the on-premises data center as the secondary location.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Website được host cả on-premises lẫn AWS Cloud (hybrid)
+> - Data center on-premises nằm gần us-west-1
+> - Website trên AWS host tại eu-central-1
+> - → Yêu cầu: tối ưu thời gian tải trang (load time) tối đa cho người dùng ở cả 2 nơi
+
+**Phân tích giải pháp tối ưu:**
+Create a DNS record with a latency-based routing policy. Associate the record for the on-premises data center with us-west-1.
+
+Latency-based routing tự động trả DNS response trỏ đến endpoint có độ trễ thấp nhất cho từng người dùng dựa trên vị trí truy vấn DNS - đúng bản chất "tối ưu load time tối đa"
+
+Với endpoint eu-central-1 (tài nguyên AWS thật), Route 53 tự động tính latency dựa trên dữ liệu network thực tế của AWS Region đó
+
+Với on-premises data center (không phải tài nguyên AWS), Route 53 không tự đo được latency thực - phải gán (associate) record đó với AWS Region gần nhất về mặt địa lý (us-west-1) để Route 53 dùng dữ liệu latency của Region đó làm xấp xỉ
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Create a DNS record with a failover routing policy that routes all primary traffic to eu-central-1. Configure the routing policy to use the on-premises data center as the secondary location.**:
+  Failover routing chỉ phục vụ mục tiêu high availability (chuyển sang secondary khi primary lỗi), không tối ưu load time - luôn ưu tiên eu-central-1 dù người dùng gần us-west-1 hơn
+
+- **(A) Create a DNS record with an IP-based routing policy. Configure specific IP ranges to return the value for the eu-central-1 website. Configure all other IP ranges to return the value for the on-premises website.**:
+  Đòi hỏi tự liệt kê và duy trì thủ công danh sách IP range cho từng vùng - không tự động tối ưu latency theo thời gian thực, dễ lỗi thời và tốn công vận hành
+
+- **(B) Create a DNS record with a weighted routing policy. Split the traffic evenly between eu-central-1 and the on-premises data center.**:
+  Weighted routing chia traffic theo tỷ lệ cố định (50/50), hoàn toàn không xét đến độ trễ thực tế của người dùng → không tối ưu load time
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Optimize load time" / "lowest latency" cho người dùng ở nhiều vị trí địa lý → Latency-based routing policy
+- Endpoint không phải tài nguyên AWS (on-premises, third-party) trong latency-based routing → phải associate với AWS Region gần nhất để Route 53 ước tính latency
+- "High availability / disaster recovery" → Failover routing; "Tối ưu độ trễ" → Latency-based routing; "Chia tải theo tỷ lệ cố định" → Weighted routing - phân biệt rõ 3 loại policy này
+- IP-based routing chỉ phù hợp khi công ty biết chính xác dải IP khách hàng (ví dụ theo ISP), không phải công cụ tối ưu latency tổng quát
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Latency-based routing](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-policy-latency.html)
+- 🌐 [Transitioning to latency-based routing in Amazon Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/TutorialTransitionToLBR.html)
+
+</details>
+
+---
+
+<div id="question-12"></div>
+
+### Question 12: Remediating Hardcoded Application Database Credentials using AWS Secrets Manager
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A) | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company has a custom application with embedded credentials that retrieves information from a database in an Amazon RDS for MySQL DB cluster. The company needs to make the application more secure with minimal programming effort. The company has created credentials on the RDS for MySQL database for the application user.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Store the credentials in AWS Secrets Manager. Configure the application to load the database credentials from Secrets Manager. Set up a credentials rotation schedule by creating an AWS Lambda function for Secrets Manager. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Store the credentials in AWS KMS. Create keys in AWS KMS. Configure the application to load the database credentials from AWS KMS. Enable automatic key rotation.
+- **(C)** Store the credentials in AWS Systems Manager Parameter Store. Configure the application to load the database credentials from Parameter Store. Set up a credentials rotation schedule in the RDS for MySQL database by using Parameter Store.
+- **(D)** Store the credentials in encrypted local storage. Configure the application to load the database credentials from the local storage. Set up a credentials rotation schedule by creating a cron job.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Ứng dụng có embedded credentials (hardcode) để truy cập Amazon RDS for MySQL DB cluster
+> - Credentials cho application user đã được tạo sẵn trên database
+> - → Yêu cầu: bảo mật hơn với minimal programming effort (ít công sức lập trình nhất)
+
+**Phân tích giải pháp tối ưu:**
+Store the credentials in AWS Secrets Manager. Configure the application to load the database credentials from Secrets Manager. Set up a credentials rotation schedule by creating an AWS Lambda function for Secrets Manager.
+
+Secrets Manager loại bỏ hoàn toàn credentials hardcode - ứng dụng chỉ cần gọi API để lấy secret tại runtime, thay vì đọc trực tiếp trong code (giảm effort thay đổi code)
+
+Secrets Manager có tích hợp sẵn (built-in integration) với RDS MySQL/PostgreSQL/Aurora - khi bật rotation, dịch vụ tự động tạo và cấu hình sẵn Lambda rotation function từ template có sẵn, không cần tự viết logic rotation từ đầu
+
+Đây là giải pháp có ít effort lập trình nhất vì tận dụng tối đa tính năng managed/built-in của AWS thay vì tự xây dựng
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Store the credentials in AWS KMS. Create keys in AWS KMS. Configure the application to load the database credentials from AWS KMS. Enable automatic key rotation.**:
+  KMS dùng để quản lý encryption keys, không phải nơi lưu trữ credentials (username/password). "Automatic key rotation" của KMS chỉ rotate key mã hóa, không rotate mật khẩu database - sai bản chất dịch vụ
+
+- **(D) Store the credentials in encrypted local storage. Configure the application to load the database credentials from the local storage. Set up a credentials rotation schedule by creating a cron job.**:
+  Vẫn phải tự quản lý lưu trữ (local storage), tự viết cron job để rotate → effort lập trình cao, không tận dụng dịch vụ managed nào của AWS
+
+- **(C) Store the credentials in AWS Systems Manager Parameter Store. Configure the application to load the database credentials from Parameter Store. Set up a credentials rotation schedule in the RDS for MySQL database by using Parameter Store.**:
+  Parameter Store không có tính năng rotation tích hợp sẵn cho RDS như Secrets Manager - phải tự xây dựng cơ chế rotation riêng (thường vẫn cần Lambda tự viết), tốn nhiều effort hơn
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Hardcoded/embedded credentials" + "minimal effort" → AWS Secrets Manager (không phải KMS hay Parameter Store)
+- "Rotation tích hợp sẵn cho RDS/Aurora/Redshift/DocumentDB" → chỉ có Secrets Manager hỗ trợ built-in rotation Lambda template, Parameter Store thì không
+- KMS = quản lý encryption key, không phải nơi lưu username/password → loại ngay khi đề nói "store credentials"
+- "Cron job" hoặc "custom script tự viết rotation" trong đáp án → dấu hiệu effort cao, thường sai khi đề yêu cầu ít effort nhất
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [What is AWS Secrets Manager?](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html)
+- 🌐 [Set up automatic rotation for Amazon RDS, Amazon Aurora, Amazon Redshift, or Amazon DocumentDB secrets](https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotate-secrets_turn-on-for-db.html)
+
+</details>
+
+---
+
+<div id="question-13"></div>
+
+### Question 13: Custom Project Cost Allocation and Reporting using Cost Allocation Tags & AWS Cost Explorer
+> **Miền kiến thức (Domain)**: Domain 4: Design Cost-Optimized Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A) | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company runs a serverless architecture that supports multiple projects and resources in the company's AWS account. The company wants to use resource tags to monitor and analyze costs contributed by individual projects to the company's AWS bill.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use AWS Cost Explorer to create custom cost allocation reports based on the tags assigned to resources. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Use AWS Budgets to set budgets for each project based on the tags assigned to resources.
+- **(C)** Use AWS Billing Conductor to configure reports for each project based on the tags assigned to resources.
+- **(D)** Use AWS Pricing Calculator to model cost reports for each project based on the tags assigned to resources.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Kiến trúc serverless, hỗ trợ nhiều project và resource trong cùng 1 AWS account
+> - Đã có resource tags gắn cho từng project
+> - → Yêu cầu: theo dõi và phân tích chi phí đóng góp theo từng project dựa trên tag
+
+**Phân tích giải pháp tối ưu:**
+Use AWS Cost Explorer to create custom cost allocation reports based on the tags assigned to resources.
+
+Cost Explorer hỗ trợ group by / filter theo cost allocation tag - đúng công cụ chuẩn để phân tích chi phí theo project dựa trên tag đã gắn sẵn
+
+Sau khi activate cost allocation tags trong Billing Console, Cost Explorer cho phép tạo report tùy chỉnh (custom report), nhóm chi phí theo tag để so sánh đóng góp của từng project vào tổng bill
+
+Hình minh hoạ
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Use AWS Budgets to set budgets for each project based on the tags assigned to resources.**:
+  AWS Budgets dùng để đặt ngưỡng và cảnh báo (alert) khi chi phí vượt mức, không phải công cụ chính để phân tích/theo dõi chi phí chi tiết theo tag - sai mục đích sử dụng so với yêu cầu "monitor and analyze costs"
+
+- **(C) Use AWS Billing Conductor to configure reports for each project based on the tags assigned to resources.**:
+  AWS Billing Conductor dùng để tạo pricing plan tùy chỉnh phục vụ mục đích resell/chargeback giữa các đơn vị (ví dụ AWS reseller lập hóa đơn cho khách hàng), không phải công cụ phân tích chi phí nội bộ đơn giản theo tag
+
+- **(D) Use AWS Pricing Calculator to model cost reports for each project based on the tags assigned to resources.**:
+  Pricing Calculator dùng để ước tính chi phí trước khi triển khai (estimate), không đọc được dữ liệu chi phí thực tế đã phát sinh và tag thực tế của resource đang chạy
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Monitor and analyze costs by tag/project" → AWS Cost Explorer (custom cost allocation report theo tag)
+- "Set threshold + alert khi vượt ngân sách" → AWS Budgets; "Phân tích/breakdown chi phí đã phát sinh" → Cost Explorer - phân biệt rõ 2 dịch vụ này
+- "Ước tính chi phí trước khi deploy" → Pricing Calculator; "Resell/chargeback pricing plan" → Billing Conductor - đây đều là bẫy tên nghe giống nhưng sai mục đích
+- Muốn Cost Explorer group theo tag, tag đó phải được activate làm cost allocation tag trong Billing and Cost Management console trước
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Organizing and tracking costs using AWS cost allocation tags](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/cost-alloc-tags.html)
+- 🌐 [How do I find the cost of my Amazon S3 buckets? (ví dụ dùng Cost Explorer + tag)](https://repost.aws/knowledge-center/s3-find-bucket-cost)
+- How to create and enforce your tagging strategy for more granular cost visibility
+
+</details>
+
+---
+
+<div id="question-14"></div>
+
+### Question 14: Secure Private In-VPC Amazon S3 Access using Gateway VPC Endpoints
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (D) | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company is building a static website on AWS in a single VPC. The VPC has public subnets and private subnets in two Availability Zones. The company stores the website content in an Amazon S3 bucket.
+
+The company has deployed a fleet of Amazon EC2 instances as web servers in a private subnet. The EC2 instances are in an Auto Scaling group behind an Application Load Balancer (ALB). The EC2 instances serve network traffic and pull content from the S3 bucket to render the webpages. The company is using an AWS Direct Connect connection with a public virtual interface (VIF) to provide on-premises connectivity to the S3 bucket. Network traffic between the EC2 instances and the S3 bucket travels through a NAT gateway.
+
+A solutions architect must reconfigure network connectivity to optimize the cost of NAT gateway traffic between the EC2 instances and the S3 bucket.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create a Direct Connect private VIF. Migrate the traffic from the public VIF to the private VIF.
+- **(B)** Create an AWS Site-to-Site VPN tunnel over the existing public VIF.
+- **(C)** Implement interface VPC endpoints for the S3 bucket. Update the VPC route table.
+- **(D)** Implement gateway VPC endpoints for the S3 bucket. Update the VPC route table. `[Lựa chọn của bạn - Chính xác ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - EC2 instances (web server) nằm trong private subnet, pull content từ S3 bucket cùng Region
+> - Traffic giữa EC2 và S3 hiện đang đi qua NAT gateway
+> - Direct Connect với public VIF chỉ dùng cho kết nối on-premises tới S3 (không liên quan đến traffic EC2 ↔ S3 nội bộ VPC)
+> - → Yêu cầu: tối ưu chi phí traffic NAT gateway giữa EC2 và S3
+
+**Phân tích giải pháp tối ưu:**
+Implement gateway VPC endpoints for the S3 bucket. Update the VPC route table.
+
+Gateway VPC endpoint cho S3 hoàn toàn miễn phí (không tính phí theo giờ hay theo GB dữ liệu), traffic đi qua AWS private network thay vì qua NAT gateway
+
+Chỉ cần cập nhật route table của private subnet để trỏ traffic đến S3 qua gateway endpoint thay vì qua NAT gateway - loại bỏ hoàn toàn chi phí NAT gateway cho traffic này
+
+Phù hợp vì EC2 và S3 bucket cùng Region, đúng điều kiện sử dụng gateway endpoint (chỉ hỗ trợ truy cập trong cùng VPC/Region)
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Create a Direct Connect private VIF. Migrate the traffic from the public VIF to the private VIF.**:
+  Direct Connect VIF (public hay private) chỉ phục vụ kết nối on-premises tới AWS, không ảnh hưởng đến traffic nội bộ giữa EC2 và S3 trong cùng VPC/Region - không giải quyết được chi phí NAT gateway trong bài toán này
+
+- **(B) Create an AWS Site-to-Site VPN tunnel over the existing public VIF.**:
+  VPN tunnel cũng chỉ phục vụ kết nối on-premises, không thay đổi đường đi traffic giữa EC2 và S3 nội bộ VPC - không liên quan đến việc giảm traffic qua NAT gateway
+
+- **(C) Implement interface VPC endpoints for the S3 bucket. Update the VPC route table.**:
+  Interface VPC endpoint có phí (theo giờ + theo GB dữ liệu qua ENI) - tuy cũng loại bỏ NAT gateway nhưng không tối ưu chi phí bằng gateway endpoint (miễn phí) khi truy cập S3 từ tài nguyên trong cùng VPC/Region
+  Interface endpoint phù hợp hơn khi cần truy cập S3 từ on-premises hoặc VPC khác/Region khác - không phải trường hợp trong đề
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Traffic EC2 ↔ S3/DynamoDB cùng Region qua NAT gateway" + "optimize cost" → luôn là Gateway VPC Endpoint (miễn phí, ưu tiên số 1)
+- Gateway VPC Endpoint: chỉ hỗ trợ S3 và DynamoDB, chỉ dùng được từ cùng VPC, không hỗ trợ on-premises/VPC peering/Direct Connect
+- Interface VPC Endpoint: hỗ trợ nhiều service hơn, dùng được từ on-premises qua Direct Connect/VPN, nhưng luôn tốn phí - chỉ chọn khi Gateway Endpoint không khả dụng
+- Direct Connect VIF (public/private) và VPN chỉ liên quan đến kết nối on-premises ↔ AWS, không bao giờ là đáp án cho bài toán tối ưu traffic nội bộ trong VPC
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Choosing Your VPC Endpoint Strategy for Amazon S3](https://aws.amazon.com/blogs/architecture/choosing-your-vpc-endpoint-strategy-for-amazon-s3/)
+- 🌐 [How do I reduce data transfer charges for my NAT gateway in Amazon VPC?](https://repost.aws/knowledge-center/vpc-reduce-nat-gateway-transfer-costs)
+
+</details>
+
+---
+
+<div id="question-15"></div>
+
+### Question 15: Cost-Effective Non-Production Managed MySQL Database using RDS Reserved Instances
+> **Miền kiến thức (Domain)**: Domain 4: Design Cost-Optimized Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (B) | **Đáp án đúng**: (B)
+
+#### 📋 Đề bài (Scenario)
+A company is planning to deploy a managed MySQL database solution for its non-production applications. The company plans to run the system for several years on AWS.
+
+Which solution will meet these requirements MOST cost-effectively?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create an Amazon RDS for MySQL instance. Use the instance on an on-demand basis.
+- **(B)** Create an Amazon RDS for MySQL instance. Purchase a Reserved Instance. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(C)** Create an Amazon Aurora MySQL cluster with writer and reader nodes. Use the cluster on an on-demand basis.
+- **(D)** Create an Amazon EC2 instance. Manually install and configure MySQL Server on the instance.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(B)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Cần managed MySQL database cho ứng dụng non-production
+> - Kế hoạch chạy hệ thống trong several years (nhiều năm, dài hạn)
+> - → Yêu cầu: giải pháp MOST cost-effective (tiết kiệm chi phí nhất)
+
+**Phân tích giải pháp tối ưu:**
+Create an Amazon RDS for MySQL instance. Purchase a Reserved Instance.
+
+RDS for MySQL đáp ứng yêu cầu "managed MySQL database" - AWS quản lý patching, backup, provisioning
+
+Reserved Instance (RI) giúp tiết kiệm tới 30-55% chi phí so với on-demand khi cam kết sử dụng dài hạn (1 hoặc 3 năm) - phù hợp trực tiếp với điều kiện "chạy hệ thống nhiều năm"
+
+Vì công ty đã biết trước sẽ dùng lâu dài (predictable, long-term usage), RI luôn là lựa chọn tiết kiệm nhất so với on-demand cho cùng loại instance
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Create an Amazon RDS for MySQL instance. Use the instance on an on-demand basis.**:
+  On-demand tính phí theo giờ sử dụng thực tế mà không có discount cam kết dài hạn - tốn kém hơn Reserved Instance đáng kể khi biết trước sẽ chạy liên tục trong nhiều năm
+
+- **(C) Create an Amazon Aurora MySQL cluster with writer and reader nodes. Use the cluster on an on-demand basis.**:
+  Aurora MySQL tương thích MySQL nhưng đơn giá cao hơn RDS for MySQL tương ứng, thêm cả reader node (không cần thiết cho non-production) làm tăng chi phí, lại dùng on-demand (không có discount dài hạn) → tốn kém hơn đáp án đúng ở cả 2 điểm
+
+- **(D) Create an Amazon EC2 instance. Manually install and configure MySQL Server on the instance.**:
+  Vi phạm yêu cầu "managed" - công ty phải tự cài đặt, vá lỗi, backup, quản lý MySQL Server thủ công, tăng operational overhead dù có thể rẻ hơn về compute; đề yêu cầu managed database solution nên phương án tự quản lý không đáp ứng đúng yêu cầu
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Chạy hệ thống nhiều năm" (predictable, long-term) + "managed database" + "most cost-effective" → Reserved Instance trên RDS, không phải on-demand
+- On-demand chỉ tối ưu khi workload ngắn hạn, không dự đoán được hoặc thử nghiệm (non-production ngắn hạn); nếu đề nói rõ "several years" → luôn nghiêng về RI
+- Aurora thường đắt hơn RDS MySQL ở mức instance tương đương - chỉ chọn Aurora khi đề yêu cầu tính năng riêng của Aurora (auto-scaling storage, global database, serverless...), không phải khi chỉ cần "cost-effective MySQL" đơn giản
+- "Manually install/configure" trên EC2 → luôn vi phạm yêu cầu "managed", loại ngay dù có vẻ rẻ hơn về hạ tầng thô
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Amazon RDS reserved DB instances](https://docs.aws.amazon.com/whitepapers/latest/cost-optimization-reservation-models/amazon-rds-reserved-db-instances.html)
+- 🌐 [Purchasing reserved DB instances for Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithReservedDBInstances.WorkingWith.html)
+
+</details>
+
+---
+
+<div id="question-16"></div>
+
+### Question 16: Automated Non-Production EC2 Cost Optimization using AWS Instance Scheduler
+> **Miền kiến thức (Domain)**: Domain 4: Design Cost-Optimized Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A) | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company runs an application that uses Amazon RDS for PostgreSQL. The application receives traffic only on weekdays during business hours. The company wants to optimize costs and reduce operational overhead based on this usage.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use the Instance Scheduler on AWS to configure start and stop schedules. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Turn off automatic backups. Create weekly manual snapshots of the database.
+- **(C)** Purchase All Upfront reserved DB instances.
+- **(D)** Create a custom AWS Lambda function to start and stop the database based on minimum CPU utilization.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Ứng dụng dùng Amazon RDS for PostgreSQL
+> - Chỉ nhận traffic weekdays trong business hours (không dùng ban đêm/cuối tuần)
+> - Công ty muốn optimize costs và reduce operational overhead
+> - → Yêu cầu: tối ưu chi phí cho database chỉ chạy theo lịch cố định, với overhead vận hành thấp nhất
+
+**Phân tích giải pháp tối ưu:**
+Use the Instance Scheduler on AWS to configure start and stop schedules.
+
+Instance Scheduler on AWS là AWS Solutions Implementation có sẵn (CloudFormation-based), tự động start/stop RDS (và EC2) theo lịch tag-based
+
+Chỉ cần gắn tag lên DB instance và cấu hình schedule, không phải viết code → đúng nghĩa "reduce operational overhead"
+
+Chạy đúng weekdays business hours (168h/tuần → ~50h/tuần) giúp tiết kiệm chi phí đáng kể so với chạy 24/7
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Turn off automatic backups. Create weekly manual snapshots of the database.**:
+  Không liên quan đến việc tắt/mở instance theo lịch để tiết kiệm chi phí compute - chỉ ảnh hưởng đến backup
+  Tắt automatic backups còn làm tăng rủi ro mất dữ liệu, vi phạm best practice, không giải quyết yêu cầu đề bài
+
+- **(D) Create a custom AWS Lambda function to start and stop the database based on minimum CPU utilization.**:
+  Tự viết và duy trì Lambda function → tăng operational overhead, ngược yêu cầu đề bài
+  Dựa vào CPU utilization không đảm bảo khớp chính xác với lịch "weekdays business hours" đã biết trước
+
+- **(C) Purchase All Upfront reserved DB instances.**:
+  Reserved Instance tối ưu cho workload chạy liên tục 24/7, ở đây DB chỉ chạy một phần thời gian trong tuần
+  Vẫn phải trả tiền cho toàn bộ thời gian đã reserve kể cả lúc không dùng (ngoài giờ hành chính, cuối tuần) → tốn chi phí hơn so với start/stop theo lịch
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Chỉ chạy trong khung giờ cố định (business hours/weekdays)" + "reduce operational overhead" → Instance Scheduler on AWS (giải pháp có sẵn, không tự code)
+- "Custom Lambda function to start/stop" → thường là đáp án nhiễu, tăng effort vận hành so với giải pháp managed có sẵn
+- Reserved Instances chỉ tối ưu chi phí cho workload chạy liên tục/predictable 24/7, không phù hợp cho workload chạy theo lịch một phần thời gian
+- Nếu đề nói "known schedule" (biết trước giờ dùng) → luôn ưu tiên scheduling solution thay vì Reserved Instance hay custom script
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Automate starting and stopping AWS instances (Instance Scheduler on AWS)](https://docs.aws.amazon.com/solutions/latest/instance-scheduler-on-aws/solution-overview.html)
+
+</details>
+
+---
+
+<div id="question-17"></div>
+
+### Question 17: Cross-Microservice Code Sharing and Versioning using AWS Lambda Layers
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company maintains multiple AWS Lambda functions that use a common Python runtime. The Lambda functions share common utilities for authentication, logging, and data validation. The shared code is approximately 30 MB in size and requires monthly security updates.
+
+The company wants to optimize deployment packages, ensure consistent dependency versions, and reduce maintenance overhead.
+
+Which solution will meet these requirements while following best practices for Lambda functions?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create a Lambda layer that contains the shared utilities. Version the layer each time the shared code is updated. Configure the Lambda functions to reference the layer's most recent version by using the layer Amazon Resource Name (ARN) version number. `[Đáp án đúng ✅]`
+- **(B)** Create a Lambda layer that uses an unversioned Amazon Resource Name (ARN). Continuously update the layer in place whenever changes are needed.
+- **(C)** Store the shared code in Amazon S3. Configure each Lambda function to download and import the shared code during initialization by using the Lambda runtime API.
+- **(D)** Store the shared code in an Amazon EFS file system. Configure each Lambda function to mount the EFS file system and download and import the shared code during initialization by using the Lambda runtime API.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Nhiều AWS Lambda functions dùng chung Python runtime
+> - Chia sẻ common utilities (authentication, logging, data validation), kích thước ~30 MB
+> - Cần cập nhật bảo mật hàng tháng cho phần code dùng chung
+> - Mục tiêu: tối ưu deployment package, đảm bảo consistent dependency versions, giảm maintenance overhead, theo best practices
+> - → Yêu cầu: chọn cách chia sẻ code chung giữa nhiều Lambda function đúng best practice
+
+**Phân tích giải pháp tối ưu:**
+Create a Lambda layer that contains the shared utilities. Version the layer each time the shared code is updated. Configure the Lambda functions to reference the layer's most recent version by using the layer Amazon Resource Name (ARN) version number.
+
+Lambda Layer là cơ chế chuẩn của AWS để chia sẻ code/dependency dùng chung giữa nhiều function, tách biệt với code nghiệp vụ
+
+Mỗi lần publish là một layer version bất biến (immutable) với ARN riêng (...:layer:my-layer:N) - đảm bảo consistent dependency versions giữa các lần deploy
+
+Cập nhật bảo mật hàng tháng → publish version mới, các function tự cập nhật bằng cách trỏ đến version ARN mới, không cần đóng gói lại 30MB code vào từng function package
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Store the shared code in Amazon S3. Configure each Lambda function to download and import the shared code during initialization by using the Lambda runtime API.**:
+  Tự viết logic tải và import code lúc cold start → tăng latency khởi động và maintenance overhead, không tận dụng cơ chế Layer có sẵn
+  Không đảm bảo mọi function dùng cùng version code tại cùng thời điểm nếu S3 object bị thay đổi
+
+- **(D) Store the shared code in an Amazon EFS file system. Configure each Lambda function to mount the EFS file system and download and import the shared code during initialization by using the Lambda runtime API.**:
+  Yêu cầu cấu hình Lambda chạy trong VPC + EFS mount target → thêm độ phức tạp mạng không cần thiết cho 30MB shared code tĩnh
+  Đây là overkill so với Layer - EFS phù hợp hơn cho dataset lớn (GB) cần chia sẻ và ghi/đọc runtime, không phải shared utility code
+
+- **(B) Create a Lambda layer that uses an unversioned Amazon Resource Name (ARN). Continuously update the layer in place whenever changes are needed.**:
+  Lambda layer luôn bất biến theo version - Lambda không hỗ trợ "unversioned ARN" để cập nhật tại chỗ, mỗi publish luôn tạo version mới
+  Update "in place" phá vỡ tính nhất quán (consistent dependency versions) giữa các lần function được invoke, vi phạm chính yêu cầu đề bài
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Chia sẻ code/dependency chung giữa nhiều Lambda function" → Lambda Layer
+- "Consistent dependency versions" + "reduce maintenance" → luôn tham chiếu version ARN cụ thể, không dùng bản mới nhất ngầm định
+- Lambda layer version là immutable - không có khái niệm "update in place" hay ARN không version
+- Nếu shared data có kích thước lớn (hàng trăm MB - GB) và cần đọc/ghi runtime → cân nhắc EFS; còn shared utility code cỡ vài chục MB → luôn ưu tiên Layer
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Managing Lambda dependencies with layers](https://docs.aws.amazon.com/lambda/latest/dg/chapter-layers.html)
+
+</details>
+
+---
+
+<div id="question-18"></div>
+
+### Question 18: Highly Available Shared Linux File System across Multiple AZs using Amazon EFS
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (D) | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company seeks a storage solution for its application. The solution must be highly available and scalable. The solution also must function as a file system, be mountable by multiple Linux instances in AWS and on premises through native protocols, and have no minimum size requirements. The company has set up a Site-to-Site VPN for access from its on-premises network to its VPC.
+
+Which storage solution meets these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Amazon FSx Multi-AZ deployments
+- **(B)** Amazon EFS with a single mount target and multiple access points
+- **(C)** Amazon EBS Multi-Attach volumes
+- **(D)** Amazon EFS with multiple mount targets `[Lựa chọn của bạn - Chính xác ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Cần storage highly available và scalable
+> - Phải hoạt động như file system, mountable bởi nhiều Linux instances cả trong AWS và on-premises qua native protocols
+> - Không có yêu cầu kích thước tối thiểu (no minimum size requirements)
+> - Kết nối on-premises tới VPC qua Site-to-Site VPN
+> - → Yêu cầu: chọn storage đáp ứng file system dùng chung, đa nền tảng Linux, HA, không ràng buộc dung lượng tối thiểu
+
+**Phân tích giải pháp tối ưu:**
+Amazon EFS with multiple mount targets
+
+EFS là managed NFS file system, dùng native NFSv4.1 protocol để mount trên Linux, cả EC2 lẫn on-premises (qua VPN/Direct Connect)
+
+Nhiều mount target (mỗi AZ một mount target) → đảm bảo highly available across Availability Zones
+
+EFS tự động scale dung lượng theo dữ liệu thực tế, không có yêu cầu kích thước tối thiểu, trả phí theo GB dùng thực tế
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Amazon FSx Multi-AZ deployments**:
+  FSx (Windows File Server/ONTAP...) thường có yêu cầu dung lượng tối thiểu khi tạo file system, vi phạm ràng buộc "no minimum size requirements"
+  FSx for Windows File Server dùng giao thức SMB, không phải giao thức "native" chuẩn cho Linux (Linux cần cài thêm client SMB, không tự nhiên như NFS)
+
+- **(C) Amazon EBS Multi-Attach volumes**:
+  EBS Multi-Attach chỉ hoạt động trong cùng một Availability Zone, không đạt yêu cầu high availability đa AZ
+  EBS là block storage, không phải file system chia sẻ qua protocol mạng, và không thể mount từ on-premises qua Site-to-Site VPN
+
+- **(B) Amazon EFS with a single mount target and multiple access points**:
+  Single mount target = single point of failure nằm trong 1 AZ, không đáp ứng yêu cầu highly available
+  Access points chỉ kiểm soát quyền truy cập/thư mục gốc, không giải quyết vấn đề HA của mount target
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Mountable bởi nhiều Linux instance, on-premises + AWS, native protocol" → Amazon EFS (NFS)
+- "No minimum size requirement" → loại ngay FSx (thường có mức dung lượng tối thiểu)
+- "Highly available file system" → EFS cần nhiều mount target (một mount target mỗi AZ), không phải một mount target duy nhất
+- EBS Multi-Attach → chỉ dùng khi cần block storage chia sẻ trong cùng AZ giữa các EC2 Nitro instance, không phải file system đa AZ/on-premises
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [How Amazon EFS works](https://docs.aws.amazon.com/efs/latest/ug/how-it-works.html)
+
+</details>
+
+---
+
+<div id="question-19"></div>
+
+### Question 19: Private Subnet EC2 Session Management via Interface VPC Endpoints for Systems Manager (ssmmessages)
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company runs an application on Amazon EC2 instances across multiple Availability Zones. For compliance reasons, the EC2 instances cannot be accessible from the internet. The EC2 instances must run within private subnets that use a shared route table. The VPC contains a single NAT gateway for internet connectivity. The company wants to improve the reliability of the connectivity to an AWS Systems Manager service.
+
+Which solution will meet these requirements with the LEAST operational effort?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Deploy an additional NAT gateway in each Availability Zone. Update the shared route table with the new NAT gateway addresses.
+- **(B)** Take an Amazon Machine Image (AMI) of the existing EC2 instances. Relaunch the instances into public subnets. Enable VPC Block Public Access.
+- **(C)** Create an interface VPC endpoint for Systems Manager ssmmessages. Specify a subnet in each Availability Zone. `[Đáp án đúng ✅]`
+- **(D)** Create an AWS Transit Gateway and a centralized outbound VPC to access the Systems Manager service.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - EC2 instances chạy trong private subnets, dùng shared route table, nhiều Availability Zone
+> - Compliance: không được truy cập từ internet
+> - VPC chỉ có một NAT gateway duy nhất cho kết nối internet
+> - Muốn cải thiện độ tin cậy (reliability) của kết nối tới AWS Systems Manager
+> - → Yêu cầu: tăng độ tin cậy kết nối SSM với LEAST operational effort
+
+**Phân tích giải pháp tối ưu:**
+Create an interface VPC endpoint for Systems Manager ssmmessages. Specify a subnet in each Availability Zone.
+
+Interface VPC endpoint (PrivateLink) cho ssmmessages cho phép instance kết nối tới Systems Manager hoàn toàn qua private network, không phụ thuộc NAT gateway/internet gateway
+
+Chỉ định subnet ở mỗi AZ → endpoint có sẵn ở nhiều AZ, loại bỏ single point of failure hiện tại (một NAT gateway duy nhất)
+
+Chỉ cần tạo VPC endpoint, không cần thay đổi kiến trúc EC2/route table phức tạp → đúng nghĩa "LEAST operational effort"
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Deploy an additional NAT gateway in each Availability Zone. Update the shared route table with the new NAT gateway addresses.**:
+  Vẫn phụ thuộc vào internet gateway/NAT cho traffic tới SSM, không phải giải pháp private-network trực tiếp
+  Route table hiện tại đang shared giữa nhiều subnet - việc thêm nhiều NAT gateway đòi hỏi tách route table riêng cho từng AZ, tăng effort đáng kể so với việc chỉ tạo VPC endpoint
+
+- **(B) Take an Amazon Machine Image (AMI) of the existing EC2 instances. Relaunch the instances into public subnets. Enable VPC Block Public Access.**:
+  Vi phạm trực tiếp yêu cầu compliance "EC2 instances cannot be accessible from the internet" vì đưa instance vào public subnet
+  Đây là thay đổi kiến trúc lớn (re-launch toàn bộ fleet), operational effort rất cao, không phải giải pháp phù hợp
+
+- **(D) Create an AWS Transit Gateway and a centralized outbound VPC to access the Systems Manager service.**:
+  Quá phức tạp cho một VPC đơn lẻ cần kết nối SSM - Transit Gateway phù hợp khi có nhiều VPC cần chia sẻ outbound path, không phải cho use case này
+  Tăng operational overhead đáng kể so với việc chỉ tạo một Interface VPC Endpoint
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Kết nối riêng tư, đáng tin cậy tới AWS service (SSM/S3/DynamoDB...) từ private subnet" → Interface/Gateway VPC Endpoint, không phải thêm NAT gateway
+- "LEAST operational effort" + đã có compliance cấm truy cập internet → loại ngay đáp án đưa instance ra public subnet
+- Interface VPC endpoint cần chỉ định subnet ở từng AZ để đảm bảo HA cho endpoint đó
+- Transit Gateway/centralized outbound VPC → chỉ cân nhắc khi có nhiều VPC cần dùng chung path ra ngoài, không phải bài toán 1 VPC
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Troubleshooting SSM Agent (VPC endpoint configuration cho ssm/ssmmessages/ec2messages)](https://docs.aws.amazon.com/systems-manager/latest/userguide/troubleshooting-ssm-agent.html)
+
+</details>
+
+---
+
+<div id="question-20"></div>
+
+### Question 20: Automatic Storage Cost Optimization for Dynamic Access Patterns via S3 Intelligent-Tiering
+> **Miền kiến thức (Domain)**: Domain 4: Design Cost-Optimized Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (D) | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+An adventure company has launched a new feature on its mobile app. Users can use the feature to upload their hiking and rafting photos and videos anytime. The photos and videos are stored in Amazon S3 Standard storage in an S3 bucket and are served through Amazon CloudFront.
+
+The company needs to optimize the cost of the storage. A solutions architect discovers that most of the uploaded photos and videos are accessed frequently after 30 days. However, some of the uploaded photos and videos are accessed infrequently after 30 days. The solutions architect needs to implement a solution that maintains millisecond retrieval availability of the photos and videos at the lowest possible cost.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Add a Cache-Control: max-age header to the S3 image objects and S3 video objects. Set the header to 30 days.
+- **(B)** Replace Amazon S3 with an Amazon EFS file system that is mounted on Amazon EC2 instances.
+- **(C)** Configure an S3 Lifecycle policy to transition image objects and video objects from S3 Standard to S3 Glacier Deep Archive after 30 days.
+- **(D)** Configure S3 Intelligent-Tiering on the S3 bucket. `[Lựa chọn của bạn - Chính xác ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Photos/videos lưu ở S3 Standard, phục vụ qua Amazon CloudFront
+> - Hầu hết object vẫn được truy cập thường xuyên (frequently) sau 30 ngày
+> - Một số object lại được truy cập không thường xuyên (infrequently) sau 30 ngày → access pattern không đồng nhất/khó đoán trước
+> - Cần giữ millisecond retrieval ở chi phí thấp nhất
+> - → Yêu cầu: tối ưu chi phí lưu trữ mà vẫn đảm bảo truy xuất tức thời (millisecond) cho object có access pattern hỗn hợp/không dự đoán được
+
+**Phân tích giải pháp tối ưu:**
+Configure S3 Intelligent-Tiering on the S3 bucket.
+
+S3 Intelligent-Tiering tự động di chuyển từng object giữa các tier (Frequent/Infrequent/Archive Instant Access) dựa trên access pattern thực tế, phù hợp khi dữ liệu không đồng nhất (một số truy cập thường xuyên, một số thì không)
+
+Cả 3 tier chính (Frequent, Infrequent, Archive Instant Access) đều có độ trễ truy xuất bằng milliseconds, không mất phí retrieval khi object được truy cập lại
+
+Không tốn operational overhead để tự viết rule phân loại, tự động tối ưu chi phí theo từng object riêng lẻ
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Configure an S3 Lifecycle policy to transition image objects and video objects from S3 Standard to S3 Glacier Deep Archive after 30 days.**:
+  Glacier Deep Archive cần hàng giờ (không phải milliseconds) để phục hồi dữ liệu → vi phạm trực tiếp yêu cầu "millisecond retrieval"
+  Lifecycle rule cố định 30 ngày giả định toàn bộ object đều chuyển sang ít truy cập, trong khi đề nói phần lớn vẫn truy cập thường xuyên sau 30 ngày
+
+- **(B) Replace Amazon S3 with an Amazon EFS file system that is mounted on Amazon EC2 instances.**:
+  Thay đổi hoàn toàn kiến trúc lưu trữ (từ S3 sang EFS + EC2) → tăng chi phí và operational overhead, không phải "LEAST cost" solution
+  EFS không tích hợp trực tiếp và tối ưu với CloudFront như S3 origin, không giải quyết đúng bài toán tối ưu storage tier
+
+- **(A) Add a Cache-Control: max-age header to the S3 image objects and S3 video objects. Set the header to 30 days.**:
+  Cache-Control chỉ ảnh hưởng đến cache ở CloudFront/trình duyệt, không thay đổi storage class hay chi phí lưu trữ trên S3
+  Không giải quyết được yêu cầu cốt lõi là tối ưu chi phí lưu trữ của bucket
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Access pattern không đồng nhất/khó dự đoán" (một phần truy cập nhiều, một phần ít) → S3 Intelligent-Tiering
+- "Millisecond retrieval" → loại ngay Glacier Flexible Retrieval và Glacier Deep Archive (retrieval tính bằng phút/giờ)
+- Lifecycle rule cố định theo số ngày chỉ phù hợp khi access pattern đã biết trước và đồng nhất cho toàn bộ object
+- Cache-Control header → chỉ tối ưu tốc độ/tần suất gọi lại origin qua CDN, không liên quan đến storage class cost
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Managing S3 Intelligent-Tiering](https://docs.aws.amazon.com/AmazonS3/latest/userguide/intelligent-tiering-managing.html)
+
+</details>
+
+---
+
+<div id="question-21"></div>
+
+### Question 21: Serverless Distributed Tracing and Latency Bottleneck Detection with AWS X-Ray in CloudFormation
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company is using a loosely coupled serverless architecture on AWS. The architecture consists of multiple web applications and APIs distributed across multiple teams. The company uses AWS Control Tower to provision AWS accounts. The company's development teams use AWS CloudFormation.
+
+The company wants to improve trace monitoring and gain insight into how individual services in application stacks are performing.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Enable AWS X-Ray in the CloudFormation templates. `[Đáp án đúng ✅]`
+- **(B)** Enable Amazon CloudWatch in the CloudFormation templates.
+- **(C)** Enable AWS X-Ray across all accounts by using AWS Control Tower.
+- **(D)** Enable AWS CloudTrail across all accounts by using AWS Control Tower.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Kiến trúc serverless loosely coupled, nhiều web app/API do nhiều team quản lý
+> - Dùng AWS Control Tower để cấp phát account, dev team dùng AWS CloudFormation
+> - Muốn cải thiện trace monitoring, hiểu rõ hiệu năng của từng service riêng lẻ trong application stack
+> - → Yêu cầu: chọn cách bật distributed tracing đúng phạm vi (account governance hay application layer)
+
+**Phân tích giải pháp tối ưu:**
+Enable AWS X-Ray in the CloudFormation templates.
+
+AWS X-Ray là dịch vụ distributed tracing chuyên dùng để theo dõi luồng request đi qua từng service (Lambda, API Gateway...) trong một application stack, đúng với nhu cầu "trace monitoring" và "insight vào hiệu năng từng service"
+
+X-Ray phải được bật ở cấp resource (ví dụ TracingConfig: Active cho Lambda function, hoặc Tracing: Active trong SAM) → khai báo trong CloudFormation template của từng application stack, đúng nơi dev team đang quản lý IaC
+
+Vì kiến trúc loosely coupled với nhiều team/stack riêng, mỗi team tự khai báo tracing cho stack của mình là cách tiếp cận đúng và khả thi
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Enable AWS CloudTrail across all accounts by using AWS Control Tower.**:
+  CloudTrail ghi lại API call/hoạt động quản trị (audit), không phải công cụ distributed tracing để xem hiệu năng service-to-service
+  Không giúp trả lời câu hỏi "service nào đang chậm/lỗi trong chuỗi xử lý request"
+
+- **(C) Enable AWS X-Ray across all accounts by using AWS Control Tower.**:
+  Control Tower quản lý governance ở cấp account/OU (guardrail, account provisioning), không có tính năng bật X-Ray tracing cho tài nguyên ứng dụng trên toàn bộ account
+  X-Ray là cấu hình ở cấp resource/application, phải khai báo trong template của từng stack, không phải chính sách account-wide qua Control Tower
+
+- **(B) Enable Amazon CloudWatch in the CloudFormation templates.**:
+  CloudWatch cung cấp metrics và logs, không cung cấp distributed trace để thấy đường đi request qua nhiều service như X-Ray
+  Không đáp ứng đúng yêu cầu "insight into how individual services... are performing" trong một luồng xử lý end-to-end
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Trace monitoring" + "hiệu năng từng service trong application stack" → AWS X-Ray, không phải CloudWatch (metrics/logs) hay CloudTrail (audit API)
+- X-Ray luôn được bật ở cấp resource (Lambda, API Gateway...) → khai báo trong CloudFormation/SAM template, không phải qua Control Tower
+- Control Tower chỉ quản lý account governance (SCP, guardrail, account provisioning) - loại ngay khi đề hỏi về cấu hình tracing/monitoring ở tầng ứng dụng
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Visualize Lambda function invocations using AWS X-Ray (Enabling Active tracing with CloudFormation)](https://docs.aws.amazon.com/lambda/latest/dg/services-xray.html)
+
+</details>
+
+---
+
+<div id="question-22"></div>
+
+### Question 22: Highly Available Fault-Tolerant Web Architecture with ALB, Multi-AZ ASG, and Multi-AZ RDS
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (B)
+
+#### 📋 Đề bài (Scenario)
+A company is moving a legacy data processing application to the AWS Cloud. The application needs to run on Amazon EC2 instances behind an Application Load Balancer (ALB). The application must handle incoming traffic spikes and continue to work in the event of an application fault in one Availability Zone. The company requires that a Web Application Firewall (WAF) must be attached to the ALB.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Deploy the application to EC2 instances in an Auto Scaling group that is in a single Availability Zone. Use an Application Load Balancer (ALB) to distribute traffic across the EC2 instances. Use AWS WAF to associate a web ACL with the ALB.
+- **(B)** Deploy the application to EC2 instances in an Auto Scaling group across multiple Availability Zones. Use an Application Load Balancer (ALB) to distribute traffic across the EC2 instances. Use AWS WAF to associate a web ACL with the ALB. `[Đáp án đúng ✅]`
+- **(C)** Deploy the application to EC2 instances in Auto Scaling groups across multiple AWS Regions. Use Amazon Route 53 latency-based routing to distribute traffic across the Auto Scaling groups. Use AWS WAF to associate a web ACL with the Route 53 routing configuration.
+- **(D)** Deploy the application to EC2 instances in an Auto Scaling group across multiple Availability Zones. Use a Network Load Balancer (NLB) to distribute traffic across the EC2 instances. Use AWS WAF to associate a web ACL with the NLB.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(B)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Ứng dụng chạy trên EC2 phía sau Application Load Balancer (ALB)
+> - Phải chịu được traffic spikes và tiếp tục hoạt động khi có application fault ở một Availability Zone
+> - Bắt buộc phải gắn Web Application Firewall (WAF) vào ALB
+> - → Yêu cầu: kiến trúc vừa fault-tolerant qua nhiều AZ, vừa hỗ trợ đính kèm AWS WAF
+
+**Phân tích giải pháp tối ưu:**
+Deploy the application to EC2 instances in an Auto Scaling group across multiple Availability Zones. Use an Application Load Balancer (ALB) to distribute traffic across the EC2 instances. Use AWS WAF to associate a web ACL with the ALB.
+
+Auto Scaling group trải nhiều Availability Zone → khi một AZ gặp sự cố, instance ở AZ khác vẫn phục vụ được traffic, đáp ứng yêu cầu fault tolerance
+
+ALB tự động scale và phân phối traffic, phù hợp xử lý traffic spikes
+
+AWS WAF hỗ trợ đính kèm trực tiếp vào ALB (Layer 7) thông qua web ACL association - đúng yêu cầu bắt buộc phải có WAF
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Deploy the application to EC2 instances in an Auto Scaling group that is in a single Availability Zone. Use an Application Load Balancer (ALB) to distribute traffic across the EC2 instances. Use AWS WAF to associate a web ACL with the ALB.**:
+  Chỉ dùng một Availability Zone duy nhất → nếu AZ đó gặp fault, toàn bộ ứng dụng sập, vi phạm trực tiếp yêu cầu "continue to work in the event of an application fault in one Availability Zone"
+
+- **(C) Deploy the application to EC2 instances in Auto Scaling groups across multiple AWS Regions. Use Amazon Route 53 latency-based routing to distribute traffic across the Auto Scaling groups. Use AWS WAF to associate a web ACL with the Route 53 routing configuration.**:
+  Đề chỉ yêu cầu chịu được fault ở một AZ, không yêu cầu multi-Region → giải pháp này over-engineered, tốn thêm chi phí/độ phức tạp không cần thiết
+  Về kỹ thuật, AWS WAF không thể gắn trực tiếp vào cấu hình routing của Route 53 - WAF chỉ tích hợp với ALB, CloudFront, API Gateway, AppSync, Cognito, App Runner
+
+- **(D) Deploy the application to EC2 instances in an Auto Scaling group across multiple Availability Zones. Use a Network Load Balancer (NLB) to distribute traffic across the EC2 instances. Use AWS WAF to associate a web ACL with the NLB.**:
+  AWS WAF không hỗ trợ Network Load Balancer (NLB hoạt động ở Layer 4, không xử lý HTTP/HTTPS request để WAF kiểm tra) - vi phạm trực tiếp yêu cầu bắt buộc phải gắn WAF
+  Đáp án này chỉ đúng nếu đề không yêu cầu WAF và cần hiệu năng/độ trễ cực thấp ở Layer 4
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "AWS WAF phải gắn vào load balancer" → luôn phải là ALB (Layer 7); NLB không được AWS WAF hỗ trợ → loại ngay đáp án dùng NLB
+- "Chịu được fault ở một Availability Zone" → Auto Scaling group phải trải nhiều AZ, không phải multi-Region (trừ khi đề nói rõ Region-level fault)
+- "Traffic spikes" → Auto Scaling group + ALB là pattern chuẩn, không cần multi-Region routing nếu chỉ cần chịu tải đột biến trong 1 Region
+- AWS WAF chỉ tích hợp được với: ALB, CloudFront, API Gateway, AppSync, Cognito user pool, App Runner - không có Route 53 hay NLB
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Integrations for your Application Load Balancer (AWS WAF)](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-integrations.html)
+
+</details>
+
+---
+
+<div id="question-23"></div>
+
+### Question 23: Configuring Lambda VPC Access and Security Groups for Private RDS Database Ingestion
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (D) | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company has deployed infrastructure on AWS. A solutions architect wants to create an AWS Lambda function that will retrieve data from an Amazon Aurora database. The Amazon Aurora database is in a private subnet in company's VPC. The VPC is named VPC1. The data is relational in nature. The Lambda function needs to access the data securely.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Export the data from the Aurora database to Amazon S3. Create and launch a Lambda function in VPC1. Configure the Lambda function query the data from Amazon S3.
+- **(B)** Create the Lambda function. Configure VPC1 access for the function. Assign a security group named SG1 to the Lambda function. Assign a second security group named SG2 to the database. Add an inbound rule to SG1 to allow TCP traffic from Port 3306.
+- **(C)** Create and launch a Lambda function in a new public subnet that is in a new VPC named VPC2. Create a peering connection between VPC1 and VPC2.
+- **(D)** Create the Lambda function. Configure VPC1 access for the function. Attach a security group named SG1 to both the Lambda function and the database. Configure the security group inbound and outbound rules to allow TCP traffic on Port 3306. `[Lựa chọn của bạn - Chính xác ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - AWS Lambda function cần retrieve data từ Amazon Aurora database
+> - Aurora nằm trong private subnet của VPC1, dữ liệu có tính chất quan hệ (relational)
+> - Lambda function cần truy cập dữ liệu một cách bảo mật (securely)
+> - → Yêu cầu: cấu hình network/security group đúng để Lambda trong VPC truy cập được Aurora trong private subnet
+
+**Phân tích giải pháp tối ưu:**
+Create the Lambda function. Configure VPC1 access for the function. Attach a security group named SG1 to both the Lambda function and the database. Configure the security group inbound and outbound rules to allow TCP traffic on Port 3306.
+
+Lambda được cấu hình chạy trong VPC1 (cùng VPC với Aurora) → có đường mạng private tới database, không cần expose ra internet
+
+Dùng chung một security group (SG1) cho cả Lambda và database, với rule cho phép TCP port 3306 (MySQL/Aurora) cả inbound lẫn outbound → theo cơ chế self-reference của security group, các resource cùng gắn SG1 có thể giao tiếp với nhau qua port đó
+
+Đây là cách cấu hình đơn giản, đúng, và bảo mật (traffic chỉ đi trong VPC, không public) để Lambda kết nối Aurora
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Create and launch a Lambda function in a new public subnet that is in a new VPC named VPC2. Create a peering connection between VPC1 and VPC2.**:
+  Đặt Lambda ở public subnet của một VPC khác rồi peering là không cần thiết và kém an toàn hơn so với việc chạy Lambda ngay trong VPC1 (cùng VPC với Aurora)
+  Tăng độ phức tạp (VPC mới, peering, route table) một cách không cần thiết cho yêu cầu đơn giản là truy cập DB cùng VPC
+
+- **(B) Create the Lambda function. Configure VPC1 access for the function. Assign a security group named SG1 to the Lambda function. Assign a second security group named SG2 to the database. Add an inbound rule to SG1 to allow TCP traffic from Port 3306.**:
+  Rule bị gắn sai chiều: cần thêm inbound rule vào SG2 (security group của database) cho phép traffic từ SG1 (Lambda), chứ không phải thêm inbound rule vào SG1 (Lambda) - traffic vẫn không thể vào được database vì SG2 không có rule cho phép
+  Đây là lỗi kinh điển trong các câu hỏi Lambda-RDS: rule "allow" phải nằm trên security group của resource được kết nối tới (database), nguồn (source) là SG của resource kết nối từ (Lambda)
+
+- **(A) Export the data from the Aurora database to Amazon S3. Create and launch a Lambda function in VPC1. Configure the Lambda function query the data from Amazon S3.**:
+  Dữ liệu có tính chất relational, cần truy vấn trực tiếp từ Aurora - export sang S3 làm mất khả năng truy vấn quan hệ (join, transaction...) và dữ liệu sẽ bị lỗi thời (stale)
+  Thêm bước export không cần thiết, tăng độ phức tạp mà không giải quyết đúng yêu cầu "retrieve data from Aurora database"
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Lambda cần truy cập RDS/Aurora trong private subnet cùng VPC" → cấu hình Lambda chạy trong VPC đó, dùng security group cho phép traffic đúng port (3306 MySQL/Aurora MySQL, 5432 PostgreSQL)
+- Khi dùng 2 security group riêng (Lambda vs DB) → luôn kiểm tra rule "allow" phải nằm ở security group của DB, trỏ nguồn về SG của Lambda - đây là điểm hay bị đánh lừa trong đề thi
+- Dùng chung 1 security group cho cả 2 resource (self-reference) là cách đơn giản và đúng để cho phép giao tiếp qua port cụ thể
+- "Dữ liệu relational cần truy vấn trực tiếp" → loại ngay các đáp án export dữ liệu ra service khác (S3, DynamoDB...) rồi query gián tiếp
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Security group rules (Security group referencing)](https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html)
+
+</details>
+
+---
+
+<div id="question-24"></div>
+
+### Question 24: Multi-Region Disaster Recovery with Sub-Second RPO using Amazon Aurora Global Database
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company operates a web application in the us-east-1 Region that uses Amazon EC2 instances behind an Application Load Balancer. The application uses an Amazon Aurora MySQL database and takes 15 minutes to start.
+
+The company needs to implement a disaster recovery (DR) solution in the us-west-2 Region. The solution must have a recovery time objective (RTO) of 30 minutes and a recovery point objective (RPO) of 30 minutes. The solution must minimize costs.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Set up AWS Elastic Disaster Recovery to continuously replicate EC2 instances to us-west-2. Use Amazon S3 Cross-Region Replication (CRR) for static assets. Schedule Aurora snapshots to be taken every hour and automatically restored to a staging database in us-west-2.
+- **(B)** Implement cross-Region VPC peering between us-east-1 and us-west-2. Configure a standby Aurora MySQL database in us-west-2 by using snapshot-based replication that is scheduled hourly. Maintain a single EC2 instance that runs continuously in us-west-2 as a placeholder for the application tier.
+- **(C)** Create daily backups of the Aurora MySQL database and copy them to us-west-2. Implement a scheduled AWS Lambda function that launches EC2 instances from Amazon Machine Images (AMIs) in us-west-2 once each day to test readiness. Configure the Lambda function to terminate the EC2 instances after testing.
+- **(D)** Use an Aurora global database to replicate data to us-west-2. Maintain Amazon Machine Images (AMIs) in us-west-2 for the application tier. Create AWS CloudFormation templates to deploy the EC2 instances, Application Load Balancer, and associated networking components in us-west-2. `[Đáp án đúng ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Web app chạy ở us-east-1, EC2 sau ALB, dùng Amazon Aurora MySQL, DB khởi động mất 15 phút
+> - Cần DR sang us-west-2
+> - Yêu cầu: RTO 30 phút, RPO 30 phút
+> - Phải minimize costs
+> - → Yêu cầu: chọn chiến lược DR (backup/pilot light/warm standby/multi-site) đạt đúng RTO/RPO với chi phí thấp nhất
+
+**Phân tích giải pháp tối ưu:**
+Use an Aurora global database to replicate data to us-west-2. Maintain Amazon Machine Images (AMIs) in us-west-2 for the application tier. Create AWS CloudFormation templates to deploy the EC2 instances, Application Load Balancer, and associated networking components in us-west-2.
+
+Aurora Global Database replicate dữ liệu liên tục ở storage layer với độ trễ thường dưới 1 giây, đảm bảo RPO gần như bằng 0, thừa đáp ứng yêu cầu RPO 30 phút, và có thể promote secondary thành primary trong dưới 1 phút khi failover
+
+Chỉ lưu sẵn AMI + CloudFormation template (không chạy EC2/ALB liên tục ở us-west-2) → đây là pattern pilot light, giúp minimize cost vì không trả tiền cho compute nhàn rỗi ở Region phụ
+
+RTO 30 phút vẫn khả thi: promote Aurora Global Database (~1 phút) + deploy EC2/ALB qua CloudFormation từ AMI có sẵn + 15 phút khởi động app → nằm trong ngưỡng 30 phút
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Create daily backups of the Aurora MySQL database and copy them to us-west-2. Implement a scheduled AWS Lambda function that launches EC2 instances from Amazon Machine Images (AMIs) in us-west-2 once each day to test readiness. Configure the Lambda function to terminate the EC2 instances after testing.**:
+  Backup hàng ngày (daily) → RPO tối đa có thể lên tới 24 giờ, vượt xa yêu cầu RPO 30 phút
+  Không đáp ứng được yêu cầu RPO dù chi phí có thể thấp
+
+- **(B) Implement cross-Region VPC peering between us-east-1 and us-west-2. Configure a standby Aurora MySQL database in us-west-2 by using snapshot-based replication that is scheduled hourly. Maintain a single EC2 instance that runs continuously in us-west-2 as a placeholder for the application tier.**:
+  Replication qua snapshot hàng giờ → RPO tối đa lên tới 60 phút, vượt yêu cầu RPO 30 phút
+  Duy trì một EC2 instance chạy liên tục làm placeholder vẫn tốn chi phí compute không cần thiết, trong khi vẫn không đạt RPO yêu cầu
+
+- **(A) Set up AWS Elastic Disaster Recovery to continuously replicate EC2 instances to us-west-2. Use Amazon S3 Cross-Region Replication (CRR) for static assets. Schedule Aurora snapshots to be taken every hour and automatically restored to a staging database in us-west-2.**:
+  AWS Elastic Disaster Recovery (DRS) replicate EC2 liên tục có chi phí cao hơn đáng kể so với pilot light (AMI + CloudFormation) do phải duy trì replication server liên tục
+  Snapshot Aurora mỗi giờ vẫn cho RPO tối đa 60 phút, vượt yêu cầu RPO 30 phút của đề bài
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "RPO tính bằng phút" cho Aurora/RDS → cần Aurora Global Database (replication liên tục, độ trễ dưới giây), loại ngay các phương án backup/snapshot theo giờ hoặc theo ngày
+- "Minimize cost" + RTO đủ rộng (vài chục phút) để build lại app tier → chọn pilot light (chỉ lưu AMI + IaC template, không chạy sẵn compute) thay vì warm standby (chạy sẵn instance liên tục)
+- Nếu RTO quá ngắn (vài phút) không đủ thời gian build lại infra → khi đó mới cần warm standby hoặc multi-site active-active, chấp nhận chi phí cao hơn
+- "Daily/hourly snapshot" luôn cho RPO tương ứng theo đơn vị đó (ngày/giờ) → so khớp trực tiếp với RPO yêu cầu trong đề để loại đáp án sai
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Using switchover or failover in Amazon Aurora Global Database](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database-disaster-recovery.html)
+
+</details>
+
+---
+
+<div id="question-25"></div>
+
+### Question 25: Automated Continuous Resource Inventory and Compliance Tracking using AWS Config Recorder
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company runs production workloads in its AWS account. Multiple teams create and maintain the workloads.
+
+The company needs to be able to detect changes in resource configurations. The company needs to capture changes as configuration items without changing or modifying the existing resources.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use AWS CloudFormation. Initiate drift detection to capture changes in resource configurations.
+- **(B)** Use AWS Audit Manager to capture management events and global service events for resource configurations.
+- **(C)** Use AWS Config. Start the configuration recorder for AWS resources to detect changes in resource configurations. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Use Amazon Detective to detect, analyze, and investigate changes in resource configurations.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Nhiều team cùng tạo và duy trì workload trong một AWS account
+> - Cần detect changes trong resource configurations
+> - Phải capture changes as configuration items, không được thay đổi/modify tài nguyên hiện có
+> - → Yêu cầu: chọn dịch vụ ghi nhận lịch sử thay đổi cấu hình tài nguyên dưới dạng "configuration items", không xâm lấn resource
+
+**Phân tích giải pháp tối ưu:**
+Use AWS Config. Start the configuration recorder for AWS resources to detect changes in resource configurations.
+
+"Configuration item" là thuật ngữ và cơ chế đặc thù của AWS Config: mỗi khi Config phát hiện thay đổi ở tài nguyên đang recording, nó tạo ra một configuration item đại diện cho trạng thái tại thời điểm đó
+
+AWS Config hoạt động read-only/agentless thông qua configuration recorder, chỉ quan sát và ghi nhận thay đổi, hoàn toàn không chỉnh sửa tài nguyên đang giám sát
+
+Phù hợp trực tiếp với yêu cầu: bật configuration recorder là đủ để bắt đầu detect và lưu lại configuration items cho các resource type được chọn
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Use AWS CloudFormation. Initiate drift detection to capture changes in resource configurations.**:
+  Drift detection chỉ áp dụng cho tài nguyên được quản lý bởi một CloudFormation stack cụ thể, so sánh trạng thái thực tế với template - không bao quát toàn bộ tài nguyên trong account như AWS Config
+  Đây là thao tác on-demand (chạy khi được gọi), không phải cơ chế liên tục ghi nhận configuration items theo thời gian như AWS Config
+
+- **(D) Use Amazon Detective to detect, analyze, and investigate changes in resource configurations.**:
+  Amazon Detective là dịch vụ điều tra bảo mật (phân tích finding từ GuardDuty/Security Hub), không phải công cụ theo dõi và lưu lịch sử cấu hình tài nguyên
+  Không tạo ra "configuration items" - đây không phải chức năng của Detective
+
+- **(B) Use AWS Audit Manager to capture management events and global service events for resource configurations.**:
+  Audit Manager tập trung thu thập bằng chứng tuân thủ (compliance evidence) theo framework kiểm toán, không phải để ghi nhận thay đổi cấu hình tài nguyên theo thời gian thực dưới dạng configuration item
+  "Management events/global service events" thực chất là khái niệm của AWS CloudTrail, không phải Audit Manager hay khái niệm "configuration items"
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Configuration items" (viết đúng thuật ngữ) → luôn là AWS Config, đây là keyword nhận diện trực tiếp
+- "Detect/track thay đổi resource configuration mà không sửa resource" → AWS Config configuration recorder (agentless, read-only)
+- Đừng nhầm AWS Config (lịch sử cấu hình + compliance rule) với AWS CloudTrail (log API call) - CloudTrail trả lời "ai đã gọi API gì", Config trả lời "cấu hình tài nguyên đã thay đổi thế nào"
+- Drift detection chỉ dùng khi câu hỏi nói rõ về CloudFormation stack cụ thể, không phải giám sát toàn account
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [AWS Config terminology and concepts (Configuration Items)](https://docs.aws.amazon.com/config/latest/developerguide/config-concepts.html)
+
+</details>
+
+---
+
+<div id="question-26"></div>
+
+### Question 26: Proactive Application Error Alerting via CloudWatch Metric Filters and Amazon SNS
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A) | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company has a web application that is hosted on Amazon EC2 instances. The EC2 instances are configured to stream logs to Amazon CloudWatch Logs. The company needs to receive an Amazon SNS notification when the number of application error messages exceeds a defined threshold within a 5-minute period.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create a CloudWatch metric filter to match the application error pattern in the log data. Set up a CloudWatch alarm based on the new custom metric. Configure the alarm to send an SNS notification when the number of errors exceeds the defined threshold within a 5-minute period. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Install and configure the Amazon Inspector agent on the EC2 instances to monitor for errors. Configure Amazon Inspector to send an SNS notification when the number of errors exceeds the defined threshold within a 5-minute period.
+- **(C)** Configure a subscription filter on the CloudWatch Logs log group. Configure the filter to send an SNS notification when the number of errors exceeds the defined threshold within a 5-minute period.
+- **(D)** Rewrite the application code to stream application logs to Amazon SNS. Configure an SNS topic to send a notification when the number of errors exceeds the defined threshold within a 5-minute period.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - EC2 stream logs vào CloudWatch Logs
+> - Cần SNS notification khi số lượng application error messages vượt ngưỡng (threshold) trong 5-minute period
+> - → Yêu cầu: đếm số dòng log lỗi theo cửa sổ thời gian, cảnh báo qua SNS khi vượt ngưỡng
+
+**Phân tích giải pháp tối ưu:**
+Create a CloudWatch metric filter to match the application error pattern in the log data. Set up a CloudWatch alarm based on the new custom metric. Configure the alarm to send an SNS notification when the number of errors exceeds the defined threshold within a 5-minute period.
+
+Metric filter biến log event khớp pattern lỗi thành một custom CloudWatch metric đếm số lần xuất hiện
+
+CloudWatch alarm đánh giá metric đó theo period (5 phút) và threshold - đúng cơ chế "count trong khoảng thời gian"
+
+Alarm hỗ trợ action gửi thẳng đến SNS topic khi chuyển trạng thái ALARM - không cần code thêm
+
+Đây là pattern chuẩn "log-to-alert": metric filter → metric → alarm → SNS
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Rewrite the application code to stream application logs to Amazon SNS. Configure an SNS topic to send a notification when the number of errors exceeds the defined threshold within a 5-minute period.**:
+  SNS không có khái niệm "đếm số message trong 5 phút rồi mới thông báo" - đây là logic của CloudWatch Alarm, không phải SNS
+  Sửa code ứng dụng để tự đếm ngưỡng là giải pháp thủ công, tốn effort, không tận dụng service có sẵn
+
+- **(C) Configure a subscription filter on the CloudWatch Logs log group. Configure the filter to send an SNS notification when the number of errors exceeds the defined threshold within a 5-minute period.**:
+  Subscription filter chỉ chuyển tiếp (stream) log event khớp pattern đến đích như Lambda/Kinesis/Firehose theo thời gian thực, không hỗ trợ gửi trực tiếp đến SNS và không có cơ chế đếm ngưỡng tích lũy theo period
+  Nếu đề chỉ cần "chuyển tiếp log real-time để xử lý tiếp" (không cần đếm ngưỡng) thì subscription filter mới là lựa chọn đúng
+
+- **(B) Install and configure the Amazon Inspector agent on the EC2 instances to monitor for errors. Configure Amazon Inspector to send an SNS notification when the number of errors exceeds the defined threshold within a 5-minute period.**:
+  Amazon Inspector là dịch vụ quét lỗ hổng bảo mật (vulnerability management), không phải công cụ giám sát log ứng dụng - sai service hoàn toàn
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Đếm số lần xuất hiện pattern trong log theo khoảng thời gian" → Metric filter + CloudWatch Alarm, không phải subscription filter
+- "Subscription filter" → chỉ dùng khi cần stream real-time log event đến Lambda/Kinesis/Firehose để xử lý tiếp, không có ngưỡng/period
+- Nếu đề yêu cầu "threshold trong X phút" → luôn nghĩ đến CloudWatch Alarm (có period + threshold sẵn), loại các đáp án tự viết code đếm thủ công
+- Amazon Inspector = security vulnerability scanning, không liên quan log monitoring → loại ngay khi thấy tên service này trong câu về log/alert
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Create a metric filter for a log group](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CreateMetricFilterProcedure.html)
+
+</details>
+
+---
+
+<div id="question-27"></div>
+
+### Question 27: Preventing Duplicate Random Identifiers in AWS Lambda SnapStart using Pre-Snapshot Hooks
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company is developing a latency-sensitive application. Part of the application includes several AWS Lambda functions that need to initialize as quickly as possible. The Lambda functions are written in Java and contain initialization code outside the handlers to load libraries, initialize classes, and generate unique IDs.
+
+Which solution will meet the startup performance requirement MOST cost-effectively?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Move all the initialization code to the handlers for each Lambda function. Activate Lambda SnapStart for each Lambda function. Configure SnapStart to reference the $LATEST version of each Lambda function.
+- **(B)** Publish a version of each Lambda function. Create an alias for each Lambda function. Configure each alias to point to its corresponding version. Set up a provisioned concurrency configuration for each Lambda function to point to the corresponding alias.
+- **(C)** Publish a version of each Lambda function. Set up a provisioned concurrency configuration for each Lambda function to point to the corresponding version. Activate Lambda SnapStart for the published versions of the Lambda functions.
+- **(D)** Update the Lambda functions to add a pre-snapshot hook. Move the code that generates unique IDs into the handlers. Publish a version of each Lambda function. Activate Lambda SnapStart for the published versions of the Lambda functions. `[Đáp án đúng ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Lambda Java, có initialization code ngoài handler (load libraries, init classes, generate unique IDs)
+> - Yêu cầu: khởi tạo (initialize) nhanh nhất có thể
+> - → Yêu cầu: giải pháp MOST cost-effective để cải thiện startup performance
+
+**Phân tích giải pháp tối ưu:**
+Update the Lambda functions to add a pre-snapshot hook. Move the code that generates unique IDs into the handlers. Publish a version of each Lambda function. Activate Lambda SnapStart for the published versions of the Lambda functions.
+
+SnapStart chỉ hoạt động trên published version (không phải $LATEST) - đáp án chọn đúng bước publish version trước khi activate SnapStart
+
+SnapStart tái sử dụng 1 snapshot đã khởi tạo cho nhiều execution environment → nội dung "unique" (như unique ID) được tạo trong lúc init sẽ bị trùng lặp giữa các environment nếu để nguyên trong init code
+
+Theo AWS best practice (Handling uniqueness with SnapStart): phải di chuyển việc sinh ID/secret/entropy ra khỏi init, dùng runtime hook (beforeCheckpoint/afterRestore - CRaC) hoặc sinh trong handler để đảm bảo tính duy nhất sau khi restore từ snapshot
+
+SnapStart miễn phí cho Java (chỉ tính phí caching/restore cho Python, .NET) → cost-effective hơn hẳn Provisioned Concurrency (tính phí liên tục theo giờ)
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Move all the initialization code to the handlers for each Lambda function. Activate Lambda SnapStart for each Lambda function. Configure SnapStart to reference the $LATEST version of each Lambda function.**:
+  SnapStart không hỗ trợ $LATEST, chỉ áp dụng cho published version - phương án này không khả thi kỹ thuật
+  Chuyển toàn bộ init code vào handler sẽ làm mỗi invocation phải load lại library/class → mất đúng lợi ích mà SnapStart mang lại (giữ snapshot đã init sẵn)
+
+- **(B) Publish a version of each Lambda function. Create an alias for each Lambda function. Configure each alias to point to its corresponding version. Set up a provisioned concurrency configuration for each Lambda function to point to the corresponding alias.**:
+  Chỉ dùng Provisioned Concurrency, không dùng SnapStart - có hiệu quả về latency nhưng tính phí liên tục 24/7 theo GB-giây được cấp phát, tốn kém hơn nhiều so với SnapStart (free cho Java) → không phải "MOST cost-effective"
+
+- **(C) Publish a version of each Lambda function. Set up a provisioned concurrency configuration for each Lambda function to point to the corresponding version. Activate Lambda SnapStart for the published versions of the Lambda functions.**:
+  SnapStart và Provisioned Concurrency không tương thích với nhau (mutually exclusive) - không thể bật đồng thời cho cùng một function/version, phương án này không khả thi kỹ thuật
+  Ngoài ra vẫn không xử lý vấn đề "unique IDs" bị trùng lặp khi dùng chung snapshot
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "SnapStart" → chỉ áp dụng cho published version, không áp dụng cho $LATEST → loại ngay đáp án nào cấu hình SnapStart trỏ về $LATEST
+- "SnapStart" + "Provisioned Concurrency" xuất hiện cùng lúc trong 1 đáp án → loại ngay, hai tính năng này không dùng chung được
+- "Generate unique IDs/secrets/random" trong init code + SnapStart → phải sinh lại sau khi restore, dùng runtime hook (beforeCheckpoint/afterRestore) hoặc chuyển vào handler
+- "MOST cost-effective" + Java Lambda cold start → ưu tiên SnapStart (free cho Java) hơn Provisioned Concurrency (tính phí liên tục)
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Handling uniqueness with Lambda SnapStart](https://docs.aws.amazon.com/lambda/latest/dg/snapstart-uniqueness.html)
+- 🌐 [Lambda SnapStart runtime hooks for Java](https://docs.aws.amazon.com/lambda/latest/dg/snapstart-runtime-hooks-java.html)
+
+</details>
+
+---
+
+<div id="question-28"></div>
+
+### Question 28: Managed SMB File Share Options on AWS: Amazon FSx for Windows File Server and FSx for NetApp ONTAP
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Multiple Choice (Chọn 2 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C), (E) | **Đáp án đúng**: (C), (E)
+
+#### 📋 Đề bài (Scenario)
+A company runs a Microsoft Windows SMB file share on premises to support an application. The company wants to migrate the application to AWS. The company wants to share storage across multiple Amazon EC2 instances.
+
+Which solutions will meet these requirements with the LEAST operational overhead? (Select TWO.)
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create an Amazon FSx for OpenZFS file system.
+- **(B)** Create an Amazon EFS file system with elastic throughput.
+- **(C)** Create an Amazon FSx for NetApp ONTAP file system. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Use Amazon EBS to create a self-managed Windows file share on the instances.
+- **(E)** Create an Amazon FSx for Windows File Server file system. `[Lựa chọn của bạn - Chính xác ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C), (E)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Đang chạy Microsoft Windows SMB file share on premises
+> - Muốn share storage across multiple EC2 instances (nhiều instance cùng truy cập chung 1 storage)
+> - → Yêu cầu: chọn 2 giải pháp share storage hỗ trợ SMB với LEAST operational overhead
+> - Câu này có 2 đáp án đúng:
+
+**Phân tích giải pháp tối ưu:**
+Create an Amazon FSx for NetApp ONTAP file system.
+
+FSx for ONTAP hỗ trợ multi-protocol: NFS, SMB, iSCSI - đáp ứng đúng yêu cầu SMB
+
+Dịch vụ managed hoàn toàn, phù hợp khi công ty đã quen hệ sinh thái NetApp on-premises
+
+Create an Amazon FSx for Windows File Server file system.
+
+FSx for Windows File Server là dịch vụ Windows-native, hỗ trợ SMB trực tiếp, tích hợp Active Directory
+
+Được AWS khuyến nghị hàng đầu (recommended) cho user/group shares và Windows applications - đúng use case "share storage across multiple EC2 instances" từ on-premises Windows SMB
+
+Cả 2 đều là managed service, không cần tự vận hành server file share → đáp ứng "LEAST operational overhead"
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Create an Amazon EFS file system with elastic throughput.**:
+  EFS chỉ hỗ trợ giao thức NFS, không hỗ trợ SMB - không dùng được cho Windows SMB file share
+
+- **(D) Use Amazon EBS to create a self-managed Windows file share on the instances.**:
+  EBS chỉ là block storage cho 1 instance, muốn share phải tự cấu hình Windows File Sharing/cluster - đây là giải pháp self-managed, operational overhead cao nhất trong các lựa chọn, ngược với yêu cầu đề
+
+- **(A) Create an Amazon FSx for OpenZFS file system.**:
+  FSx for OpenZFS chủ yếu phục vụ giao thức NFS (Linux/Unix workload), không phải giải pháp SMB-native cho Windows
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "SMB" + "Windows" + "shared file storage" → FSx for Windows File Server (Windows-native, tích hợp AD) hoặc FSx for NetApp ONTAP (multi-protocol NFS+SMB)
+- "EFS" → chỉ hỗ trợ NFS, luôn loại ngay khi đề yêu cầu SMB/Windows
+- "FSx for OpenZFS" → chủ yếu NFS/Linux, không phải lựa chọn cho SMB
+- "Self-managed" (tự cài đặt/quản lý trên EC2/EBS) → luôn có operational overhead cao nhất, loại ngay khi đề yêu cầu "LEAST operational overhead"
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Choose the right SMB file storage](https://docs.aws.amazon.com/prescriptive-guidance/latest/optimize-costs-microsoft-workloads/storage-fsx-smb.html)
+
+</details>
+
+---
+
+<div id="question-29"></div>
+
+### Question 29: Offloading Heavy Reporting Queries from RDS PostgreSQL using Read Replicas
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company has a two-tier web application that uses Amazon EC2 instances and an Amazon RDS for PostgreSQL database.
+
+Application users have recently reported that the application performance degrades when users attempt to produce unique reports. The company needs to fix the poor performance without making significant changes to the application.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Reconfigure the RDS for PostgreSQL DB instance from a Single-AZ DB instance to a Multi-AZ DB instance.
+- **(B)** Migrate the RDS for PostgreSQL DB instance to a new DB instance that has a higher I/O capacity.
+- **(C)** Create a read replica of the RDS for PostgreSQL DB instance. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Create a snapshot of the RDS for PostgreSQL DB instance. Provision a new copy by using PostgreSQL.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Two-tier web app: EC2 + RDS for PostgreSQL
+> - Performance degrade khi user chạy unique reports (báo cáo, truy vấn nặng đọc dữ liệu)
+> - Yêu cầu fix không thay đổi đáng kể application code (without making significant changes to the application)
+> - → Yêu cầu: giảm tải cho DB instance chính khi có truy vấn reporting nặng, ít thay đổi app
+
+**Phân tích giải pháp tối ưu:**
+Create a read replica of the RDS for PostgreSQL DB instance.
+
+Read replica được AWS khuyến nghị chính thức cho use case "business reporting or data warehousing scenarios" - chạy report trên replica thay vì DB production
+
+Chỉ cần trỏ các câu query reporting sang endpoint của read replica, không cần sửa kiến trúc/logic ứng dụng - đúng "without making significant changes"
+
+Giải quyết đúng gốc vấn đề: tách read-heavy reporting workload khỏi DB chính đang phục vụ traffic ứng dụng
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Migrate the RDS for PostgreSQL DB instance to a new DB instance that has a higher I/O capacity.**:
+  Tăng I/O capacity chỉ giúp DB instance hiện tại "chịu tải" tốt hơn tạm thời, không tách riêng workload reporting khỏi workload production - vẫn cùng 1 instance chịu cả 2 loại tải, không giải quyết triệt để gốc vấn đề
+  Yêu cầu migrate DB instance cũng là một thay đổi có rủi ro/downtime, không hẳn là ít nhất
+
+- **(A) Reconfigure the RDS for PostgreSQL DB instance from a Single-AZ DB instance to a Multi-AZ DB instance.**:
+  Multi-AZ phục vụ mục tiêu high availability/failover, không phải tối ưu performance cho truy vấn đọc - standby instance trong Multi-AZ không phục vụ read traffic
+  Không liên quan đến vấn đề "unique reports" gây chậm
+
+- **(D) Create a snapshot of the RDS for PostgreSQL DB instance. Provision a new copy by using PostgreSQL.**:
+  Tạo bản copy từ snapshot là dữ liệu tĩnh, không đồng bộ real-time với DB gốc → báo cáo sẽ dùng dữ liệu cũ (stale), không phù hợp nhu cầu report cần dữ liệu mới
+  Yêu cầu vận hành thêm (quản lý snapshot/refresh định kỳ) - phức tạp hơn read replica vốn tự động đồng bộ
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Reporting queries làm chậm DB production" + "ít thay đổi app" → RDS Read Replica (route traffic đọc sang, AWS khuyến nghị chính thức cho reporting/data warehousing)
+- "Multi-AZ" → chỉ dùng cho high availability, không cải thiện read performance - loại ngay khi đề hỏi về performance/report
+- "Snapshot/tạo bản copy tĩnh" → dữ liệu không real-time, chỉ phù hợp backup/restore, không phù hợp reporting cần dữ liệu mới nhất
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Working with DB instance read replicas](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_ReadRepl.html)
+
+</details>
+
+---
+
+<div id="question-30"></div>
+
+### Question 30: Handling Sudden Unpredictable Traffic Surges with EC2 Auto Scaling Step Scaling Policies
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (B) | **Đáp án đúng**: (B)
+
+#### 📋 Đề bài (Scenario)
+A solutions architect manages a web application for a company. The application runs on Amazon EC2 instances in an Auto Scaling group. The Auto Scaling group configuration includes a minimum of 3 instances and a maximum of 300 instances. The maximum helps handle unpredictable, short-lived traffic surges.
+
+The application must scale to meet demand. However, to help manage cost, the number of running instances should not exceed 180 for longer than 1 continuous hour.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use a scheduled scaling policy. Set the maximum capacity of the Auto Scaling group to 180 during peak hours. Set the maximum capacity to 300 during non-peak hours.
+- **(B)** Add a step scaling policy that uses an Amazon CloudWatch alarm. Trigger the alarm when the Auto Scaling group includes more than 180 instances for longer than 1 hour. Configure the alarm to set the maximum size of the group to 180 when triggered. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(C)** Set the maximum instance lifetime of the Auto Scaling group to 1 hour to force the replacement of instances when capacity exceeds 180.
+- **(D)** Configure a target tracking scaling policy that scales based on average CPU utilization. Add an Amazon CloudWatch alarm to terminate instances after 1 hour when capacity exceeds 180.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(B)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Auto Scaling group: min 3, max 300 instances, phục vụ unpredictable, short-lived traffic surges
+> - Ứng dụng phải scale để đáp ứng demand (cho phép vượt 180 khi có surge)
+> - Ràng buộc chi phí: số instance đang chạy không được vượt quá 180 lâu hơn 1 giờ liên tục
+> - → Yêu cầu: vẫn cho phép scale tự do đến 300 khi cần, nhưng tự động kéo về ≤180 nếu duy trì >180 quá 1 giờ
+
+**Phân tích giải pháp tối ưu:**
+Add a step scaling policy that uses an Amazon CloudWatch alarm. Trigger the alarm when the Auto Scaling group includes more than 180 instances for longer than 1 hour. Configure the alarm to set the maximum size of the group to 180 when triggered.
+
+CloudWatch alarm với evaluation period tương ứng 1 giờ (theo dõi số instance >180 kéo dài) đúng cơ chế "for longer than 1 hour" trong đề
+
+Trong lúc chưa breach alarm, ASG vẫn tự do scale đến max 300 để đáp ứng surge ngắn hạn (short-lived) - không ảnh hưởng availability
+
+Khi alarm breach (đã >180 liên tục 1 giờ), step scaling policy điều chỉnh MaxSize xuống 180, buộc ASG scale-in về giới hạn chi phí - đúng cơ chế alarm + step scaling chuẩn của EC2 Auto Scaling
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Use a scheduled scaling policy. Set the maximum capacity of the Auto Scaling group to 180 during peak hours. Set the maximum capacity to 300 during non-peak hours.**:
+  Scheduled scaling cần biết trước thời điểm cố định, trong khi traffic surge ở đây là unpredictable, short-lived → không thể lập lịch chính xác
+  Nếu surge unpredictable xảy ra ngoài "peak hours" đã định nghĩa, ASG bị giới hạn max 180 sai thời điểm, ảnh hưởng khả năng đáp ứng demand
+
+- **(D) Configure a target tracking scaling policy that scales based on average CPU utilization. Add an Amazon CloudWatch alarm to terminate instances after 1 hour when capacity exceeds 180.**:
+  Tự ý terminate instance ngoài quyền kiểm soát của ASG (không qua cơ chế scale-in chuẩn) có thể phá vỡ logic quản lý fleet của ASG, gây flapping/instance bị thay thế liên tục không kiểm soát
+  Đây không phải cách AWS khuyến nghị để giới hạn capacity - nên điều chỉnh MaxSize thay vì terminate instance thủ công
+
+- **(C) Set the maximum instance lifetime of the Auto Scaling group to 1 hour to force the replacement of instances when capacity exceeds 180.**:
+  Maximum instance lifetime là cơ chế thay thế instance định kỳ theo tuổi thọ (age) của từng instance, không liên quan đến việc giới hạn tổng số instance đang chạy vượt ngưỡng 180
+  Không giải quyết đúng yêu cầu đề: instance mới vẫn có thể tiếp tục launch để duy trì >180, chỉ có instance cũ bị thay thế sau 1 giờ tuổi thọ
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Không được vượt X trong hơn Y thời gian" (capacity cap có điều kiện thời gian) → CloudWatch alarm (evaluation period = Y) + step scaling policy điều chỉnh MaxSize
+- "Unpredictable, short-lived surge" → loại ngay scheduled scaling (cần biết trước thời điểm)
+- Muốn giới hạn capacity theo alarm → điều chỉnh MaxSize của ASG, không tự ý terminate instance thủ công (phá vỡ vòng đời quản lý của ASG)
+- "Maximum instance lifetime" → chỉ dùng để luân phiên thay thế instance theo tuổi thọ, không phải công cụ giới hạn tổng capacity
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Step and simple scaling policies for Amazon EC2 Auto Scaling](https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html)
+
+</details>
+
+---
+
+<div id="question-31"></div>
+
+### Question 31: Automated Backup Compliance Auditing across Multi-Account Fleets with AWS Backup Audit Manager
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company runs several custom applications on Amazon EC2 instances. Each team within the company manages its own set of applications and backups. To comply with regulations, the company must be able to report on the status of backups and ensure that backups are encrypted.
+
+Which solution will meet these requirements with the LEAST effort?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create an AWS Lambda function that processes AWS Config events. Configure the Lambda function to query AWS Config for backup-related data and to generate daily reports.
+- **(B)** Check the backup status of the EC2 instances daily by reviewing the backup configurations in AWS Backup and Amazon EBS snapshots.
+- **(C)** Use an AWS Lambda function to query Amazon EBS snapshots, Amazon RDS snapshots, and AWS Backup jobs. Configure the Lambda function to process and report on the data. Schedule the function to run daily.
+- **(D)** Use AWS Config and AWS Backup Audit Manager to ensure compliance. Review generated reports daily. `[Đáp án đúng ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Nhiều custom application trên EC2, mỗi team tự quản lý backup riêng
+> - Cần report trạng thái backup (report on the status of backups) để tuân thủ quy định
+> - Cần đảm bảo backup được mã hoá (ensure that backups are encrypted)
+> - → Yêu cầu: giải pháp LEAST effort để báo cáo tình trạng backup + kiểm tra compliance mã hoá
+
+**Phân tích giải pháp tối ưu:**
+Use AWS Config and AWS Backup Audit Manager to ensure compliance. Review generated reports daily.
+
+AWS Backup Audit Manager được thiết kế sẵn để trả lời chính xác các câu hỏi kiểu "Am I backing up all my resources?", "Are all of my backups encrypted?", "Are my backups taking place daily?" - đúng yêu cầu đề
+
+Tự động sinh report hàng ngày (daily reports) và audit trail, publish lên S3 - không cần tự viết logic tổng hợp
+
+AWS Config cung cấp resource tracking làm nền tảng cho Audit Manager đánh giá compliance - đây là managed service, không cần code, effort thấp nhất trong các lựa chọn
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Create an AWS Lambda function that processes AWS Config events. Configure the Lambda function to query AWS Config for backup-related data and to generate daily reports.**:
+  Phải tự viết và duy trì code Lambda để tổng hợp report - nhiều effort hơn hẳn so với dùng tính năng có sẵn (Backup Audit Manager) đã làm đúng việc này
+
+- **(B) Check the backup status of the EC2 instances daily by reviewing the backup configurations in AWS Backup and Amazon EBS snapshots.**:
+  Kiểm tra thủ công (manual review) hàng ngày tốn nhiều effort nhất, không có tính tự động hoá, dễ sai sót và không scale khi có nhiều team/nhiều resource
+
+- **(C) Use an AWS Lambda function to query Amazon EBS snapshots, Amazon RDS snapshots, and AWS Backup jobs. Configure the Lambda function to process and report on the data. Schedule the function to run daily.**:
+  Tương tự phương án Lambda + Config: tự xây dựng giải pháp custom để làm việc mà AWS Backup Audit Manager đã cung cấp sẵn - effort cao hơn không cần thiết
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Report tình trạng backup" + "đảm bảo backup được mã hoá" + "LEAST effort" → AWS Backup Audit Manager (có sẵn compliance framework/control cho encryption, frequency, retention)
+- Nếu đề có "LEAST effort/operational overhead" → luôn ưu tiên managed service có sẵn tính năng thay vì tự viết Lambda function custom
+- "Manual review/check daily" → luôn là effort cao nhất, gần như luôn là đáp án sai khi đề hỏi LEAST effort
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [AWS Backup Audit Manager](https://docs.aws.amazon.com/aws-backup/latest/devguide/aws-backup-audit-manager.html)
+
+</details>
+
+---
+
+<div id="question-32"></div>
+
+### Question 32: Automated Sensitive Data (PII) Discovery and Protection in S3 Buckets using Amazon Macie
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (D) | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company manages millions of documents in hundreds of Amazon S3 buckets in multiple AWS Regions. The company must determine whether any of the S3 buckets contain personally identifiable information (PII).
+
+Which solution will meet this requirement with the LEAST operational overhead?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use AWS Trusted Advisor to generate PII notifications.
+- **(B)** Use Amazon Detective to detect PII in the S3 buckets.
+- **(C)** Use AWS Lambda functions to review each file in the S3 buckets to identify PII.
+- **(D)** Use Amazon Macie to detect PII in the S3 buckets. `[Lựa chọn của bạn - Chính xác ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Hàng triệu documents trong hàng trăm S3 bucket, nhiều AWS Regions
+> - Cần xác định bucket nào chứa personally identifiable information (PII)
+> - → Yêu cầu: phát hiện PII trong S3 với LEAST operational overhead
+
+**Phân tích giải pháp tối ưu:**
+Use Amazon Macie to detect PII in the S3 buckets.
+
+Amazon Macie được thiết kế chuyên biệt để tự động phát hiện dữ liệu nhạy cảm (PII, financial info, credentials) trong S3, dùng machine learning + pattern matching (managed data identifiers)
+
+Hỗ trợ automated sensitive data discovery: tự động quét toàn bộ S3 inventory hàng ngày, không cần cấu hình job riêng cho từng bucket - đúng nghĩa "LEAST operational overhead" khi có hàng trăm bucket
+
+Sinh finding chi tiết report vị trí phát hiện PII, không cần xây dựng logic quét thủ công
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Use Amazon Detective to detect PII in the S3 buckets.**:
+  Amazon Detective là công cụ điều tra bảo mật (security investigation, phân tích root cause sau khi có finding từ GuardDuty/Security Hub), không có chức năng quét/phát hiện PII trong dữ liệu S3 - sai service
+
+- **(A) Use AWS Trusted Advisor to generate PII notifications.**:
+  Trusted Advisor kiểm tra best practices (cost, performance, security configuration, fault tolerance, service limits), không có khả năng phân tích nội dung file để phát hiện PII
+
+- **(C) Use AWS Lambda functions to review each file in the S3 buckets to identify PII.**:
+  Tự viết Lambda để quét từng file là giải pháp custom, operational overhead rất cao: phải tự xây dựng logic nhận diện PII, xử lý hàng triệu file, maintain code - ngược hẳn yêu cầu "LEAST operational overhead"
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Phát hiện PII/dữ liệu nhạy cảm trong S3" → luôn là Amazon Macie (managed data identifiers cho PII, financial, credentials)
+- "Amazon Detective" → chỉ dùng để điều tra/phân tích sau khi đã có security finding, không phải công cụ quét dữ liệu ban đầu
+- "LEAST operational overhead" + "quét/phân tích nội dung file" → loại ngay đáp án tự viết Lambda function custom
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [What is Amazon Macie?](https://docs.aws.amazon.com/macie/latest/user/what-is-macie.html)
+- 🌐 [Discovering sensitive data with Macie](https://docs.aws.amazon.com/macie/latest/user/data-classification.html)
+
+</details>
+
+---
+
+<div id="question-33"></div>
+
+### Question 33: Restricting Outbound-Only Internet Egress for IPv6 Workloads using Egress-Only Internet Gateways
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (B)
+
+#### 📋 Đề bài (Scenario)
+A company manages client deployments in individual VPCs and one shared services VPC. Each VPC uses one NAT gateway for each Availability Zone and an internet gateway for outbound traffic. The client deployments use the outbound connections only to call an external API that is available over IPv4 and IPv6.
+
+The company wants to reduce the quantity of NAT gateways to reduce costs. The client deployments should only have outbound access to the internet. The shared services VPC does not require internet access.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Move the clients into public subnets. Assign only an IPv6 address. Delete all NAT gateways.
+- **(B)** Create an outbound-only internet gateway in each VPC. Add a route that directs all IPv6 traffic to the outbound-only internet gateway. Delete all NAT gateways. `[Đáp án đúng ✅]`
+- **(C)** Create an AWS Transit Gateway in the shared services VPC. Attach all client VPCs to the Transit Gateway. Configure routing so all traffic from the client VPCs routes to the shared services VPC. Delete all NAT gateways.
+- **(D)** Delete the NAT gateways in all client VPCs. Configure all route tables to route internet traffic to the shared services VPC.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(B)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Nhiều client VPC + 1 shared services VPC, mỗi VPC có NAT gateway theo từng AZ + internet gateway
+> - Client chỉ cần outbound gọi external API khả dụng qua cả IPv4 và IPv6
+> - Muốn giảm số lượng NAT gateway để giảm chi phí
+> - Client deployment chỉ cần outbound access; shared services VPC không cần internet access
+> - → Yêu cầu: loại bỏ NAT gateway ở client VPC mà vẫn giữ outbound internet cho client, giữ private subnet
+
+**Phân tích giải pháp tối ưu:**
+Create an outbound-only internet gateway in each VPC. Add a route that directs all IPv6 traffic to the outbound-only internet gateway. Delete all NAT gateways.
+
+Egress-only internet gateway ("outbound-only internet gateway") là thành phần tương đương NAT gateway dành riêng cho IPv6, cho phép outbound-only traffic mà miễn phí hoàn toàn (không tính phí theo giờ/GB như NAT gateway)
+
+Vì API khả dụng qua cả IPv4 và IPv6, client có thể chuyển hẳn traffic gọi API sang IPv6 - loại bỏ nhu cầu NAT gateway cho traffic outbound này
+
+Instance vẫn ở private subnet (không cần public IP), route IPv6 traffic đến egress-only IGW - đúng yêu cầu "should only have outbound access", không public hoá instance
+
+Không đụng đến shared services VPC (vốn không cần internet access) - đúng ràng buộc đề
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Move the clients into public subnets. Assign only an IPv6 address. Delete all NAT gateways.**:
+  Đưa instance vào public subnet không cần thiết và kém an toàn hơn - vi phạm nguyên tắc chỉ nên public hoá khi thực sự cần inbound từ internet, trong khi client chỉ cần outbound
+  Egress-only internet gateway đã giải quyết được outbound IPv6 ngay trong private subnet, không cần chuyển sang public subnet
+
+- **(C) Create an AWS Transit Gateway in the shared services VPC. Attach all client VPCs to the Transit Gateway. Configure routing so all traffic from the client VPCs routes to the shared services VPC. Delete all NAT gateways.**:
+  Shared services VPC không có internet access (theo đề) → route traffic outbound của client qua đây không giúp client ra được internet, không đáp ứng yêu cầu
+  Thêm Transit Gateway cũng phát sinh chi phí và độ phức tạp không cần thiết cho use case chỉ là outbound API call
+
+- **(D) Delete the NAT gateways in all client VPCs. Configure all route tables to route internet traffic to the shared services VPC.**:
+  Tương tự lựa chọn C: shared services VPC không có internet access nên không thể làm điểm trung chuyển traffic ra internet cho client - không khả thi
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Traffic hỗ trợ cả IPv4 và IPv6" + "giảm chi phí NAT gateway" → cân nhắc chuyển sang IPv6 + Egress-only Internet Gateway (miễn phí, tương đương NAT cho IPv6)
+- "Egress-only internet gateway" = phiên bản IPv6 của NAT gateway - chỉ cho outbound, không cho inbound khởi tạo từ internet
+- "Chỉ cần outbound access" → giữ instance ở private subnet, không cần chuyển sang public subnet
+- Nếu 1 VPC "không cần internet access" theo đề → loại ngay đáp án route traffic của VPC khác qua VPC đó để ra internet
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [What is an egress-only internet gateway](https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/egress-only-internet-gateway.html)
+
+</details>
+
+---
+
+<div id="question-34"></div>
+
+### Question 34: Multi-Tier Web Security Architecture: ALB Inbound HTTPS (443) and Web Tier Inbound HTTP (80)
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Multiple Choice (Chọn 3 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A), (D), (F) | **Đáp án đúng**: (A), (D), (F)
+
+#### 📋 Đề bài (Scenario)
+A solutions architect is designing a three-tier web application. The architecture consists of an internet-facing Application Load Balancer (ALB) and a web tier that is hosted on Amazon EC2 instances in private subnets. The application tier with the business logic runs on EC2 instances in private subnets. The database tier consists of Microsoft SQL Server that runs on EC2 instances in private subnets. Security is a high priority for the company.
+
+Which combination of security group configurations should the solutions architect use? (Select THREE.)
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Configure the security group for the web tier to allow inbound HTTPS traffic from the security group for the ALB. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Configure the security group for the application tier to allow outbound HTTPS traffic and Microsoft SQL Server traffic to the security group for the web tier.
+- **(C)** Configure the security group for the web tier to allow outbound HTTPS traffic to 0.0.0.0/0.
+- **(D)** Configure the security group for the application tier to allow inbound HTTPS traffic from the security group for the web tier. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(E)** Configure the security group for the database tier to allow outbound HTTPS traffic and Microsoft SQL Server traffic to the security group for the web tier.
+- **(F)** Configure the security group for the database tier to allow inbound Microsoft SQL Server traffic from the security group for the application tier. `[Lựa chọn của bạn - Chính xác ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A), (D), (F)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Kiến trúc 3-tier: internet-facing ALB → web tier (EC2, private subnet) → application tier (EC2, private subnet) → database tier (SQL Server trên EC2, private subnet)
+> - Ưu tiên hàng đầu: security
+> - → Yêu cầu: chọn 3 cấu hình security group đúng nguyên tắc least privilege cho luồng traffic ALB → web → app → db
+> - Câu này có 3 đáp án đúng:
+
+**Phân tích giải pháp tối ưu:**
+Configure the security group for the web tier to allow inbound HTTPS traffic from the security group for the ALB.
+
+Web tier chỉ nên nhận traffic từ ALB, dùng security group reference (chỉ định ALB's SG làm source) thay vì CIDR - đúng luồng traffic đi vào (ALB → web)
+
+Configure the security group for the database tier to allow inbound Microsoft SQL Server traffic from the security group for the application tier.
+
+Database tier chỉ nên nhận traffic SQL Server từ application tier, cũng dùng security group reference - đúng hướng traffic đi vào (app → db)
+
+Configure the security group for the application tier to allow inbound HTTPS traffic from the security group for the web tier.
+
+Application tier chỉ nên nhận traffic từ web tier, không nhận trực tiếp từ ALB hay internet - đúng hướng traffic đi vào (web → app)
+
+Cả 3 quy tắc tạo thành chuỗi least-privilege liền mạch: ALB → web → app → db, mỗi tier chỉ cho phép inbound đúng từ tier phía trước, dùng SG reference (không phải CIDR/IP range) để tự động cập nhật khi scale thêm/thay instance
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Configure the security group for the web tier to allow outbound HTTPS traffic to 0.0.0.0/0.**:
+  Mở outbound đến toàn bộ internet (0.0.0.0/0) cho web tier là quá rộng, không cần thiết vì web tier chỉ cần gọi đến application tier - vi phạm nguyên tắc least privilege khi "security là ưu tiên hàng đầu"
+
+- **(E) Configure the security group for the database tier to allow outbound HTTPS traffic and Microsoft SQL Server traffic to the security group for the web tier.**:
+  Database tier không có lý do nghiệp vụ để chủ động gửi traffic đến web tier - traffic phải đi từ app tier vào db tier (inbound ở db), không phải db gửi outbound ngược lên web tier
+  Đây là hướng traffic sai (ngược pattern 3-tier chuẩn)
+
+- **(B) Configure the security group for the application tier to allow outbound HTTPS traffic and Microsoft SQL Server traffic to the security group for the web tier.**:
+  Tương tự: application tier cần gửi traffic đến database tier (SQL Server), không phải đến web tier - hướng traffic sai, không khớp luồng nghiệp vụ thực tế (app tier là bên gọi database, không gọi ngược lại web tier)
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- Kiến trúc 3-tier chuẩn AWS → luôn cấu hình inbound rule của tier sau trỏ về security group của tier trước (ALB→web, web→app, app→db), dùng security group reference thay vì CIDR
+- "Security là ưu tiên hàng đầu" → loại ngay đáp án mở outbound 0.0.0.0/0 không cần thiết hoặc traffic chạy sai hướng (ngược luồng nghiệp vụ)
+- Nếu đề liệt kê đáp án có traffic đi "ngược" pattern (tier sau gửi outbound đến tier trước, ví dụ database → web) → gần như chắc chắn sai
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Example: VPC for web and database servers](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-example-web-database-servers.html)
+
+</details>
+
+---
+
+<div id="question-35"></div>
+
+### Question 35: Decoupling Burst News Ingestion and Processing using AWS Lambda and Amazon SQS Standard
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (B)
+
+#### 📋 Đề bài (Scenario)
+A company is building a news aggregation platform. The platform ingests news articles that need to be cleaned and categorized. The processed articles must be stored durably for one year. The platform must handle up to thousands of incoming articles each minute during peaks. The platform must also provide independent, scalable processing for each article.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create a custom application to ingest articles and perform in-memory processing. Run the application on one large Amazon EC2 instance. Configure the application to store processed articles in an Amazon S3 bucket.
+- **(B)** Create an AWS Lambda function to ingest articles. Send one message for each article to an Amazon SQS queue. Create a second Lambda function to consume the SQS queue. Configure the second Lambda function to process the articles and store the articles in an Amazon S3 bucket. `[Đáp án đúng ✅]`
+- **(C)** Create an AWS Lambda function to ingest articles. Store the output in a shared Amazon ElastiCache (Memcached) cluster. Deploy a fleet of Amazon EC2 instances in an Auto Scaling group. Configure the instances to retrieve the article data from the ElastiCache cluster, process the data, and write the data back to the ElastiCache cluster.
+- **(D)** Create an AWS Lambda function to ingest articles. Send one message for each article to an Amazon SQS queue. Create a second Lambda function to consume the SQS queue. Configure the second Lambda function to process the articles and store the articles in a second SQS queue.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(B)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - News aggregation platform: ingest, clean và categorize bài báo
+> - Lưu trữ durably trong 1 năm
+> - Peak: thousands incoming articles mỗi phút
+> - Cần independent, scalable processing cho từng article
+> - → Yêu cầu: pipeline chịu được burst lớn, xử lý độc lập/scale theo từng bài, lưu trữ bền vững 1 năm
+
+**Phân tích giải pháp tối ưu:**
+Create an AWS Lambda function to ingest articles. Send one message for each article to an Amazon SQS queue. Create a second Lambda function to consume the SQS queue. Configure the second Lambda function to process the articles and store the articles in an Amazon S3 bucket.
+
+SQS queue đóng vai trò buffer, hấp thụ hàng nghìn message/phút khi có traffic đỉnh, tách rời (decouple) bước ingest và bước xử lý
+
+Lambda thứ 2 consume từ SQS: mỗi message (mỗi article) được xử lý độc lập, Lambda tự động scale số lượng concurrent execution theo khối lượng message trong queue - đúng "independent, scalable processing for each article"
+
+Amazon S3 là nơi lưu trữ durable (11 số 9 độ bền), kết hợp lifecycle policy để tự xoá sau 1 năm nếu cần - đúng yêu cầu "durably for one year"
+
+Kiến trúc hoàn toàn serverless, tự scale, không cần quản lý server
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Create a custom application to ingest articles and perform in-memory processing. Run the application on one large Amazon EC2 instance. Configure the application to store processed articles in an Amazon S3 bucket.**:
+  Một EC2 instance duy nhất là single point of failure, không scale được khi traffic tăng đột biến hàng nghìn article/phút, và không cung cấp xử lý độc lập cho từng article như yêu cầu
+
+- **(C) Create an AWS Lambda function to ingest articles. Store the output in a shared Amazon ElastiCache (Memcached) cluster. Deploy a fleet of Amazon EC2 instances in an Auto Scaling group. Configure the instances to retrieve the article data from the ElastiCache cluster, process the data, and write the data back to the ElastiCache cluster.**:
+  ElastiCache (Memcached) không phải durable storage - dữ liệu có thể mất khi node restart/evict do hết bộ nhớ, không đáp ứng yêu cầu "stored durably for one year"
+  Kiến trúc phức tạp hơn không cần thiết so với pattern SQS + Lambda
+
+- **(D) Create an AWS Lambda function to ingest articles. Send one message for each article to an Amazon SQS queue. Create a second Lambda function to consume the SQS queue. Configure the second Lambda function to process the articles and store the articles in a second SQS queue.**:
+  SQS không phải durable long-term storage - retention tối đa chỉ 14 ngày, không thể lưu trữ dữ liệu trong 1 năm như yêu cầu
+  SQS phù hợp làm buffer trung gian, không phù hợp làm nơi lưu trữ cuối cùng (final storage)
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Independent, scalable processing cho từng item" + "burst traffic lớn" → SQS (buffer) + Lambda (consumer tự scale theo queue)
+- "Durable storage" cho dữ liệu dài hạn (tháng/năm) → Amazon S3, không phải SQS (giới hạn 14 ngày) hay ElastiCache (in-memory, không durable)
+- "Một EC2 instance lớn duy nhất xử lý in-memory" → luôn là dấu hiệu thiếu khả năng scale/chịu lỗi, loại ngay khi đề có traffic đỉnh lớn
+- Nếu đề yêu cầu lưu trữ lâu dài (>14 ngày) → loại ngay đáp án dùng SQS làm kho lưu trữ cuối
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Using Lambda with Amazon SQS](https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html)
+
+</details>
+
+---
+
+<div id="question-36"></div>
+
+### Question 36: Stateful Containerized Microservices on AWS Fargate with Shared Persistent Amazon EFS Volumes
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company runs an application that uses Docker containers in an on-premises data center. The application runs on a container host that stores persistent data files in a local volume. Container instances use the stored persistent data.
+
+The company wants to migrate the application to fully managed AWS services.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use Amazon ECS with the Amazon EC2 launch type. Create an Amazon EFS volume. Mount the EFS volume on the containers to provide persistent storage.
+- **(B)** Use Amazon ECS with the AWS Fargate launch type. Create an Amazon DynamoDB table. Configure the application to use the DynamoDB table for persistent storage.
+- **(C)** Use Amazon ECS with the AWS Fargate launch type. Create an Amazon EFS volume. Mount the EFS volume on the containers to provide persistent storage. `[Đáp án đúng ✅]`
+- **(D)** Use Amazon EKS with self-managed nodes. Attach an Amazon EBS volume to an Amazon EC2 instance. Mount the EBS volume on the containers to provide persistent storage.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Ứng dụng chạy Docker containers on-premises, container host lưu persistent data files trong local volume
+> - Container instances dùng lại dữ liệu đã lưu này
+> - Công ty muốn migrate sang fully managed AWS services
+> - → Yêu cầu: container orchestration hoàn toàn managed (không quản lý server/host) + shared persistent storage cho container
+
+**Phân tích giải pháp tối ưu:**
+Use Amazon ECS with the AWS Fargate launch type. Create an Amazon EFS volume. Mount the EFS volume on the containers to provide persistent storage.
+
+AWS Fargate launch type là serverless compute cho ECS - AWS tự quản lý toàn bộ máy chủ, không có EC2 instance nào công ty phải vận hành → đúng "fully managed"
+
+Amazon EFS là managed, elastic NFS file system, hỗ trợ mount trực tiếp vào ECS task chạy trên Fargate (từ platform version 1.4.0 trở lên) làm persistent, shared storage - tương đương "local volume" trên container host cũ
+
+Kết hợp ECS Fargate + EFS đáp ứng đồng thời cả "fully managed" lẫn "persistent data files"
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Use Amazon EKS with self-managed nodes. Attach an Amazon EBS volume to an Amazon EC2 instance. Mount the EBS volume on the containers to provide persistent storage.**:
+  "self-managed nodes" nghĩa là công ty vẫn phải tự quản lý, patch, scale EC2 worker node → không đạt "fully managed"
+  EBS volume chỉ attach được vào một EC2 instance tại một thời điểm, không phù hợp làm shared persistent storage cho nhiều container/task
+
+- **(B) Use Amazon ECS with the AWS Fargate launch type. Create an Amazon DynamoDB table. Configure the application to use the DynamoDB table for persistent storage.**:
+  DynamoDB là NoSQL key-value database, không phải file storage → không tương thích với ứng dụng đang lưu "persistent data files" dạng file hệ thống
+  Yêu cầu viết lại hoàn toàn tầng lưu trữ của ứng dụng thay vì giữ nguyên mô hình file, tăng effort migrate không cần thiết
+
+- **(A) Use Amazon ECS with the Amazon EC2 launch type. Create an Amazon EFS volume. Mount the EFS volume on the containers to provide persistent storage.**:
+  EC2 launch type yêu cầu công ty tự quản lý, patch, scale các EC2 instance làm container host → không đạt "fully managed"
+  Phần EFS đúng, nhưng launch type sai nên vẫn không đáp ứng yêu cầu chính
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "fully managed" + container → luôn ưu tiên Fargate launch type, loại ngay EC2 launch type hoặc self-managed nodes
+- "persistent data files" cần share giữa nhiều container/task → Amazon EFS (NFS, multi-AZ, mount đồng thời nhiều task), không phải EBS (chỉ attach 1 instance) hay DynamoDB (không phải file storage)
+- Nếu đề mô tả "local volume" trên container host cũ → tìm managed file storage tương đương (EFS), không đổi sang mô hình database
+- Nếu đề yêu cầu "no infrastructure management" hoặc "fully managed" → loại ngay mọi đáp án có EC2 launch type/self-managed nodes
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Specify an Amazon EFS file system in an Amazon ECS task definition](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/specify-efs-config.html)
+
+</details>
+
+---
+
+<div id="question-37"></div>
+
+### Question 37: Enforcing Organizational Multi-Account Service Restrictions using Service Control Policies (SCPs)
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (B) | **Đáp án đúng**: (B)
+
+#### 📋 Đề bài (Scenario)
+A company has multiple AWS accounts. The company uses AWS Organizations with an organizational unit (OU) for the production account and another OU for the development account. Corporate policies state that developers must use only approved AWS services in the production account.
+
+What is the MOST operationally efficient solution to control the production account?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create an IAM policy. Apply the policy in Amazon API Gateway to restrict the production account.
+- **(B)** Create a service control policy (SCP). Apply the SCP to the production OU. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(C)** Create a job function policy in IAM. Apply the policy to all users within the production OU.
+- **(D)** Create a customer managed policy in IAM. Apply the policy to all users within the production account.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(B)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Công ty có nhiều AWS account, dùng AWS Organizations
+> - Có OU riêng cho production account, OU riêng cho development account
+> - Chính sách nội bộ: developer chỉ được dùng approved AWS services trong production account
+> - → Yêu cầu: giải pháp MOST operationally efficient để kiểm soát dịch vụ được phép dùng ở production account
+
+**Phân tích giải pháp tối ưu:**
+Create a service control policy (SCP). Apply the SCP to the production OU.
+
+SCP là organization policy, thiết lập giới hạn permission tối đa (permission guardrail) cho tất cả IAM user/role trong mọi account thuộc OU, kể cả root user của các account đó
+
+Áp dụng một lần ở cấp OU → tự động có hiệu lực với mọi account hiện tại và account mới được thêm vào OU production sau này → operationally efficient nhất, không cần cấu hình lặp lại theo từng account/user
+
+Đúng cơ chế kỹ thuật để "restrict approved AWS services" tại cấp account/OU
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Create a customer managed policy in IAM. Apply the policy to all users within the production account.**:
+  IAM policy (identity-based) phải được gắn thủ công cho từng user, không tự động áp dụng cho user hoặc account mới → tốn operational overhead khi số lượng account/user tăng
+  IAM policy chỉ giới hạn trong phạm vi một account, không quản lý tập trung ở cấp OU
+
+- **(C) Create a job function policy in IAM. Apply the policy to all users within the production OU.**:
+  IAM policy không thể "apply to OU" - IAM là dịch vụ theo từng account, các managed policy (kể cả job function policy) chỉ gắn được vào user/group/role trong một account, không có khái niệm gắn vào OU
+  Sai về mặt kỹ thuật ngay từ cách áp dụng
+
+- **(A) Create an IAM policy. Apply the policy in Amazon API Gateway to restrict the production account.**:
+  Amazon API Gateway không phải nơi quản lý quyền sử dụng dịch vụ AWS ở cấp account → sai hoàn toàn về service, không liên quan gì đến việc kiểm soát AWS service được phép dùng
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "approved AWS services" + "restrict tại account/OU" → luôn nghĩ tới Service Control Policy (SCP) áp ở cấp OU
+- "MOST operationally efficient" + kiểm soát nhiều account cùng lúc → chọn giải pháp áp dụng một lần ở cấp OU/Organizations, loại các đáp án phải cấu hình lặp lại cho từng account hoặc từng user
+- IAM identity-based policy không gắn được vào OU - chỉ SCP (và các organization policy khác trong AWS Organizations) mới áp dụng được ở cấp OU/account trong tổ chức
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Service control policies (SCPs)](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)
+
+</details>
+
+---
+
+<div id="question-38"></div>
+
+### Question 38: Asynchronous Batch Image Processing Pipeline using AWS Batch and AWS Step Functions
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A digital image processing company wants to migrate its on-premises monolithic application to the AWS Cloud. The company processes thousands of images and generates large files as part of the processing workflow.
+
+The company needs a solution to manage the growing number of image processing jobs. The solution must also reduce the manual tasks in the image processing workflow. The company does not want to manage the underlying infrastructure of the solution.
+
+Which solution will meet these requirements with the LEAST operational overhead?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Deploy a group of Amazon EC2 instances to process the images. Use AWS Step Functions to orchestrate the workflow. Store the processed files in an Amazon EBS volume.
+- **(B)** Use Amazon ECS with Amazon EC2 Spot Instances to process the images. Configure Amazon SQS to orchestrate the workflow. Store the processed files in Amazon EFS.
+- **(C)** Use AWS Batch jobs to process the images. Use AWS Step Functions to orchestrate the workflow. Store the processed files in an Amazon S3 bucket. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Use AWS Lambda functions and Amazon EC2 Spot Instances to process the images. Store the processed files in Amazon FSx.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Xử lý hàng nghìn ảnh, tạo ra large files trong workflow
+> - Cần quản lý số lượng image processing jobs đang tăng, giảm thao tác thủ công trong workflow
+> - Công ty không muốn quản lý underlying infrastructure
+> - → Yêu cầu: giải pháp LEAST operational overhead cho job xử lý ảnh có orchestration, không quản lý hạ tầng
+
+**Phân tích giải pháp tối ưu:**
+Use AWS Batch jobs to process the images. Use AWS Step Functions to orchestrate the workflow. Store the processed files in an Amazon S3 bucket.
+
+AWS Batch là dịch vụ fully managed batch computing - tự động provision, schedule compute resource (có thể chạy trên Fargate), loại bỏ việc tự cài đặt/quản lý cluster hay software batch computing
+
+AWS Step Functions orchestrate toàn bộ workflow xử lý ảnh bằng low-code visual workflow, tự động xử lý retry/parallelization/error handling → giảm thao tác thủ công
+
+Amazon S3 là nơi lưu trữ file lớn phù hợp, độ bền cao, chi phí thấp, không giới hạn dung lượng như EBS
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Use Amazon ECS with Amazon EC2 Spot Instances to process the images. Configure Amazon SQS to orchestrate the workflow. Store the processed files in Amazon EFS.**:
+  Dùng EC2 Spot Instances làm container host vẫn phải quản lý một phần hạ tầng compute (capacity, scaling) → không đạt "does not want to manage underlying infrastructure"
+  SQS chỉ là hàng đợi message, không phải công cụ orchestration workflow nhiều bước như Step Functions
+
+- **(D) Use AWS Lambda functions and Amazon EC2 Spot Instances to process the images. Store the processed files in Amazon FSx.**:
+  Kết hợp Lambda và EC2 Spot Instances vẫn phải tự quản lý một phần hạ tầng EC2, và đề không có công cụ orchestration rõ ràng cho workflow
+  Amazon FSx không phù hợp bằng S3 cho việc lưu trữ file lớn, chi phí cao hơn cho use case này
+
+- **(A) Deploy a group of Amazon EC2 instances to process the images. Use AWS Step Functions to orchestrate the workflow. Store the processed files in an Amazon EBS volume.**:
+  Tự triển khai nhóm EC2 instance để xử lý ảnh → công ty phải quản lý toàn bộ vòng đời instance (patch, scale, capacity) → vi phạm trực tiếp yêu cầu "does not want to manage the underlying infrastructure"
+  EBS volume gắn với một instance, không phù hợp lưu trữ file dùng chung ở quy mô lớn như S3
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "does not want to manage underlying infrastructure" + "growing number of jobs" → AWS Batch (fully managed, không cần quản lý cluster)
+- "reduce manual tasks in workflow" + nhiều bước xử lý tuần tự/song song → AWS Step Functions để orchestrate
+- "large files" cần lưu trữ bền vững, chi phí thấp, không giới hạn dung lượng → Amazon S3, loại EBS (gắn 1 instance) và FSx (đắt hơn, không cần thiết) khi không có yêu cầu POSIX/file system đặc thù
+- Nếu đề có "Spot Instances" hoặc "group of EC2 instances" để xử lý job kèm yêu cầu "least operational overhead"/"no infrastructure management" → loại ngay các đáp án đó
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Welcome (AWS Batch)](https://docs.aws.amazon.com/batch/latest/APIReference/Welcome.html)
+- 🌐 [Run AWS Batch workloads with Step Functions](https://docs.aws.amazon.com/step-functions/latest/dg/connect-batch.html)
+
+</details>
+
+---
+
+<div id="question-39"></div>
+
+### Question 39: Optimizing Global CDN Distribution Costs by Adjusting Amazon CloudFront Price Classes
+> **Miền kiến thức (Domain)**: Domain 4: Design Cost-Optimized Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company hosts a static website in an Amazon S3 bucket. The S3 bucket is the origin for an Amazon CloudFront distribution. The company has users in the United States, Canada, and Europe. The company wants to optimize distribution costs for the website.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Configure CloudFront to send a Cache-Control response header. Set the maximum TTL to a low value.
+- **(B)** Use CloudFront events to invoke Lambda@Edge functions to perform data processing for the website.
+- **(C)** Modify the CloudFront price class to include only the countries that the company serves. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Use AWS Certificate Manager (ACM) to provision a public SSL/TLS certificate for the CloudFront distribution.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Static website trên Amazon S3, origin cho Amazon CloudFront distribution
+> - Người dùng tập trung ở United States, Canada, và Europe (không phải toàn cầu)
+> - → Yêu cầu: tối ưu chi phí phân phối (distribution costs) của CloudFront
+
+**Phân tích giải pháp tối ưu:**
+Modify the CloudFront price class to include only the countries that the company serves.
+
+Price class của CloudFront quyết định tập hợp edge location được dùng để phục vụ nội dung - mặc định là "All" (toàn bộ edge location toàn cầu, giá cao nhất)
+
+Người dùng công ty chỉ ở US, Canada, Europe → chọn price class nhỏ hơn (ví dụ Price Class 100/200) loại bỏ các edge location đắt tiền không phục vụ khu vực này → giảm chi phí trực tiếp mà vẫn phục vụ đủ toàn bộ user hiện tại
+
+Đây chính là cơ chế "tối ưu chi phí" chính thức được AWS khuyến nghị cho trường hợp user tập trung ở vài khu vực địa lý
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Configure CloudFront to send a Cache-Control response header. Set the maximum TTL to a low value.**:
+  TTL thấp khiến CloudFront phải request lại origin thường xuyên hơn → tăng tải lên origin và có thể tăng chi phí, ngược với mục tiêu tối ưu chi phí distribution
+  Cache-Control/TTL ảnh hưởng đến tần suất cache refresh, không liên quan đến việc chọn tập edge location phục vụ
+
+- **(B) Use CloudFront events to invoke Lambda@Edge functions to perform data processing for the website.**:
+  Lambda@Edge tính phí theo số lần invoke và thời gian thực thi → tăng thêm chi phí thay vì giảm, không phục vụ mục tiêu tối ưu chi phí
+  Phù hợp khi cần xử lý logic tại edge (A/B testing, header manipulation...), không phải bài toán cost optimization ở đây
+
+- **(D) Use AWS Certificate Manager (ACM) to provision a public SSL/TLS certificate for the CloudFront distribution.**:
+  ACM certificate cho CloudFront là miễn phí, không ảnh hưởng đến chi phí phân phối nội dung
+  Certificate chỉ phục vụ HTTPS, hoàn toàn không liên quan đến việc giảm chi phí data transfer/edge location
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "users chỉ ở một số quốc gia/khu vực nhất định" + CloudFront + "optimize cost" → luôn nghĩ tới CloudFront price class
+- "reduce distribution/delivery cost" mà không đổi trải nghiệm user hiện tại → loại ngay các đáp án thêm tính năng (Lambda@Edge, ACM) vì chỉ tăng chi phí hoặc không liên quan chi phí
+- TTL thấp → tăng cache miss, tăng request đến origin → không phải hướng tối ưu chi phí
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Choosing the price class for a CloudFront distribution](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/PriceClass.html)
+
+</details>
+
+---
+
+<div id="question-40"></div>
+
+### Question 40: Accelerating Global TCP/UDP Application Ingress and Bypassing DNS Caching via AWS Global Accelerator
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company runs an enterprise resource planning (ERP) system on Amazon EC2 instances in a single AWS Region. Users connect to the ERP system by using a public API that is hosted on the EC2 instances. International users report slow API response times from their data centers.
+
+A solutions architect needs to improve API response times for the international users.
+
+Which solution will meet these requirements MOST cost-effectively?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Set up AWS Global Accelerator. Configure listeners for the necessary ports. Configure endpoint groups for the appropriate Regions to distribute traffic. Create an endpoint in each group for the API. `[Đáp án đúng ✅]`
+- **(B)** Deploy Amazon API Gateway endpoints in multiple Regions. Use Amazon Route 53 latency-based routing to route requests to the nearest endpoint. Configure a VPC peering connection between the Regions to connect to the ERP system.
+- **(C)** Set up an AWS Direct Connect connection that has a public virtual interface (VIF) to connect each user's data center to the EC2 instances. Create a Direct Connect gateway for the ERP system API to route user API requests.
+- **(D)** Use AWS Site-to-Site VPN to establish dedicated VPN tunnels between multiple Regions and user networks. Route traffic to the API through the VPN connections.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - ERP system chạy trên EC2 instances trong một AWS Region duy nhất
+> - Users truy cập qua public API hosted trên EC2 instances
+> - International users báo cáo API response time chậm từ data center của họ
+> - → Yêu cầu: cải thiện API response time cho user quốc tế, giải pháp MOST cost-effective
+
+**Phân tích giải pháp tối ưu:**
+Set up AWS Global Accelerator. Configure listeners for the necessary ports. Configure endpoint groups for the appropriate Regions to distribute traffic. Create an endpoint in each group for the API.
+
+Global Accelerator dùng anycast static IP, đưa traffic user vào AWS edge location gần nhất ngay từ điểm vào, sau đó định tuyến trên AWS global network (backbone riêng) thay vì đi qua public internet đến tận Region đích → giảm latency, jitter đáng kể cho user quốc tế
+
+Không yêu cầu triển khai lại ứng dụng ở nhiều Region, chỉ cần cấu hình endpoint group trỏ về EC2 instances hiện có trong Region duy nhất → chi phí thấp hơn nhiều so với việc nhân bản hạ tầng
+
+Chi phí Global Accelerator chỉ gồm phí cố định theo giờ + phí data transfer premium, thấp hơn đáng kể so với việc xây dựng multi-Region hoặc Direct Connect/VPN riêng cho từng data center
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Set up an AWS Direct Connect connection that has a public virtual interface (VIF) to connect each user's data center to the EC2 instances. Create a Direct Connect gateway for the ERP system API to route user API requests.**:
+  Direct Connect cho từng data center của user quốc tế là chi phí cực lớn (thiết lập kết nối vật lý + phí hàng tháng cho mỗi kết nối) → hoàn toàn không cost-effective
+  Public VIF dùng để truy cập AWS public service endpoints, không phải giải pháp thiết kế để cải thiện latency API cho nhiều user phân tán toàn cầu
+
+- **(B) Deploy Amazon API Gateway endpoints in multiple Regions. Use Amazon Route 53 latency-based routing to route requests to the nearest endpoint. Configure a VPC peering connection between the Regions to connect to the ERP system.**:
+  Yêu cầu triển khai hạ tầng ở nhiều Region (multi-Region), tốn thêm chi phí vận hành và đồng bộ dữ liệu, phức tạp hơn nhiều so với Global Accelerator
+  Không cost-effective bằng việc chỉ thêm Global Accelerator phía trước hạ tầng hiện có trong một Region
+
+- **(D) Use AWS Site-to-Site VPN to establish dedicated VPN tunnels between multiple Regions and user networks. Route traffic to the API through the VPN connections.**:
+  Site-to-Site VPN không được thiết kế để cải thiện latency cho traffic API công khai; VPN tunnel qua public internet còn có thể tăng overhead/latency do encryption
+  Thiết lập VPN cho nhiều mạng người dùng quốc tế phức tạp, tốn chi phí vận hành, không phù hợp bài toán tối ưu response time cho public API
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "international/global users" + "public API/TCP-UDP traffic" + "improve latency" + "single Region, không muốn nhân bản hạ tầng" → AWS Global Accelerator
+- "MOST cost-effective" + cải thiện performance toàn cầu → ưu tiên giải pháp không cần triển khai lại ứng dụng ở nhiều Region
+- Direct Connect/VPN riêng cho từng data center người dùng cuối luôn là dấu hiệu chi phí rất cao → loại ngay khi đề yêu cầu cost-effective
+- CloudFront tối ưu cho static/cacheable content, Global Accelerator tối ưu cho TCP/UDP traffic tại tầng network (API, gaming, VoIP) - phân biệt rõ 2 service khi đề nhắc "API response time"
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [AWS Global Accelerator FAQs](https://aws.amazon.com/global-accelerator/faqs/)
+- 🌐 [Understanding AWS Global Accelerator use cases](https://docs.aws.amazon.com/global-accelerator/latest/dg/introduction-benefits-of-migrating.html)
+
+</details>
+
+---
+
+<div id="question-41"></div>
+
+### Question 41: Bidirectional Hybrid DNS Resolution using Route 53 Resolver Inbound and Outbound Endpoints
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Multiple Choice (Chọn 3 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (B), (C), (F)
+
+#### 📋 Đề bài (Scenario)
+A company has a single AWS account. The company runs workloads on Amazon EC2 instances in multiple VPCs in one AWS Region. The company also runs workloads in an on-premises data center that connects to the company's AWS account by using AWS Direct Connect.
+
+The company needs all EC2 instances in the VPCs to resolve DNS queries for the internal.example.com domain to the authoritative DNS server that is located in the on-premises data center. The solution must use private communication between the VPCs and the on-premises network. All route tables, network ACLs, and security groups are configured correctly between AWS and the on-premises data center.
+
+Which combination of actions will meet these requirements? (Select THREE.)
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create an Amazon Route 53 inbound endpoint in all the workload VPCs.
+- **(B)** Create an Amazon Route 53 outbound endpoint in one of the workload VPCs. `[Đáp án đúng ✅]`
+- **(C)** Create an Amazon Route 53 Resolver rule with the Forward type configured to forward queries for internal.example.com to the on-premises DNS server. `[Đáp án đúng ✅]`
+- **(D)** Associate the Amazon Route 53 Resolver rule with the workload VPC with the new Route 53 endpoint.
+- **(E)** Create an Amazon Route 53 Resolver rule with the System type configured to forward queries for internal.example.com to the on-premises DNS server.
+- **(F)** Associate the Amazon Route 53 Resolver rule with all the workload VPCs. `[Đáp án đúng ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(B), (C), (F)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Một AWS account, nhiều VPC trong cùng một Region, kết nối on-premises qua AWS Direct Connect
+> - Yêu cầu: mọi EC2 instance trong các VPC phải resolve DNS queries cho domain internal.example.com đến authoritative DNS server on-premises
+> - Phải dùng private communication giữa VPC và on-premises (route table, NACL, security group đã cấu hình đúng sẵn)
+> - Đề cho 6 lựa chọn, chọn đúng 3 hành động
+> - → Yêu cầu: cấu hình Route 53 Resolver để forward DNS query của domain nội bộ từ tất cả VPC đến DNS server on-premises
+> - Câu này có 3 đáp án đúng:
+
+**Phân tích giải pháp tối ưu:**
+Create an Amazon Route 53 outbound endpoint in one of the workload VPCs.
+
+Outbound endpoint cho phép Route 53 Resolver chuyển tiếp (forward) DNS query từ VPC ra ngoài đến DNS server on-premises qua kết nối private (Direct Connect)
+
+Chỉ cần một outbound endpoint duy nhất cho nhiều VPC - endpoint và rule được share cho các VPC khác, không cần tạo endpoint riêng ở từng VPC
+
+Create an Amazon Route 53 Resolver rule with the Forward type configured to forward queries for internal.example.com to the on-premises DNS server.
+
+Forward type rule là loại rule đúng để chỉ định: query cho domain cụ thể (internal.example.com) sẽ được chuyển tiếp đến địa chỉ IP DNS server on-premises
+
+Đây là cơ chế duy nhất trong Route 53 Resolver hỗ trợ forward theo domain tới resolver bên ngoài AWS
+
+Associate the Amazon Route 53 Resolver rule with all the workload VPCs.
+
+Resolver rule chỉ có hiệu lực trên VPC mà nó được associate - phải associate với tất cả VPC thì mọi EC2 instance trong mọi VPC mới áp dụng được rule forward này
+
+Việc chia sẻ 1 rule cho nhiều VPC giúp không cần tạo lại outbound endpoint/rule riêng cho từng VPC
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Create an Amazon Route 53 inbound endpoint in all the workload VPCs.**:
+  Inbound endpoint dùng cho chiều ngược lại: cho phép DNS server on-premises gửi query vào để resolve tên miền được host trên Route 53 (VD: Private Hosted Zone) - không phải yêu cầu của đề (đề cần VPC resolve ra on-premises)
+
+- **(E) Create an Amazon Route 53 Resolver rule with the System type configured to forward queries for internal.example.com to the on-premises DNS server.**:
+  System type rule là loại rule mặc định dùng cho DNS resolution tiêu chuẩn trong VPC (Route 53 private hosted zone, EC2 local domain name, public internet) - không hỗ trợ forward đến DNS server bên ngoài; chỉ Forward type mới làm được việc này
+
+- **(D) Associate the Amazon Route 53 Resolver rule with the workload VPC with the new Route 53 endpoint.**:
+  Chỉ associate rule với VPC chứa outbound endpoint thì các VPC còn lại không nhận được rule, EC2 instance ở các VPC đó sẽ không resolve được domain internal.example.com đến on-premises → không đáp ứng yêu cầu "all EC2 instances in the VPCs"
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "VPC cần resolve domain nội bộ đến on-premises DNS server" → Route 53 Resolver outbound endpoint + Forward type rule
+- "on-premises cần resolve domain trong Route 53 (VD: private hosted zone) của AWS" → dùng inbound endpoint (chiều ngược lại)
+- "Forward type" → chuyển tiếp ra ngoài AWS theo domain cụ thể; "System type" → resolution tiêu chuẩn nội bộ VPC/internet, không forward ra ngoài được
+- Chỉ cần một outbound endpoint cho nhiều VPC, nhưng rule phải được associate với từng VPC cần áp dụng - đây là điểm hay bị nhầm trong câu multi-VPC
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Route 53 Resolver endpoints and forwarding rules](https://docs.aws.amazon.com/whitepapers/latest/hybrid-cloud-dns-options-for-vpc/route-53-resolver-endpoints-and-forwarding-rules.html)
+- 🌐 [Set up DNS resolution for hybrid networks in a single-account AWS environment](https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/set-up-dns-resolution-for-hybrid-networks-in-a-single-account-aws-environment.html)
+
+</details>
+
+---
+
+<div id="question-42"></div>
+
+### Question 42: Multi-Account Cost Governance and Budget Overrun Alerts using AWS Budgets
+> **Miền kiến thức (Domain)**: Domain 4: Design Cost-Optimized Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company wants to experiment with individual AWS accounts for its engineer team. The company wants to be notified as soon as the Amazon EC2 instance usage for a given month exceeds a specific threshold for each account.
+
+What should a solutions architect do to meet this requirement MOST cost-effectively?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use Cost Explorer to create a daily report of costs by service. Filter the report by EC2 instances. Configure Cost Explorer to send an Amazon SES notification when a threshold is exceeded.
+- **(B)** Use AWS Cost and Usage Reports to create a report with hourly granularity. Integrate the report data with Amazon Athena. Use Amazon EventBridge to schedule an Athena query. Configure an Amazon SNS topic to receive a notification when a threshold is exceeded.
+- **(C)** Use AWS Budgets to create a cost budget for each account. Set the period to monthly. Set the scope to EC2 instances. Set an alert threshold for the budget. Configure an Amazon SNS topic to receive a notification when a threshold is exceeded. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Use Cost Explorer to create a monthly report of costs by service. Filter the report by EC2 instances. Configure Cost Explorer to send an Amazon SES notification when a threshold is exceeded.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Công ty muốn individual AWS accounts cho từng engineer trong team
+> - Cần được notified khi EC2 instance usage trong một tháng vượt specific threshold, áp dụng cho từng account
+> - → Yêu cầu: giải pháp MOST cost-effectively để cảnh báo ngưỡng usage theo tháng, theo từng account
+
+**Phân tích giải pháp tối ưu:**
+Use AWS Budgets to create a cost budget for each account. Set the period to monthly. Set the scope to EC2 instances. Set an alert threshold for the budget. Configure an Amazon SNS topic to receive a notification when a threshold is exceeded.
+
+AWS Budgets cho phép tạo budget theo monthly period, giới hạn scope theo service (EC2 instances), và thiết lập alert threshold để tự động gửi notification khi vượt ngưỡng - đúng chính xác toàn bộ yêu cầu đề bài
+
+Kết hợp với Amazon SNS để nhận notification ngay khi vượt threshold, đúng "as soon as usage exceeds"
+
+AWS Budgets có free tier (miễn phí cho một số lượng budget nhất định mỗi account) → chi phí thấp nhất trong các lựa chọn, phù hợp "MOST cost-effectively"
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Use Cost Explorer to create a daily report of costs by service. Filter the report by EC2 instances. Configure Cost Explorer to send an Amazon SES notification when a threshold is exceeded.**:
+  Cost Explorer không có cơ chế tự động gửi notification khi vượt threshold - đây là tính năng của AWS Budgets, không phải Cost Explorer, nên đáp án sai về mặt kỹ thuật
+  Report theo daily không khớp yêu cầu theo dõi "for a given month"
+
+- **(D) Use Cost Explorer to create a monthly report of costs by service. Filter the report by EC2 instances. Configure Cost Explorer to send an Amazon SES notification when a threshold is exceeded.**:
+  Tương tự lỗi trên: Cost Explorer không hỗ trợ cấu hình gửi notification tự động (không có tính năng threshold alert tích hợp) - đây là điểm sai kỹ thuật cốt lõi dù period đã đúng là monthly
+
+- **(B) Use AWS Cost and Usage Reports to create a report with hourly granularity. Integrate the report data with Amazon Athena. Use Amazon EventBridge to schedule an Athena query. Configure an Amazon SNS topic to receive a notification when a threshold is exceeded.**:
+  Giải pháp đúng về mặt kỹ thuật nhưng phức tạp và tốn nhiều operational effort hơn hẳn (CUR + Athena + EventBridge + custom query) so với dùng trực tiếp AWS Budgets có sẵn tính năng threshold alert → không phải "MOST cost-effectively" vì tốn thêm chi phí Athena query và effort xây dựng/vận hành
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "notify khi usage/cost vượt threshold" → luôn nghĩ tới AWS Budgets (không phải Cost Explorer - Cost Explorer chỉ để visualize/phân tích, không tự gửi alert)
+- "MOST cost-effectively" + cần threshold alert đơn giản → chọn dịch vụ có sẵn tính năng (Budgets + SNS), loại các giải pháp tự xây pipeline phức tạp (CUR + Athena + EventBridge)
+- "Cost Explorer" + "gửi notification" trong cùng một đáp án → dấu hiệu sai kỹ thuật rõ ràng, loại ngay vì Cost Explorer không có khả năng này
+- Budget "scope to EC2 instances" + "period monthly" + "alert threshold" + "SNS" là combo chuẩn cho dạng câu hỏi cảnh báo chi phí/usage theo dịch vụ
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Managing your costs with AWS Budgets](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html)
+- 🌐 [Creating an Amazon SNS topic for budget notifications](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-sns-policy.html)
+
+</details>
+
+---
+
+<div id="question-43"></div>
+
+### Question 43: High-Throughput Dedicated Kinesis Data Streams Ingestion with Enhanced Fan-Out
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company has multiple consumers that consume data from Amazon Kinesis Data Streams. The company wants to share throughput across all consumers. The company must prevent any one consumer from monopolizing the stream's throughput. Each consumer must have its own read throughput and must not compete with other consumers.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Increase the number of shards in the stream.
+- **(B)** Send the data to an Amazon SQS queue before distributing data to the consumers.
+- **(C)** Configure enhanced fan-out to allow each consumer to receive its own dedicated throughput. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Configure lease management within the consumers.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Nhiều consumer cùng đọc dữ liệu từ Amazon Kinesis Data Streams
+> - Muốn share throughput giữa tất cả consumer, nhưng prevent any one consumer from monopolizing throughput của stream
+> - Mỗi consumer phải có read throughput riêng, không cạnh tranh (compete) với consumer khác
+> - → Yêu cầu: mỗi consumer có throughput đọc dành riêng, độc lập với các consumer còn lại
+
+**Phân tích giải pháp tối ưu:**
+Configure enhanced fan-out to allow each consumer to receive its own dedicated throughput.
+
+Enhanced fan-out (EFO) cấp cho mỗi consumer throughput đọc dành riêng lên đến 2 MB/giây trên mỗi shard, độc lập hoàn toàn với các consumer khác đang đọc cùng stream
+
+Với mô hình shared throughput mặc định (standard/polling consumer), tất cả consumer phải chia sẻ chung 2 MB/giây/shard và 5 TPS → một consumer đọc nhiều có thể làm consumer khác bị đói throughput (monopolize); EFO giải quyết triệt để vấn đề này
+
+Kinesis Data Streams push dữ liệu đến EFO consumer qua HTTP/2 thay vì consumer phải poll, nên không còn giới hạn 5 TPS chia sẻ
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Increase the number of shards in the stream.**:
+  Tăng shard chỉ tăng tổng throughput của stream, nhưng nếu vẫn dùng shared throughput consumer thì các consumer vẫn phải chia sẻ chung throughput trên từng shard - không đảm bảo throughput riêng, độc lập cho mỗi consumer
+  Đây là giải pháp scale dung lượng chung của stream, không phải giải pháp cô lập throughput theo consumer
+
+- **(D) Configure lease management within the consumers.**:
+  Lease management (dùng trong Kinesis Client Library - KCL) chỉ giúp phân chia shard nào consumer nào xử lý trong một application, không cấp dedicated throughput; nhiều KCL application khác nhau đọc cùng stream vẫn dùng chung shared throughput per shard
+  Không giải quyết được vấn đề "monopolize" throughput giữa các consumer riêng biệt
+
+- **(B) Send the data to an Amazon SQS queue before distributing data to the consumers.**:
+  Thêm SQS phía sau Kinesis làm thay đổi kiến trúc, tốn thêm chi phí và độ trễ, không giải quyết trực tiếp vấn đề throughput đọc từ Kinesis
+  SQS có mô hình phân phối khác (mỗi message chỉ được 1 consumer xử lý theo mặc định), không phù hợp với yêu cầu "share throughput across all consumers" gốc của bài toán fan-out từ Kinesis
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "mỗi consumer có throughput riêng, không cạnh tranh với consumer khác" trong Kinesis Data Streams → Enhanced fan-out (EFO)
+- "shared throughput" mặc định = tất cả consumer chia nhau 2 MB/giây + 5 TPS mỗi shard; "enhanced fan-out" = mỗi consumer có riêng 2 MB/giây mỗi shard, dùng HTTP/2 push
+- Tăng số shard chỉ tăng tổng throughput, không cô lập throughput theo từng consumer - phân biệt rõ 2 khái niệm "scale throughput" và "isolate throughput per consumer"
+- "lease management"/KCL liên quan đến phân chia shard trong nội bộ một consumer group, không phải cơ chế cấp dedicated throughput giữa nhiều consumer độc lập
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Develop enhanced fan-out consumers with dedicated throughput](https://docs.aws.amazon.com/streams/latest/dev/enhanced-consumers.html)
+- 🌐 [Manage enhanced fan-out consumers with the AWS CLI or APIs](https://docs.aws.amazon.com/streams/latest/dev/building-enhanced-consumers-console.html)
+
+</details>
+
+---
+
+<div id="question-44"></div>
+
+### Question 44: End-to-End Encrypted Serverless ETL Pipeline using AWS Glue and AWS KMS
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company needs to process data from multiple users. The company stores the data in a relational database.
+
+A solutions architect needs to extract the data, use business rules to transform the data, and store the data in Amazon S3. The solutions architect must ensure that the data is encrypted during processing.
+
+Which solution will meet these requirements with the LEAST operational effort?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use AWS Lambda functions that run in response to database changes. Process data in memory, with encryption enabled. Write the processed data to Amazon S3. Use server-side encryption (SSE).
+- **(B)** Use AWS DMS with encryption enabled. Configure one replication task for each user to extract and load data into a separate S3 bucket for each user. Encrypt each bucket with a KMS key that is specific to each user.
+- **(C)** Use AWS Glue ETL jobs that use AWS KMS to provide built-in encryption. Configure an AWS Glue job to transform the data. Store the transformed data in a separate S3 bucket for each user. Encrypt each bucket with a KMS key that is specific to each user. `[Đáp án đúng ✅]`
+- **(D)** Use Amazon EMR clusters with encryption settings. Create one cluster for each user. Use AWS KMS keys to encrypt the data at rest and in transit.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Dữ liệu từ nhiều user được lưu trong relational database
+> - Cần extract dữ liệu, dùng business rules để transform, rồi store vào Amazon S3
+> - Dữ liệu phải được encrypted during processing
+> - → Yêu cầu: giải pháp LEAST operational effort cho ETL có encryption trong lúc xử lý
+
+**Phân tích giải pháp tối ưu:**
+Use AWS Glue ETL jobs that use AWS KMS to provide built-in encryption. Configure an AWS Glue job to transform the data. Store the transformed data in a separate S3 bucket for each user. Encrypt each bucket with a KMS key that is specific to each user.
+
+AWS Glue là dịch vụ serverless ETL fully managed - không cần provision/quản lý cluster hay server, đúng "least operational effort"
+
+Glue job hỗ trợ business rules transform qua script/visual ETL, và tích hợp sẵn AWS KMS encryption cho dữ liệu xử lý (job bookmark, log, dữ liệu ghi ra S3) → đáp ứng "encrypted during processing"
+
+Kết quả transform được ghi ra S3, mã hóa bằng KMS key riêng cho từng user → vừa đáp ứng yêu cầu bảo mật, vừa tách biệt dữ liệu theo user
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Use Amazon EMR clusters with encryption settings. Create one cluster for each user. Use AWS KMS keys to encrypt the data at rest and in transit.**:
+  Phải tạo và quản lý một cluster EMR cho mỗi user → tốn nhiều operational effort hơn hẳn (provision, scale, terminate cluster) so với Glue serverless
+  EMR phù hợp cho xử lý dữ liệu lớn phức tạp (Spark/Hadoop), không cần thiết cho bài toán ETL đơn giản theo business rules này
+
+- **(B) Use AWS DMS with encryption enabled. Configure one replication task for each user to extract and load data into a separate S3 bucket for each user. Encrypt each bucket with a KMS key that is specific to each user.**:
+  AWS DMS được thiết kế chủ yếu cho migration/replication dữ liệu, khả năng transform dữ liệu theo business rules phức tạp rất hạn chế so với Glue → không đáp ứng tốt yêu cầu "use business rules to transform the data"
+  Phù hợp khi cần đồng bộ/migrate dữ liệu gần như nguyên trạng, không phải khi cần transform logic nghiệp vụ
+
+- **(A) Use AWS Lambda functions that run in response to database changes. Process data in memory, with encryption enabled. Write the processed data to Amazon S3. Use server-side encryption (SSE).**:
+  Lambda có giới hạn thời gian chạy (tối đa 15 phút) và bộ nhớ, không phù hợp để extract/transform khối lượng dữ liệu lớn từ relational database một cách đáng tin cậy
+  Yêu cầu tự viết code xử lý toàn bộ logic ETL trong Lambda → tăng operational effort so với dùng Glue (đã có sẵn connector, job bookmark, scheduler cho ETL)
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "extract - transform (business rules) - load vào S3" + "least operational effort" → AWS Glue ETL jobs (serverless, fully managed)
+- "encrypted during processing" + Glue → AWS KMS tích hợp sẵn trong security configuration của Glue job
+- AWS DMS → ưu tiên cho migration/replication dữ liệu gần nguyên trạng; AWS Glue → ưu tiên cho ETL có transform logic nghiệp vụ phức tạp
+- "one cluster/task/function cho mỗi user" tự quản lý → dấu hiệu operational overhead cao, thường không phải đáp án "least operational effort" trừ khi không còn lựa chọn managed service nào khác phù hợp hơn
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Encrypting data at rest (AWS Glue)](https://docs.aws.amazon.com/glue/latest/dg/encryption-at-rest.html)
+
+</details>
+
+---
+
+<div id="question-45"></div>
+
+### Question 45: Cost-Effective Analytics for Intermittent and Spiky Workloads with Amazon Redshift Serverless
+> **Miền kiến thức (Domain)**: Domain 4: Design Cost-Optimized Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company runs a provisioned Amazon Redshift cluster. The company runs nightly automated jobs. The nightly jobs are short-lived but are CPU-intensive and storage-intensive. The nightly jobs create large temporary tables. To keep the nightly jobs reliable, the company uses a large cluster size. However, the company experiences increased cost. Daytime jobs are moderate.
+
+The company wants to reduce costs while continuing to meet the short, spiky nightly demand. The company wants to avoid paying for unused capacity when idle.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use Amazon Redshift Spectrum to offload the temporary tables to Amazon S3 to reduce the existing cluster size.
+- **(B)** Schedule an elastic resize operation to scale up the node count before the nightly jobs and scale down afterward.
+- **(C)** Migrate to Amazon Redshift Serverless to handle both daytime and nightly jobs. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Enable concurrency scaling to add transient capacity during the nightly jobs without changing the cluster size.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Chạy provisioned Amazon Redshift cluster
+> - Nightly automated jobs: short-lived nhưng CPU-intensive và storage-intensive, tạo large temporary tables
+> - Hiện dùng large cluster size để đảm bảo nightly job chạy ổn định → chi phí tăng cao
+> - Daytime jobs chỉ ở mức moderate
+> - Muốn giảm chi phí nhưng vẫn đáp ứng nhu cầu spiky ban đêm, tránh trả tiền cho capacity không dùng khi idle
+> - → Yêu cầu: giải pháp giảm chi phí, tự động đáp ứng tải cao ngắn hạn ban đêm, không trả phí khi idle
+
+**Phân tích giải pháp tối ưu:**
+Migrate to Amazon Redshift Serverless to handle both daytime and nightly jobs.
+
+Redshift Serverless tự động scale capacity (RPU) lên/xuống theo workload thực tế, xử lý tốt cả tải "moderate" ban ngày lẫn tải "CPU-intensive, storage-intensive" đột biến ban đêm mà không cần cấu hình cluster size cố định
+
+Tính phí theo RPU-giây thực tế sử dụng (per-second billing, tối thiểu 60 giây), tự động thu nhỏ khi idle → đúng chính xác yêu cầu "avoid paying for unused capacity when idle"
+
+Không cần công ty tự lên lịch resize thủ công, loại bỏ hoàn toàn việc phải chọn trước một "large cluster size" cố định chỉ để đáp ứng vài giờ tải cao mỗi đêm
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Schedule an elastic resize operation to scale up the node count before the nightly jobs and scale down afterward.**:
+  Elastic resize vẫn là provisioned cluster, dù resize theo lịch thì trong suốt thời gian resize lớn công ty vẫn trả phí theo giờ cho toàn bộ node đang chạy, không phải "pay only when used" như Serverless
+  Elastic resize cũng mất thời gian chuyển đổi và có thể ảnh hưởng đến kết nối/hiệu năng trong lúc resize, kém linh hoạt hơn cho tải "spiky" thực sự ngắn hạn
+
+- **(D) Enable concurrency scaling to add transient capacity during the nightly jobs without changing the cluster size.**:
+  Concurrency scaling được thiết kế để xử lý số lượng query đồng thời (concurrent queries) tăng đột biến, không giải quyết vấn đề job CPU-intensive/storage-intensive tạo large temporary tables cần nhiều compute/storage hơn cho từng job
+  Cluster chính vẫn phải giữ "large cluster size" như hiện tại vì concurrency scaling chỉ thêm cluster tạm cho truy vấn đọc, không thay thế được nhu cầu compute lớn của job ETL nặng
+
+- **(A) Use Amazon Redshift Spectrum to offload the temporary tables to Amazon S3 to reduce the existing cluster size.**:
+  Redshift Spectrum dùng để query trực tiếp dữ liệu trên S3, không phải nơi lưu temporary tables dùng trong xử lý trung gian của một job - temporary table vẫn cần chạy trên compute node của cluster
+  Không giải quyết được vấn đề cốt lõi là chi phí cluster lớn phải duy trì "idle" phần lớn thời gian trong ngày
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "avoid paying for unused capacity when idle" + Redshift + tải spiky, không dự đoán được lịch cố định thực sự linh hoạt → Amazon Redshift Serverless (pay-per-RPU-second, tự scale, tự tắt khi idle)
+- "concurrency scaling" → giải quyết nhiều query đồng thời, không giải quyết một job nặng CPU/storage; phân biệt rõ 2 khái niệm khi đọc đề
+- "elastic resize theo lịch" vẫn là provisioned, vẫn trả phí theo giờ cho node đang chạy dù đã scale down - không đạt "avoid paying for unused capacity" tuyệt đối như Serverless
+- Redshift Spectrum → tối ưu khi cần query dữ liệu lịch sử/lạnh trên S3 mà không load vào cluster, không phải giải pháp cho temporary table xử lý job
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [What is Amazon Redshift Serverless?](https://docs.aws.amazon.com/redshift/latest/mgmt/serverless-whatis.html)
+- 🌐 [Amazon Redshift Pricing](https://aws.amazon.com/redshift/pricing/)
+
+</details>
+
+---
+
+<div id="question-46"></div>
+
+### Question 46: Cost-Effective 30-Day Archival with Millisecond Retrieval using S3 Glacier Instant Retrieval
+> **Miền kiến thức (Domain)**: Domain 4: Design Cost-Optimized Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company's compliance archive holds 120 TB of objects in an Amazon S3 bucket in the Standard access tier. The company accesses the objects frequently during the first 30 days after creation. After the initial 30 days, the company rarely reads the objects. However, the objects must be retrievable in under 1 minute when the company needs the objects.
+
+Which solution will meet these requirements in the MOST cost-effective way?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use an S3 Lifecycle rule to transition objects to S3 Glacier Flexible Retrieval after 30 days.
+- **(B)** Enable S3 Intelligent-Tiering. Configure S3 Intelligent-Tiering to store objects in S3 Glacier Deep Archive automatically after 30 days.
+- **(C)** Use an S3 Lifecycle rule to transition objects to S3 Glacier Instant Retrieval after 30 days. `[Đáp án đúng ✅]`
+- **(D)** Store objects in S3 Standard-Infrequent Access (Standard-IA) for the full retention period.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Compliance archive 120 TB trong S3 Standard
+> - Truy cập thường xuyên trong 30 ngày đầu sau khi tạo
+> - Sau 30 ngày đầu, hiếm khi đọc (rarely reads) nhưng vẫn phải retrieve được dưới 1 phút khi cần
+> - → Yêu cầu: giải pháp tiết kiệm chi phí nhất (MOST cost-effective) mà vẫn đảm bảo retrieval time dưới 1 phút sau 30 ngày
+
+**Phân tích giải pháp tối ưu:**
+Use an S3 Lifecycle rule to transition objects to S3 Glacier Instant Retrieval after 30 days.
+
+S3 Glacier Instant Retrieval cho retrieval time tính bằng milliseconds, cùng latency/throughput với S3 Standard → thỏa mãn "dưới 1 phút" mà không cần thao tác restore
+
+Chi phí lưu trữ thấp nhất trong nhóm archive tier có truy xuất tức thời, rẻ hơn Standard-IA tới ~68% với data truy cập vài lần/năm
+
+Giữ nguyên Standard trong 30 ngày đầu (truy cập thường xuyên) rồi mới transition → đúng pattern lifecycle 2 giai đoạn
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Store objects in S3 Standard-Infrequent Access (Standard-IA) for the full retention period.**:
+  Standard-IA vẫn tính phí lưu trữ cao hơn Glacier Instant Retrieval cho dữ liệu hiếm khi truy cập → không phải MOST cost-effective
+  Không tận dụng được việc dữ liệu "rarely reads" sau 30 ngày để chuyển sang tier rẻ hơn
+
+- **(A) Use an S3 Lifecycle rule to transition objects to S3 Glacier Flexible Retrieval after 30 days.**:
+  Flexible Retrieval có retrieval time mặc định (Standard) là 3-5 giờ, kể cả Expedited cũng mất 1-5 phút (và tốn thêm phí) → không đảm bảo chắc chắn dưới 1 phút như yêu cầu
+  Phù hợp khi có thể chấp nhận chờ vài giờ, không phải khi cần "under 1 minute"
+
+- **(B) Enable S3 Intelligent-Tiering. Configure S3 Intelligent-Tiering to store objects in S3 Glacier Deep Archive automatically after 30 days.**:
+  Intelligent-Tiering tự động chuyển sang Archive/Deep Archive Access tier dựa trên thời gian không truy cập (tối thiểu 90/180 ngày tuỳ cấu hình), không thể ép chuyển ngay sau 30 ngày như mô tả
+  Deep Archive có retrieval time tối thiểu 12 giờ (Standard) hoặc 48 giờ (Bulk) → vi phạm trực tiếp yêu cầu "dưới 1 phút"
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "retrieval under 1 minute" / "milliseconds" cho dữ liệu ít truy cập → S3 Glacier Instant Retrieval
+- "vài giờ chấp nhận được" cho archive → S3 Glacier Flexible Retrieval (Expedited 1-5 phút, Standard 3-5 giờ, Bulk 5-12 giờ)
+- "12+ giờ chấp nhận được", chi phí thấp nhất tuyệt đối → S3 Glacier Deep Archive
+- Nếu đề vừa yêu cầu retrieval nhanh (phút/giây) vừa yêu cầu tối ưu chi phí cho dữ liệu rarely accessed → loại ngay Deep Archive và Flexible Retrieval Standard/Bulk
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Understanding S3 Glacier storage classes for long-term data storage](https://docs.aws.amazon.com/AmazonS3/latest/userguide/glacier-storage-classes.html)
+- 🌐 [Understanding and managing Amazon S3 storage classes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html)
+
+</details>
+
+---
+
+<div id="question-47"></div>
+
+### Question 47: Proactive Hybrid Network Path and Packet Loss Monitoring using CloudWatch Network Monitor
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company has set up hybrid connectivity between an on-premises data center and AWS by using AWS Site-to-Site VPN. The company is migrating a workload to AWS.
+
+The company sets up a VPC that has two public subnets and two private subnets. The company wants to monitor the total packet loss and round-trip-time (RTT) between the data center and AWS.
+
+Which solution will meet these requirements with the LEAST operational overhead?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create an AWS Lambda function in each subnet. Write a script to perform Internet Control Message Protocol (ICMP) connectivity checks.
+- **(B)** Create an Amazon EC2 instance in each subnet. Create a scheduled job to send Internet Control Message Protocol (ICMP) packets to the on-premises destination.
+- **(C)** Use Amazon CloudWatch Network Monitor to set up Internet Control Message Protocol (ICMP) probe monitoring from each subnet to the on-premises destination. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Create an AWS Batch job in each subnet. Write a script to perform Internet Control Message Protocol (ICMP) connectivity checks.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Kết nối hybrid on-premises - AWS qua AWS Site-to-Site VPN
+> - VPC có 2 public subnet và 2 private subnet
+> - Cần theo dõi total packet loss và round-trip-time (RTT) giữa data center và AWS
+> - → Yêu cầu: giải pháp với LEAST operational overhead
+
+**Phân tích giải pháp tối ưu:**
+Use Amazon CloudWatch Network Monitor to set up Internet Control Message Protocol (ICMP) probe monitoring from each subnet to the on-premises destination.
+
+CloudWatch Network Monitor (nay là Network Synthetic Monitor) là dịch vụ fully-managed, chỉ cần khai báo subnet nguồn và IP đích on-premises, không cần cài agent trên VPC hay on-premises
+
+Tự động đo và tổng hợp RTT và packet loss cho từng probe, hiển thị trực tiếp trên CloudWatch dashboard - đúng 2 chỉ số đề bài yêu cầu
+
+Không cần tạo, vận hành hay vá lỗi bất kỳ compute resource nào → đúng nghĩa "LEAST operational overhead"
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Create an Amazon EC2 instance in each subnet. Create a scheduled job to send Internet Control Message Protocol (ICMP) packets to the on-premises destination.**:
+  Phải tự quản lý vòng đời EC2 (patching, scaling, high availability), tự viết script đo RTT/packet loss và tổng hợp dữ liệu → operational overhead cao hơn hẳn giải pháp managed
+
+- **(A) Create an AWS Lambda function in each subnet. Write a script to perform Internet Control Message Protocol (ICMP) connectivity checks.**:
+  Lambda không hỗ trợ raw socket cần thiết để gửi ICMP packet trực tiếp một cách đáng tin cậy, và vẫn phải tự viết logic đo lường/tổng hợp/lưu trữ dữ liệu
+
+- **(D) Create an AWS Batch job in each subnet. Write a script to perform Internet Control Message Protocol (ICMP) connectivity checks.**:
+  AWS Batch dùng cho batch/job xử lý theo lô, không phải công cụ giám sát liên tục (continuous monitoring) - sai use case, vẫn phải tự viết toàn bộ logic đo lường
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "packet loss" + "round-trip-time (RTT)" + "on-premises to AWS" + "LEAST operational overhead" → Amazon CloudWatch Network Monitor (Network Synthetic Monitor)
+- Nếu đề yêu cầu "LEAST operational overhead" mà đáp án là tự dựng EC2/Lambda/Batch để làm việc mà AWS đã có managed service tương đương → loại ngay
+- Phân biệt: Network Flow Monitor (traffic giữa EC2 instances/AWS services), Internet Monitor (traffic internet-facing), Network Synthetic Monitor (hybrid on-premises ↔ AWS qua probe ICMP)
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Using Network Synthetic Monitor (Amazon CloudWatch Network Monitor)](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/what-is-network-monitor.html)
+- 🌐 [Network Monitoring (CloudWatch)](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Network-Monitoring-Sections.html)
+
+</details>
+
+---
+
+<div id="question-48"></div>
+
+### Question 48: Accelerating Database Read Performance with In-Memory Caching using Amazon ElastiCache for Redis
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A) | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company has a social media application that receives large amounts of traffic. User posts and interactions are continuously updated in an Amazon RDS database. The data changes frequently, and the data types can be complex. The application must serve read requests with minimal latency.
+
+The application's current architecture struggles to deliver these rapid data updates efficiently. The company needs a solution to improve the application's performance.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create an Amazon ElastiCache (Redis OSS) cluster. Update the application code to use a write-through caching strategy and read the data from Redis. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Add an Amazon CloudFront distribution in front of the RDS database to provide a caching layer for the high volume of rapidly changing data.
+- **(C)** Set up Amazon S3 Transfer Acceleration on the RDS database to enhance the speed of data transfer from the databases to the application.
+- **(D)** Use Amazon DynamoDB Accelerator (DAX) in front of the RDS database to provide a caching layer for the high volume of rapidly changing data.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Social media app ghi dữ liệu liên tục vào Amazon RDS
+> - Dữ liệu thay đổi thường xuyên (frequently) và kiểu dữ liệu phức tạp (complex data types)
+> - App phải phục vụ read request với minimal latency
+> - Kiến trúc hiện tại struggles để cập nhật dữ liệu nhanh hiệu quả
+> - → Yêu cầu: cải thiện hiệu năng đọc cho dữ liệu RDS thay đổi liên tục
+
+**Phân tích giải pháp tối ưu:**
+Create an Amazon ElastiCache (Redis OSS) cluster. Update the application code to use a write-through caching strategy and read the data from Redis.
+
+ElastiCache Redis là caching layer chuẩn đặt trước RDS, giảm tải truy vấn trực tiếp vào database và trả kết quả với độ trễ dưới mili-giây
+
+Write-through đảm bảo cache được cập nhật đồng bộ ngay khi ghi vào database → dữ liệu trong cache luôn phản ánh đúng dữ liệu mới nhất, phù hợp với data "thay đổi thường xuyên"
+
+Redis hỗ trợ cấu trúc dữ liệu phức tạp (hash, list, set, sorted set...) → khớp yêu cầu "data types can be complex"
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Use Amazon DynamoDB Accelerator (DAX) in front of the RDS database to provide a caching layer for the high volume of rapidly changing data.**:
+  DAX chỉ hoạt động với DynamoDB, không tương thích và không thể đặt trước RDS (RDS/MySQL, PostgreSQL...) → sai service hoàn toàn về mặt kỹ thuật
+
+- **(C) Set up Amazon S3 Transfer Acceleration on the RDS database to enhance the speed of data transfer from the databases to the application.**:
+  S3 Transfer Acceleration là tính năng của S3, dùng tăng tốc upload/download qua CloudFront edge locations, không áp dụng được cho RDS - sai cặp service/feature
+
+- **(B) Add an Amazon CloudFront distribution in front of the RDS database to provide a caching layer for the high volume of rapidly changing data.**:
+  CloudFront là CDN cache nội dung tĩnh/HTTP response ở edge location, không kết nối trực tiếp và cache được truy vấn database động, đổi liên tục như mô tả
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "RDS" + "read latency" + "caching layer" → ElastiCache (Redis/Valkey/Memcached), không phải DAX
+- "DAX" chỉ đi kèm DynamoDB - nếu đề nói RDS/Aurora mà đáp án là DAX → loại ngay
+- "data changes frequently" + cần cache luôn cập nhật → write-through; nếu chỉ cần giảm tải đọc không quan trọng độ mới → lazy loading (cache-aside)
+- CloudFront/S3 Transfer Acceleration không liên quan đến caching layer cho database truy vấn động
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Caching patterns (Write-Through)](https://docs.aws.amazon.com/whitepapers/latest/database-caching-strategies-using-redis/caching-patterns.html)
+- 🌐 [Optimize cost and boost performance of RDS for MySQL using Amazon ElastiCache for Redis](https://aws.amazon.com/blogs/database/optimize-cost-and-boost-performance-of-rds-for-mysql-using-amazon-elasticache-for-redis/)
+
+</details>
+
+---
+
+<div id="question-49"></div>
+
+### Question 49: Zero-Downtime Database Storage Expansion using Amazon RDS Storage Auto Scaling
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A) | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+An application uses an Amazon RDS MySQL DB instance. The RDS database is becoming low on disk space. A solutions architect wants to increase the disk space without downtime.
+
+Which solution meets these requirements with the LEAST amount of effort?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Enable storage autoscaling in RDS. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Back up the RDS database, increase the storage capacity, restore the database, and stop the previous instance.
+- **(C)** Increase the RDS database instance size.
+- **(D)** Change the RDS database instance storage type to Provisioned IOPS.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Ứng dụng dùng Amazon RDS MySQL DB instance
+> - Database đang low on disk space (sắp hết dung lượng lưu trữ)
+> - Cần tăng disk space không downtime
+> - → Yêu cầu: giải pháp tăng storage với LEAST amount of effort
+
+**Phân tích giải pháp tối ưu:**
+Enable storage autoscaling in RDS.
+
+RDS storage autoscaling tự động tăng storage khi free space ≤ 10% allocated storage, không cần can thiệp thủ công lặp lại mỗi khi sắp hết dung lượng
+
+Việc scale storage của RDS vốn đã không gây downtime hay giảm hiệu năng (storage và compute layer tách biệt)
+
+Chỉ cần cấu hình một lần (bật autoscaling + set maximum storage threshold) → đúng nghĩa "LEAST amount of effort" so với việc phải tự theo dõi và modify thủ công định kỳ
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Increase the RDS database instance size.**:
+  "Instance size" là compute (vCPU/RAM), không phải storage - tăng instance size không giải quyết được vấn đề hết dung lượng đĩa, sai mục tiêu
+
+- **(D) Change the RDS database instance storage type to Provisioned IOPS.**:
+  Đổi storage type (gp2/gp3 → io1/io2) chỉ thay đổi hiệu năng I/O, không làm tăng dung lượng lưu trữ hiện có
+
+- **(B) Back up the RDS database, increase the storage capacity, restore the database, and stop the previous instance.**:
+  Quy trình backup/restore thủ công phức tạp, tốn nhiều effort và có khả năng gây gián đoạn/downtime trong lúc chuyển đổi - ngược hẳn với yêu cầu "LEAST effort" và "no downtime"
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "low on disk space" + "no downtime" + "least effort" (RDS) → Enable storage autoscaling
+- "instance size" → compute, không phải storage; đề hỏi storage thì loại ngay đáp án đổi instance size
+- Đổi storage type (Provisioned IOPS) chỉ tối ưu IOPS/throughput, không tăng dung lượng
+- RDS storage modification (thủ công hoặc autoscaling) vốn online, không cần backup/restore để tăng storage
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Managing capacity automatically with Amazon RDS storage autoscaling](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIOPS.Autoscaling.html)
+
+</details>
+
+---
+
+<div id="question-50"></div>
+
+### Question 50: Handling Asynchronous Lambda Failures and Retry Poison Pills with Amazon SQS Dead-Letter Queues (DLQ)
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A) | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company is building a serverless application that processes large volumes of data from a mobile app. The application uses an AWS Lambda function to process the data and store the data in an Amazon DynamoDB table.
+
+The company needs to ensure that the application can recover from failures and continue processing data without losing any records.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Configure the Lambda function to use a dead-letter queue with an Amazon SQS queue. Configure Lambda to retry failed records from the dead-letter queue. Use a retry mechanism by implementing an exponential backoff algorithm. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Configure the Lambda function to read records from Amazon Data Firehose. Replay the Firehose records in case of any failures.
+- **(C)** Use Amazon OpenSearch Service to store failed records. Configure AWS Lambda to retry failed records from OpenSearch Service. Use Amazon EventBridge to orchestrate the retry logic.
+- **(D)** Use Amazon SNS to store the failed records. Configure Lambda to retry failed records from the SNS topic. Use Amazon API Gateway to orchestrate the retry calls.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Serverless app: AWS Lambda xử lý dữ liệu lớn từ mobile app, lưu vào Amazon DynamoDB
+> - Cần đảm bảo ứng dụng recover from failures và tiếp tục xử lý mà không mất record nào
+> - → Yêu cầu: cơ chế xử lý lỗi đảm bảo không mất dữ liệu khi Lambda xử lý thất bại
+
+**Phân tích giải pháp tối ưu:**
+Configure the Lambda function to use a dead-letter queue with an Amazon SQS queue. Configure Lambda to retry failed records from the dead-letter queue. Use a retry mechanism by implementing an exponential backoff algorithm.
+
+Khi Lambda asynchronous invocation thất bại sau các lần retry mặc định (2 lần), event bị discard nếu không cấu hình DLQ - DLQ với SQS giữ lại các record thất bại thay vì mất vĩnh viễn
+
+Retry lại từ DLQ với exponential backoff giúp tránh làm quá tải downstream (DynamoDB) khi lỗi do throttling/transient error, tăng tỷ lệ xử lý thành công
+
+Đây là pattern chuẩn của AWS cho "capture discarded events" khi xử lý bất đồng bộ với Lambda
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(B) Configure the Lambda function to read records from Amazon Data Firehose. Replay the Firehose records in case of any failures.**:
+  Đổi hẳn kiến trúc nguồn dữ liệu (từ mobile app trực tiếp sang Firehose) không phải là cơ chế lỗi/DLQ chuẩn, và Firehose không có cơ chế "replay" theo yêu cầu retry linh hoạt như DLQ
+
+- **(C) Use Amazon OpenSearch Service to store failed records. Configure AWS Lambda to retry failed records from OpenSearch Service. Use Amazon EventBridge to orchestrate the retry logic.**:
+  OpenSearch Service là dịch vụ search/analytics, không phải target DLQ hợp lệ của Lambda - dùng sai service cho mục đích lưu trữ record lỗi để retry, thêm độ phức tạp và chi phí không cần thiết
+
+- **(D) Use Amazon SNS to store the failed records. Configure Lambda to retry failed records from the SNS topic. Use Amazon API Gateway to orchestrate the retry calls.**:
+  SNS có thể là target DLQ của Lambda về mặt kỹ thuật, nhưng SNS không lưu trữ bền vững message (không có retention/queue để consumer chủ động poll và retry nhiều lần) như SQS - không phù hợp cho việc retry có kiểm soát; API Gateway không có vai trò "orchestrate retry calls" trong kiến trúc DLQ chuẩn
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "recover from failures" + "not losing records" (Lambda async) → Dead-letter queue (SQS) + exponential backoff
+- Lambda async invocation mặc định retry 2 lần rồi discard - nếu đề nhấn mạnh "không được mất record" → luôn cần DLQ
+- DLQ chuẩn cho Lambda dùng SQS (queue, có thể retry/redrive nhiều lần) hơn là SNS (pub/sub, không có redrive policy linh hoạt như SQS)
+- Nếu đáp án đề xuất OpenSearch/Firehose/API Gateway làm vai trò "lưu trữ record lỗi để retry" → sai service, loại ngay
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [How Lambda handles errors and retries with asynchronous invocation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-error-handling.html)
+- 🌐 [Asynchronous invocation (dead-letter queue)](https://docs.aws.amazon.com/help-panel/lambda/latest/console/configuration-async.html)
+
+</details>
+
+---
+
+<div id="question-51"></div>
+
+### Question 51: Establishing Well-Architected Multi-Account Landing Zones and Guardrails with AWS Control Tower
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company uses AWS Organizations to manage multiple AWS accounts. Each department in the company has its own AWS account.
+
+A security team needs to implement centralized governance and control to enforce security best practices across all accounts. The team wants to have control over which AWS services each account can use. The team needs to restrict access to sensitive resources based on IP addresses or geographic regions. The root user must be protected with multi-factor authentication (MFA) across all accounts.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use AWS IAM Identity Center to manage user access and to enforce service restrictions by using permissions boundaries in each account.
+- **(B)** Use AWS Systems Manager to enforce service restrictions across multiple accounts. Use IAM policies to enforce MFA for the root user across all accounts.
+- **(C)** Use AWS Control Tower to establish a multi-account environment. Use service control policies (SCPs) to enforce service restrictions in AWS Organizations. Configure MFA for the root user across all accounts. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Use IAM to manage IAM users and IAM roles in each account. Implement MFA for the root user in each account. Enforce service restrictions by using AWS managed prefix lists.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Công ty dùng AWS Organizations quản lý nhiều AWS account (mỗi phòng ban 1 account)
+> - Cần centralized governance: kiểm soát AWS service nào mỗi account được dùng
+> - Cần restrict access vào resource nhạy cảm dựa trên IP address hoặc geographic region
+> - Root user phải được bảo vệ bằng MFA trên tất cả account
+> - → Yêu cầu: giải pháp quản trị tập trung đáp ứng đủ 3 yêu cầu trên
+
+**Phân tích giải pháp tối ưu:**
+Use AWS Control Tower to establish a multi-account environment. Use service control policies (SCPs) to enforce service restrictions in AWS Organizations. Configure MFA for the root user across all accounts.
+
+AWS Control Tower tự động thiết lập landing zone multi-account với guardrail (mandatory/strongly recommended/elective) chuẩn AWS - đúng nghĩa "centralized governance and control"
+
+SCP trong AWS Organizations kiểm soát chính xác AWS service nào mỗi account/OU được phép gọi, và có thể thêm điều kiện (Condition) để hạn chế theo IP address/region cho resource nhạy cảm
+
+Control Tower có sẵn control "Disallow actions as a root user" và khuyến nghị/enforce MFA cho root user trên toàn bộ account trong landing zone → đáp ứng yêu cầu MFA root xuyên suốt
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Use IAM to manage IAM users and IAM roles in each account. Implement MFA for the root user in each account. Enforce service restrictions by using AWS managed prefix lists.**:
+  Quản lý IAM riêng lẻ từng account không phải giải pháp centralized governance, tốn nhiều effort vận hành
+  AWS managed prefix lists dùng để nhóm dải IP CIDR cho security group/route table, không phải công cụ để "enforce service restrictions" ở cấp account/organization
+
+- **(B) Use AWS Systems Manager to enforce service restrictions across multiple accounts. Use IAM policies to enforce MFA for the root user across all accounts.**:
+  Systems Manager là công cụ quản lý fleet EC2/hybrid instance (patch, run command...), không có chức năng hạn chế AWS service ở cấp account/Organizations
+  IAM policy thông thường không thể áp dụng cho root user theo cách enforce MFA tập trung xuyên tổ chức
+
+- **(A) Use AWS IAM Identity Center to manage user access and to enforce service restrictions by using permissions boundaries in each account.**:
+  Permissions boundary giới hạn quyền tối đa của một IAM entity cụ thể, phải cấu hình riêng lẻ từng account - không phải cơ chế governance tập trung toàn Organization như SCP
+  IAM Identity Center quản lý truy cập người dùng (SSO), không trực tiếp kiểm soát AWS service nào account được dùng hay MFA root
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "centralized governance" + "multi-account" + "control which services accounts can use" → AWS Control Tower + Service Control Policies (SCP)
+- SCP hoạt động ở cấp Organizations/OU/account, khác với permissions boundary (chỉ áp dụng cho 1 IAM entity) và IAM policy (chỉ áp dụng trong 1 account)
+- "restrict by IP/region" trên nhiều account → thêm Condition (aws:SourceIp, aws:RequestedRegion) vào SCP
+- "root user MFA" xuyên suốt nhiều account → gắn liền với AWS Control Tower guardrail, không phải IAM policy hay Systems Manager
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [What Is AWS Control Tower?](https://docs.aws.amazon.com/controltower/latest/userguide/what-is-control-tower.html)
+- 🌐 [Service control policies (SCPs)](https://docs.aws.amazon.com/help-panel/IAM/latest/console/hp-scps-uiam.html)
+- 🌐 [Multi-factor authentication for AWS account root user](https://docs.aws.amazon.com/IAM/latest/UserGuide/enable-mfa-for-root.html)
+
+</details>
+
+---
+
+<div id="question-52"></div>
+
+### Question 52: Auditing Unintended Public and Cross-Account S3 Access using IAM Access Analyzer
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (B) | **Đáp án đúng**: (B)
+
+#### 📋 Đề bài (Scenario)
+A company runs all its business applications in the AWS Cloud. The company uses AWS Organizations to manage multiple AWS accounts.
+
+A solutions architect needs to review all permissions that are granted to IAM users to determine which IAM users have more permissions than required.
+
+Which solution will meet these requirements with the LEAST administrative overhead?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create an Amazon CloudWatch alarm that activates when an IAM user creates or modifies resources in an AWS account.
+- **(B)** Use AWS Identity and Access Management Access Analyzer to review all the company's resources and accounts. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(C)** Use Network Access Analyzer to review all access permissions in the company's AWS accounts.
+- **(D)** Use Amazon Inspector to find vulnerabilities in existing IAM policies.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(B)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Công ty dùng AWS Organizations quản lý nhiều AWS account
+> - Cần review tất cả permissions được cấp cho IAM user để tìm user có quyền vượt quá mức cần thiết (more permissions than required)
+> - → Yêu cầu: giải pháp review permission với LEAST administrative overhead
+
+**Phân tích giải pháp tối ưu:**
+Use AWS Identity and Access Management Access Analyzer to review all the company's resources and accounts.
+
+IAM Access Analyzer có tính năng unused access analyzer: tự động phân tích và tạo finding về unused roles, unused access keys, unused permissions/actions của IAM user/role trên toàn bộ account trong Organization
+
+Chạy liên tục, tự động (continuously analyzes) và cho dashboard tập trung ở cấp Organization → đúng nghĩa "LEAST administrative overhead", không cần tự viết script hay theo dõi thủ công
+
+Đúng chức năng cốt lõi: "identify unneeded or excessive permissions" - khớp trực tiếp yêu cầu tìm user có quyền dư thừa
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Use Network Access Analyzer to review all access permissions in the company's AWS accounts.**:
+  Network Access Analyzer dùng để phân tích network reachability/cấu hình mạng (VPC, security group, route table...), hoàn toàn không liên quan đến IAM permission - sai service
+
+- **(A) Create an Amazon CloudWatch alarm that activates when an IAM user creates or modifies resources in an AWS account.**:
+  Alarm chỉ cảnh báo theo sự kiện xảy ra sau này (reactive), không review được toàn bộ permission hiện có để phát hiện quyền dư thừa - sai cách tiếp cận, cần tự xây dựng nhiều logic bổ sung
+
+- **(D) Use Amazon Inspector to find vulnerabilities in existing IAM policies.**:
+  Amazon Inspector là dịch vụ quét lỗ hổng bảo mật (vulnerability) trên EC2/ECR/Lambda workload, không có chức năng phân tích hay đánh giá nội dung IAM policy
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "review IAM permissions" + "find users/roles with more access than needed" → IAM Access Analyzer (unused access analyzer)
+- "LEAST administrative overhead" cho review permission toàn Organization → ưu tiên dịch vụ managed/tự động (Access Analyzer) thay vì tự xây CloudWatch alarm/script
+- Network Access Analyzer (network reachability) khác hoàn toàn IAM Access Analyzer (permission analysis) - dễ nhầm tên, cần đọc kỹ
+- Amazon Inspector chỉ dành cho vulnerability scanning workload, không liên quan IAM policy
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Using AWS Identity and Access Management Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html)
+
+</details>
+
+---
+
+<div id="question-53"></div>
+
+### Question 53: Long-Term Cost-Effective Document Archival with Flexible Retrieval using S3 Glacier Flexible Retrieval
+> **Miền kiến thức (Domain)**: Domain 4: Design Cost-Optimized Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A) | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company hosts an application on AWS. The application has generated approximately 2.5 TB of data over the previous 12 years. The company currently stores the data on Amazon EBS volumes.
+
+The company wants a cost-effective backup solution for long-term storage. The company must be able to retrieve the data within minutes when required for audits.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create an Amazon S3 bucket. Use the S3 Glacier Flexible Retrieval storage class to back up the data. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Create an Amazon S3 bucket. Use the S3 Glacier Deep Archive storage class to back up the data.
+- **(C)** Create EBS snapshots to back up the data.
+- **(D)** Create an Amazon EFS file system to back up the data.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Ứng dụng đã sinh ra khoảng 2.5 TB dữ liệu trong 12 năm, hiện lưu trên Amazon EBS volumes
+> - Cần giải pháp backup cost-effective cho lưu trữ dài hạn (long-term storage)
+> - Phải retrieve trong vài phút (within minutes) khi cần cho mục đích audit
+> - → Yêu cầu: backup dài hạn, tiết kiệm chi phí, nhưng vẫn retrieve được trong vài phút
+
+**Phân tích giải pháp tối ưu:**
+Create an Amazon S3 bucket. Use the S3 Glacier Flexible Retrieval storage class to back up the data.
+
+S3 Glacier Flexible Retrieval cung cấp tuỳ chọn Expedited retrieval, trả dữ liệu trong 1-5 phút (cho object dưới 250 MB) - đúng khớp yêu cầu "within minutes"
+
+Chi phí lưu trữ thấp (dưới S3 Standard/Standard-IA), phù hợp cho dữ liệu 12 năm ít khi cần đến, phục vụ mục đích audit không thường xuyên
+
+Rẻ hơn nhiều so với việc giữ EBS snapshot dài hạn (EBS snapshot tính phí theo GB-month gần với giá S3 Standard, không tối ưu cho lưu trữ 12 năm)
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Create EBS snapshots to back up the data.**:
+  EBS snapshot lưu trên S3 nhưng tính phí theo mức giá cao hơn các storage class tối ưu chi phí như Glacier - không phải giải pháp cost-effective nhất cho lưu trữ dài hạn 2.5 TB/12 năm
+
+- **(B) Create an Amazon S3 bucket. Use the S3 Glacier Deep Archive storage class to back up the data.**:
+  Deep Archive có retrieval time tối thiểu 12 giờ (Standard) hoặc 48 giờ (Bulk), không có Expedited retrieval → không thể đáp ứng "retrieve within minutes"
+  Đây là lựa chọn rẻ nhất nhưng vi phạm trực tiếp yêu cầu thời gian truy xuất
+
+- **(D) Create an Amazon EFS file system to back up the data.**:
+  EFS là file storage cho workload cần truy cập file thường xuyên qua network file system, chi phí trên mỗi GB cao hơn nhiều so với S3/Glacier - không tối ưu cho backup dài hạn ít truy cập
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "long-term backup" + "retrieve within minutes" + "cost-effective" → S3 Glacier Flexible Retrieval (Expedited: 1-5 phút)
+- "retrieve within minutes" luôn loại Glacier Deep Archive (nhanh nhất là 12 giờ, không có Expedited)
+- So sánh nhanh retrieval time: Glacier Instant Retrieval (ms) < Flexible Retrieval Expedited (1-5 phút) < Flexible Retrieval Standard (3-5 giờ) < Deep Archive Standard (12 giờ) < Deep Archive Bulk (48 giờ)
+- EBS snapshot và EFS thường bị loại khi đề yêu cầu "MOST cost-effective" cho lưu trữ dài hạn, ít truy cập
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Understanding S3 Glacier storage classes for long-term data storage](https://docs.aws.amazon.com/AmazonS3/latest/userguide/glacier-storage-classes.html)
+- 🌐 [Understanding and managing Amazon S3 storage classes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html)
+
+</details>
+
+---
+
+<div id="question-54"></div>
+
+### Question 54: Ultra-Low Latency Inter-Node HPC Clustering using Cluster Placement Groups and ENA
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A) | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company runs code compilation tasks that span many virtual machines (VMs) in its on-premises data center. These tasks require low latency and high bandwidth between servers. The company wants to migrate this workload to run on Amazon EC2 instances in the AWS Cloud. After the migration, the workload must maintain low latency and high bandwidth between EC2 instances.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Deploy Amazon EC2 instances in a cluster placement group. Enable enhanced networking on the EC2 instances. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Configure an AWS Batch fleet of Amazon EC2 instances. Enable enhanced networking on the EC2 instances. Use AWS Step Functions to orchestrate compilation tasks.
+- **(C)** Deploy Amazon EC2 instances in a partition placement group. Enable enhanced networking on the EC2 instances.
+- **(D)** Deploy an Amazon EKS cluster that uses a managed node group of Amazon EC2 instances. Configure the cluster to use a container network interface (CNI) for enhanced networking.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Code compilation task chạy trên nhiều VM on-premises, yêu cầu low latency và high bandwidth giữa các server
+> - Di chuyển workload sang Amazon EC2, sau migrate vẫn phải giữ low latency và high bandwidth giữa các EC2 instance
+> - → Yêu cầu: giải pháp EC2 duy trì độ trễ thấp và băng thông cao giữa các instance
+
+**Phân tích giải pháp tối ưu:**
+Deploy Amazon EC2 instances in a cluster placement group. Enable enhanced networking on the EC2 instances.
+
+Cluster placement group đặt các instance gần nhau về mặt vật lý trong cùng 1 Availability Zone, cho phép non-blocking, non-oversubscribed connectivity với full bisection bandwidth - đúng nghĩa "low latency, high bandwidth" giữa các instance
+
+Enhanced networking (SR-IOV/ENA) tăng packet-per-second (PPS), giảm jitter và CPU overhead network stack so với virtual network interface thông thường
+
+Kết hợp cluster placement group + enhanced networking là pattern chuẩn AWS khuyến nghị cho workload tightly-coupled như HPC/code compilation cần băng thông cao tốc độ 10-25 Gbps giữa instance
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Deploy Amazon EC2 instances in a partition placement group. Enable enhanced networking on the EC2 instances.**:
+  Partition placement group thiết kế để giảm rủi ro hardware failure tương quan (cô lập theo rack/partition) cho workload phân tán như Hadoop/Cassandra, không tối ưu cho low-latency network giữa instance - sai mục tiêu (high availability vs low latency)
+
+- **(D) Deploy an Amazon EKS cluster that uses a managed node group of Amazon EC2 instances. Configure the cluster to use a container network interface (CNI) for enhanced networking.**:
+  Thêm layer Kubernetes/EKS không cần thiết khi đề chỉ yêu cầu network performance giữa EC2 instance thuần tuý, tăng độ phức tạp vận hành không có lợi ích tương ứng
+  CNI không tự động đảm bảo low latency/high bandwidth bằng đặt instance trong cluster placement group
+
+- **(B) Configure an AWS Batch fleet of Amazon EC2 instances. Enable enhanced networking on the EC2 instances. Use AWS Step Functions to orchestrate compilation tasks.**:
+  AWS Batch quản lý job scheduling/queue, Step Functions orchestrate workflow - cả hai không liên quan trực tiếp đến việc tối ưu latency/bandwidth mạng giữa các instance, thiếu thành phần cốt lõi là cluster placement group
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "low latency" + "high bandwidth" + "between EC2 instances" (cùng AZ) → Cluster placement group + Enhanced networking
+- Phân biệt 3 loại placement group: Cluster (low latency, cùng AZ, HPC/tightly-coupled) - Partition (cô lập hardware failure, distributed workload như Hadoop/Cassandra) - Spread (tách biệt hoàn toàn từng instance, giảm correlated failure cho vài instance quan trọng)
+- Nếu đề không nhắc đến container/Kubernetes mà đáp án thêm EKS/CNI → thường là distractor thêm phức tạp không cần thiết
+- AWS Batch/Step Functions dùng cho job orchestration, không phải công cụ tối ưu network performance
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Placement strategies for your placement groups](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-strategies.html)
+- 🌐 [Improve network latency for Linux based EC2 instances](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ena-improve-network-latency-linux.html)
+
+</details>
+
+---
+
+<div id="question-55"></div>
+
+### Question 55: Cost-Effective Storage Selection for Temporary Files with Unpredictable Lifespans under 30 Days (S3 Standard)
+> **Miền kiến thức (Domain)**: Domain 4: Design Cost-Optimized Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company is developing a content sharing platform that currently handles 500 GB of user-generated media files. The company expects the amount of content to grow significantly in the future. The company needs a storage solution that can automatically scale, provide high durability, and allow direct user uploads from web browsers.
+
+Which solution will meet these requirements MOST cost-effectively?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Store the data in an Amazon EBS volume with Multi-Attach enabled.
+- **(B)** Store the data in an Amazon EFS Standard file system.
+- **(C)** Store the data in an Amazon S3 Standard bucket. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Store the data in an Amazon S3 Express One Zone bucket.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Content sharing platform hiện có 500 GB file media do người dùng tạo (user-generated), dự kiến tăng trưởng mạnh trong tương lai
+> - Cần storage tự động scale, high durability, cho phép direct user uploads từ web browser
+> - → Yêu cầu: giải pháp storage đáp ứng đủ 3 tiêu chí trên với chi phí MOST cost-effective
+
+**Phân tích giải pháp tối ưu:**
+Store the data in an Amazon S3 Standard bucket.
+
+S3 tự động scale dung lượng gần như vô hạn, không cần provision trước hay quản lý capacity - đúng nghĩa "automatically scale"
+
+Độ bền thiết kế 99.999999999% (11 số 9), dữ liệu lưu trên tối thiểu 3 Availability Zone - đúng yêu cầu "high durability"
+
+Hỗ trợ presigned URL, cho phép ứng dụng cấp quyền upload trực tiếp từ trình duyệt vào S3 mà không cần chia sẻ credential - đúng yêu cầu "direct user uploads from web browsers"
+
+Chi phí lưu trữ trên GB thấp hơn hẳn EFS/S3 Express One Zone cho use case chung (không yêu cầu độ trễ single-digit millisecond) → MOST cost-effective
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Store the data in an Amazon EBS volume with Multi-Attach enabled.**:
+  EBS gắn với một EC2 instance/AZ cụ thể, không phải object storage cho phép truy cập/upload trực tiếp từ browser; Multi-Attach chỉ cho nhiều instance cùng AZ cùng mount, không giải quyết được bài toán scale lưu trữ media cho nhiều user
+
+- **(B) Store the data in an Amazon EFS Standard file system.**:
+  EFS Standard có chi phí trên GB cao hơn S3 Standard đáng kể, không thiết kế cho việc user browser upload trực tiếp (cần mount qua NFS, không hỗ trợ presigned URL kiểu S3) - không phải lựa chọn cost-effective nhất
+
+- **(D) Store the data in an Amazon S3 Express One Zone bucket.**:
+  S3 Express One Zone tối ưu cho latency single-digit millisecond, phù hợp ứng dụng nhạy cảm độ trễ cao, nhưng chi phí lưu trữ cao hơn S3 Standard và chỉ lưu trong 1 Availability Zone (kém durable/resilient hơn so với S3 Standard lưu tối thiểu 3 AZ) - không cần thiết và không tối ưu chi phí cho content sharing platform thông thường
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "automatically scale" + "high durability" + "direct browser upload" + "MOST cost-effective" → S3 Standard + presigned URL
+- "direct user uploads from web browsers" mà không muốn chia sẻ credential → S3 Presigned URL (PUT)
+- S3 Express One Zone chỉ chọn khi đề nhấn mạnh single-digit millisecond latency và chấp nhận đánh đổi chỉ lưu 1 AZ, không phải mặc định cho mọi bài toán S3
+- EBS/EFS thường là distractor khi đề cần storage cho nhiều user truy cập qua internet/browser thay vì mount vào compute instance
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Understanding and managing Amazon S3 storage classes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html)
+- 🌐 [Download and upload objects with presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html)
+
+</details>
+
+---
+
+<div id="question-56"></div>
+
+### Question 56: Multi-Region Active-Active High Availability with Route 53 and In-Region Application Fleets
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (A) | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company has a regional subscription-based streaming service that runs in a single AWS Region. The architecture consists of web servers and application servers on Amazon EC2 instances. The EC2 instances are in Auto Scaling groups behind Elastic Load Balancing (ELB) load balancers. The architecture includes an Amazon Aurora global database cluster that extends across multiple Availability Zones.
+
+The company wants to expand globally and to ensure that its application has minimal downtime.
+
+Which solution will provide the MOST fault tolerance?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Deploy the web tier and the application tier to a second Region. Use an Amazon Aurora global database to deploy the database in the primary Region and the second Region. Use Amazon Route 53 health checks with a failover routing policy to the second Region. Promote the secondary to primary as needed. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(B)** Deploy the web tier and the application tier to a second Region. Create an Aurora PostgreSQL database in the second Region. Use AWS DMS to replicate the primary database to the second Region. Use Amazon Route 53 health checks with a failover routing policy to the second Region.
+- **(C)** Deploy the web tier and the application tier to a second Region. Add an Aurora PostgreSQL cross-Region Aurora Replica in the second Region. Promote the secondary to primary as needed. Use Amazon Route 53 health checks with a failover routing policy to the second Region.
+- **(D)** Extend the Auto Scaling groups for the web tier and the application tier to deploy instances in Availability Zones in a second Region. Use an Aurora global database to deploy the database in the primary Region and the second Region. Use Amazon Route 53 health checks with a failover routing policy to the second Region.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Kiến trúc hiện tại: web/app tier trên EC2 trong Auto Scaling groups sau ELB, chỉ chạy trong một Region
+> - Đã có Amazon Aurora global database cluster trải nhiều Availability Zone (nhưng vẫn 1 Region)
+> - Công ty muốn mở rộng toàn cầu (expand globally) và đảm bảo minimal downtime
+> - → Yêu cầu: giải pháp fault tolerance cao nhất (MOST fault tolerance) khi mở rộng sang Region thứ hai
+
+**Phân tích giải pháp tối ưu:**
+Deploy the web tier and the application tier to a second Region. Use an Amazon Aurora global database to deploy the database in the primary Region and the second Region. Use Amazon Route 53 health checks with a failover routing policy to the second Region. Promote the secondary to primary as needed.
+
+Deploy the web tier and the application tier to a second Region: Auto Scaling group là tài nguyên theo từng Region, không thể "extend" một ASG sang Region khác - phải triển khai một bộ ASG/ELB độc lập ở Region thứ hai, đây là cách làm đúng kỹ thuật
+
+Aurora global database cho phép replicate dữ liệu sang secondary Region với RPO thấp (thường dưới 1 giây) và hỗ trợ fail over nhanh, đúng chuẩn cho kiến trúc đa Region fault tolerant
+
+Route 53 health checks + failover routing policy tự động chuyển traffic sang Region thứ hai khi Region chính gặp sự cố, giảm downtime
+
+Promote the secondary to primary as needed: Aurora Global Database yêu cầu bước failover thủ công/managed (chọn secondary cluster để promote) - đây là bước bắt buộc trong quy trình failover thực tế của Aurora Global Database, không tự động xảy ra nếu không có bước này
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Extend the Auto Scaling groups for the web tier and the application tier to deploy instances in Availability Zones in a second Region. Use an Aurora global database to deploy the database in the primary Region and the second Region. Use Amazon Route 53 health checks with a failover routing policy to the second Region.**:
+  Auto Scaling group không thể "extend" xuyên Region - ASG bị giới hạn trong phạm vi một Region (chỉ trải nhiều AZ trong cùng Region đó), đây là giới hạn kỹ thuật không thể vượt qua, khiến phương án này không khả thi
+  Thiếu bước promote secondary to primary khi failover thực sự xảy ra
+
+- **(C) Deploy the web tier and the application tier to a second Region. Add an Aurora PostgreSQL cross-Region Aurora Replica in the second Region. Promote the secondary to primary as needed. Use Amazon Route 53 health checks with a failover routing policy to the second Region.**:
+  Cross-Region Aurora Replica (không dùng Global Database) có replication lag cao hơn và RPO/RTO kém hơn so với Aurora Global Database - Global Database là dịch vụ được thiết kế chuyên biệt cho multi-Region DR với fault tolerance tốt hơn
+  Chỉ phù hợp khi không cần fault tolerance ở mức cao nhất
+
+- **(B) Deploy the web tier and the application tier to a second Region. Create an Aurora PostgreSQL database in the second Region. Use AWS DMS to replicate the primary database to the second Region. Use Amazon Route 53 health checks with a failover routing policy to the second Region.**:
+  AWS DMS là công cụ migration/replication mục đích chung, có độ trễ cao hơn nhiều so với Aurora Global Database (được tối ưu native cho cross-Region replication), không đảm bảo fault tolerance tốt nhất
+  DMS phù hợp cho migrate one-time hoặc replicate giữa các engine khác nhau, không phải giải pháp DR tối ưu cho Aurora
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Auto Scaling group extend sang Region khác" → luôn SAI, ASG chỉ hoạt động trong 1 Region (nhiều AZ)
+- "Multi-Region fault tolerance cho Aurora" → luôn ưu tiên Aurora Global Database thay vì cross-Region Read Replica hoặc DMS
+- "Promote secondary to primary" là bước bắt buộc phải có trong quy trình failover Aurora Global Database → đáp án thiếu bước này kém đầy đủ hơn
+- Nếu đề yêu cầu "MOST fault tolerance" + đã có sẵn Aurora → loại ngay các đáp án dùng DMS hoặc Read Replica thường
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Using switchover or failover in Amazon Aurora Global Database](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database-disaster-recovery.html)
+- 🌐 [Managed planned failovers with Amazon Aurora Global Database](https://aws.amazon.com/blogs/database/managed-planned-failovers-with-amazon-aurora-global-database/)
+
+</details>
+
+---
+
+<div id="question-57"></div>
+
+### Question 57: Centralized Enterprise Cross-Account Backup Automation for EC2 Instances using AWS Backup
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (D) | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company is building a new application that will run on Amazon EC2 instances in one AWS Region. The EC2 instances will use Amazon EBS volumes. The business continuity plan requires the ability to fail over to a secondary Region. The failover must have a recovery time objective (RTO) of 4 hours and a recovery point objective (RPO) of 1 hour.
+
+Which solution will meet these requirements MOST cost-effectively?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Deploy the application on a smaller number of EC2 instances in the secondary Region. Configure the secondary Region to sync with the primary Region.
+- **(B)** Deploy a similar number of EC2 instances in the secondary Region. Use AWS DataSync to transfer the data on the EBS volumes from the primary Region to the secondary Region.
+- **(C)** Refactor the application to use an active-active strategy across both Regions. Use Amazon Route 53 and health checks to route requests to the lowest latency Region.
+- **(D)** Use AWS Backup to create a backup plan for the EC2 instances that includes cross-Region backups to the secondary Region. Restore the EC2 instances in the secondary Region in case of failover. `[Lựa chọn của bạn - Chính xác ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Ứng dụng chạy trên EC2 + EBS trong 1 Region
+> - Business continuity plan yêu cầu fail over sang secondary Region
+> - RTO = 4 giờ, RPO = 1 giờ
+> - → Yêu cầu: giải pháp đáp ứng RTO/RPO trên với chi phí MOST cost-effective
+
+**Phân tích giải pháp tối ưu:**
+Use AWS Backup to create a backup plan for the EC2 instances that includes cross-Region backups to the secondary Region. Restore the EC2 instances in the secondary Region in case of failover.
+
+Theo AWS Well-Architected Framework, chiến lược Backup and restore có RPO tính bằng giờ và RTO trong vòng 24 giờ - khớp chính xác với yêu cầu RTO 4h/RPO 1h của đề (backup hàng giờ đáp ứng RPO 1h, restore EC2 từ backup trong vài giờ đáp ứng RTO 4h)
+
+Đây là chiến lược DR rẻ nhất trong 4 chiến lược (backup and restore → pilot light → warm standby → multi-site active/active) vì không cần chạy compute tại secondary Region cho đến khi thật sự failover, chỉ trả phí lưu trữ backup
+
+AWS Backup hỗ trợ cross-Region backup tự động theo lịch, không cần vận hành thủ công
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Deploy the application on a smaller number of EC2 instances in the secondary Region. Configure the secondary Region to sync with the primary Region.**:
+  Đây là mô hình pilot light/warm standby - có compute chạy sẵn (dù giảm quy mô) tại secondary Region liên tục → tốn chi phí nhiều hơn phương án backup and restore trong khi RTO/RPO đề bài không đòi hỏi mức nhanh này
+
+- **(C) Refactor the application to use an active-active strategy across both Regions. Use Amazon Route 53 and health checks to route requests to the lowest latency Region.**:
+  Active-active (multi-site) là chiến lược tốn kém nhất, RPO gần như 0 và RTO gần như tức thời - vượt xa yêu cầu RTO 4h/RPO 1h, không tối ưu chi phí, đồng thời tốn công refactor ứng dụng
+
+- **(B) Deploy a similar number of EC2 instances in the secondary Region. Use AWS DataSync to transfer the data on the EBS volumes from the primary Region to the secondary Region.**:
+  Triển khai số lượng instance tương đương ở secondary Region nghĩa là chạy song song liên tục → chi phí cao gần bằng active-active mà không cần thiết cho RTO/RPO đã cho
+  DataSync không phải công cụ tối ưu để đồng bộ EBS liên tục, thường dùng cho di chuyển dữ liệu file/one-time hơn là replication liên tục
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "RPO tính bằng giờ" + "RTO trong 24 giờ" + "cost-effective" → chiến lược Backup and restore (rẻ nhất trong 4 chiến lược DR)
+- Thứ tự chi phí tăng dần: Backup & Restore → Pilot Light → Warm Standby → Multi-site Active/Active (RTO/RPO giảm dần theo thứ tự này)
+- Nếu đề có compute chạy liên tục ở secondary Region (dù nhỏ) mà chỉ cần RTO tính bằng giờ → thường KHÔNG phải đáp án tối ưu chi phí nhất
+- "MOST cost-effective" + RTO/RPO nới lỏng (giờ, không phải phút/giây) → luôn cân nhắc AWS Backup / snapshot-based restore trước
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [REL13-BP02 Use defined recovery strategies to meet the recovery objectives](https://docs.aws.amazon.com/wellarchitected/latest/framework/rel_planning_for_recovery_disaster_recovery.html)
+
+</details>
+
+---
+
+<div id="question-58"></div>
+
+### Question 58: Enforcing WORM Immutability and Compliance Protection on Backups via AWS Backup Vault Lock
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company wants to implement a backup strategy for Amazon EC2 data and multiple Amazon S3 buckets. Because of regulatory requirements, the company must retain backup files for a specific time period. The company must not alter the files for the duration of the retention period.
+
+Which solution will meet these requirements?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use Amazon S3 File Gateway to create the backup. Configure the appropriate S3 Lifecycle management.
+- **(B)** Use Amazon Data Lifecycle Manager to create the required automated snapshot policy.
+- **(C)** Use AWS Backup to create a backup vault that has a vault lock in compliance mode. Create the required backup plan. `[Đáp án đúng ✅]`
+- **(D)** Use AWS Backup to create a backup vault that has a vault lock in governance mode. Create the required backup plan.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Backup strategy cho Amazon EC2 data và nhiều Amazon S3 buckets
+> - Vì lý do quy định (regulatory requirements), phải giữ file backup trong khoảng thời gian cụ thể
+> - Công ty không được phép thay đổi (must not alter) file trong suốt thời gian retention
+> - → Yêu cầu: giải pháp đảm bảo file backup bất biến (immutable) trong suốt retention period, đáp ứng compliance nghiêm ngặt
+
+**Phân tích giải pháp tối ưu:**
+Use AWS Backup to create a backup vault that has a vault lock in compliance mode. Create the required backup plan.
+
+AWS Backup hỗ trợ backup thống nhất cho cả EC2 (EBS) lẫn S3, phù hợp yêu cầu "EC2 data and multiple S3 buckets" trong cùng một chiến lược
+
+Vault lock ở compliance mode làm cho vault (và các recovery point trong đó) trở nên immutable tuyệt đối - không ai, kể cả root user của tài khoản hay chính AWS, có thể xoá hoặc sửa đổi cho đến khi hết retention period
+
+Đây chính xác là cơ chế đáp ứng yêu cầu "must not alter the files for the duration of the retention period" do quy định pháp lý (regulatory) - compliance mode được thiết kế riêng cho tình huống này
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Use AWS Backup to create a backup vault that has a vault lock in governance mode. Create the required backup plan.**:
+  Governance mode vẫn cho phép user có đủ IAM permission (ví dụ đủ quyền quản trị) xoá hoặc sửa đổi backup vault → không đáp ứng yêu cầu "must not alter" tuyệt đối theo quy định compliance
+  Governance mode phù hợp khi công ty chỉ cần kiểm soát nội bộ (giới hạn ai được sửa), không phù hợp với yêu cầu tuân thủ pháp lý nghiêm ngặt
+
+- **(B) Use Amazon Data Lifecycle Manager to create the required automated snapshot policy.**:
+  DLM chỉ tự động hoá tạo/giữ/xoá snapshot EBS theo lịch, không hỗ trợ backup cho S3, và không có cơ chế immutability/lock để ngăn xoá/sửa trong retention period → không đáp ứng yêu cầu compliance
+
+- **(A) Use Amazon S3 File Gateway to create the backup. Configure the appropriate S3 Lifecycle management.**:
+  S3 File Gateway dùng để kết nối on-premises với S3 qua giao thức file (NFS/SMB), không phải giải pháp backup cho EC2, và S3 Lifecycle chỉ chuyển storage class/xoá theo thời gian - không đảm bảo tính immutable trong retention period
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "regulatory requirements" + "must not alter/delete" → luôn nghĩ tới AWS Backup Vault Lock ở compliance mode (immutable tuyệt đối, kể cả root/AWS cũng không xoá được)
+- "Governance mode" chỉ chặn user thường, admin/root vẫn sửa được → không dùng khi yêu cầu compliance pháp lý nghiêm ngặt
+- Cần backup thống nhất cho cả EC2 lẫn S3 trong cùng 1 chiến lược → AWS Backup (không phải DLM - DLM chỉ cho EBS/EC2)
+- Nếu đề chỉ cần kiểm soát nội bộ ai được sửa vault (không phải yêu cầu pháp lý tuyệt đối) → governance mode là đủ và ít ràng buộc hơn
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [AWS Backup Vault Lock](https://docs.aws.amazon.com/aws-backup/latest/devguide/vault-lock.html)
+
+</details>
+
+---
+
+<div id="question-59"></div>
+
+### Question 59: Scalable Data Pre-processing for Large ML Datasets using AWS Glue and SageMaker AI
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (B) | **Đáp án đúng**: (B)
+
+#### 📋 Đề bài (Scenario)
+An automobile company collects several terabytes of sensor data from vehicles every day and stores the data in Amazon S3. The company wants to use Amazon SageMaker AI and the sensor data to run an inference model.
+
+The company needs to pre-process the data to remove noise or bias that interferes with inference. The company wants to run the inference model once each week.
+
+Which solution will meet these requirements with the LEAST operational overhead?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use Amazon EMR to pre-process the data. Use a SageMaker AI processing job to run the inference workloads.
+- **(B)** Use AWS Glue to pre-process the data. Use a SageMaker AI processing job to run the inference workloads. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(C)** Use AWS Batch to pre-process the data. Use a SageMaker AI processing job to run the inference workloads.
+- **(D)** Use a SageMaker AI batch transform job to pre-process the data and to run the inference workloads.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(B)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Thu thập vài terabyte dữ liệu sensor mỗi ngày, lưu trong Amazon S3
+> - Dùng Amazon SageMaker AI để chạy inference model
+> - Cần pre-process dữ liệu để loại bỏ noise/bias trước khi inference
+> - Chạy inference model mỗi tuần một lần (once each week)
+> - → Yêu cầu: giải pháp đáp ứng với LEAST operational overhead
+
+**Phân tích giải pháp tối ưu:**
+Use AWS Glue to pre-process the data. Use a SageMaker AI processing job to run the inference workloads.
+
+AWS Glue là dịch vụ ETL serverless hoàn toàn - không cần provision, quản lý hay scale cluster, AWS tự động xử lý toàn bộ hạ tầng, khớp trực tiếp với "LEAST operational overhead"
+
+Vì job chỉ chạy once a week (tần suất thấp), mô hình trả phí theo lượng dùng của Glue (serverless) tối ưu hơn nhiều so với việc phải tự vận hành cluster (EMR) hay quản lý compute environment/container (Batch) chỉ để chạy 1 lần/tuần
+
+SageMaker AI processing job cũng là managed service, không cần tự quản lý hạ tầng compute, tiếp tục giữ overhead thấp cho bước inference
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Use AWS Batch to pre-process the data. Use a SageMaker AI processing job to run the inference workloads.**:
+  AWS Batch yêu cầu tự định nghĩa job definitions, compute environment, job queue - nhiều cấu hình vận hành hơn so với Glue vốn chỉ cần định nghĩa ETL job, tăng operational overhead không cần thiết cho một job chạy hàng tuần
+
+- **(A) Use Amazon EMR to pre-process the data. Use a SageMaker AI processing job to run the inference workloads.**:
+  Amazon EMR (cluster truyền thống) đòi hỏi quản lý cluster (provisioning, scaling, patching) - phù hợp với job chạy thường xuyên cần lưu trữ bán thường trực, không tối ưu cho tần suất thấp (hàng tuần) như Glue serverless
+
+- **(D) Use a SageMaker AI batch transform job to pre-process the data and to run the inference workloads.**:
+  Batch transform được thiết kế cho inference (batch prediction), không phải công cụ ETL/pre-processing chuyên dụng để loại bỏ noise/bias trong dữ liệu quy mô terabyte - dùng sai mục đích service, không tối ưu cho bước pre-processing phức tạp
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Pre-process dữ liệu quy mô lớn, tần suất thấp/định kỳ" + "least operational overhead" → AWS Glue (serverless ETL, không quản lý cluster)
+- "EMR" (không phải EMR Serverless) → cần quản lý cluster, overhead cao hơn Glue với job chạy không thường xuyên
+- "SageMaker batch transform" → dùng cho inference/batch prediction, không phải cho ETL/data cleaning
+- Nếu đề nhấn mạnh "serverless" hoặc "least operational overhead" cho ETL → ưu tiên Glue trước AWS Batch/EMR
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Benefits of using AWS Glue for data integration](https://docs.aws.amazon.com/whitepapers/latest/aws-glue-best-practices-build-efficient-data-pipeline/benefits-of-using-aws-glue-for-data-integration.html)
+- 🌐 [Batch transform for inference with Amazon SageMaker AI](https://docs.aws.amazon.com/sagemaker/latest/dg/batch-transform.html)
+
+</details>
+
+---
+
+<div id="question-60"></div>
+
+### Question 60: Scaling Multi-VPC and Hybrid Direct Connect Connectivity with AWS Transit Gateway
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (D) | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company uses AWS Direct Connect to connect its on-premises network to multiple VPCs. All VPCs are located in the same AWS account in one AWS Region. Each VPC uses its own private virtual interface (VIF) and virtual local area network (VLAN) on the Direct Connect connection.
+
+The company is growing and needs to add more VPCs and private VIFs. The existing connections cannot support the additional VPCs and private VIFs. The company's new VPCs must have connectivity to the on-premises network.
+
+Which solution will meet these requirements in the MOST scalable way?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Provision a new Direct Connect connection to handle the additional VPCs and VIFs.
+- **(B)** Create a virtual private gateway for each VPC that is over the connection service quota. Use AWS Site-to-Site VPN to connect the virtual private gateways to the on-premises network.
+- **(C)** Create a Direct Connect gateway and add virtual private gateway associations to all of the VPCs. Configure a private VIF for each new VPC to connect each new VPC to the on-premises network.
+- **(D)** Connect a transit gateway to all the VPCs. Associate a Direct Connect gateway with the transit gateway. Create a transit VIF for the Direct Connect gateway. `[Lựa chọn của bạn - Chính xác ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Dùng AWS Direct Connect kết nối on-premises với nhiều VPC, tất cả trong cùng 1 account, cùng 1 Region
+> - Mỗi VPC hiện dùng riêng một private VIF và VLAN trên connection Direct Connect
+> - Công ty tăng trưởng, cần thêm nhiều VPC và private VIF hơn, nhưng connection hiện tại không đủ hỗ trợ (đã chạm giới hạn)
+> - → Yêu cầu: giải pháp kết nối VPC mới với on-premises theo cách MOST scalable
+
+**Phân tích giải pháp tối ưu:**
+Connect a transit gateway to all the VPCs. Associate a Direct Connect gateway with the transit gateway. Create a transit VIF for the Direct Connect gateway.
+
+Mỗi private VIF chỉ kết nối được 1 VPC, và số lượng private VIF trên một connection Direct Connect bị giới hạn bởi service quota → đây chính là nguyên nhân "existing connections cannot support the additional VPCs and private VIFs"
+
+Transit VIF + Direct Connect gateway + Transit Gateway: chỉ cần một transit VIF duy nhất trên Direct Connect gateway để kết nối tới Transit Gateway, sau đó Transit Gateway attach được rất nhiều VPC (hàng nghìn) mà không tốn thêm VIF nào - đây là kiến trúc scale tốt nhất cho việc thêm nhiều VPC liên tục
+
+Đây là pattern chuẩn của AWS cho các tổ chức có số lượng VPC lớn, tăng trưởng liên tục cần kết nối Direct Connect tập trung
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Provision a new Direct Connect connection to handle the additional VPCs and VIFs.**:
+  Thêm connection Direct Connect mới tốn kém và chậm triển khai (cần thời gian lắp đặt vật lý), đồng thời không giải quyết gốc rễ vấn đề scale (VIF vẫn giới hạn theo mô hình 1 VPC/1 VIF) - không phải giải pháp scalable dài hạn
+
+- **(B) Create a virtual private gateway for each VPC that is over the connection service quota. Use AWS Site-to-Site VPN to connect the virtual private gateways to the on-premises network.**:
+  Site-to-Site VPN chạy qua internet công cộng, băng thông và độ trễ kém ổn định hơn Direct Connect, không tận dụng được kết nối riêng đã đầu tư - đây là giải pháp chắp vá, không scalable và làm giảm chất lượng kết nối cho các VPC mới
+
+- **(C) Create a Direct Connect gateway and add virtual private gateway associations to all of the VPCs. Configure a private VIF for each new VPC to connect each new VPC to the on-premises network.**:
+  Vẫn dùng mô hình 1 private VIF cho mỗi VPC mới, không giải quyết được nguyên nhân gốc (giới hạn số lượng VIF/VGW association trên Direct Connect gateway), sẽ tiếp tục chạm giới hạn scale khi công ty tăng trưởng thêm
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Nhiều VPC + Direct Connect + chạm giới hạn VIF/VGW" → Transit Gateway + Direct Connect gateway + transit VIF (1 VIF phục vụ nhiều VPC qua TGW)
+- "Private VIF" → chỉ kết nối 1 VPC; "Transit VIF" → kết nối tới Transit Gateway, từ đó attach nhiều VPC
+- Nếu đề yêu cầu "MOST scalable" + đã dùng Direct Connect → loại ngay đáp án dùng VPN (chất lượng kém hơn) hoặc thêm connection mới (tốn kém, không giải quyết gốc rễ)
+- VGW association trực tiếp với Direct Connect gateway bị giới hạn số lượng (quota) → khi cần scale lớn, luôn ưu tiên Transit Gateway thay vì VGW riêng lẻ
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Direct Connect with AWS Transit Gateway over transit VIF](https://docs.aws.amazon.com/prescriptive-guidance/latest/designing-control-tower-landing-zone/dc-transit-vif.html)
+- 🌐 [Which type of Direct Connect virtual interface should I use to connect different AWS resources?](https://repost.aws/knowledge-center/public-private-interface-dx)
+
+</details>
+
+---
+
+<div id="question-61"></div>
+
+### Question 61: Cross-Account SNS-to-Lambda Invocation via Lambda Resource Policy and SNS Topic Policy
+> **Miền kiến thức (Domain)**: Domain 1: Design Secure Architectures  
+> **Loại câu hỏi**: Multiple Choice (Chọn 2 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (B), (E)
+
+#### 📋 Đề bài (Scenario)
+A media company has a multi-account AWS environment in the us-east-1 Region. The company has an Amazon SNS topic in a production account that publishes performance metrics. The company has an AWS Lambda function in an administrator account to process and analyze log data.
+
+The Lambda function that is in the administrator account must be invoked by messages from the SNS topic that is in the production account when significant metrics are reported.
+
+Which combination of steps will meet these requirements? (Select TWO.)
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Use an Amazon EventBridge rule in the production account to capture the SNS topic notifications. Configure the EventBridge rule to forward notifications to the Lambda function that is in the administrator account.
+- **(B)** Create an IAM policy for the SNS topic that allows the Lambda function to subscribe to the topic. `[Đáp án đúng ✅]`
+- **(C)** Implement an Amazon SQS queue in the administrator account to buffer messages from the SNS topic that is in the production account. Configure the SQS queue to invoke the Lambda function.
+- **(D)** Store performance metrics in an Amazon S3 bucket in the production account. Use Amazon Athena to analyze the metrics from the administrator account.
+- **(E)** Create an IAM resource policy for the Lambda function that allows Amazon SNS to invoke the function. `[Đáp án đúng ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(B), (E)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Multi-account environment, cùng us-east-1
+> - Amazon SNS topic nằm trong production account, publish performance metrics
+> - AWS Lambda function nằm trong administrator account, xử lý log data
+> - Lambda (account khác) phải được invoke bởi message từ SNS topic (khác account) khi có metric quan trọng
+> - → Yêu cầu: cấu hình đúng để SNS topic ở account A có thể invoke Lambda ở account B (cross-account) - chọn HAI bước
+> - Câu này có 2 đáp án đúng:
+
+**Phân tích giải pháp tối ưu:**
+Create an IAM resource policy for the Lambda function that allows Amazon SNS to invoke the function.
+
+Để một AWS service (SNS) invoke được Lambda, Lambda cần có resource-based policy (thêm qua lambda add-permission) với Principal: sns.amazonaws.com và SourceArn = ARN của SNS topic - đây là bước bắt buộc cho mọi trường hợp SNS → Lambda, kể cả cross-account
+
+Create an IAM policy for the SNS topic that allows the Lambda function to subscribe to the topic.
+
+Vì SNS topic và Lambda khác account, theo mặc định account B (chứa Lambda) không có quyền subscribe vào topic của account A → phải cấu hình access policy (resource policy) của chính SNS topic ở account A để cấp quyền subscribe cho account B/Lambda function, đây là bước xác nhận chính thức trong tutorial AWS Lambda + SNS cross-account
+
+Hai bước này phối hợp nhau: bước 1 cho phép SNS gọi Lambda (chiều invoke), bước 2 cho phép Lambda subscribe vào topic khác account (chiều thiết lập subscription) - thiếu một trong hai thì cấu hình cross-account sẽ thất bại
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Implement an Amazon SQS queue in the administrator account to buffer messages from the SNS topic that is in the production account. Configure the SQS queue to invoke the Lambda function.**:
+  Thêm SQS là giải pháp thừa và phức tạp hơn cần thiết - SNS có thể invoke trực tiếp Lambda cross-account chỉ với đúng 2 resource policy, không cần lớp trung gian SQS
+  Ngoài ra, SQS không "invoke" Lambda theo nghĩa trực tiếp - Lambda phải poll SQS qua event source mapping, khác cơ chế push của SNS
+
+- **(A) Use an Amazon EventBridge rule in the production account to capture the SNS topic notifications. Configure the EventBridge rule to forward notifications to the Lambda function that is in the administrator account.**:
+  Thêm EventBridge là bước không cần thiết khi SNS đã có thể invoke Lambda cross-account trực tiếp qua resource policy - làm phức tạp kiến trúc mà không mang lại lợi ích cho yêu cầu đề bài
+
+- **(D) Store performance metrics in an Amazon S3 bucket in the production account. Use Amazon Athena to analyze the metrics from the administrator account.**:
+  Đây là hướng tiếp cận hoàn toàn khác (batch analytics qua S3 + Athena) thay vì realtime invoke Lambda theo message SNS - không đáp ứng yêu cầu "invoked by messages from the SNS topic ... when significant metrics are reported"
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "SNS topic account A invoke Lambda account B" → luôn cần 2 bước: (1) resource-based policy trên Lambda cho phép sns.amazonaws.com invoke với SourceArn, (2) access policy trên SNS topic cho phép account/Lambda kia subscribe
+- "Cross-account" + service-to-service invoke → nghĩ ngay tới resource-based policy hai chiều, không phải thêm queue/EventBridge trung gian nếu SNS đã hỗ trợ invoke trực tiếp
+- Nếu đề chỉ cần buffer/xử lý bất đồng bộ thêm mới cần SQS - khi yêu cầu chỉ là "invoke" đơn giản cross-account thì SQS/EventBridge là thừa
+- lambda:InvokeFunction + Principal: sns.amazonaws.com + SourceArn là pattern chuẩn cần nhớ cho mọi câu SNS → Lambda
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Tutorial: Using AWS Lambda with Amazon Simple Notification Service](https://docs.aws.amazon.com/lambda/latest/dg/with-sns-example.html)
+- 🌐 [Granting Lambda function access to AWS services](https://docs.aws.amazon.com/lambda/latest/dg/permissions-function-services.html)
+
+</details>
+
+---
+
+<div id="question-62"></div>
+
+### Question 62: Cost-Minimizing Fault-Tolerant Batch Processing with Diversified EC2 Spot Fleets (CreateFleet)
+> **Miền kiến thức (Domain)**: Domain 4: Design Cost-Optimized Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A company hosts crowdsourced research projects. The company wants to run a very complex and long-running application. The application has many steps. Each step has checkpoints that can be resumed if necessary. There is no deadline for the application to finish running.
+
+Which solution will meet these requirements MOST cost-effectively?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Deploy Amazon EC2 instances on an Amazon EC2 Dedicated Host. Use an Amazon FSx for Lustre file system to store interim and final results of the application.
+- **(B)** Use the Amazon EC2 CreateFleet API to create a Spot Instances request. Set the request type to persistent. Use Amazon EBS volumes to store interim and final results of the application.
+- **(C)** Use the Amazon EC2 CreateFleet API to create a Spot Instances request. Set a maximum price in the request. Use an Amazon EFS file system to store interim and final results of the application. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Create a job container for the application. Add the container to an Amazon ECR registry. Use AWS Batch to pull a container image from the container registry and run the application.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Ứng dụng rất phức tạp, chạy dài hạn (long-running), có nhiều bước (steps)
+> - Mỗi bước có checkpoint có thể resume (resumed if necessary)
+> - Không có deadline để hoàn thành
+> - → Yêu cầu: giải pháp MOST cost-effective cho workload chịu được gián đoạn và có thể resume
+
+**Phân tích giải pháp tối ưu:**
+Use the Amazon EC2 CreateFleet API to create a Spot Instances request. Set a maximum price in the request. Use an Amazon EFS file system to store interim and final results of the application.
+
+Ứng dụng có checkpoint resumable và không deadline → hoàn toàn phù hợp với Spot Instances, vốn có thể bị interrupt bất cứ lúc nào nhưng bù lại rẻ hơn đáng kể so với On-Demand/Dedicated Host - đúng tiêu chí "MOST cost-effective"
+
+Amazon EFS là file system dùng chung, truy cập được từ nhiều AZ trong cùng Region - khi Spot instance bị interrupt và một instance thay thế được cấp phát (có thể ở AZ khác), instance mới vẫn mount được cùng EFS và đọc tiếp checkpoint đã lưu, đảm bảo resume đúng nghĩa
+
+Kết hợp Spot (rẻ) + EFS (bền vững, không phụ thuộc AZ cụ thể) là pattern tối ưu chi phí cho workload dài hạn, chịu gián đoạn, cần checkpoint
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(D) Create a job container for the application. Add the container to an Amazon ECR registry. Use AWS Batch to pull a container image from the container registry and run the application.**:
+  AWS Batch tự nó không phải là compute rẻ nhất - vẫn chạy trên EC2/Fargate bên dưới, việc containerize hoá thêm bước không cần thiết khi có thể dùng Spot trực tiếp qua CreateFleet với chi phí thấp hơn cho compute-only workload này
+
+- **(A) Deploy Amazon EC2 instances on an Amazon EC2 Dedicated Host. Use an Amazon FSx for Lustre file system to store interim and final results of the application.**:
+  Dedicated Host là lựa chọn tốn kém nhất trong các loại EC2 pricing (trả phí cho toàn bộ physical host, dùng khi cần compliance/license theo socket-vật lý) - hoàn toàn ngược với yêu cầu "MOST cost-effective", không có lý do dùng ở đây
+
+- **(B) Use the Amazon EC2 CreateFleet API to create a Spot Instances request. Set the request type to persistent. Use Amazon EBS volumes to store interim and final results of the application.**:
+  EBS volume bị khoá trong 1 Availability Zone cụ thể - nếu Spot instance bị interrupt và instance thay thế được cấp ở AZ khác, EBS volume cũ không thể attach trực tiếp cho instance mới → rủi ro mất khả năng resume đúng checkpoint, kém bền vững hơn EFS trong ngữ cảnh Spot có thể đổi AZ
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Checkpoint resumable" + "no deadline" + "cost-effective" → Spot Instances (không cần On-Demand/Dedicated Host)
+- "Spot Instance có thể đổi AZ khi thay thế" + "cần lưu trữ resume được từ instance mới" → ưu tiên EFS (regional, đa AZ) hơn EBS (khoá 1 AZ)
+- "Dedicated Host" → luôn là lựa chọn đắt nhất trong các câu hỏi tối ưu chi phí, gần như không bao giờ là đáp án đúng cho "MOST cost-effective"
+- Nếu đề không nhấn mạnh cần containerize hoá hay orchestration phức tạp → AWS Batch thường là lựa chọn "thừa" so với dùng trực tiếp Spot Fleet/CreateFleet
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Resilience in Amazon EFS](https://docs.aws.amazon.com/efs/latest/ug/disaster-recovery-resiliency.html)
+- 🌐 [SpotRequestType (ONE_TIME vs PERSISTENT)](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html)
+
+</details>
+
+---
+
+<div id="question-63"></div>
+
+### Question 63: Serverless Container Orchestration with Minimal Operational Overhead using Amazon ECS on AWS Fargate
+> **Miền kiến thức (Domain)**: Domain 3: Design High-Performing Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Correct (Chính xác) ✅ | **Lựa chọn của bạn**: (C) | **Đáp án đúng**: (C)
+
+#### 📋 Đề bài (Scenario)
+A media streaming company needs to deploy its video processing application across multiple Availability Zones for high availability. The application consists of containerized microservices that process video files. The microservices must automatically recover from failures.
+
+Which solution meets these requirements with the LEAST operational overhead?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Deploy the containers to Amazon ECS with the EC2 launch type.
+- **(B)** Deploy the containers to Amazon EKS with self-managed nodes.
+- **(C)** Deploy the containers to Amazon ECS with the Fargate launch type. `[Lựa chọn của bạn - Chính xác ✅]`
+- **(D)** Deploy the containers to Amazon EC2 instances.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(C)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Ứng dụng xử lý video, containerized microservices
+> - Phải deploy multi-Availability Zone để đạt high availability
+> - Microservices phải tự động recover khi có lỗi (automatically recover from failures)
+> - → Yêu cầu: giải pháp đáp ứng với LEAST operational overhead
+
+**Phân tích giải pháp tối ưu:**
+Deploy the containers to Amazon ECS with the Fargate launch type.
+
+Fargate là serverless compute cho container - không cần provision, patch hay quản lý EC2 instance/node bên dưới, giảm operational overhead tối đa so với các launch type/nền tảng khác
+
+ECS (control plane) tự động theo dõi health của task và khởi động lại task khi fail, kết hợp task placement trải nhiều AZ để đạt high availability mà không cần cấu hình thủ công phức tạp
+
+Đây là lựa chọn được khuyến nghị mặc định cho production container workload cần multi-AZ + tự phục hồi lỗi với ít công sức vận hành nhất
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(A) Deploy the containers to Amazon ECS with the EC2 launch type.**:
+  ECS EC2 launch type vẫn yêu cầu người dùng tự quản lý, patch, scale các EC2 instance làm container instance (Auto Scaling group, capacity provider...) → operational overhead cao hơn Fargate
+
+- **(B) Deploy the containers to Amazon EKS with self-managed nodes.**:
+  EKS self-managed nodes đòi hỏi vận hành cả Kubernetes control plane lẫn worker node (patch OS, quản lý node group, nâng cấp version...) → overhead vận hành cao nhất trong các lựa chọn, không phù hợp khi không có yêu cầu bắt buộc dùng Kubernetes
+
+- **(D) Deploy the containers to Amazon EC2 instances.**:
+  Chạy container trực tiếp trên EC2 (không qua ECS/EKS orchestration) có nghĩa là tự xây dựng toàn bộ cơ chế health check, tự động khởi động lại, scheduling multi-AZ từ đầu - operational overhead cao nhất, không có gì tự động hoá sẵn có
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Containerized" + "LEAST operational overhead" + "automatically recover" → ECS Fargate (mặc định ưu tiên hơn EC2 launch type và EKS trừ khi đề yêu cầu Kubernetes cụ thể)
+- "Kubernetes"/"K8s" xuất hiện trong đề → mới cân nhắc EKS; nếu không có, đừng chọn EKS vì overhead luôn cao hơn ECS
+- Đề nói tới "server management" hoặc "provision EC2" như một gánh nặng cần tránh → loại ngay các đáp án dùng EC2/self-managed nodes
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [AWS Fargate Documentation](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/AWS_Fargate.html)
+- 🌐 [Amazon ECS Developer Guide](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html)
+
+</details>
+
+---
+
+<div id="question-64"></div>
+
+### Question 64: High Availability and Automated Database Failover for Microsoft SQL Server using RDS Multi-AZ
+> **Miền kiến thức (Domain)**: Domain 2: Design Resilient Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (D)
+
+#### 📋 Đề bài (Scenario)
+A company needs to deploy a Microsoft SQL Server database on AWS. The database must handle real-time transactions. The database must be highly available within an AWS Region.
+
+Which solution will meet these requirements with the LEAST operational overhead?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Create an Amazon RDS for SQL Server instance. Configure automated snapshots.
+- **(B)** Use Amazon Aurora to host the database. Enable Aurora replicas in different Availability Zones.
+- **(C)** Install SQL Server on two Amazon EC2 instances in two Availability Zones. Ensure data synchronization through custom scripts.
+- **(D)** Create an Amazon RDS for SQL Server Multi-AZ deployment. `[Đáp án đúng ✅]`
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(D)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Deploy database Microsoft SQL Server trên AWS
+> - Phải xử lý real-time transactions
+> - Phải highly available trong 1 AWS Region
+> - → Yêu cầu: giải pháp đáp ứng với LEAST operational overhead
+
+**Phân tích giải pháp tối ưu:**
+Create an Amazon RDS for SQL Server Multi-AZ deployment.
+
+Amazon RDS for SQL Server là dịch vụ managed hỗ trợ trực tiếp engine SQL Server, không cần tự cài đặt/vận hành hệ điều hành hay SQL Server
+
+Multi-AZ deployment tự động provision và duy trì standby instance đồng bộ (synchronous) ở AZ khác, tự động failover khi có sự cố mà không cần can thiệp thủ công → đáp ứng "highly available within a Region" với operational overhead thấp nhất
+
+RDS Multi-AZ dùng SQL Server Database Mirroring hoặc Always On Availability Groups (tuỳ version) - cơ chế này được AWS quản lý hoàn toàn, phù hợp trực tiếp yêu cầu real-time transaction với đảm bảo tính sẵn sàng cao
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Install SQL Server on two Amazon EC2 instances in two Availability Zones. Ensure data synchronization through custom scripts.**:
+  Tự cài SQL Server trên EC2 và viết custom script đồng bộ dữ liệu đòi hỏi tự quản lý toàn bộ vòng đời database, patching, failover logic thủ công → operational overhead cao nhất trong các lựa chọn, hoàn toàn ngược lại yêu cầu đề bài
+
+- **(B) Use Amazon Aurora to host the database. Enable Aurora replicas in different Availability Zones.**:
+  Amazon Aurora không hỗ trợ engine SQL Server (Aurora chỉ hỗ trợ MySQL-compatible và PostgreSQL-compatible) - sai hoàn toàn về mặt kỹ thuật, không thể dùng cho yêu cầu "Microsoft SQL Server database"
+
+- **(A) Create an Amazon RDS for SQL Server instance. Configure automated snapshots.**:
+  Automated snapshot chỉ phục vụ backup/restore, không cung cấp high availability thời gian thực (không có standby instance, không tự động failover) - không đáp ứng yêu cầu "highly available" cho real-time transaction workload
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Microsoft SQL Server" → loại ngay Amazon Aurora (Aurora chỉ hỗ trợ MySQL/PostgreSQL-compatible, không có SQL Server)
+- "Highly available" + "least operational overhead" cho RDS engine → RDS Multi-AZ deployment, không phải tự dựng HA trên EC2 hay chỉ dùng snapshot
+- "Automated snapshot" chỉ giải quyết được backup/durability, KHÔNG giải quyết được yêu cầu high availability/failover tức thời
+- Nếu đề có "custom script" để đồng bộ dữ liệu → luôn là dấu hiệu của operational overhead cao, gần như không bao giờ là đáp án đúng cho câu "least operational overhead"
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Multi-AZ DB instance deployments for Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZSingleStandby.html)
+- 🌐 [Amazon RDS for SQL Server (high availability)](https://docs.aws.amazon.com/prescriptive-guidance/latest/migration-sql-server/rds-sql.html)
+
+</details>
+
+---
+
+<div id="question-65"></div>
+
+### Question 65: Automating EBS Snapshot Lifecycles and Retention Policies using Amazon Data Lifecycle Manager (DLM)
+> **Miền kiến thức (Domain)**: Domain 4: Design Cost-Optimized Architectures  
+> **Loại câu hỏi**: Single Choice (Chọn 1 đáp án)  
+> **Kết quả thực hành**: Incorrect (Chưa chính xác) ❌ | **Lựa chọn của bạn**: - | **Đáp án đúng**: (A)
+
+#### 📋 Đề bài (Scenario)
+A company uses AWS Cost Explorer to monitor its AWS costs. The company notices that Amazon EBS storage and snapshot costs increase every month. However, the company does not purchase additional EBS storage every month. The company wants to optimize monthly costs for its current storage usage.
+
+Which solution will meet these requirements with the LEAST operational overhead?
+
+#### 🔘 Các phương án lựa chọn (Options)
+- **(A)** Delete all nonessential snapshots. Use Amazon Data Lifecycle Manager to create and manage the snapshots according to the company's snapshot policy requirements. `[Đáp án đúng ✅]`
+- **(B)** Delete all expired and unused snapshots to reduce snapshot costs.
+- **(C)** Use logs in Amazon CloudWatch Logs to monitor the storage utilization of Amazon EBS. Use Amazon EBS Elastic Volumes to reduce the size of the EBS volumes.
+- **(D)** Use a custom script to monitor space usage. Use Amazon EBS Elastic Volumes to reduce the size of the EBS volumes.
+
+<details>
+<summary>👉 <b>Xem đáp án chi tiết & giải thích kiến trúc (Click to expand)</b></summary>
+
+#### ✅ Đáp án đúng: **(A)**
+
+#### 💡 Phân tích giải thích chi tiết (Core Explanation):
+> 📝 **Tóm tắt đề bài:**
+> - Dùng AWS Cost Explorer để theo dõi chi phí AWS
+> - Chi phí EBS storage và snapshot tăng đều mỗi tháng
+> - Nhưng công ty không mua thêm EBS storage mỗi tháng (nguyên nhân không phải do tăng dung lượng mới)
+> - → Yêu cầu: tối ưu chi phí storage hiện tại với LEAST operational overhead
+
+**Phân tích giải pháp tối ưu:**
+Delete all nonessential snapshots. Use Amazon Data Lifecycle Manager to create and manage the snapshots according to the company's snapshot policy requirements.
+
+Chi phí tăng dù không mua thêm storage → nguyên nhân điển hình là snapshot tích luỹ dần theo thời gian (snapshot cũ/không dùng không được dọn dẹp) - cần dọn snapshot thừa trước
+
+Amazon Data Lifecycle Manager (DLM) tự động hoá việc tạo, giữ (retention) và xoá snapshot theo policy - sau khi thiết lập, không cần thao tác thủ công hàng tháng nữa, giải quyết triệt để nguyên nhân gốc (snapshot tích luỹ không kiểm soát) với overhead vận hành thấp nhất về lâu dài
+
+#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):
+- **(C) Use logs in Amazon CloudWatch Logs to monitor the storage utilization of Amazon EBS. Use Amazon EBS Elastic Volumes to reduce the size of the EBS volumes.**
+
+- **(D) Use a custom script to monitor space usage. Use Amazon EBS Elastic Volumes to reduce the size of the EBS volumes.**:
+  Cả hai đáp án đều nhắm vào giảm kích thước volume EBS, nhưng đề bài nêu rõ nguyên nhân là chi phí storage VÀ snapshot tăng dù không mua thêm dung lượng - vấn đề nằm ở snapshot tích luỹ, không phải volume quá lớn, nên giải pháp giảm size volume không giải quyết đúng nguyên nhân
+  Amazon EBS Elastic Volumes hiện tại chỉ hỗ trợ tăng kích thước/loại volume, không hỗ trợ giảm kích thước - hai đáp án này sai cả về mặt kỹ thuật khả thi
+
+- **(B) Delete all expired and unused snapshots to reduce snapshot costs.**:
+  Đây chỉ là hành động một lần, thủ công (one-time manual action) - không có cơ chế tự động cho các tháng tiếp theo, nghĩa là chi phí sẽ tiếp tục tăng trở lại và cần lặp lại thao tác thủ công mỗi tháng → operational overhead cao hơn về lâu dài so với dùng DLM tự động hoá
+
+#### 🔑 Bí kíp thi cử & Trọng tâm ghi nhớ (Exam Tips & Key Takeaways):
+- "Chi phí tăng dù không mua thêm storage" → nghĩ ngay tới snapshot tích luỹ không được dọn dẹp, không phải volume quá lớn
+- "Least operational overhead" cho vấn đề lặp lại hàng tháng → luôn ưu tiên giải pháp tự động hoá (DLM) thay vì hành động thủ công một lần
+- EBS Elastic Volumes chỉ tăng được size, không giảm được → loại ngay đáp án nào dùng Elastic Volumes để "reduce the size"
+- Nếu đề yêu cầu giải pháp bền vững, lặp lại theo lịch → chọn đáp án có "policy"/"lifecycle" tự động thay vì "delete" một lần
+
+#### 📚 Tài liệu tham khảo chính thức (Official References):
+- 🌐 [Automate backups with Amazon Data Lifecycle Manager](https://docs.aws.amazon.com/ebs/latest/userguide/snapshot-lifecycle.html)
+- 🌐 [Automating Amazon EBS snapshot management using Data Lifecycle Manager](https://aws.amazon.com/blogs/storage/automating-amazon-ebs-snapshots-management-using-data-lifecycle-manager/)
+
+</details>
+
+---
+
