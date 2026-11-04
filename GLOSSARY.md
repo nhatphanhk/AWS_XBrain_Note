@@ -1,6 +1,7 @@
 # Bảng Thuật Ngữ Kỹ Thuật Điện Toán Đám Mây & AWS (Technical Terminology Glossary)
 
 > **Mục tiêu**: Cung cấp từ điển thuật ngữ chuẩn hóa Anh - Việt chuyên sâu về AWS, Cloud DevOps, Kiến trúc mạng (Networking), Bảo mật (Security), Tự động hóa hạ tầng (IaC) và Khả năng quan sát (Observability).  
+> **Tài liệu luyện thi chuyên sâu**: 👉 Xem ngay **[Cẩm Nang Từ Vựng & Giải Mã Đề Thi AWS SAA-C03 (EXAM_VOCABULARY.md)](./EXAM_VOCABULARY.md)** (Tổng hợp từ khóa, bẫy thi và ma trận ánh xạ từ 390 câu hỏi qua 6 bộ đề Cloud Mentor).  
 > **Nguyên tắc**: Giữ nguyên thuật ngữ tiếng Anh chuẩn công nghiệp, giải thích nghĩa tiếng Việt chính xác và nêu rõ ngữ cảnh ứng dụng thực tế trong công việc kỹ thuật Cloud/DevOps.
 
 ---

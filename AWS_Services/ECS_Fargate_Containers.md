@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Amazon ECS, AWS Fargate, ECR & EKS (Công Nghệ Điều Phối Container Đám Mây)
+﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon ECS, AWS Fargate, ECR & EKS (Công Nghệ Điều Phối Container Đám Mây)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -135,6 +135,21 @@ classDiagram
     2. **Interface VPC Endpoint**: `com.amazonaws.<region>.ecr.dkr` (cho luồng tải các image layer Docker).
     3. **Gateway VPC Endpoint cho Amazon S3**: Đây là **bẫy tinh vi nhất** — toàn bộ các layer nhị phân của Docker image trong Amazon ECR thực tế được lưu trữ trên Amazon S3! Nếu thiếu S3 Gateway Endpoint, lệnh kéo image vẫn sẽ thất bại.
 
+#### 🪤 Bẫy 3: Phân Quyền Least Privilege: Task Role vs Task Execution Role — (CM-PT2 Q20)
+- **Tình huống đề thi**: *"Ứng dụng microservices đóng gói container chạy trên Amazon ECS cần đọc các file trong S3 bucket và ghi bản ghi vào Amazon DynamoDB. Cần phân quyền IAM theo nguyên tắc đặc quyền tối thiểu (Least Privilege). Cấu hình IAM như thế nào?"*
+- **Quy tắc phân biệt bất biến**:
+  - **Task Role**: Cấp quyền cho **mã nguồn ứng dụng chạy bên trong container**. Khi code Java/Node.js gọi `s3.getObject()` hay `dynamo.putItem()`, nó sẽ nhận credentials từ Task Role. Luôn gắn IAM policy có full ARN của S3/DynamoDB vào **Task Role**!
+  - **Task Execution Role**: Cấp quyền cho **hạ tầng ECS Agent của AWS** để thực thi các tác vụ quản trị container (kéo image từ Amazon ECR, đẩy stdout log vào CloudWatch Logs, lấy bí mật từ Secrets Manager đưa vào biến môi trường).
+- **Các phương án bẫy**:
+  - ❌ *Gán IAM policy đọc S3 vào Task Execution Role*: Mã nguồn ứng dụng bên trong container sẽ bị lỗi `AccessDenied` vì Execution Role không được truyền vào container runtime.
+  - ❌ *Gán IAM policy vào EC2 Instance Profile Role*: Vi phạm nghiêm trọng Least Privilege vì tất cả các container khác chạy chung trên máy ảo EC2 đó đều có thể mượn quyền truy cập vào S3 bucket!
+
+#### 🪤 Bẫy 4: Chạy Ứng Dụng Web Container Với Ít Công Vận Hành Nhất: App Runner vs ECS — (CM-PT2 Q57, CM-PT4 Q05)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn triển khai một ứng dụng web dạng Docker container với ít chi phí vận hành và quản lý hạ tầng nhất (LEAST operational overhead), không muốn phải tự cấu hình VPC, subnets, Load Balancers hay ECS Clusters."*
+- **Giải pháp ĐÚNG**: **AWS App Runner**.
+  - Dịch vụ PaaS Serverless Container của riêng AWS: Lập trình viên chỉ cần trỏ tới Docker image trong Amazon ECR hoặc mã nguồn Git.
+  - App Runner tự động cung cấp Load Balancer, chứng chỉ SSL/TLS, định tuyến lưu lượng, giám sát và co giãn tự động theo số lượng request đồng thời mà người dùng hoàn toàn không cần quản lý mạng hay cluster.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Container Nhanh (Exam Decision Matrix)
@@ -147,6 +162,8 @@ classDiagram
 | **Container cần chia sẻ file system đọc/ghi đồng thời** | **ECS on Fargate + Amazon EFS** | Amazon EBS (không chia sẻ nhiều AZ đồng thời) |
 | **Script chạy 30-60 phút cần serverless** | **EventBridge Scheduler + ECS Fargate Task** | AWS Lambda (hard limit timeout 15 phút) |
 | **Kéo image ECR trong Private Subnet không có NAT** | **VPC Endpoints cho ECR API, DKR + S3 Gateway** | Chỉ tạo ECR endpoints (thiếu S3 endpoint) |
+| **Triển khai Web App Container ít công vận hành nhất** | **AWS App Runner** | Tự dựng cụm ECS + ALB + VPC (quá nhiều cấu hình) |
+| **Phân quyền truy cập S3/DB theo chuẩn Least Privilege** | **ECS Task Role** | Instance Role (vi phạm least privilege vì dùng chung host) |
 
 ---
 

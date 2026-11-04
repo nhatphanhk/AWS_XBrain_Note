@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: AWS KMS, Secrets Manager, CloudHSM, WAF & Dịch Vụ An Ninh Đám Mây (Security & Encryption)
+﻿# Tài Liệu Học Tập Chuyên Sâu: AWS KMS, Secrets Manager, CloudHSM, WAF & Dịch Vụ An Ninh Đám Mây (Security & Encryption)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -232,6 +232,32 @@ flowchart LR
   - Khóa KMS thông thường là **tài nguyên cục bộ trong 1 Region (Regional Resource)**. Khóa tạo ở Region A hoàn toàn không tồn tại và không thể dùng để giải mã ở Region B.
   - **Giải pháp ĐÚNG**: Sử dụng **AWS KMS Multi-Region Key (`mrk-xxxxxxxx`)**. Khóa này chia sẻ cùng một Key ID và Key Material trên nhiều Region, cho phép mã hóa ở Region A và giải mã liền mạch tại Region B.
 
+#### 🪤 Bẫy 4: Tự Kiểm Soát Khóa Mã Hóa (Retain Control Over Key Material) — (CM-PT2 Q23)
+- **Tình huống đề thi**: *"Khách hàng yêu cầu toàn bộ dữ liệu lưu trữ trên Amazon S3 Glacier phải được mã hóa khi lưu trữ. Tuy nhiên, doanh nghiệp bắt buộc phải TỰ MÌNH KIỂM SOÁT toàn bộ chuỗi bit khóa mã hóa (Key Material), tuyệt đối không để AWS tự sinh ra hay nắm giữ key material trong HSM của AWS. Chọn 2 giải pháp kết hợp."*
+- **Phân tích giải pháp**:
+  - **Giải pháp 1**: Tạo một **AWS KMS Key với Imported Key Material (BYOK - Bring Your Own Key)**. Khách hàng sử dụng thiết bị HSM tại chỗ (On-Premises HSM) để sinh key material, sau đó import vào KMS key rỗng. Khách hàng toàn quyền xóa hoặc thay thế key material bất cứ lúc nào.
+  - **Giải pháp 2**: Sử dụng phương thức mã hóa **Server-Side Encryption with Customer-Provided Keys (SSE-C)**. Khách hàng tự lưu trữ và quản lý khóa hoàn toàn ngoài AWS; mỗi khi upload/download qua S3/Glacier, khách hàng truyền key trong HTTPS headers (`x-amz-server-side-encryption-customer-key`). AWS chỉ dùng key đó trong RAM để mã hóa/giải mã rồi lập tức xóa bỏ khỏi bộ nhớ.
+
+#### 🪤 Bẫy 5: Quyền Kiểm Soát Lịch Xoay Vòng Khóa Bắt Buộc Dùng Customer Managed Key (CMK) — (CM-PT6 Q14)
+- **Tình huống đề thi**: *"Chính sách bảo mật của doanh nghiệp quy định đội ngũ an ninh phải chủ động kiểm soát và thiết lập lịch xoay vòng khóa mã hóa (Key Rotation Schedule) theo yêu cầu riêng hoặc định kỳ 90 ngày một lần. Chọn loại khóa KMS nào?"*
+- **Bẫy bất biến**:
+  - **AWS Managed Keys** (ví dụ `aws/s3`, `aws/ebs`): AWS tự động xoay vòng mỗi năm 1 lần (365 ngày), người dùng **HOÀN TOÀN KHÔNG CÓ QUYỀN** thay đổi hoặc kiểm soát lịch xoay vòng này.
+  - **Customer Managed Keys (CMK)**: Người dùng có toàn quyền bật/tắt xoay vòng tự động, kích hoạt xoay vòng theo nhu cầu (On-demand Rotation), hoặc tự quản lý các phiên bản khóa. Bắt buộc chọn **Customer Managed Key (CMK)**!
+
+#### 🪤 Bẫy 6: Cấp Quyền Giải Mã S3 KMS Xuyên Tài Khoản Cho Lambda — (CM-PT6 Q55)
+- **Tình huống đề thi**: *"Hàm AWS Lambda tại Tài khoản A cần đọc và giải mã các file nhạy cảm trong S3 bucket được mã hóa bằng AWS KMS tại Tài khoản B. Cần cấu hình phân quyền giải mã như thế nào?"*
+- **Nguyên tắc phân quyền KMS Cross-Account**:
+  - Cần đồng thời cả 2 cấu hình:
+    1. **IAM Policy gán vào Lambda Execution Role tại Tài khoản A**: Cho phép hành động `kms:Decrypt` trên ARN của khóa KMS ở Tài khoản B.
+    2. **KMS Key Policy tại Tài khoản B**: Phải có statement cho phép Principal là Tài khoản A (hoặc IAM Role của Lambda) quyền gọi `kms:Decrypt`.
+  - Nếu chỉ cấp quyền trên IAM Role mà không mở trên Key Policy $\rightarrow$ Thao tác decrypt chắc chắn bị `AccessDenied`.
+
+#### 🪤 Bẫy 7: Region Bắt Buộc Của Chứng Chỉ ACM Cho CloudFront — (CM-PT3 Q35)
+- **Bẫy đề thi**: *"Ứng dụng sử dụng Amazon CloudFront để phân phối nội dung toàn cầu và cần gắn chứng chỉ SSL/TLS công khai cấp bởi AWS Certificate Manager (ACM) cho tên miền riêng `app.example.com`."*
+- **Quy tắc bất biến của AWS**:
+  - Chứng chỉ SSL/TLS dùng cho **Amazon CloudFront Distribution** BẮT BUỘC PHẢI ĐƯỢC REQUEST TẠI REGION **`us-east-1` (N. Virginia)**!
+  - Nếu tạo chứng chỉ ở bất kỳ Region nào khác (ví dụ `ap-southeast-1` Singapore hay `eu-west-1` Ireland), CloudFront Distribution sẽ hoàn toàn không nhìn thấy chứng chỉ đó trong danh sách dropdown!
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định An Ninh & Mã Hóa Nhanh (Exam Decision Matrix)
@@ -246,6 +272,10 @@ flowchart LR
 | **Mã hóa S3 CRR xuyên nhiều AWS Regions** | **AWS KMS Multi-Region Key** | Single-Region KMS Key (không giải mã được ở Region khác) |
 | **Quản lý & xoay vòng chứng chỉ SSL tự động** | **AWS Certificate Manager (ACM)** | Tự upload cert bên thứ 3 (không tự renew được) |
 | **Truy vết ai đã sử dụng khóa để giải mã dữ liệu** | **SSE-KMS** (ghi log vào CloudTrail) | SSE-S3 (không có audit trail chi tiết cho từng object) |
+| **Tự kiểm soát key material không để AWS sinh** | **KMS Imported Key Material (BYOK) hoặc SSE-C** | AWS Managed Keys (AWS tự sinh và nắm giữ) |
+| **Kiểm soát chủ động lịch xoay vòng khóa mã hóa** | **KMS Customer Managed Key (CMK)** | AWS Managed Key (bị cố định 1 năm 1 lần) |
+| **Cấp chứng chỉ SSL/TLS cho CloudFront Distribution** | **ACM tại Region `us-east-1` (bắt buộc)** | ACM tại các Region khác (CloudFront không nhận) |
+| **Giải mã KMS xuyên tài khoản S3 sang Lambda** | **IAM Policy (Caller) + Key Policy (Owner)** | Chỉ cấu hình 1 bên (bị lỗi Access Denied) |
 
 ---
 

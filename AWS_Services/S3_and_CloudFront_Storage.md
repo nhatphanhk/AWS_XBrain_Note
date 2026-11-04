@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Amazon S3 & Amazon CloudFront (Lưu Trữ Đối Tượng, Bảo Mật & Mạng Phân Phối Nội Dung Toàn Cầu)
+﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon S3 & Amazon CloudFront (Lưu Trữ Đối Tượng, Bảo Mật & Mạng Phân Phối Nội Dung Toàn Cầu)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -200,6 +200,37 @@ flowchart TD
   2. **Giai đoạn 2 (30 ngày – 5 năm)**: **S3 Standard-IA** (dữ liệu thô ít khi truy vấn, tiết kiệm chi phí, đáp ứng truy xuất nhanh khi kiểm toán đột xuất).
   3. **Giai đoạn 3 (Sau 5 năm)**: **S3 Glacier Flexible / Deep Archive** (lưu trữ tuân thủ pháp lý với chi phí rẻ nhất $0.00099/GB).
 
+#### 🪤 Bẫy 5: S3 Object Lock Compliance Mode với Retention Period Cố Định — (CM-PT2 Q22, CM-PT1 Q01)
+- **Tình huống đề thi**: *"Doanh nghiệp tài chính cần lưu trữ hồ sơ giao dịch trong đúng thời hạn 1 năm. Quy định pháp lý yêu cầu hồ sơ TUYỆT ĐỐI KHÔNG ĐƯỢC XÓA HOẶC GHI ĐÈ trong 1 năm này, kể cả bởi quản trị viên cấp cao nhất hay tài khoản Root, nhưng hồ sơ vẫn phải đọc được bình thường."*
+- **Phân biệt rạch ròi 3 chế độ Object Lock**:
+  - **Legal Hold**: Giữ vô thời hạn (indefinitely) cho các vụ kiện, không có ngày hết hạn; chỉ gỡ khi chủ động bỏ cờ.
+  - **Governance Mode**: Vẫn có thể bị xóa bởi user có quyền IAM đặc biệt (`s3:BypassGovernanceRetention`).
+  - **Compliance Mode**: **Không ai có thể xóa trước hạn (kể cả Root account)**. Không thể rút ngắn thời hạn retention period.
+- **Giải pháp ĐÚNG**: Bật S3 Versioning $\rightarrow$ Cấu hình **S3 Object Lock ở Compliance Mode** với retention period 365 ngày.
+
+#### 🪤 Bẫy 6: Chi Phí S3 Tăng Ẩn Do Tải Lên Đứt Quãng (Incomplete Multipart Uploads) — (CM-PT5 Q27)
+- **Tình huống đề thi**: *"Doanh nghiệp duy trì 300 TB trong S3 Standard. Đội FinOps phát hiện hóa đơn lưu trữ S3 liên tục tăng hàng tháng mặc dù số lượng object và dung lượng thực tế không hề thay đổi. Đâu là nguyên nhân và giải pháp ít công vận hành nhất?"*
+- **Nguyên nhân cốt lõi**:
+  - Khi tải file lớn qua **Multipart Upload**, file được chia nhỏ thành nhiều parts. Nếu quá trình tải bị lỗi mạng hoặc đứt quãng giữa chừng mà client không gửi lệnh abort, **các parts dở dang vẫn nằm trong S3 và tiếp tục bị tính tiền lưu trữ ngầm hàng tháng**!
+- **Giải pháp ĐÚNG**:
+  - Cấu hình một **S3 Lifecycle Rule** với hành động **Abort incomplete multipart uploads**.
+  - Thiết lập tự động dọn dẹp và xóa sạch các parts dở dang sau 7 ngày kể từ khi bắt đầu upload.
+
+#### 🪤 Bẫy 7: Xử Lý Đợt Tăng Tải Tải File Đột Biến Bằng S3 Presigned URLs — (CM-PT6 Q33)
+- **Tình huống đề thi**: *"Ứng dụng tổ chức sự kiện trực tiếp với hàng triệu người dùng đồng loạt upload ảnh/video tự sướng lên hệ thống. Cụm máy chủ EC2 backend bị nghẽn mạng và sập do không chịu nổi băng thông tải file trung gian. Cần giải pháp co giãn tốt với ít công vận hành nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Tăng quy mô EC2 Auto Scaling lên hàng trăm máy*: Tốn kém chi phí, máy chủ vẫn phải nhận dữ liệu trung gian rồi mới đẩy lên S3.
+  - ❌ *Cấp IAM Access Keys cho ứng dụng di động của người dùng*: Rủi ro bảo mật nghiêm trọng (rò rỉ IAM keys).
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon S3 Presigned URLs**.
+  - Máy chủ backend chỉ xác thực người dùng và sinh nhanh một đường dẫn **Presigned URL** (hạn dùng vài phút) trả về cho ứng dụng client.
+  - Client trực tiếp đẩy HTTP PUT file thẳng vào S3 bucket. Tận dụng băng thông không giới hạn và khả năng co giãn tự động của Amazon S3, giảm tải 100% cho cụm máy chủ backend.
+
+#### 🪤 Bẫy 8: Tối Ưu Tải File Lớn Hàng Chục Gigabytes Bằng Multipart Upload và Parallel Byte-Ranges — (CM-PT6 Q05)
+- **Tình huống đề thi**: *"Cần truyền tải các tệp tin hình ảnh vệ tinh có kích thước hàng chục Gigabytes từ On-Premises lên S3 với thông lượng tối đa và khả năng chịu lỗi mạng tốt nhất."*
+- **Giải pháp ĐÚNG**:
+  - Bắt buộc sử dụng **S3 Multipart Upload** (bắt buộc cho file > 5 GB, khuyến nghị cho file > 100 MB).
+  - Kết hợp đọc/ghi song song theo dải byte (**Parallel Byte-Range Fetches**). Nếu một part bị lỗi mạng, chỉ cần tải lại duy nhất part đó mà không phải tải lại toàn bộ file từ đầu.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Lớp Lưu Trữ S3 Nhanh (Exam Decision Matrix)
@@ -215,6 +246,11 @@ flowchart TD
 | **Chống ghi đè vô thời hạn phục vụ pháp lý** | **S3 Object Lock (Legal Hold)** | Retention Period (có ngày hết hạn) |
 | **Tải file lớn > 100 MB xuyên lục địa nhanh nhất** | **S3 Transfer Acceleration + Multipart** | Direct Connect / VPN (tốn kém và chậm triển khai) |
 | **Bảo vệ nội dung S3 chỉ phát qua CloudFront** | **CloudFront Origin Access Control (OAC)** | CNAME / S3 Public Website Endpoint |
+| **Bảo vệ bất biến cố định 1 năm không ai xóa được** | **S3 Object Lock (Compliance Mode + Retention Period)** | Governance Mode (admin có thể bypass xóa) |
+| **Hàng triệu user upload ảnh sự kiện không sập web tier** | **Amazon S3 Presigned URLs** | Scale EC2 hàng trăm máy (tốn kém & nghẽn I/O) |
+| **Ngăn chặn chi phí ẩn do upload file lớn đứt quãng** | **S3 Lifecycle (Abort Incomplete Multipart Uploads)** | Quét script thủ công (dễ bỏ sót parts dở dang) |
+| **Tải file vệ tinh/video hàng chục GB lên S3 tối ưu** | **S3 Multipart Upload + Parallel Byte-Ranges** | Tải đơn luồng (dễ rớt mạng, chậm chạp) |
+| **Chỉ cho phép tài khoản trong cùng Organization đọc S3** | **S3 Bucket Policy điều kiện `aws:PrincipalOrgID`** | Cấp quyền theo từng IAM Role lẻ tẻ |
 
 ---
 

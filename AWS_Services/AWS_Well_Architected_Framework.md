@@ -162,6 +162,30 @@ flowchart TD
   - **Price Class 100**: **Chỉ sử dụng các Edge Locations tại Bắc Mỹ, Châu Âu và Israel**. Đây là lựa chọn có chi phí thấp nhất!
 - **Giải pháp ĐÚNG**: Chuyển đổi cấu hình CloudFront Distribution sang **Price Class 100**.
 
+#### 🪤 Bẫy 4: Chia Sẻ Chiết Khấu Savings Plans Trong AWS Organizations — (CM-PT2 Q55, CM-PT3 Q05, CM-PT5 Q36)
+- **Tình huống đề thi**: *"Doanh nghiệp triển khai kiến trúc đa tài khoản với AWS Organizations. Một số tài khoản thành viên chạy EC2, Lambda và Fargate. Doanh nghiệp muốn mua Savings Plans và chia sẻ chiết khấu giảm giá cho toàn bộ tổ chức với ít công sức nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Mua và chia sẻ từ tài khoản thành viên (Member Account)*: Chỉ tài khoản đó được hưởng ưu đãi, không tự động tối ưu hóa hóa đơn tổng hợp.
+  - ❌ *Chọn EC2 Instance Savings Plans khi ứng dụng dùng cả Lambda và Fargate*: EC2 Instance Savings Plans CHỈ áp dụng cho EC2, hoàn toàn không giảm giá cho Lambda hay Fargate!
+- **Giải pháp ĐÚNG**:
+  1. Mua gói **Compute Savings Plans** (giảm tới 66% cho EC2, Fargate VÀ Lambda).
+  2. Bật tính năng **Discount Sharing từ Management Account** trong AWS Billing Console.
+  3. Cấu hình **AWS Budgets Coverage Alerts** để nhận thông báo tự động khi tỷ lệ bao phủ của Savings Plans giảm xuống dưới ngưỡng mong muốn.
+
+#### 🪤 Bẫy 5: Kiểm Soát Tuân Thủ Đa Tài Khoản: Control Tower Proactive Controls vs Detective Controls — (CM-PT4 Q36, CM-PT6 Q25)
+- **Tình huống đề thi**: *"Doanh nghiệp cần NGĂN CHẶN hoàn toàn (PREVENT) việc lập trình viên khởi chạy các EC2 instance có gắn địa chỉ Public IP trong toàn bộ tổ chức, đồng thời phát hiện sai lệch cấu hình (Configuration Drift) với ít công vận hành nhất."*
+- **Nguyên tắc phân biệt Guardrails / Controls trong Control Tower**:
+  - **Preventive Controls (Ngăn chặn)**: Thực thi thông qua **Service Control Policies (SCPs)** của AWS Organizations (chặn các API call nguy hiểm).
+  - **Proactive Controls (Chủ động chặn trước khi deploy)**: Sử dụng **CloudFormation Guard** để quét mẫu template IaC và chặn deployment ngay tại thời điểm tạo resource nếu vi phạm quy định (ví dụ: cấm `AssociatePublicIpAddress: true`).
+  - **Detective Controls (Phát hiện sau khi tạo)**: Thực thi thông qua **AWS Config Managed Rules**, phát hiện tài nguyên vi phạm và ghi nhận sự kiện drift hoặc kích hoạt tự động sửa chữa.
+- **Giải pháp ĐÚNG**: Triển khai **AWS Control Tower Proactive Controls** trong Landing Zone và bật **Drift Notifications**.
+
+#### 🪤 Bẫy 6: Khuyến Nghị Mua Reserved Instances Cho Database Hoạt Động Tải Cao — (CM-PT3 Q31, CM-PT6 Q54)
+- **Tình huống đề thi**: *"Doanh nghiệp vận hành nhiều cơ sở dữ liệu Amazon RDS for Oracle theo mô hình On-Demand với mức độ tải CPU/Memory liên tục vượt 85% trong nhiều tháng. Ban giám đốc yêu cầu đưa ra phương án cắt giảm chi phí ngay lập tức với công cụ tích hợp sẵn của AWS."*
+- **Giải pháp ĐÚNG**: Kiểm tra báo cáo tối ưu hóa tại **AWS Trusted Advisor** mục **Amazon RDS Reserved Instance Optimization checks**.
+  - Trusted Advisor tự động phân tích lịch sử sử dụng thực tế trong 30 ngày và đề xuất chính xác số lượng, loại DB instance cần chuyển đổi sang **Reserved Instances (RI 1 năm hoặc 3 năm)** để tiết kiệm tới 60% chi phí.
+  - Bật tính năng **Cost and Usage Reports (CUR)** tại Management Account đẩy log vào S3 để phân tích sâu bằng **Amazon Athena**.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Tối Ưu Chi Phí & Trụ Cột Nhanh (Exam Decision Matrix)
@@ -176,6 +200,11 @@ flowchart TD
 | **Dữ liệu tạm thời vòng đời < 30 ngày** | **Amazon S3 Standard** | S3 Standard-IA (bị phạt tính tiền tối thiểu 30 ngày) |
 | **Giảm chi phí CloudFront cho khách Mỹ & Châu Âu** | **CloudFront Price Class 100** | Price Class All (phải trả phí cho Edge Location đắt đỏ) |
 | **Phân bổ chi phí theo phòng ban/dự án** | **Cost Allocation Tags + Cost Explorer** | Xem hóa đơn tổng (không lọc theo dự án được) |
+| **Chia sẻ chiết khấu Savings Plans đa tài khoản** | **Bật Discount Sharing từ Management Account** | Mua và cấu hình từ Member Account (không áp dụng toàn tổ chức) |
+| **Chặn deploy máy ảo có Public IP toàn tổ chức** | **Control Tower Proactive Controls (CloudFormation Guard)** | Detective Controls (chỉ phát hiện sau khi máy đã chạy) |
+| **Phát hiện cấu hình trôi lệch (Drift) đa tài khoản** | **Control Tower Drift Notifications** | Quét thủ công từng tài khoản (tốn công vận hành) |
+| **Đề xuất mua Reserved Instances cho DB tải cao** | **Trusted Advisor RDS RI Optimization Checks** | Giữ On-Demand chạy 24/7 (lãng phí tới 60% chi phí) |
+| **Báo cáo chi phí chi tiết phân tích bằng Athena** | **AWS Cost and Usage Reports (CUR) ở Management Account** | Xuất báo cáo lẻ tẻ ở từng Member Account |
 
 ---
 

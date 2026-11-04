@@ -1,4 +1,4 @@
-# AWS Certified Solutions Architect Associate (SAA-C03) & Cloud DevOps Knowledge Base
+﻿# AWS Certified Solutions Architect Associate (SAA-C03) & Cloud DevOps Knowledge Base
 
 > **Cơ sở tri thức kỹ thuật dài hạn và toàn diện về Điện toán đám mây AWS, Kiến trúc giải pháp (Cloud Solutions Architecture) và Thực hành Cloud DevOps.**
 > Tổng hợp, chuẩn hóa và nâng cao từ 389 bài giảng Udemy của giảng viên Stéphane Maarek kết hợp các tài liệu kỹ thuật chính thức từ AWS (AWS Whitepapers, AWS Well-Architected Framework, AWS Documentation).
@@ -131,6 +131,21 @@ Mỗi tài liệu ghi chú tổng hợp các bài học theo cấu trúc chuẩn
 | **30** | Other Services | 8 | CloudFormation Templates/Drift, Systems Manager Parameter Store/Session Manager | [30_Other_Services_CloudFormation_SSM.md](./Lesson_Notes/30_Other_Services_CloudFormation_SSM.md) |
 | **31** | WhitePapers & Architectures | 10 | AWS Well-Architected 6 Pillars, Disaster Recovery Whitepaper, Trusted Advisor | [31_WhitePapers_and_Architectures.md](./Lesson_Notes/31_WhitePapers_and_Architectures.md) |
 | **32** | Preparing for the Exam & Exam Tricks | 5 | Chiến lược ôn thi SAA-C03, 7 nhóm Core Services, 5 Trick loại trừ thực chiến, Bảng Keyword Triggers | [32_Preparing_for_the_Exam.md](./Lesson_Notes/32_Preparing_for_the_Exam.md) |
+
+---
+
+## 🎯 4.5. Luyện Thi Thực Chiến & Cẩm Nang Giải Mã Đề Thi (`Practices_Test/` & `EXAM_VOCABULARY.md`)
+
+Hệ thống tài liệu luyện thi thực hành bám sát 100% cấu trúc đề thi thật của AWS Certified Solutions Architect - Associate (**SAA-C03**):
+
+* **[Cẩm Nang Từ Vựng & Giải Mã Đề Thi (EXAM_VOCABULARY.md)](./EXAM_VOCABULARY.md)**: Bí kíp phân tích từ khóa quyết định (Decision Qualifiers), 12 bẫy thi kinh điển, động từ hành động kỹ thuật, ma trận phản xạ giải pháp từ 390 câu hỏi thực tế và chiến lược loại trừ 4 bước.
+* **Bộ Đề Thi Thử Cloud Mentor (6 Bộ Đề Thực Hành - 390 Câu Hỏi Kèm Phân Tích Chuyên Sâu)**:
+  - 📝 **[Practice Test 01 (65 câu - 21 câu trọng tâm ôn tập)](./Practices_Test/Cloud_Mentor/pt_1.md)**: PrivateLink overlapping CIDRs, FSx Multi-AZ DataSync, S3 aws:PrincipalOrgID, Lambda SnapStart hooks.
+  - 📝 **[Practice Test 02 (65 câu - 18 câu trọng tâm ôn tập)](./Practices_Test/Cloud_Mentor/pt_2.md)**: EFS manuals zero-code, Aurora Serverless v2 spiky dev/test, Transfer Family SFTP, Egress-Only IGW.
+  - 📝 **[Practice Test 03 (65 câu - 19 câu trọng tâm ôn tập)](./Practices_Test/Cloud_Mentor/pt_3.md)**: Kinesis real-time, Compute Savings Plans vs EC2 Savings Plans, WAF SQLi/XSS, Trusted Advisor RDS RI.
+  - 📝 **[Practice Test 04 (65 câu - 23 câu trọng tâm ôn tập)](./Practices_Test/Cloud_Mentor/pt_4.md)**: Control Tower Proactive Controls, Organizations multi-account, KMS encrypted AMI sharing, DynamoDB Gateway Endpoint.
+  - 📝 **[Practice Test 05 (65 câu - 16 câu trọng tâm ôn tập)](./Practices_Test/Cloud_Mentor/pt_5.md)**: GuardDuty RDS Protection, SQS FIFO ordering, S3 Lifecycle abort multipart, CloudWatch EC2 Auto-Recovery.
+  - 📝 **[Practice Test 06 (65 câu - 31 câu trọng tâm ôn tập)](./Practices_Test/Cloud_Mentor/pt_6.md)**: S3 Presigned URLs surge, RDS Storage Auto Scaling zero-downtime, RDS Proxy failover, EBS Snapshot Lock.
 
 ---
 

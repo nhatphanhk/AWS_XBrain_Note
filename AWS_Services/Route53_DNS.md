@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Amazon Route 53 (Dịch Vụ Phân Giải Tên Miền & Định Tuyến Toàn Cầu)
+﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon Route 53 (Dịch Vụ Phân Giải Tên Miền & Định Tuyến Toàn Cầu)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -212,6 +212,21 @@ flowchart LR
   - `enableDnsSupport` phải được đặt thành `true`.
 - Nếu thiếu cờ `enableDnsSupport`, máy chủ nội bộ `10.x.x.2` (AmazonProvidedDNS) sẽ không được kích hoạt, dẫn tới Route 53 Resolver không thể phản hồi truy vấn cho Private Hosted Zone.
 
+#### 🪤 Bẫy 5: Tăng Tốc Giao Thức TCP/UDP Toàn Cầu: Global Accelerator vs CloudFront — (CM-PT1 Q40, CM-PT6 Q48)
+- **Tình huống đề thi**: *"Ứng dụng truyền thông VoIP, máy chủ game trực tuyến hoặc IoT giao tiếp qua giao thức TCP/UDP trên nhiều cổng mạng khác nhau. Khách hàng phân tán trên toàn thế giới và yêu cầu độ trễ thấp nhất, không phụ thuộc vào bộ nhớ đệm IP/DNS trên thiết bị người dùng cuối."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Amazon CloudFront*: CloudFront là mạng phân phối nội dung (CDN) hoạt động ở **Layer 7** chuyên cho các giao thức web (HTTP/HTTPS), hoàn toàn **KHÔNG hỗ trợ giao thức UDP** hay các ứng dụng TCP thô non-HTTP.
+  - ❌ *Dùng Route 53 Latency-Based Routing*: Route 53 chỉ phân giải tên miền ở bước đầu; lưu lượng gói tin thực tế sau đó vẫn phải di chuyển qua mạng Internet công cộng đầy rủi ro và nghẽn mạng.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Global Accelerator**.
+  - Cung cấp **2 địa chỉ Static Anycast IP** cố định (dễ cấu hình whitelist tường lửa).
+  - Hỗ trợ đầy đủ cả giao thức **TCP và UDP** trên mọi dải cổng mạng.
+  - Đưa lưu lượng gói tin của client vào điểm biên Edge Location gần nhất của AWS, sau đó dẫn truyền toàn bộ qua mạng trục cáp quang riêng tốc độ cao của AWS (AWS Global Network Backbone), giúp giảm tới 60% độ trễ và triệt tiêu hiện tượng jitter/packet loss.
+
+#### 🪤 Bẫy 6: Định Tuyến Đa Vùng Độ Trễ Thấp Nhất Bằng Route 53 Latency Routing — (CM-PT5 Q06, CM-PT5 Q18)
+- **Tình huống đề thi**: *"Doanh nghiệp triển khai ứng dụng web trên hai cụm máy chủ EC2 đặt phía sau Application Load Balancers (ALBs) tại 2 AWS Regions khác nhau. Cần giải pháp định tuyến người dùng tới Region có độ trễ mạng thấp nhất và tự động chuyển hướng khi một Region gặp sự cố."*
+- **Giải pháp ĐÚNG**: Sử dụng **Route 53 Public Hosted Zone** với các bản ghi **Alias Record sử dụng Latency-Based Routing Policy** trỏ vào DNS của từng ALB kèm theo Route 53 Health Checks.
+  - Route 53 liên tục đo đạc độ trễ mạng từ các mạng người dùng tới từng Region và trả về địa chỉ của ALB gần nhất về mặt thời gian phản hồi mạng.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Chính Sách Định Tuyến DNS Nhanh (Exam Decision Matrix)
@@ -227,6 +242,8 @@ flowchart LR
 | **Tên miền gốc `example.com` trỏ vào ALB/CloudFront** | **Alias Record (A/AAAA)** | CNAME Record (vi phạm tiêu chuẩn RFC DNS Apex) |
 | **On-Premises phân giải tên miền private AWS** | **Route 53 Resolver Inbound Endpoint** | Outbound Endpoint (sai chiều đi của query) |
 | **EC2 trong VPC phân giải tên miền On-Premises** | **Route 53 Resolver Outbound Endpoint** | Inbound Endpoint (sai chiều đi của query) |
+| **Tăng tốc ứng dụng UDP/VoIP/Game toàn cầu** | **AWS Global Accelerator (2 Static Anycast IPs)** | CloudFront (chỉ hỗ trợ Layer 7 HTTP/HTTPS) |
+| **Định tuyến người dùng tới Region có độ trễ thấp nhất** | **Route 53 Latency-Based Routing + Health Check** | Geolocation Routing (không đo độ trễ mạng thực) |
 
 ---
 

@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Amazon EC2 (Elastic Compute Cloud) & Kiến Trúc Máy Chủ Ảo Đám Mây
+﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon EC2 (Elastic Compute Cloud) & Kiến Trúc Máy Chủ Ảo Đám Mây
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -242,6 +242,33 @@ flowchart TD
   - Dữ liệu bị **xóa sạch vĩnh viễn** khi instance bị **STOP** hoặc **TERMINATE** hoặc máy chủ vật lý gặp sự cố phần cứng.
   - Dữ liệu trong Instance Store **KHÔNG được lưu vào AMI** khi bạn tạo image sao lưu.
 
+#### 🪤 Bẫy 6: Cấu Hình EMR Instance Fleet Tự Động Chọn AZ Có Sẵn Dung Lượng Spot — (CM-PT2 Q26, CM-PT6 Q43)
+- **Tình huống đề thi**: *"Doanh nghiệp chạy cụm Amazon EMR để xử lý dữ liệu lớn. Nhóm muốn tối ưu chi phí bằng cách sử dụng EC2 Spot Instances cho cụm worker nodes trải dài trên nhiều subnets, nhưng thường xuyên gặp lỗi khởi tạo do thiếu dung lượng Spot tại một số AZ."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng EMR Instance Groups*: Instance Groups bị khóa vào 1 subnet/AZ duy nhất và chỉ chọn được 1 loại instance type cố định cho mỗi role. Khi AZ đó hết Spot capacity, cụm EMR sẽ bị fail khởi tạo.
+- **Giải pháp ĐÚNG**: Cấu hình **Amazon EMR Instance Fleets**.
+  - Cho phép khai báo danh sách nhiều subnets ở các AZ khác nhau.
+  - Cho phép định nghĩa tới 30 loại EC2 instance types khác nhau (ví dụ: m5.xlarge, m5a.xlarge, c5.xlarge...) kèm mức phân bổ On-Demand và Spot.
+  - EMR sẽ tự động thăm dò và chỉ khởi chạy cụm máy tại Availability Zone nào đang có sẵn dung lượng Spot dồi dào nhất.
+
+#### 🪤 Bẫy 7: Tự Động Phục Hồi Máy Ảo Lỗi Phần Cứng Bằng EC2 Auto-Recovery — (CM-PT5 Q03)
+- **Tình huống đề thi**: *"Một máy chủ EC2 chạy hệ thống cơ sở dữ liệu nội bộ bị ngắt quãng do máy chủ vật lý bên dưới của AWS bị lỗi phần cứng (System Status Check Failed). Cần thiết lập cơ chế tự động khắc phục với ít công sức nhất mà giữ nguyên cấu hình mạng."*
+- **Giải pháp ĐÚNG**: Tạo một **Amazon CloudWatch Alarm** theo dõi metric **`StatusCheckFailed_System`** và gán hành động **EC2 Auto-Recovery**.
+  - Khi phát hiện phần cứng sập, CloudWatch Alarm tự động chuyển máy ảo sang một host vật lý mới lành lặn trong cùng Availability Zone.
+  - Giữ nguyên hoàn toàn địa chỉ IP riêng (Private IP), IP công khai / Elastic IP, các ổ đĩa EBS đính kèm và Instance ID!
+
+#### 🪤 Bẫy 8: Tải Công Việc Định Kỳ Cùng Khung Giờ: Scheduled Scaling vs Target Tracking — (CM-PT6 Q35)
+- **Tình huống đề thi**: *"Ứng dụng chấm công của doanh nghiệp ghi nhận lưu lượng truy cập tăng vọt đột ngột vào đúng 8h30 đến 9h00 sáng mỗi ngày làm việc và giảm mạnh sau 17h30. Nhân viên phàn nàn hệ thống bị chậm trong 10 phút đầu mỗi buổi sáng. Cần giải pháp co giãn tự động tối ưu."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Target Tracking Policy theo CPUUtilization*: Target Tracking là cơ chế phản ứng sau (Reactive). Hệ thống phải đợi tải CPU tăng cao trong vài chu kỳ đánh giá (5 phút) thì mới kích hoạt thêm instance, sau đó mất thêm 2-3 phút boot OS $\rightarrow$ Nhân viên vẫn phải chịu nghẽn mạng trong 10 phút đầu!
+- **Giải pháp ĐÚNG**: Cấu hình **EC2 Auto Scaling Scheduled Scaling**.
+  - Thiết lập lịch biểu co giãn chủ động tăng dung lượng máy chủ lên mức tối đa vào lúc 8h15 sáng (trước giờ cao điểm 15 phút) và tự động giảm về mức cơ sở vào lúc 18h00. Hệ thống đã sẵn sàng 100% tài nguyên khi người dùng ùa vào!
+
+#### 🪤 Bẫy 9: Tính Toán HPC Mạng Siêu Nhanh Bắt Buộc Dùng Cluster Placement Group — (CM-PT6 Q37, CM-PT1 Q54)
+- **Tình huống đề thi**: *"Workload tính toán hiệu năng cao (HPC), mô phỏng khí động học hoặc đào tạo mô hình AI yêu cầu các máy chủ EC2 trao đổi thông điệp với độ trễ mạng thấp nhất (LEAST latency) và băng thông liên nút cực cao."*
+- **Giải pháp ĐÚNG**: Khởi chạy toàn bộ cụm máy chủ trong một **Cluster Placement Group** kết hợp tính năng mạng nâng cao **Elastic Network Adapter (ENA)**.
+  - Các máy chủ được đặt gần nhau về mặt vật lý trong cùng một tủ rack hoặc cụm switch mạng trong 1 AZ duy nhất, đạt độ trễ mạng dưới 1 mili-giây và băng thông lên đến 100 Gbps.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định EC2 & Tính Toán Nhanh (Exam Decision Matrix)
@@ -255,6 +282,9 @@ flowchart TD
 | **Phục hồi tự động máy chủ đơn khối (Monolith) + EIP** | **ASG (Min=1, Max=1) + EIP re-attach qua User Data** | Dùng ALB (tốn thêm chi phí duy trì hàng tháng) |
 | **Tự động tắt máy chủ Dev ngoài giờ làm việc** | **AWS Instance Scheduler** | Viết script cron thủ công trên EC2 |
 | **Lưu trữ tạm thời tốc độ cực cao, mất khi tắt máy** | **EC2 Instance Store** | Amazon EBS (độ trễ cao hơn Instance Store) |
+| **Cụm EMR chạy Spot tự động chọn AZ có capacity** | **EMR Instance Fleets (đa Subnet/Instance Types)** | Instance Groups (bị khóa vào 1 AZ cố định) |
+| **Tự động phục hồi máy ảo lỗi phần cứng giữ nguyên IP** | **CloudWatch Alarm (StatusCheckFailed_System) + Auto-Recovery** | Tạo mới máy ảo thủ công (mất thời gian & đổi IP) |
+| **Tải công việc tăng giảm định kỳ theo giờ mỗi ngày** | **EC2 Auto Scaling Scheduled Scaling** | Dynamic Target Tracking (bị chậm trễ vài phút ban đầu) |
 
 ---
 

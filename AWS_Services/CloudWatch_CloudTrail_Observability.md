@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Amazon CloudWatch, AWS CloudTrail & AWS Config (Hệ Thống Quan Sát, Kiểm Toán & Quản Trị Tuân Thủ)
+﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon CloudWatch, AWS CloudTrail & AWS Config (Hệ Thống Quan Sát, Kiểm Toán & Quản Trị Tuân Thủ)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -157,6 +157,24 @@ flowchart TD
 - **Tình huống đề thi**: *"Doanh nghiệp cần tự động kiểm tra, đối soát và xuất báo cáo tuân thủ chính sách sao lưu định kỳ (Backup Compliance Reports) trên hàng trăm tài khoản AWS để nộp cho kiểm toán viên quốc tế."*
 - **Giải pháp ĐÚNG**: Sử dụng **AWS Backup Audit Manager** tích hợp với các quy tắc được quản lý của **AWS Config**. Dịch vụ tự động đối chiếu các kế hoạch sao lưu thực tế với chính sách đề ra và sinh báo cáo tuân thủ tiêu chuẩn tự động.
 
+#### 🪤 Bẫy 5: Nhận Diện Tấn Công Đăng Nhập RDS Bằng GuardDuty RDS Protection — (CM-PT5 Q22)
+- **Tình huống đề thi**: *"Doanh nghiệp thương mại điện tử vận hành nhiều cơ sở dữ liệu Amazon RDS trong các tài khoản thành viên của AWS Organizations. Đội an ninh cần một giải pháp chuyên biệt để phát hiện các cuộc tấn công dò mật khẩu (brute-force login attempts) hoặc hành vi đăng nhập bất thường vào database với ít công sức quản trị nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Bật CloudWatch Logs xuất toàn bộ error log rồi viết Metric Filters*: Tốn công viết regex, dễ bỏ sót các kiểu tấn công phân tán tinh vi và phát sinh chi phí log lớn.
+  - ❌ *Cài đặt agent giám sát bên thứ ba*: Tăng gánh nặng bảo trì và patching agent.
+- **Giải pháp ĐÚNG**: Bật tính năng **Amazon GuardDuty RDS Protection** tập trung từ Delegated Administrator Account cho toàn bộ các member accounts.
+  - GuardDuty sử dụng Machine Learning phân tích các luồng sự kiện đăng nhập vào RDS/Aurora (Login Events) để phát hiện tức thì các dấu hiệu brute-force, rò rỉ tài khoản mà không gây ảnh hưởng đến hiệu năng của database.
+
+#### 🪤 Bẫy 6: Tự Động Phục Hồi Máy Ảo EC2 Bằng CloudWatch Alarm Auto-Recovery — (CM-PT5 Q03)
+- **Tình huống đề thi**: *"Máy chủ EC2 chạy hệ thống ERP nội bộ quan trọng gặp lỗi phần cứng vật lý bên dưới của hạ tầng AWS. Cần cấu hình giải pháp tự động khắc phục với ít công sức nhất mà giữ nguyên địa chỉ IP và cấu hình máy ảo."*
+- **Giải pháp ĐÚNG**: Tạo một **Amazon CloudWatch Alarm** theo dõi metric **`StatusCheckFailed_System`** và gắn action **Recover this instance**.
+  - Khi metric vượt ngưỡng (phần cứng AWS bị lỗi), CloudWatch tự động di dời máy ảo sang một host vật lý mới nguyên vẹn trong cùng Availability Zone mà giữ nguyên Private IP, Public/Elastic IP, cấu hình mạng và ổ đĩa EBS.
+
+#### 🪤 Bẫy 7: Tự Động Phát Hiện Tài Nguyên Không Tuân Thủ Bằng AWS Config — (CM-PT6 Q13, CM-PT4 Q36)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn tự động phát hiện (automatically detect) các thay đổi cấu hình làm tài nguyên bị lệch chuẩn an ninh (như EBS volumes không được mã hóa, S3 bucket mở public, port 22 mở ra 0.0.0.0/0) trên toàn bộ tổ chức với ít công vận hành nhất."*
+- **Giải pháp ĐÚNG**: Kích hoạt **AWS Config** kết hợp sử dụng **AWS Config Managed Rules**.
+  - Config liên tục ghi nhận trạng thái cấu hình và kiểm tra đối soát với các quy chuẩn đề ra, tự động kích hoạt cảnh báo qua EventBridge/SNS và hỗ trợ tài liệu khắc phục tự động (Remediation).
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Giám Sát & Kiểm Toán Nhanh (Exam Decision Matrix)
@@ -170,6 +188,9 @@ flowchart TD
 | **Kiểm toán hoạt động người dùng toàn tổ chức** | **CloudTrail Organizational Trail** | Cấu hình CloudTrail riêng lẻ từng account |
 | **Giám sát độ trễ & mất gói tin Hybrid Network** | **CloudWatch Network Monitor** | VPC Flow Logs (chỉ lưu metadata IP/port, không đo RTT) |
 | **Báo cáo tuân thủ sao lưu đa tài khoản** | **AWS Backup Audit Manager** | Viết Lambda script kiểm tra thủ công |
+| **Phát hiện tấn công đăng nhập bất thường vào RDS** | **Amazon GuardDuty RDS Protection** | CloudWatch Metric Filter (khó phân tích hành vi phức tạp) |
+| **Tự động phục hồi máy ảo khi lỗi phần cứng AWS** | **CloudWatch Alarm + EC2 Auto-Recovery** | Can thiệp thủ công (downtime kéo dài) |
+| **Tự động phát hiện tài nguyên sai lệch quy chuẩn** | **AWS Config (Managed Rules)** | Quét script thủ công (tốn công vận hành) |
 
 ---
 

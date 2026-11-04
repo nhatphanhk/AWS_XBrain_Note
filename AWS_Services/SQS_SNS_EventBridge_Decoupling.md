@@ -197,6 +197,25 @@ flowchart LR
   - Route 53 phụ thuộc vào DNS caching của client và ISP, rollback có thể mất hàng giờ.
   - Global Accelerator sử dụng 2 IP Anycast tĩnh và điều phối luồng tại các máy chủ Edge của mạng trục AWS, giúp chuyển đổi lưu lượng tức thì trong vài giây.
 
+#### 🪤 Bẫy 5: Lưu Trữ & Phát Lại Sự Kiện Trong 30 Ngày Bằng EventBridge Archive & Replay — (CM-PT2 Q21)
+- **Tình huống đề thi**: *"Ứng dụng microservices sử dụng bus sự kiện để trao đổi thông điệp. Yêu cầu hệ thống phải lưu trữ toàn bộ các thông điệp sự kiện trong vòng 30 ngày và có khả năng phát lại (replay) các sự kiện khi có dịch vụ mới ra đời với ít công sức phát triển nhất (LEAST development effort)."*
+- **Các phương án bẫy**:
+  - ❌ *Tạo Lambda trigger lưu event vào DynamoDB hoặc S3*: Tốn công viết code, kiểm thử, quản lý TTL và viết thêm script replay.
+  - ❌ *Gửi bản sao sang SQS và tăng retention lên 30 ngày*: SQS chỉ hỗ trợ lưu tối đa 14 ngày (`MessageRetentionPeriod = 14 days`) và không có cơ chế replay native.
+- **Giải pháp ĐÚNG**: Kích hoạt tính năng **Amazon EventBridge Archive and Replay**.
+  - Tính năng tích hợp sẵn (Built-in) trên Event Bus. Chỉ cần đặt tên archive và thiết lập retention period là 30 ngày.
+  - Khi cần phát lại, gọi API hoặc nhấn Replay trên Console/CloudFormation để bơm lại toàn bộ sự kiện lịch sử vào target service trong khoảng thời gian mong muốn mà không cần viết 1 dòng code!
+
+#### 🪤 Bẫy 6: Lọc Tin Nhắn Theo Nội Dung Chi Tiết Bằng EventBridge Rules — (CM-PT5 Q20)
+- **Tình huống đề thi**: *"API Gateway chuyển tiếp các request giao dịch đến các microservices hạ nguồn khác nhau tùy theo thuộc tính của payload JSON (ví dụ: giao dịch giá trị lớn > $10,000 cần gửi tới fraud detection). Cần giải pháp lọc tin nhắn với ít chi phí vận hành nhất."*
+- **Giải pháp ĐÚNG**: Chuyển request từ API Gateway thẳng vào **Amazon EventBridge Event Bus** và cấu hình **EventBridge Rules với Content-based Event Patterns**.
+  - EventBridge hỗ trợ lọc theo giá trị số học (`"amount": [{"numeric": [">", 10000]}]`), tiền tố, danh sách giá trị hoặc sự hiện diện của trường JSON trực tiếp mà không cần dựng thêm Lambda function để parse code.
+
+#### 🪤 Bẫy 7: Xử Lý Giao Dịch Tài Chính Đúng Thứ Tự Bằng SQS FIFO — (CM-PT5 Q08)
+- **Tình huống đề thi**: *"Hệ thống thanh toán trực tuyến cần xử lý giao dịch tài chính yêu cầu tuyệt đối không được phép xử lý lặp lại tin nhắn và phải bảo toàn thứ tự nghiêm ngặt (Strict Ordering) với hạ tầng ít phải quản trị nhất."*
+- **Giải pháp ĐÚNG**: **Amazon SQS FIFO Queue** kết hợp AWS Lambda.
+  - SQS FIFO đảm bảo thứ tự chính xác (First-In-First-Out) và tự động khử trùng lặp (Exactly-Once processing) thông qua `MessageDeduplicationId` và `MessageGroupId`.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Tách Rời Kiến Trúc Nhanh (Exam Decision Matrix)
@@ -211,6 +230,9 @@ flowchart LR
 | **Hoãn thời gian xử lý tin nhắn tới 15 phút** | **SQS Delay Queues** | Viết lệnh sleep trong code worker |
 | **Chuyển đổi lưu lượng tức thì, bypass DNS cache** | **AWS Global Accelerator (Traffic Dial)** | Route 53 Weighted (bị nghẽn bởi DNS cache) |
 | **Điều phối các sự kiện định dạng JSON phân tán** | **Amazon EventBridge** | Amazon SQS (không có bộ lọc rules JSON native) |
+| **Lưu trữ & phát lại tin nhắn sự kiện trong 30 ngày** | **Amazon EventBridge Archive and Replay** | SQS (chỉ lưu 14 ngày, không có replay) |
+| **Lọc tin nhắn JSON nâng cao (số học, tiền tố)** | **EventBridge Rules (Content-based filtering)** | Viết code Lambda parse JSON thủ công |
+| **Giao dịch tài chính yêu cầu đúng thứ tự tuyệt đối** | **Amazon SQS FIFO Queue** | SQS Standard (chỉ đảm bảo Best-effort ordering) |
 
 ---
 

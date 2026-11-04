@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: AWS Lambda, Amazon API Gateway, DynamoDB & Kiến Trúc Phi Máy Chủ (Serverless Architecture)
+﻿# Tài Liệu Học Tập Chuyên Sâu: AWS Lambda, Amazon API Gateway, DynamoDB & Kiến Trúc Phi Máy Chủ (Serverless Architecture)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -186,6 +186,26 @@ flowchart TD
   - Khi SNS invoke Lambda (theo mô hình Asynchronous), số lượng concurrency của Lambda tăng vọt. Nếu tài khoản đạt ngưỡng giới hạn **Account Concurrency Limit** (mặc định 1,000 unreserved concurrency/Region), các yêu cầu invoke tiếp theo sẽ bị throttle.
   - **Giải pháp**: Yêu cầu AWS Support tăng **Account Concurrency Quota** hoặc cấu hình SQS làm buffer đệm giữa SNS và Lambda.
 
+#### 🪤 Bẫy 6: Gọi Hàm Lambda Xuyên Tài Khoản Từ Amazon SNS — (CM-PT1 Q61)
+- **Tình huống đề thi**: *"Hệ thống sử dụng Amazon SNS Topic tại Tài khoản AWS A để thông báo sự kiện. Cần gọi thực thi một hàm AWS Lambda tại Tài khoản AWS B mỗi khi có thông báo mới. Cấu hình phân quyền nào bắt buộc phải có?"*
+- **Quy tắc bắt buộc phải có 2 chính sách đồng thời**:
+  1. **Lambda Resource-Based Policy tại Tài khoản B**: Bắt buộc thêm một permission statement cho phép Principal `sns.amazonaws.com` thực hiện Action `lambda:InvokeFunction` với điều kiện `SourceArn` trỏ chính xác vào ARN của SNS Topic ở Tài khoản A.
+  2. **SNS Topic Policy tại Tài khoản A**: Bắt buộc cho phép Tài khoản B hoặc Lambda function quyền `sns:Subscribe` vào Topic này.
+- **Bẫy đề thi**: Chỉ cấu hình 1 trong 2 phía (ví dụ chỉ tạo IAM Role gán vào Lambda hoặc chỉ sửa topic policy) $\rightarrow$ Thao tác subscribe hoặc invoke sẽ bị từ chối truy cập ngay lập tức!
+
+#### 🪤 Bẫy 7: Xử Lý Đợt Tải Tăng Đột Biến Bằng SQS Đệm Trước Lambda — (CM-PT1 Q35, CM-PT5 Q08)
+- **Tình huống đề thi**: *"Website tin tức tiếp nhận lượng lớn bài viết gửi về đồng thời trong các sự kiện thể thao lớn. Nếu gửi trực tiếp tới cụm xử lý backend sẽ gây quá tải sập cơ sở dữ liệu. Cần giải pháp phân rã kiến trúc với chi phí thấp nhất."*
+- **Giải pháp ĐÚNG**:
+  - Sử dụng hàm **AWS Lambda Ingestion** tiếp nhận bài viết và đẩy vào hàng đợi **Amazon SQS Standard**.
+  - Một nhóm worker Lambda khác cấu hình **SQS Event Source Mapping** với Batch Size phù hợp để lấy tin nhắn ra xử lý tuần tự/song song có kiểm soát.
+  - SQS hoạt động như một hồ chứa đệm (Buffer leveling), triệt tiêu hoàn toàn nguy cơ quá tải backend.
+
+#### 🪤 Bẫy 8: Điều Phối Luồng Xử Lý Serverless Phức Tạp Bằng AWS Step Functions — (CM-PT1 Q06, CM-PT1 Q38)
+- **Tình huống đề thi**: *"Quy trình xử lý ảnh và trích xuất dữ liệu ETL serverless bao gồm nhiều bước: kiểm tra định dạng ảnh, gọi AWS Batch để resize nhiều kích cỡ, gọi AWS Glue để trích xuất text, và lưu kết quả vào S3. Các bước có logic rẽ nhánh điều kiện và cần tự động thử lại khi gặp lỗi mạng."*
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Step Functions (State Machines)**.
+  - Step Functions cung cấp giao diện trực quan hóa trạng thái thực thi.
+  - Tự động hóa việc xử lý lỗi (Catch & Retry với Exponential Backoff), kiểm soát timeout từng bước và hỗ trợ cả luồng công việc chạy dài hạn (lên tới 1 năm). Loại bỏ hoàn toàn việc viết code spaghetti Lambda gọi lồng nhau!
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Công Nghệ Serverless Nhanh (Exam Decision Matrix)
@@ -200,6 +220,8 @@ flowchart TD
 | **Bảo vệ RDS không bị sập kết nối bởi Lambda** | **Amazon RDS Proxy** (+ Reserved Concurrency) | Loại tăng RAM Lambda (không giải quyết connection pool) |
 | **Điều phối luồng nghiệp vụ phân tán, có retry** | **AWS Step Functions** | Loại viết code logic lồng nhau trong 1 hàm Lambda |
 | **Xử lý luồng dữ liệu thời gian thực hàng ngàn record** | **Kinesis Data Streams + Lambda** | SQS không hỗ trợ replay dữ liệu theo shard |
+| **Gọi Lambda cross-account từ SNS topic** | **Lambda Resource-based Policy + SNS Topic Policy** | Chỉ cấu hình 1 bên (bị lỗi Access Denied) |
+| **Hấp thụ tải tăng vọt burst tránh sập backend** | **Amazon SQS Buffer + Lambda Batch Processing** | Gọi trực tiếp Lambda (dễ cạn concurrency & sập DB) |
 
 ---
 

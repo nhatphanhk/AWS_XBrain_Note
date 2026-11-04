@@ -1,8 +1,8 @@
-﻿# Bộ Đề Thi Thử AWS Certified Solutions Architect - Associate (SAA-C03) - Cloud Mentor Practice Test 5
+# Bộ Đề Thi Thử AWS Certified Solutions Architect - Associate (SAA-C03) - Cloud Mentor Practice Test 5
 
 > **Nền tảng luyện thi**: Cloud Mentor AWS Practice Exams (SAA-C03)  
 > **Bộ đề**: Practice Test 05 - Results & In-Depth Architecture Review (65 Questions)  
-> **Tài liệu học tập liên quan**: [Ghi chú Chương 32: Chiến lược thi & Đề thi thử (32_Preparing_for_the_Exam.md)](../Lesson_Notes/32_Preparing_for_the_Exam.md) | [Bảng thuật ngữ AWS (GLOSSARY.md)](../GLOSSARY.md)
+> **Tài liệu học tập liên quan**: [Ghi chú Chương 32: Chiến lược thi & Đề thi thử (32_Preparing_for_the_Exam.md)](../Lesson_Notes/32_Preparing_for_the_Exam.md) | [Bảng thuật ngữ AWS (GLOSSARY.md)](../../GLOSSARY.md) | [Cẩm nang từ vựng giải mã đề thi (EXAM_VOCABULARY.md)](./EXAM_VOCABULARY.md)
 
 ---
 

@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Amazon EBS, Amazon EFS & EC2 Instance Store (Lưu Trữ Khối & Tệp Tin Đám Mây)
+﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon EBS, Amazon EFS & EC2 Instance Store (Lưu Trữ Khối & Tệp Tin Đám Mây)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -256,6 +256,37 @@ sequenceDiagram
   - Các máy chủ EC2 và ổ đĩa EBS **bắt buộc phải nằm trong CÙNG MỘT Availability Zone** (không hỗ trợ Cross-AZ Multi-Attach).
   - Hệ điều hành trên các máy chủ bắt buộc phải sử dụng **Cluster-Aware File System** (ví dụ: GFS2, OCFS2) để điều phối ghi đĩa, tránh xung đột hỏng dữ liệu.
 
+#### 🪤 Bẫy 6: Nhiều EC2 Đọc Chung Dữ Liệu Tức Thời Không Đổi Code Ứng Dụng — (CM-PT2 Q01)
+- **Tình huống đề thi**: *"Ứng dụng thương mại điện tử chạy trên nhiều EC2 instance trong Auto Scaling Group. Ứng dụng cần phục vụ tài liệu hướng dẫn sản phẩm (product manuals) được cập nhật liên tục bởi nhóm quản trị nội dung. Dữ liệu phải luôn nhất quán, truy cập tức thời trên mọi instance mà không được sửa đổi mã nguồn ứng dụng."*
+- **Các phương án bẫy**:
+  - ❌ *Lưu manuals trên Amazon S3*: Đòi hỏi ứng dụng phải viết lại mã nguồn để gọi AWS SDK API (`GetObject`), vi phạm yêu cầu "no code changes".
+  - ❌ *Dùng Amazon EBS gắn vào máy chủ*: EBS chỉ nằm trong 1 AZ duy nhất, không thể mount đồng thời xuyên đa AZ cho cụm ASG.
+  - ❌ *Viết script định kỳ copy dữ liệu từ 1 máy chủ sang các máy khác*: Dữ liệu bị trễ (inconsistent), tốn công vận hành script.
+- **Giải pháp ĐÚNG**: Lưu trữ toàn bộ manuals trong một **Amazon EFS volume**.
+  - EFS cung cấp giao diện hệ thống tệp chuẩn POSIX (NFSv4), mount trực tiếp vào hệ điều hành Linux của mọi instance trong ASG như một thư mục nội bộ.
+  - Khi file được cập nhật, tất cả instance đều nhìn thấy nội dung mới ngay lập tức mà không cần sửa 1 dòng code ứng dụng nào.
+
+#### 🪤 Bẫy 7: Xử Lý Log Tuần Tự Thông Lượng 500 MB/s Chi Phí Tối Ưu — (CM-PT2 Q51)
+- **Tình huống đề thi**: *"Khối lượng công việc phân tích dữ liệu lớn và xử lý log yêu cầu đọc/ghi dữ liệu tuần tự với kích thước tệp lớn. Hệ thống yêu cầu băng thông xử lý lên tới 500 MB/s. Lựa chọn loại ổ đĩa EBS nào tối ưu chi phí nhất?"*
+- **Các phương án bẫy**:
+  - ❌ *Chọn Cold HDD (`sc1`)*: Băng thông tối đa của `sc1` chỉ đạt **250 MB/s**, không đáp ứng được yêu cầu 500 MB/s của đề bài.
+  - ❌ *Chọn General Purpose SSD (`gp3`)* hoặc *io2*: Chi phí tính theo GB đắt hơn rất nhiều so với HDD và lãng phí tính năng ngẫu nhiên IOPS thấp không cần thiết cho luồng tuần tự.
+- **Giải pháp ĐÚNG**: **Throughput Optimized HDD (`st1`)**.
+  - `st1` cung cấp băng thông tối đa lên tới **500 MB/s** và 500 IOPS, được thiết kế chuyên biệt cho luồng I/O tuần tự khối lớn (Big Data, MapReduce, Kafka, Log Processing) với đơn giá chỉ bằng 1/2 so với SSD.
+
+#### 🪤 Bẫy 8: Khóa Snapshot Ngăn Chặn Xóa Vô Tình Hay Ác Ý Bằng EBS Snapshot Lock — (CM-PT6 Q20)
+- **Tình huống đề thi**: *"Doanh nghiệp chụp snapshot hàng ngày cho các ổ đĩa EBS để đáp ứng quy định tuân thủ bảo lưu dữ liệu. Cần ngăn chặn việc xóa bản chụp do vô tình hoặc do bị chiếm đoạt tài khoản quản trị (Ransomware)."*
+- **Giải pháp ĐÚNG**: Kích hoạt tính năng **Amazon EBS Snapshot Lock**.
+  - Hỗ trợ 2 chế độ:
+    - **Governance Mode**: Cho phép người dùng có quyền IAM đặc biệt mở khóa khi cần.
+    - **Compliance Mode**: **Không ai (kể cả tài khoản Root của AWS) có thể xóa snapshot** hoặc giảm thời gian khóa trước khi hết hạn. Cung cấp khoảng thời gian dùng thử (cooling-off period) trước khi khóa vĩnh viễn.
+
+#### 🪤 Bẫy 9: Tách Biệt Cấu Hình IOPS Độc Lập Khỏi Dung Lượng Bằng EBS gp3 — (CM-PT6 Q46)
+- **Tình huống đề thi**: *"Migrate cơ sở dữ liệu lên EC2 yêu cầu tốc độ 12,000 IOPS nhưng dung lượng lưu trữ chỉ cần 200 GB. Cần chọn cấu hình ổ đĩa EBS tiết kiệm chi phí nhất."*
+- **Bẫy tính toán giữa gp2 và gp3**:
+  - Trên `gp2`, tỷ lệ cố định là 3 IOPS/GB $\rightarrow$ Muốn có 12,000 IOPS, bạn **bắt buộc phải mua ổ đĩa 4,000 GB (4 TB)**! Dù chỉ dùng 200 GB, bạn vẫn phải trả tiền cho 4,000 GB đĩa SSD!
+  - Trên `gp3`, baseline có sẵn 3,000 IOPS và 125 MB/s miễn phí. Bạn chỉ cần mua ổ đĩa **200 GB** và mua thêm **9,000 Provisioned IOPS** độc lập. Tổng chi phí rẻ hơn gp2 tới 70%!
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Lưu Trữ Khối & Tệp Nhanh (Exam Decision Matrix)
@@ -271,6 +302,11 @@ sequenceDiagram
 | **Tự động chụp và dọn dẹp snapshot định kỳ** | **Amazon Data Lifecycle Manager (DLM)** | Viết Lambda cron script thủ công |
 | **Bộ nhớ tạm IOPS hàng triệu, mất khi tắt máy** | **EC2 Instance Store** | Amazon EBS (độ trễ cao hơn Instance Store) |
 | **Gắn 1 ổ đĩa EBS vào nhiều EC2 cùng lúc** | **EBS Multi-Attach (`io1`/`io2`, cùng 1 AZ)** | `gp3` (không hỗ trợ Multi-Attach) |
+| **Nhiều EC2 chia sẻ tài liệu đọc tức thời không sửa code** | **Amazon EFS (POSIX NFS)** | S3 (phải sửa code SDK), EBS (chỉ 1 AZ) |
+| **Xử lý dữ liệu tuần tự lớn băng thông tới 500 MB/s** | **Amazon EBS `st1` (Throughput Optimized)** | `sc1` (bị giới hạn 250 MB/s), `gp3` (đắt hơn) |
+| **Khóa chống xóa snapshot đáp ứng compliance kể cả Root** | **Amazon EBS Snapshot Lock (Compliance Mode)** | IAM Policy Deny (Root vẫn có thể can thiệp) |
+| **Cần IOPS cao nhưng dung lượng đĩa nhỏ (tối ưu chi phí)** | **Amazon EBS `gp3` (Provisioned IOPS độc lập)** | `gp2` (bị ép mua đĩa dung lượng khổng lồ) |
+| **Hệ thống tệp Windows SMB có Active Directory** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ giao thức Linux NFS) |
 
 ---
 

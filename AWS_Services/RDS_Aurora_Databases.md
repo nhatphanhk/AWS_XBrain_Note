@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Amazon RDS, Amazon Aurora & Dịch Vụ Cơ Sở Dữ Liệu Đám Mây (Databases in AWS)
+﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon RDS, Amazon Aurora & Dịch Vụ Cơ Sở Dữ Liệu Đám Mây (Databases in AWS)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -357,6 +357,30 @@ sequenceDiagram
   1. Instance Primary chưa mã hóa -> **KHÔNG THỂ** tạo Standby Multi-AZ được mã hóa hay Read Replica được mã hóa.
   2. Muốn mã hóa: Bắt buộc chụp Snapshot của DB -> Copy Snapshot đó kèm theo lựa chọn kích hoạt AWS KMS Key -> Restore ra một cụm RDS mới từ Encrypted Snapshot -> Cắt chuyển ứng dụng sang cụm mới.
 
+#### 🪤 Bẫy 6: Môi Trường Dev & Test Không Chạy 24/7 Dùng Aurora Serverless v2 — (CM-PT2 Q04)
+- **Tình huống đề thi**: *"Doanh nghiệp thiết kế môi trường Phát triển (Dev) và Kiểm thử (Test) cho ứng dụng cơ sở dữ liệu quan hệ PostgreSQL. Cả 2 môi trường này chỉ được đội ngũ kỹ sư sử dụng vài giờ trong ngày, hoàn toàn không chạy liên tục 24/7. Giải pháp kiến trúc nào tối ưu chi phí nhất?"*
+- **Các phương án bẫy**:
+  - ❌ *Dùng RDS PostgreSQL On-Demand kích thước cố định*: Máy chủ chạy liên tục kể cả ban đêm và cuối tuần, gây lãng phí tới 75% chi phí nhàn rỗi.
+  - ❌ *Tự viết script Lambda bật/tắt database theo giờ*: Hoạt động được nhưng tốn công viết code, bảo trì lịch trình và không linh hoạt khi kỹ sư cần làm thêm giờ đột xuất.
+- **Giải pháp ĐÚNG**: Triển khai **Amazon Aurora Serverless v2**.
+  - Tự động co giãn tài nguyên theo ACU (Aurora Capacity Units) trong tích tắc theo tải thực tế.
+  - Khi không có truy vấn nào (idle), tài nguyên tự động hạ về mức tối thiểu (0.5 ACU), giúp tiết kiệm chi phí tối đa mà vẫn sẵn sàng phục vụ tức thì khi có request.
+
+#### 🪤 Bẫy 7: DynamoDB Cho Lưu Lượng Truy Cập Không Thể Dự Đoán Trước — (CM-PT2 Q43, CM-PT6 Q42)
+- **Tình huống đề thi**: *"Ứng dụng mạng xã hội mới ra mắt có mẫu lưu lượng truy cập thất thường và không thể dự đoán được (unpredictable traffic). Cần cấu hình bảng Amazon DynamoDB tối ưu chi phí nhất mà không làm giảm trải nghiệm người dùng."*
+- **Các phương án bẫy**:
+  - ❌ *Chọn DynamoDB Provisioned Mode với Auto Scaling*: Auto Scaling cần thời gian vài phút để phát hiện tải tăng và cấp phát thêm partition, có nguy cơ gây lỗi `ProvisionedThroughputExceededException` (bị bóp nghẹt request) khi có traffic tăng vọt bất ngờ.
+  - ❌ *Provision dung lượng cao sẵn*: Gây lãng phí ngân sách khổng lồ cho thời gian nhàn rỗi.
+- **Giải pháp ĐÚNG**: Sử dụng **DynamoDB On-Demand Capacity Mode**.
+  - Tự động đáp ứng hàng trăm ngàn requests/giây ngay tức thì mà không cần ước lượng dung lượng.
+  - Chỉ trả tiền cho số lượng thao tác đọc/ghi thực tế phát sinh (Pay-per-request).
+
+#### 🪤 Bẫy 8: Giảm Thiểu Downtime Khi Failover Cho Ứng Dụng Serverless Bằng RDS Proxy — (CM-PT6 Q38)
+- **Tình huống đề thi**: *"Hệ thống sử dụng hàng ngàn hàm AWS Lambda kết nối vào cơ sở dữ liệu quan hệ Amazon RDS. Trong quá trình kiểm thử chuyển đổi dự phòng (failover) hoặc khi có tải tăng đột biến, ứng dụng bị nghẽn và thời gian downtime kéo dài do cạn kiệt connection pool."*
+- **Giải pháp ĐÚNG**: Đặt **Amazon RDS Proxy** nằm giữa Lambda và cơ sở dữ liệu RDS.
+  - RDS Proxy duy trì một pool các kết nối mở sẵn tới database và chia sẻ dùng chung giữa các hàm Lambda (Connection Pooling), ngăn chặn Lambda làm sập database.
+  - Giảm thời gian gián đoạn chuyển đổi dự phòng (**Failover Downtime**) xuống dưới 66% bằng cách giữ nguyên kết nối của client và tự động chuyển hướng truy vấn sang DB Standby mới.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Cơ Sở Dữ Liệu Nhanh (Exam Decision Matrix)
@@ -371,6 +395,11 @@ sequenceDiagram
 | **High Availability tự động failover cho SQL Server** | **Amazon RDS for SQL Server Multi-AZ** | Tự dựng cluster trên EC2 (quá nhiều overhead) |
 | **Tối ưu chi phí truyền dữ liệu sao chép giữa các AZ** | **Sử dụng Private IP Address** | Dùng Public IP / EIP (bị tính cước Internet) |
 | **Mở rộng dung lượng ổ đĩa tự động không downtime** | **RDS Storage Auto Scaling** | Tăng thủ công (nguy cơ sập khi cạn disk đột ngột) |
+| **Môi trường Dev/Test không chạy 24/7 tải gián đoạn** | **Amazon Aurora Serverless v2** | Provisioned Instances (lãng phí khi nhàn rỗi) |
+| **Lưu lượng truy cập NoSQL không thể dự đoán trước** | **DynamoDB On-Demand Mode** | Provisioned Capacity (dễ bị throttling khi tăng tải) |
+| **Giảm thời gian gián đoạn failover & nghẽn Lambda** | **Amazon RDS Proxy** | Mở kết nối trực tiếp từ Lambda (tràn connection) |
+| **Cải thiện tính sẵn sàng (Availability) khi AZ sập** | **Amazon RDS Multi-AZ Deployment** | Read Replica (không tự động failover đồng bộ) |
+| **Cải thiện hiệu năng đọc (Read Performance) tải cao** | **Amazon RDS Read Replicas** | Multi-AZ Standby (không hỗ trợ câu lệnh đọc) |
 
 ---
 

@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: AWS Identity and Access Management (IAM) & Quản Trị Định Danh Doanh Nghiệp
+﻿# Tài Liệu Học Tập Chuyên Sâu: AWS Identity and Access Management (IAM) & Quản Trị Định Danh Doanh Nghiệp
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -251,6 +251,29 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
   - Nếu EC2 nằm trong VPC và gọi qua **Gateway VPC Endpoint**, IP nguồn của request là **Private IP** trong VPC, không phải Public IP -> **Request sẽ bị DENY nhầm lẫn**!
   - `aws:SourceIp` chỉ hoạt động chuẩn xác khi người dùng thực hiện API call từ máy trạm On-Premises trực tiếp qua Internet công cộng.
 
+#### 🪤 Bẫy 6: Thứ Tự Ưu Tiên Tuyệt Đối: Deny Luôn Phủ Quyết Allow — (CM-PT6 Q57)
+- **Tình huống đề thi**: *"Một người dùng IAM thuộc một nhóm được gắn 2 chính sách: Chính sách 1 cho phép toàn quyền trên Amazon S3 (`Allow s3:*`). Chính sách 2 từ chối quyền xóa bucket (`Deny s3:DeleteBucket`). Người dùng này có thể xóa được một S3 bucket không?"*
+- **Nguyên lý đánh giá IAM Logic bất biến của AWS**:
+  - Mặc định mọi thao tác là **Implicit Deny** (ngầm định từ chối).
+  - Một thao tác chỉ được thực thi khi có ít nhất một **Explicit Allow**.
+  - **NHƯNG NẾU CÓ BẤT KỲ MỘT `EXPLICIT DENY` NÀO TỒN TẠI, NÓ SẼ NGAY LẬP TỨC PHỦ QUYẾT TẤT CẢ CÁC LỆNH ALLOW KHÁC**!
+  - Do đó, câu trả lời là **KHÔNG THỂ XÓA ĐƯỢC** (thao tác xóa bucket chắc chắn bị lỗi `403 Access Denied`).
+
+#### 🪤 Bẫy 7: Phạm Vi Áp Dụng Của SCP Lên Các Member Accounts Cụ Thể — (CM-PT5 Q40)
+- **Tình huống đề thi**: *"Tổ chức AWS Organizations gồm 4 tài khoản nằm chung trong Root OU (1 Production account và 3 Nonproduction accounts). Doanh nghiệp muốn áp dụng một Service Control Policy (SCP) giới hạn các dịch vụ đắt đỏ chỉ cho 3 tài khoản Nonproduction mà tuyệt đối không ảnh hưởng đến Production account."*
+- **Các phương án bẫy**:
+  - ❌ *Gắn SCP lên Root OU*: SCP trên Root OU sẽ tự động áp dụng kế thừa cho TẤT CẢ tài khoản bên dưới, làm hạn chế nhầm cả tài khoản Production!
+- **Giải pháp ĐÚNG**:
+  - Tạo một Organizational Unit (OU) riêng biệt (ví dụ: `Nonproduction-OU`), di chuyển 3 tài khoản Nonproduction vào OU đó và gắn SCP lên cấp độ OU này.
+  - Hoặc gắn trực tiếp SCP lên từng tài khoản Nonproduction độc lập.
+
+#### 🪤 Bẫy 8: Chia Sẻ Golden AMI Đã Mã Hóa KMS Xuyên Tài Khoản — (CM-PT4 Q48)
+- **Tình huống đề thi**: *"Tài khoản Shared Services xây dựng Golden AMI được mã hóa bằng khóa AWS KMS tùy chỉnh. Doanh nghiệp muốn chia sẻ AMI này cho các tài khoản Development trong AWS Organizations để khởi chạy máy ảo EC2."*
+- **Quy tắc bắt buộc 2 bước**:
+  1. Chia sẻ quyền khởi chạy AMI (**AMI Launch Permissions**) cho OU ARN hoặc Account IDs của Dev.
+  2. Cập nhật **KMS Key Policy** của khóa mã hóa tại tài khoản Shared Services để cấp quyền `kms:DescribeKey`, `kms:ReEncrypt*`, `kms:CreateGrant` cho tài khoản Dev.
+  - Nếu chỉ chia sẻ AMI mà quên cấp quyền trên KMS Key Policy, máy ảo EC2 tại tài khoản Dev sẽ lập tức bị lỗi `Client.InternalError` khi boot vì không thể giải mã được ổ đĩa EBS root!
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Phân Quyền & Danh Tính Nhanh (Exam Decision Matrix)
@@ -264,6 +287,9 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
 | **Phân quyền Pod EKS đọc S3/DynamoDB độc lập** | **IAM Roles for Service Accounts (IRSA)** | Gán quyền vào Node Instance Profile vi phạm Least Privilege |
 | **Đăng nhập một lần đa tài khoản qua On-Prem AD** | **AD Connector + IAM Identity Center + Permission Sets** | Tự quản trị IAM Role thủ công tốn operational overhead |
 | **Kiểm toán tự động tài nguyên bị lộ ra ngoài Internet** | **AWS IAM Access Analyzer** | AWS CloudTrail chỉ ghi log, không phân tích quyền tự động |
+| **Xử lý xung đột giữa quyền Allow và Deny** | **Explicit Deny luôn thắng (phủ quyết mọi Allow)** | Cho phép thực thi (sai nguyên lý IAM evaluation) |
+| **Áp dụng SCP chỉ cho các tài khoản Nonproduction** | **Tạo OU riêng cho Nonproduction và gắn SCP** | Gắn vào Root OU (làm ảnh hưởng cả Production) |
+| **Chia sẻ AMI mã hóa KMS cho tài khoản con khởi chạy** | **Share AMI Launch Permissions + KMS Key Policy** | Chỉ share AMI (EC2 boot lỗi vì không decrypt được disk) |
 
 ---
 

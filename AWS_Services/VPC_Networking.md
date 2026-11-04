@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Amazon VPC & Kiến Trúc Mạng Đám Mây Doanh Nghiệp (Virtual Private Cloud)
+﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon VPC & Kiến Trúc Mạng Đám Mây Doanh Nghiệp (Virtual Private Cloud)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -224,6 +224,29 @@ flowchart LR
   2. `enableDnsSupport = true` (cho phép VPC sử dụng máy chủ AmazonProvidedDNS tại địa chỉ IP cơ sở `10.x.x.2`).
 - Nếu `enableDnsSupport = false`, mọi truy vấn phân giải Private Hosted Zone đều bị từ chối.
 
+#### 🪤 Bẫy 6: Cắt Giảm Chi Phí NAT Gateway Bằng Egress-Only Internet Gateway Khi Hỗ Trợ IPv6 — (CM-PT2 Q09, CM-PT1 Q33)
+- **Tình huống đề thi**: *"Doanh nghiệp có hàng chục VPC với NAT Gateways tại mỗi AZ để máy chủ trong private subnet gọi ra ngoài API của đối tác. Chi phí NAT Gateway quá đắt đỏ. Đối tác xác nhận API của họ hỗ trợ cả IPv4 và IPv6. Giải pháp nào loại bỏ NAT Gateway mà vẫn giữ an toàn chiều Outbound?"*
+- **Phân tích giải pháp tối ưu**:
+  - NAT Gateway tính phí $0.045/giờ/gateway + $0.045/GB dữ liệu xử lý.
+  - Cấu hình dải IPv6 cho VPC và các subnet.
+  - Thay thế NAT Gateway bằng **Egress-Only Internet Gateway** (hoàn toàn **miễn phí**).
+  - Cập nhật bảng định tuyến private subnet trỏ `::/0` tới Egress-Only IGW. Máy chủ gọi ra ngoài bình thường nhưng Internet hoàn toàn không thể khởi tạo kết nối đi vào!
+
+#### 🪤 Bẫy 7: Chèn Tường Lửa Ảo Kiểm Tra Gói Tin Sâu Bằng Gateway Load Balancer (GWLB) — (CM-PT2 Q48)
+- **Tình huống đề thi**: *"Doanh nghiệp yêu cầu chèn các thiết bị mạng ảo bên thứ 3 (Virtual Appliance như Palo Alto Firewall, Fortinet IDS/IPS) để kiểm tra gói tin sâu (Deep Packet Inspection) cho toàn bộ lưu lượng ra/vào VPC với độ tin cậy cao và ít phức tạp định tuyến nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng ALB hoặc NLB*: ALB là Layer 7 (HTTP), NLB là Layer 4; cả 2 đều chấm dứt kết nối TCP/TLS (Proxy mode), làm thay đổi header IP gốc và không thể truyền gói tin IP nguyên bản qua tường lửa.
+  - ❌ *Định tuyến thủ công qua EC2 iptables*: Rất dễ gây nghẽn cổ chai (SPOF) và phức tạp khi muốn scale cụm firewall.
+- **Giải pháp ĐÚNG**: **Gateway Load Balancer (GWLB)** kết hợp **GWLB Endpoints**.
+  - GWLB hoạt động ở OSI Layer 3 (Network Layer) và sử dụng giao thức **GENEVE (cổng UDP 6081)** để đóng gói toàn bộ gói tin IP (bao gồm cả header gốc) chuyển tiếp tới phi đội tường lửa ảo.
+  - Tự động kiểm tra sức khỏe (Health Check) và co giãn đàn thiết bị mạng ảo không cần can thiệp bảng định tuyến thủ công.
+
+#### 🪤 Bẫy 8: Truy Cập S3/SQS Riêng Tư Từ On-Premises Qua Direct Connect Bằng Interface Endpoints — (CM-PT6 Q28, CM-PT6 Q32, CM-PT4 Q50)
+- **Tình huống đề thi**: *"Các máy chủ tại trung tâm dữ liệu On-Premises kết nối tới AWS qua Direct Connect hoặc VPN. Đội an ninh yêu cầu máy chủ On-Premises sao lưu dữ liệu lên S3 hoặc đẩy tin nhắn vào SQS mà TUYỆT ĐỐI KHÔNG đi qua Internet công cộng."*
+- **Quy tắc phân biệt Endpoint sống còn**:
+  - **Gateway VPC Endpoint** (dành cho S3 và DynamoDB): CHỈ hoạt động cho các tài nguyên NỘI BỘ bên trong VPC thông qua Route Table. **KHÔNG THỂ** truy cập từ On-Premises qua Direct Connect / VPN / VPC Peering.
+  - **Interface VPC Endpoint (AWS PrivateLink)**: Cấp phát một Card mạng ảo (ENI) có IP riêng trong subnet của VPC. Các máy chủ On-Premises định tuyến qua Direct Connect tới IP riêng của ENI này để truy cập S3 hoặc SQS một cách hoàn toàn riêng tư.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Kết Nối Mạng Nhanh (Exam Decision Matrix)
@@ -241,6 +264,10 @@ flowchart LR
 | **IPv6 trong Private Subnet cần ra Internet** | **Egress-Only Internet Gateway** | Loại NAT Gateway (chỉ hỗ trợ IPv4) |
 | **On-Premises truy cập S3 qua Direct Connect** | **Direct Connect Public VIF** | Loại Private VIF (chỉ truy cập VPC nội bộ) |
 | **Truyền dữ liệu nhạy cảm qua Direct Connect an toàn** | **Direct Connect + Site-to-Site VPN (IPsec)** | Direct Connect đơn thuần chưa được mã hóa at-transit |
+| **Kiểm tra an ninh gói tin sâu L3/L4 bằng Firewall ảo** | **Gateway Load Balancer (GWLB) cổng GENEVE 6081** | ALB / NLB (chấm dứt kết nối TCP/TLS, mất IP header gốc) |
+| **Cắt giảm chi phí NAT Gateway khi hỗ trợ IPv6** | **Egress-Only Internet Gateway ($0 chi phí)** | NAT Gateway ($0.045/giờ + phí dữ liệu data processing) |
+| **On-Premises truy cập S3/SQS riêng tư qua Direct Connect** | **Interface VPC Endpoint (PrivateLink)** | Gateway VPC Endpoint (không định tuyến qua Direct Connect) |
+| **Quản trị EC2 trong Private Subnet không có NAT Gateway** | **Interface VPC Endpoints (`ssmmessages`, `ssm`)** | Bastion Host (cần Public IP hoặc mở cổng 22) |
 
 ---
 

@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Khắc Phục Thảm Họa (Disaster Recovery) & Di Chuyển Lên Đám Mây (Cloud Migration)
+﻿# Tài Liệu Học Tập Chuyên Sâu: Khắc Phục Thảm Họa (Disaster Recovery) & Di Chuyển Lên Đám Mây (Cloud Migration)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -166,6 +166,33 @@ Chi Phí Rẻ Nhất / RTO-RPO Lâu Nhất                Chi Phí Đắt Nhất
   - *"Một phiên bản thu nhỏ (scaled-down copy) luôn chạy 24/7 ở Region thứ hai, sẵn sàng tăng tải"* -> **Warm Standby**.
   - *"Hệ thống chạy song song 100% công suất ở 2 Region, RTO/RPO dưới 1 phút"* -> **Multi-Region Active-Active** (Aurora Global DB + Route 53 / Global Accelerator).
 
+#### 🪤 Bẫy 4: Kết Nối SFTP Bên Thứ Ba Với Ít Công Quản Lý Nhất Bằng AWS Transfer Family — (CM-PT2 Q05)
+- **Tình huống đề thi**: *"Doanh nghiệp cần truyền và nhận các tệp tin qua giao thức SFTP từ một máy chủ SFTP bên ngoài thông qua VPN kết nối sẵn có. Yêu cầu giải pháp phải có ít chi phí quản lý vận hành nhất (LEAST management overhead) và sử dụng dịch vụ managed hoàn toàn thay vì tự dựng hạ tầng."*
+- **Các phương án bẫy**:
+  - ❌ *Tự cài OpenSSH/SFTP server trên EC2 trong private subnet*: Tốn công vá lỗi hệ điều hành, cấu hình HA và quản trị người dùng.
+  - ❌ *Viết script Lambda kết hợp VPN*: Khó duy trì kết nối SFTP dài hạn và dễ gặp giới hạn 15 phút của Lambda.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Transfer Family (SFTP Connectors / Endpoints)**.
+  - Dịch vụ Fully-Managed của AWS: Cho phép kết nối và trao đổi tệp tin qua giao thức SFTP/FTPS/FTP trực tiếp với các máy chủ bên ngoài, tự động lưu trữ dữ liệu vào Amazon S3 hoặc EFS mà không cần quản lý máy chủ hay cài đặt phần mềm.
+
+#### 🪤 Bẫy 5: Di Chuyển Cụm Dữ Liệu Hadoop HDFS Lên S3 Bằng AWS DataSync — (CM-PT2 Q06)
+- **Tình huống đề thi**: *"Doanh nghiệp cần di chuyển một cụm dữ liệu phân tán Hadoop Distributed File System (HDFS) từ On-Premises lên Amazon S3 với chi phí tối ưu nhất, đồng thời đáp ứng yêu cầu mã hóa khi truyền tải và tự động xác thực tính toàn vẹn của dữ liệu."*
+- **Giải pháp ĐÚNG**: Triển khai **AWS DataSync**.
+  - AWS DataSync tích hợp sẵn location type hỗ trợ **HDFS**, cho phép kết nối trực tiếp vào DataNode của cụm Hadoop on-premise.
+  - Tự động nén, mã hóa bằng TLS trong suốt quá trình truyền tải và thực hiện đối soát mã băm (Checksum verification) trước khi ghi vào S3 bucket.
+
+#### 🪤 Bẫy 6: Di Chuyển File Giữa Các Hệ Thống Tệp NFS Xuyên Regions Cho Mục Đích DR — (CM-PT6 Q51)
+- **Tình huống đề thi**: *"Doanh nghiệp cần sao chép định kỳ khối lượng lớn tệp tin giữa hai hệ thống tệp tin NFS đặt tại 2 AWS Regions khác nhau phục vụ kịch bản Disaster Recovery (DR) với ít công sức quản trị nhất."*
+- **Giải pháp ĐÚNG**: Sử dụng **AWS DataSync** để đồng bộ NFS-to-NFS liên vùng.
+  - Tốc độ truyền tải nhanh gấp 10 lần các công cụ truyền thống (như rsync hoặc script copy), hỗ trợ lập lịch định kỳ và tự động khôi phục khi đường truyền mạng bị gián đoạn.
+
+#### 🪤 Bẫy 7: Di Chuyển Database Đòi Hỏi Quyền Can Thiệp Hệ Điều Hành Bằng RDS Custom — (CM-PT3 Q42)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn di chuyển cơ sở dữ liệu Oracle từ On-Premises lên AWS. Ứng dụng kế thừa bắt buộc phải cài đặt các thư viện phần mềm chuyên dụng và tiện ích trực tiếp vào hệ điều hành của máy chủ database (OS-level access). Giải pháp nào đáp ứng yêu cầu mà vẫn giữ được tính năng tự động hóa của AWS?"*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Amazon RDS for Oracle tiêu chuẩn*: RDS tiêu chuẩn là dịch vụ hộp đen (black-box), AWS cấm hoàn toàn quyền root/admin vào OS và cấm cài phần mềm ngoài.
+  - ❌ *Cài Oracle lên EC2*: Mất toàn bộ các tính năng managed tự động (automated backups, point-in-time recovery).
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon RDS Custom for Oracle**.
+  - Cho phép người dùng toàn quyền truy cập mức hệ điều hành (SSH/RDP với quyền root/administrator) và can thiệp file system của database server, trong khi vẫn duy trì các tính năng quản lý sao lưu và vá lỗi tự động của Amazon RDS.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Công Cụ Di Chuyển & DR Nhanh (Exam Decision Matrix)
@@ -179,6 +206,10 @@ Chi Phí Rẻ Nhất / RTO-RPO Lâu Nhất                Chi Phí Đắt Nhất
 | **Đồng bộ FSx Single-AZ sang Multi-AZ** | **Tạo FSx Multi-AZ mới + AWS DataSync** | Sửa in-place trên FSx cũ (AWS không hỗ trợ) |
 | **Ứng dụng On-Premises mount S3 như ổ NFS cục bộ** | **AWS Storage Gateway (S3 File Gateway)** | AWS Direct Connect đơn thuần |
 | **Di chuyển hàng trăm Petabytes không có mạng cáp** | **AWS Snowball Edge / AWS Snowmobile** | Truyền qua Internet / Direct Connect (mất nhiều tháng) |
+| **Truyền nhận file SFTP với bên thứ ba ít overhead** | **AWS Transfer Family (SFTP Connectors)** | Tự dựng EC2 SFTP (tốn công quản trị OS) |
+| **Di chuyển cụm Hadoop HDFS sang Amazon S3** | **AWS DataSync (hỗ trợ native HDFS)** | Copy thủ công qua script (chậm & thiếu verify) |
+| **Đồng bộ file NFS giữa 2 Regions cho kịch bản DR** | **AWS DataSync (NFS-to-NFS Cross-Region)** | rsync / script định kỳ (dễ gián đoạn khi đứt mạng) |
+| **Di chuyển DB Oracle cần can thiệp quyền Root OS** | **Amazon RDS Custom for Oracle** | RDS Standard (AWS cấm truy cập root OS) |
 
 ---
 

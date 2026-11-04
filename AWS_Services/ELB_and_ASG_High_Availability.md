@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Elastic Load Balancing (ELB) & Auto Scaling Groups (ASG) (Kiến Trúc Co Giãn & Độ Sẵn Sàng Cao)
+﻿# Tài Liệu Học Tập Chuyên Sâu: Elastic Load Balancing (ELB) & Auto Scaling Groups (ASG) (Kiến Trúc Co Giãn & Độ Sẵn Sàng Cao)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -201,6 +201,24 @@ flowchart TD
   3. **Bước 3 (Tối ưu giờ thanh toán)**: Nếu vẫn có nhiều instance trùng cấu hình, chọn instance **gần tới mốc chu kỳ tính cước giờ tiếp theo nhất** (Closest to the next billing hour).
   4. **Bước 4 (Ngẫu nhiên)**: Nếu tất cả các tiêu chí trên đều như nhau, chọn ngẫu nhiên một instance.
 
+#### 🪤 Bẫy 5: Yêu Cầu Cân Bằng Tải Cung Cấp IP Tĩnh và Hỗ Trợ Hybrid Targets — (CM-PT2 Q61, CM-PT3 Q14, CM-PT5 Q49)
+- **Tình huống đề thi**: *"Doanh nghiệp tích hợp hệ thống thanh toán với các đối tác tài chính ngân hàng. Đối tác yêu cầu Load Balancer phải có địa chỉ IP tĩnh công khai (Static / Elastic IP) để cấu hình mở tường lửa (IP Whitelisting). Ngoài ra, hệ thống cần cân bằng tải lưu lượng đồng thời giữa các máy chủ EC2 trên AWS và cụm máy chủ vật lý On-Premises. Chọn loại cân bằng tải nào?"*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Application Load Balancer (ALB)*: ALB không hỗ trợ gán địa chỉ IP tĩnh công khai (ALB chỉ cung cấp DNS Name và IP thay đổi liên tục).
+- **Giải pháp ĐÚNG**: **Network Load Balancer (NLB)**.
+  - NLB hoạt động ở Layer 4 (TCP/UDP), cho phép gán trực tiếp **Elastic IP cố định cho từng Availability Zone**.
+  - Target Group của NLB hỗ trợ loại **IP addresses**, cho phép khai báo cả Private IP của các máy chủ On-Premises kết nối qua Direct Connect hoặc VPN để cân bằng tải hỗn hợp (Hybrid Architecture).
+
+#### 🪤 Bẫy 6: Duy Trì Phiên Người Dùng Cho Ứng Dụng Web Stateful Bằng ALB Sticky Sessions — (CM-PT6 Q40)
+- **Tình huống đề thi**: *"Một ứng dụng web thương mại cổ điển lưu trữ thông tin giỏ hàng và phiên đăng nhập trực tiếp trong bộ nhớ RAM của từng máy chủ EC2 (Stateful Sessions). Khi triển khai cụm máy chủ phía sau Application Load Balancer, người dùng liên tục phàn nàn bị mất giỏ hàng khi click chuyển trang. Cần giải pháp xử lý ngay mà không sửa code ứng dụng."*
+- **Giải pháp ĐÚNG**: Bật tính năng **Sticky Sessions (Session Affinity)** trên Target Group của Application Load Balancer.
+  - ALB sử dụng cookie (hoặc mã hóa cookie tùy chỉnh từ ứng dụng) để nhận diện người dùng và đảm bảo toàn bộ các HTTP requests tiếp theo của client đó luôn được chuyển hướng chính xác tới cùng một máy chủ backend ban đầu.
+
+#### 🪤 Bẫy 7: Chèn Tường Lửa Ảo Kiểm Tra Gói Tin Sâu L3/L4 Bằng Gateway Load Balancer (GWLB) — (CM-PT2 Q48)
+- **Tình huống đề thi**: *"Doanh nghiệp yêu cầu chèn cụm thiết bị tường lửa ảo của bên thứ 3 (Firewalls, IDS/IPS) để kiểm tra gói tin sâu cho toàn bộ luồng mạng ra vào VPC mà không làm đứt kết nối hay thay đổi IP header gốc."*
+- **Giải pháp ĐÚNG**: **Gateway Load Balancer (GWLB)**.
+  - Hoạt động ở OSI Layer 3 (Network Layer), sử dụng giao thức **GENEVE (port UDP 6081)** để dẫn toàn bộ gói tin nguyên bản qua cụm firewall ảo và tự động kiểm tra sức khỏe, cân bằng tải giữa các firewall instances.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Cân Bằng Tải & Co Giãn Nhanh (Exam Decision Matrix)
@@ -215,6 +233,9 @@ flowchart TD
 | **Đáp ứng tăng tải đột biến theo từng nấc** | **Step Scaling Policy** | Scheduled Scaling (không dự đoán được thời điểm) |
 | **Chuẩn bị hạ tầng trước đợt sale Black Friday** | **Scheduled Scaling Actions** | Dynamic Scaling (bị trễ khi lưu lượng ùa vào đột ngột) |
 | **Dung lượng dự phòng chịu sập 1 AZ rẻ nhất** | **Triển khai 3 AZs (mỗi AZ gánh N/2 instances)** | Triển khai 2 AZs (tốn thêm 25% chi phí máy) |
+| **Cung cấp Static IP cố định & cân bằng tải Hybrid** | **Network Load Balancer (NLB)** | Application Load Balancer (IP động, không cố định) |
+| **Duy trì phiên đăng nhập/giỏ hàng ứng dụng web** | **ALB Sticky Sessions (Session Affinity)** | Tắt sticky session (user bị mất giỏ hàng khi đổi server) |
+| **Kiểm tra an ninh gói tin sâu bằng Firewall ảo bên thứ 3** | **Gateway Load Balancer (GWLB, UDP 6081)** | ALB / NLB (không giữ nguyên IP packet thô) |
 
 ---
 
