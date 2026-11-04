@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Automated Formatter for AWS Solutions Architect Practice Tests (Udemy SAA-C03).
 
@@ -371,23 +371,37 @@ for ($idx = 0; $idx -lt $qMatches.Count; $idx++) {
 
         # Options
         $optMatches = [regex]::Matches($chunk, "(?ms)^([A-H])\.\r?\n(.*?)(?=\r?\n[A-H]\.\r?\n|\r?\nExplanation\r?\n)")
-        $wrongMatches = [regex]::Matches($chunk, "(?m)^❌\s*(.+)")
+        $wrongMatches = [regex]::Matches($chunk, "(?m)^\u274C\s*(.+)")
+        if ($wrongMatches.Count -eq 0) {
+            $wrongMatches = [regex]::Matches($chunk, "(?m)^❌\s*(.+)")
+        }
         $wrongTexts = @()
-        foreach ($wm in $wrongMatches) { $wrongTexts += ($wm.Groups[1].Value.Trim() -replace "\s+", " ") }
+        foreach ($wm in $wrongMatches) { 
+            $w = ($wm.Groups[1].Value.Trim() -replace "\s+", " ")
+            $w = ($w -replace "^(?:Đáp án \d+:|Option [A-H]:|[A-H]\.?\s*)", "").Trim()
+            $wrongTexts += $w 
+        }
+
+        $metaHasCorr = ($metaJson.correctAnswers -and $metaJson.correctAnswers.$qKey)
+        $metaCorrList = if ($metaHasCorr) { @($metaJson.correctAnswers.$qKey) } else { @() }
 
         for ($o = 0; $o -lt $optMatches.Count; $o++) {
             $letter = $optMatches[$o].Groups[1].Value
             $bText = $optMatches[$o].Groups[2].Value.Trim()
             $optNorm = ($bText -replace "\s+", " ").Trim()
 
-            $isWrong = $false
-            foreach ($wt in $wrongTexts) {
-                if ($wt.StartsWith($optNorm) -or $optNorm.StartsWith($wt) -or $wt -eq $optNorm) {
-                    $isWrong = $true
-                    break
+            if ($metaHasCorr) {
+                $isCorrect = ($metaCorrList -contains $letter)
+            } else {
+                $isWrong = $false
+                foreach ($wt in $wrongTexts) {
+                    if ($wt.StartsWith($optNorm) -or $optNorm.StartsWith($wt) -or $wt -eq $optNorm) {
+                        $isWrong = $true
+                        break
+                    }
                 }
+                $isCorrect = (-not $isWrong)
             }
-            $isCorrect = (-not $isWrong)
             $isUser = ($isAllCorrect -and $isCorrect)
 
             if ($isCorrect) { $correctLetters += $letter }
@@ -777,7 +791,8 @@ foreach ($q in $questionsData) {
             $wReason = if ($firstNewline -ge 0) { $wText.Substring($firstNewline).Trim() } else { "" }
 
             $wLetter = ""
-            $wNorm = ($wOptName -replace "\s+", " ").Trim()
+            $wCleanOptName = ($wOptName -replace "^(?:Đáp án \d+:|Option [A-H]:|[A-H]\.?\s*)", "").Trim()
+            $wNorm = ($wCleanOptName -replace "\s+", " ").Trim()
             foreach ($opt in $q.Options) {
                 $oNorm = ($opt.Text -replace "\s+", " ").Trim()
                 if ($wNorm.StartsWith($oNorm) -or $oNorm.StartsWith($wNorm) -or $wNorm -eq $oNorm) {

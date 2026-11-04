@@ -1,0 +1,443 @@
+﻿{
+    "examTitle":  "# Bộ Đề Thi Thử AWS Certified Solutions Architect - Associate (SAA-C03) - Cloud Mentor Practice Test 3",
+    "metaCourse":  "\u003e **Nền tảng luyện thi**: Cloud Mentor AWS Practice Exams (SAA-C03)  ",
+    "metaSet":  "\u003e **Bộ đề**: Practice Test 03 - Results \u0026 In-Depth Architecture Review (65 Questions)  ",
+    "metaRef":  "\u003e **Tài liệu học tập liên quan**: [Ghi chú Chương 32: Chiến lược thi \u0026 Đề thi thử (32_Preparing_for_the_Exam.md)](../Lesson_Notes/32_Preparing_for_the_Exam.md) | [Bảng thuật ngữ AWS (GLOSSARY.md)](../GLOSSARY.md)",
+    "h1":  "## 📊 1. Báo Cáo Kết Quả Thực Hành (Exam Performance Summary)",
+    "h1Domain":  "### 📈 Ma Trận Phân Bổ Điểm Số Theo 4 Miền Kiến Thức (Domains Breakdown)",
+    "h2":  "## 🎯 2. Danh Sách 19 Câu Cần Tập Trung Ôn Tập (Focused Revision for Incorrect Answers)",
+    "h2Intro":  "Dưới đây là tổng hợp 19 câu trả lời chưa chính xác và bỏ qua trong bài thi thử này. Hãy rà soát kỹ các bẫy đề bài, nguyên lý kiến trúc cốt lõi và bài học thực tế trước khi bước vào kỳ thi thật:",
+    "h2Empty":  "\u003e 🌟 **Tuyệt vời!** Bạn đã trả lời chính xác 100% tất cả các câu hỏi trong đề thi này (65 / 65 câu). Không có câu hỏi nào cần đưa vào danh sách ôn tập trọng tâm.",
+    "h3":  "## 📑 3. Mục Lục Điều Hướng Nhanh (Question Quick Index)",
+    "h3Summary":  "\u003csummary\u003e👉 \u003cb\u003eNhấp vào đây để mở rộng danh sách 65 câu hỏi\u003c/b\u003e\u003c/summary\u003e",
+    "h4":  "## 📝 4. Nội Dung Chi Tiết 65 Câu Hỏi \u0026 Phân Tích Kiến Trúc (Detailed Questions \u0026 Explanations)",
+    "qTypeSingle":  "Single Choice (Chọn 1 đáp án)",
+    "qTypeSelect2":  "Multiple Choice (Chọn 2 đáp án)",
+    "qTypeSelect3":  "Multiple Choice (Chọn 3 đáp án)",
+    "statusCorrect":  "Correct (Chính xác) ✅",
+    "statusIncorrect":  "Incorrect (Chưa chính xác) ❌",
+    "badgeCorrect":  "✅ Đúng",
+    "badgeIncorrect":  "❌ Sai",
+    "tagUserCorrect":  " `[Lựa chọn của bạn - Chính xác ✅]`",
+    "tagUserIncorrect":  " `[Lựa chọn của bạn - Không chính xác ❌]`",
+    "tagCorrect":  " `[Đáp án đúng ✅]`",
+    "visualRef":  "\u003e 🔗 **Tài liệu tham khảo trực quan**: ",
+    "noExtraRef":  "- Không có liên kết bổ sung.",
+    "labelDomain":  "\u003e **Miền kiến thức (Domain)**: ",
+    "labelType":  "\u003e **Loại câu hỏi**: ",
+    "labelResult":  "\u003e **Kết quả thực hành**: ",
+    "labelUser":  " | **Lựa chọn của bạn**: ",
+    "labelCorrect":  " | **Đáp án đúng**: ",
+    "headingPrompt":  "#### 📋 Đề bài (Scenario)",
+    "headingOptions":  "#### 🔘 Các phương án lựa chọn (Options)",
+    "summaryExp":  "\u003csummary\u003e👉 \u003cb\u003eXem đáp án chi tiết \u0026 giải thích kiến trúc (Click to expand)\u003c/b\u003e\u003c/summary\u003e",
+    "headingAns":  "#### ✅ Đáp án đúng: ",
+    "headingCore":  "#### 💡 Phân tích giải thích chi tiết (Core Explanation):",
+    "headingDistractors":  "#### ❌ Phân tích các phương án không chính xác (Distractors Analysis):",
+    "headingTips":  "#### 🔑 Bí kíp thi cử \u0026 Trọng tâm ghi nhớ (Exam Tips \u0026 Key Takeaways):",
+    "headingRefs":  "#### 📚 Tài liệu tham khảo chính thức (Official References):",
+    "tblTotal":  "| **Tổng số câu hỏi (Total Questions)** |",
+    "tblCorrect":  "| **Số câu trả lời đúng (Correct Answers)** |",
+    "tblIncorrect":  "| **Số câu trả lời sai / bỏ qua (Incorrect \u0026 Skipped)** |",
+    "tblScore":  "| **Tỷ lệ chính xác (Overall Score)** |",
+    "tblTime":  "| **Thời gian thi tiêu chuẩn** | **130 phút** | 130 phút *(160 phút nếu có ESL +30)* | Đạt tiến độ thời gian |",
+    "tblHeaderMetric":  "| Chỉ số đánh giá (Metric) | Kết quả đạt được | Tiêu chuẩn đạt của AWS | Trạng thái (Status) |",
+    "tblHeaderDomains":  "| Miền kiến thức (AWS Domain) | Trọng số thi | Tổng số câu | Số câu đúng | Số câu sai | Tỷ lệ chính xác | Đánh giá năng lực |",
+    "tblHeaderReview":  "| Câu số | Miền kiến thức | Chủ đề câu hỏi | Kiến thức cốt lõi \u0026 Bẫy đề bài cần lưu ý | Xem lại |",
+    "tblHeaderIndex":  "| STT | Trạng thái | Chủ đề câu hỏi | Miền kiến thức |",
+    "tblTotalRowLabel":  "| **TỔNG CỘNG (OVERALL)** | **100%** | ",
+    "tblCau":  " câu",
+    "ratingExcellent":  "Xuất sắc 🟢",
+    "ratingGood":  "Tốt 🟡",
+    "ratingNeedsWork":  "Cần củng cố 🔴",
+    "linkJump":  "[👉 Xem](#",
+    "refPrefix":  "- 🌐 [",
+    "passedBanner":  "🌟 **PASSED (XUẤT SẮC - ĐẠT)**",
+    "failedBanner":  "⚠️ **FAILED (CHƯA ĐẠT - CẦN ÔN TẬP)**",
+    "cauWord":  "Câu ",
+    "domainTitlesVi":  {
+                           "Design Secure Architectures":  "Thiết kế kiến trúc an toàn (Security)",
+                           "Design Resilient Architectures":  "Thiết kế kiến trúc kiên cường chịu lỗi (Resilience)",
+                           "Design High-Performing Architectures":  "Thiết kế kiến trúc hiệu năng cao (Performance)",
+                           "Design Cost-Optimized Architectures":  "Thiết kế kiến trúc tối ưu chi phí (Cost Optimization)"
+                       },
+    "domainWeights":  {
+                          "Design Secure Architectures":  "30%",
+                          "Design Resilient Architectures":  "26%",
+                          "Design High-Performing Architectures":  "24%",
+                          "Design Cost-Optimized Architectures":  "20%"
+                      },
+    "domainLabels":  {
+                         "Design Secure Architectures":  "Domain 1: Design Secure Architectures",
+                         "Design Resilient Architectures":  "Domain 2: Design Resilient Architectures",
+                         "Design High-Performing Architectures":  "Domain 3: Design High-Performing Architectures",
+                         "Design Cost-Optimized Architectures":  "Domain 4: Design Cost-Optimized Architectures"
+                     },
+    "questionDomains":  {
+                            "1":  "Design Resilient Architectures",
+                            "2":  "Design High-Performing Architectures",
+                            "3":  "Design Secure Architectures",
+                            "4":  "Design Resilient Architectures",
+                            "5":  "Design Cost-Optimized Architectures",
+                            "6":  "Design Secure Architectures",
+                            "7":  "Design Secure Architectures",
+                            "8":  "Design Secure Architectures",
+                            "9":  "Design High-Performing Architectures",
+                            "10":  "Design Secure Architectures",
+                            "11":  "Design Cost-Optimized Architectures",
+                            "12":  "Design Secure Architectures",
+                            "13":  "Design Cost-Optimized Architectures",
+                            "14":  "Design Resilient Architectures",
+                            "15":  "Design Secure Architectures",
+                            "16":  "Design Resilient Architectures",
+                            "17":  "Design Secure Architectures",
+                            "18":  "Design Secure Architectures",
+                            "19":  "Design High-Performing Architectures",
+                            "20":  "Design Secure Architectures",
+                            "21":  "Design Resilient Architectures",
+                            "22":  "Design Cost-Optimized Architectures",
+                            "23":  "Design Resilient Architectures",
+                            "24":  "Design Secure Architectures",
+                            "25":  "Design High-Performing Architectures",
+                            "26":  "Design High-Performing Architectures",
+                            "27":  "Design Resilient Architectures",
+                            "28":  "Design Secure Architectures",
+                            "29":  "Design High-Performing Architectures",
+                            "30":  "Design Secure Architectures",
+                            "31":  "Design Secure Architectures",
+                            "32":  "Design Secure Architectures",
+                            "33":  "Design High-Performing Architectures",
+                            "34":  "Design Secure Architectures",
+                            "35":  "Design High-Performing Architectures",
+                            "36":  "Design Secure Architectures",
+                            "37":  "Design Secure Architectures",
+                            "38":  "Design Resilient Architectures",
+                            "39":  "Design Cost-Optimized Architectures",
+                            "40":  "Design Secure Architectures",
+                            "41":  "Design Resilient Architectures",
+                            "42":  "Design Cost-Optimized Architectures",
+                            "43":  "Design Secure Architectures",
+                            "44":  "Design High-Performing Architectures",
+                            "45":  "Design Resilient Architectures",
+                            "46":  "Design High-Performing Architectures",
+                            "47":  "Design Resilient Architectures",
+                            "48":  "Design Cost-Optimized Architectures",
+                            "49":  "Design Secure Architectures",
+                            "50":  "Design High-Performing Architectures",
+                            "51":  "Design Secure Architectures",
+                            "52":  "Design Secure Architectures",
+                            "53":  "Design Resilient Architectures",
+                            "54":  "Design Resilient Architectures",
+                            "55":  "Design Resilient Architectures",
+                            "56":  "Design High-Performing Architectures",
+                            "57":  "Design Cost-Optimized Architectures",
+                            "58":  "Design Secure Architectures",
+                            "59":  "Design Secure Architectures",
+                            "60":  "Design High-Performing Architectures",
+                            "61":  "Design Resilient Architectures",
+                            "62":  "Design Resilient Architectures",
+                            "63":  "Design Cost-Optimized Architectures",
+                            "64":  "Design Secure Architectures",
+                            "65":  "Design Secure Architectures"
+                        },
+    "incorrectReviewNotes":  {
+                                 "2":  "Yêu cầu phân tích real-time\u003cbr\u003e\"Real-time analysis\" → Kinesis Data Streams + Lambda",
+                                 "3":  "tất cả EBS volumes mới phải được mã hóa mặc định (encrypted by default)\u003cbr\u003e\"encrypt by default\" → EC2 account attributes setting",
+                                 "5":  "Công ty sử dụng 4 dịch vụ: EC2, Lambda, Fargate, SageMaker\u003cbr\u003eEC2 Instance Savings Plan → Chỉ EC2",
+                                 "7":  "LEAST operational overhead (ít phức tạp vận hành nhất)\u003cbr\u003e\"LEAST operational overhead\" → AWS managed services với automation",
+                                 "12":  "Yêu cầu giải pháp most operationally efficient\u003cbr\u003e\"SQL injection + XSS\" → AWS WAF (Web Application Firewall)",
+                                 "14":  "Yêu cầu MOST cost-effectively\u003cbr\u003e\"Transport layer OSI\" → Layer 4 → TCP/UDP → Network Load Balancer",
+                                 "17":  "Đã migrated Hundreds of EC2 instances (từ on-premises VMs)\u003cbr\u003eAutomate OS updates/patching → AWS Systems Manager Patch Manager",
+                                 "22":  "Yêu cầu MOST cost-effectively (chọn 3 đáp án)\u003cbr\u003e\"SMB file share\" → S3 File Gateway (NFS/SMB interface)",
+                                 "25":  "SAP application với SQL Server database trong on-premises environment\u003cbr\u003e\"SAP\" + \"high memory utilization\" → Memory optimized instances",
+                                 "31":  "Company chạy several RDS for Oracle On-Demand DB instances với high utilization\u003cbr\u003e\"High utilization\" + \"cost optimization\" → Reserved Instance recommendations",
+                                 "33":  "Yêu cầu low-latency network performance\u003cbr\u003e\"HPC workload\" + \"low latency\" + \"high throughput\" → Cluster placement groups",
+                                 "35":  "Yêu cầu deploy certificate without incurring additional costs\u003cbr\u003e\"CloudFront\" + \"SSL certificate\" → ACM certificate trong us-east-1",
+                                 "41":  "Large international university deploy tất cả compute services trên AWS Cloud\u003cbr\u003e\"Centralize management\" + \"automate backups\" → AWS Backup",
+                                 "42":  "Yêu cầu MOST cost-effectively\u003cbr\u003e\"Third-party features\" + \"privileged access\" → RDS Custom",
+                                 "43":  "Yêu cầu LEAST operational overhead\u003cbr\u003e\"Password rotation\" + \"RDS\" → AWS Secrets Manager",
+                                 "46":  "On-premises business application tạo ra hundreds of files mỗi ngày\u003cbr\u003e\"SMB file share\" + \"copy to AWS\" + \"no code changes\" → AWS Storage Gateway",
+                                 "48":  "Yêu cầu MOST cost-effectively\u003cbr\u003e\"AWS managed service\" + \"cost-effective\" → AWS Backup",
+                                 "62":  "Java-based job chạy trên EC2 instance\u003cbr\u003e\"10 seconds every hour\" → Lambda optimal cho short, infrequent tasks",
+                                 "65":  "Yêu cầu LEAST operational overhead\u003cbr\u003e\"Automatically every year\" → KMS customer managed keys với documented 365-day rotation"
+                             },
+    "topicTitles":  {
+                        "1":  "Amazon S3 Storage Lens to identify all S3 buckets that are not versioning-enabled ...",
+                        "2":  "A data stream in Amazon Kinesis Data Streams in on-demand mode to capture the clic...",
+                        "3":  "The EC2 account attributes to always encrypt new EBS volumes",
+                        "4":  "Babelfish on Aurora PostgreSQL to run the SQL queries from the applications and th...",
+                        "5":  "A Compute Savings Plan for Lambda, Fargate, and Amazon EC2 and a SageMaker Savings...",
+                        "6":  "The security group for the application tier to allow outbound HTTPS traffic and Mi...",
+                        "7":  "AWS Budgets to establish budgets for each developer account",
+                        "8":  "A Compute Savings Plan",
+                        "9":  "A Cache-Control max-age directive of 24 hours to the objects in Amazon S3 and Set ...",
+                        "10":  "Share an Amazon QuickSight dashboard that includes the requested table visual",
+                        "11":  "Update the application to send the purchase requests to an Amazon Simple Queue Ser...",
+                        "12":  "AWS WAF",
+                        "13":  "An Amazon API Gateway endpoint that returns the contact form from an AWS Lambda fu...",
+                        "14":  "A Network Load Balancer in front of the EC2 instances and an Auto Scaling group fo...",
+                        "15":  "An S3 gateway endpoint to access the S3 buckets",
+                        "16":  "An Auto Scaling group and an ELB in the DR Region",
+                        "17":  "AWS Systems Manager Patch Manager to manage all the EC2 instances",
+                        "18":  "An organization in AWS Organizations in the management account with the default po...",
+                        "19":  "Amazon Cognito for authentication",
+                        "20":  "An IAM role in the Production account",
+                        "21":  "An Amazon Simple Queue Service (Amazon SQS) FIFO queue",
+                        "22":  "An AWS Glue crawler to create a table based on the data that is in Amazon S3 and a...",
+                        "23":  "AWS Compute Optimizer to generate EBS volume recommendations for optimization",
+                        "24":  "A gateway VPC endpoint for Amazon S3",
+                        "25":  "The memory optimized instance family for both the application and the database",
+                        "26":  "An Aurora read replica in the existing Aurora DB cluster",
+                        "27":  "Modify the RDS database to have a retention period of 30 days for automated backups",
+                        "28":  "The application to use client-side encryption with a key stored in AWS Key Managem...",
+                        "29":  "Provision an Amazon RDS for MySQL DB instance with Provisioned IOPS SSD storage",
+                        "30":  "A gateway endpoint for Amazon S3 in the VPC",
+                        "31":  "Review the Trusted Advisor checks for Amazon RDS Reserved Instance Optimization an...",
+                        "32":  "Two AWS Direct Connect connections from each of the primary and secondary data cen...",
+                        "33":  "The EC2 instances to be part of a cluster placement group",
+                        "34":  "Generate a presigned URL that has the required access to the location of the repor...",
+                        "35":  "Request an Amazon issued public certificate from AWS Certificate Manager (ACM) in ...",
+                        "36":  "The DB cluster to use IAM database authentication",
+                        "37":  "Amazon GuardDuty to perform threat detection",
+                        "38":  "Copy the website assets to an Amazon Elastic File System (Amazon EFS) file system",
+                        "39":  "An Amazon Aurora Serverless cluster",
+                        "40":  "Amazon Neptune to store the data",
+                        "41":  "AWS Backup to configure and monitor all backups for the services in use",
+                        "42":  "The database to Amazon RDS Custom for Oracle by using native tools",
+                        "43":  "The password in AWS Secrets Manager",
+                        "44":  "A recurring scheduled action to scale up the Auto Scaling group before the expecte...",
+                        "45":  "An AWS Lambda function that scans the DynamoDB table and uses Amazon Simple Notifi...",
+                        "46":  "AWS Storage Gateway",
+                        "47":  "The web application to Amazon EC2 instances that run in an Auto Scaling group acro...",
+                        "48":  "AWS Backup to create a backup plan with a rule that takes a daily backup and repli...",
+                        "49":  "Amazon Macie in each Region",
+                        "50":  "AWS Global Accelerator",
+                        "51":  "Provision a gateway endpoint for Amazon S3 in the VPC",
+                        "52":  "Amazon Elastic Block Store (Amazon EBS) encryption and Amazon RDS encryption with ...",
+                        "53":  "Mount an Amazon Elastic File System (Amazon EFS) file system across all the EC2 in...",
+                        "54":  "An Amazon Route 53 multivalue answer routing policy",
+                        "55":  "An AWS Transit Gateway in the networking team\u0027s AWS account",
+                        "56":  "An Amazon Aurora MySQL Multi-AZ DB cluster with multiple read replicas",
+                        "57":  "The AWS Snow Family console to order several AWS Snowball Edge Storage Optimized d...",
+                        "58":  "An AWS Transfer Family server with SFTP endpoints",
+                        "59":  "Implement an AWS Site-to-Site VPN connection",
+                        "60":  "Amazon Neptune to store the datasets with edges and vertices",
+                        "61":  "An S3 Lifecycle rule to transition objects to the S3 Intelligent-Tiering storage c...",
+                        "62":  "Copy the code into an AWS Lambda function that has 1 GB of memory",
+                        "63":  "The cluster to use the Aurora I/O-Optimized storage configuration",
+                        "64":  "AWS IAM Identity Center",
+                        "65":  "An AWS Key Management Service (AWS KMS) customer managed key"
+                    },
+    "statusTargetMet":  "Đạt tiêu chuẩn ✅",
+    "statusTargetNotMet":  "Chưa đạt tiêu chuẩn ❌",
+    "statusNoErrors":  "Không có câu sai 🌟",
+    "statusNeedsRevision":  "Cần tập trung ôn tập ⚠️",
+    "statusCompleted":  "Hoàn thành 100%",
+    "correctAnswers":  {
+                           "1":  [
+                                     "B"
+                                 ],
+                           "2":  [
+                                     "D"
+                                 ],
+                           "3":  [
+                                     "D"
+                                 ],
+                           "4":  [
+                                     "C",
+                                     "D"
+                                 ],
+                           "5":  [
+                                     "C",
+                                     "D"
+                                 ],
+                           "6":  [
+                                     "C",
+                                     "E",
+                                     "F"
+                                 ],
+                           "7":  [
+                                     "C"
+                                 ],
+                           "8":  [
+                                     "D"
+                                 ],
+                           "9":  [
+                                     "D",
+                                     "E"
+                                 ],
+                           "10":  [
+                                      "C"
+                                  ],
+                           "11":  [
+                                      "C",
+                                      "D"
+                                  ],
+                           "12":  [
+                                      "D"
+                                  ],
+                           "13":  [
+                                      "D"
+                                  ],
+                           "14":  [
+                                      "A",
+                                      "E"
+                                  ],
+                           "15":  [
+                                      "C"
+                                  ],
+                           "16":  [
+                                      "C"
+                                  ],
+                           "17":  [
+                                      "C"
+                                  ],
+                           "18":  [
+                                      "D"
+                                  ],
+                           "19":  [
+                                      "D"
+                                  ],
+                           "20":  [
+                                      "A"
+                                  ],
+                           "21":  [
+                                      "B"
+                                  ],
+                           "22":  [
+                                      "A",
+                                      "D",
+                                      "E"
+                                  ],
+                           "23":  [
+                                      "A"
+                                  ],
+                           "24":  [
+                                      "A"
+                                  ],
+                           "25":  [
+                                      "D"
+                                  ],
+                           "26":  [
+                                      "C"
+                                  ],
+                           "27":  [
+                                      "A"
+                                  ],
+                           "28":  [
+                                      "A"
+                                  ],
+                           "29":  [
+                                      "B"
+                                  ],
+                           "30":  [
+                                      "A"
+                                  ],
+                           "31":  [
+                                      "B",
+                                      "E"
+                                  ],
+                           "32":  [
+                                      "B"
+                                  ],
+                           "33":  [
+                                      "D"
+                                  ],
+                           "34":  [
+                                      "C"
+                                  ],
+                           "35":  [
+                                      "C"
+                                  ],
+                           "36":  [
+                                      "D"
+                                  ],
+                           "37":  [
+                                      "C"
+                                  ],
+                           "38":  [
+                                      "C"
+                                  ],
+                           "39":  [
+                                      "D"
+                                  ],
+                           "40":  [
+                                      "C"
+                                  ],
+                           "41":  [
+                                      "A"
+                                  ],
+                           "42":  [
+                                      "D"
+                                  ],
+                           "43":  [
+                                      "D"
+                                  ],
+                           "44":  [
+                                      "D"
+                                  ],
+                           "45":  [
+                                      "D"
+                                  ],
+                           "46":  [
+                                      "A"
+                                  ],
+                           "47":  [
+                                      "D"
+                                  ],
+                           "48":  [
+                                      "B"
+                                  ],
+                           "49":  [
+                                      "A"
+                                  ],
+                           "50":  [
+                                      "B"
+                                  ],
+                           "51":  [
+                                      "B"
+                                  ],
+                           "52":  [
+                                      "A"
+                                  ],
+                           "53":  [
+                                      "A"
+                                  ],
+                           "54":  [
+                                      "B"
+                                  ],
+                           "55":  [
+                                      "A"
+                                  ],
+                           "56":  [
+                                      "A"
+                                  ],
+                           "57":  [
+                                      "C"
+                                  ],
+                           "58":  [
+                                      "D"
+                                  ],
+                           "59":  [
+                                      "D"
+                                  ],
+                           "60":  [
+                                      "C"
+                                  ],
+                           "61":  [
+                                      "D"
+                                  ],
+                           "62":  [
+                                      "C"
+                                  ],
+                           "63":  [
+                                      "C"
+                                  ],
+                           "64":  [
+                                      "C"
+                                  ],
+                           "65":  [
+                                      "C"
+                                  ]
+                       }
+}
