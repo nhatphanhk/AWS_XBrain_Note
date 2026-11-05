@@ -269,6 +269,20 @@ flowchart TD
 - **Giải pháp ĐÚNG**: Khởi chạy toàn bộ cụm máy chủ trong một **Cluster Placement Group** kết hợp tính năng mạng nâng cao **Elastic Network Adapter (ENA)**.
   - Các máy chủ được đặt gần nhau về mặt vật lý trong cùng một tủ rack hoặc cụm switch mạng trong 1 AZ duy nhất, đạt độ trễ mạng dưới 1 mili-giây và băng thông lên đến 100 Gbps.
 
+#### 🪤 Bẫy 10: Quy Tắc Kế Thừa Tenancy Giữa VPC và Launch Template — (U-PT3 Q07)
+- **Tình huống đề thi**: *"Một VPC được thiết lập thuộc tính Tenancy là `Dedicated`. Kỹ sư tạo một EC2 Launch Template với thuộc tính Tenancy được chỉ định là `Default` (Shared). Khi một máy ảo EC2 được khởi chạy từ Launch Template này vào VPC trên, máy ảo đó sẽ chạy dưới chế độ phần cứng nào?"*
+- **Quy tắc kế thừa Tenancy bất biến của AWS**:
+  - **Quyền lực của VPC Tenancy luôn ở mức tối cao**: Nếu VPC có thuộc tính Tenancy là `Dedicated`, **MỌI MÁY ẢO** khởi chạy vào VPC đó đều **TỰ ĐỘNG TRỞ THÀNH DEDICATED INSTANCES**, bất kể Launch Template hoặc tham số lệnh API có ghi là `Default` đi chăng nữa!
+  - Chỉ khi VPC có Tenancy là `Default`, thì thuộc tính Tenancy trên Launch Template mới có hiệu lực để quyết định máy ảo là Shared, Dedicated hay Host.
+
+#### 🪤 Bẫy 11: Phân Biệt Elastic Network Adapter (ENA) vs Elastic Fabric Adapter (EFA) Cho HPC — (U-PT6 Q23)
+- **Tình huống đề thi**: *"Ứng dụng mô phỏng thời tiết chạy trên cụm EC2 Linux sử dụng giao thức truyền thông điệp MPI (Message Passing Interface). Yêu cầu giảm thiểu tối đa độ trễ trao đổi thông tin giữa các tiến trình tính toán xuyên nút (Inter-node Communication)."*
+- **Các phương án bẫy**:
+  - ❌ *Chỉ bật Enhanced Networking với ENA*: ENA mang lại băng thông cao (lên tới 100 Gbps), nhưng toàn bộ dữ liệu vẫn phải đi qua ngăn xếp giao thức mạng truyền thống của nhân hệ điều hành Linux (OS Kernel Network Stack), tạo ra độ trễ hàng chục microsecond.
+- **Giải pháp ĐÚNG**: Sử dụng **Elastic Fabric Adapter (EFA)**.
+  - EFA là một thiết bị mạng tùy biến của AWS dành riêng cho các tác vụ HPC và Deep Learning phân tán.
+  - Tính năng cốt lõi: **OS Bypass (Bỏ qua nhân hệ điều hành)** — cho phép ứng dụng MPI và NVIDIA NCCL giao tiếp trực tiếp với phần cứng mạng EFA mà không cần can thiệp của OS kernel, đưa độ trễ liên nút xuống mức microsecond thấp nhất!
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định EC2 & Tính Toán Nhanh (Exam Decision Matrix)
@@ -277,6 +291,16 @@ flowchart TD
 |:---|:---|:---|
 | **Bản quyền BYOL tính theo Socket/Core vật lý** | **EC2 Dedicated Hosts** | Dedicated Instances (không kiểm soát được socket/core) |
 | **Tính toán HPC mạng siêu nhanh, độ trễ thấp** | **Cluster Placement Group** (+ ENA/EFA) | Spread / Partition Placement Group |
+| **Ứng dụng HPC/MPI cần OS Bypass độ trễ microsecond** | **Elastic Fabric Adapter (EFA)** | Elastic Network Adapter (ENA đi qua kernel stack) |
+| **VPC có Tenancy: Dedicated, máy ảo khai báo Default** | **Máy ảo TỰ ĐỘNG thành Dedicated Instance** | Chạy shared (VPC Tenancy luôn ghi đè Launch Template) |
+| **Ứng dụng cực kỳ quan trọng, chống sập phần cứng** | **Spread Placement Group** (tối đa 7 instances/AZ) | Cluster Placement Group (rủi ro sập chung rack) |
+| **Xử lý Batch chịu lỗi, tối thiểu chi phí 90%** | **EC2 Spot Fleet (Diversified Strategy)** | On-Demand Instances (chi phí quá cao) |
+| **Phục hồi tự động máy chủ đơn khối (Monolith) + EIP** | **ASG (Min=1, Max=1) + EIP re-attach qua User Data** | Dùng ALB (tốn thêm chi phí duy trì hàng tháng) |
+| **Tự động tắt máy chủ Dev ngoài giờ làm việc** | **AWS Instance Scheduler** | Viết script cron thủ công trên EC2 |
+| **Lưu trữ tạm thời tốc độ cực cao, mất khi tắt máy** | **EC2 Instance Store** | Amazon EBS (độ trễ cao hơn Instance Store) |
+| **Cụm EMR chạy Spot tự động chọn AZ có capacity** | **EMR Instance Fleets (đa Subnet/Instance Types)** | Instance Groups (bị khóa vào 1 AZ cố định) |
+| **Tự động phục hồi máy ảo lỗi phần cứng giữ nguyên IP** | **CloudWatch Alarm (StatusCheckFailed_System) + Auto-Recovery** | Tạo mới máy ảo thủ công (mất thời gian & đổi IP) |
+| **Tải công việc tăng giảm định kỳ theo giờ mỗi ngày** | **EC2 Auto Scaling Scheduled Scaling** | Dynamic Target Tracking (bị chậm trễ vài phút ban đầu) |
 | **Ứng dụng cực kỳ quan trọng, chống sập phần cứng** | **Spread Placement Group** (tối đa 7 instances/AZ) | Cluster Placement Group (rủi ro sập chung rack) |
 | **Xử lý Batch chịu lỗi, tối thiểu chi phí 90%** | **EC2 Spot Fleet (Diversified Strategy)** | On-Demand Instances (chi phí quá cao) |
 | **Phục hồi tự động máy chủ đơn khối (Monolith) + EIP** | **ASG (Min=1, Max=1) + EIP re-attach qua User Data** | Dùng ALB (tốn thêm chi phí duy trì hàng tháng) |

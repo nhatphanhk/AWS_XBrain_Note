@@ -1,8 +1,8 @@
-# 📘 Bộ Từ Điển Thuật Ngữ & Cẩm Nang Giải Mã Đề Thi AWS SAA-C03 (Exam Vocabulary & Keyword Playbook)
+﻿# 📘 Bộ Từ Điển Thuật Ngữ & Cẩm Nang Giải Mã Đề Thi AWS SAA-C03 (Exam Vocabulary & Keyword Playbook)
 
 > **Mục tiêu**: Cung cấp từ điển thuật ngữ chuyên biệt và bộ quy tắc giải mã từ khóa (Keyword Clues) trong các đề thi AWS Certified Solutions Architect - Associate (**SAA-C03**).  
-> **Nguồn trích xuất thực chứng**: Tổng hợp và chuẩn hóa trực tiếp từ 390 câu hỏi qua 6 bộ đề thi thực hành chuyên sâu (**Cloud Mentor Practice Tests 1 đến 6 - CM-PT1 đến CM-PT6**).  
-> **Tài liệu liên kết**: [Bảng thuật ngữ kỹ thuật tổng quan (GLOSSARY.md)](../../GLOSSARY.md) | [Thư viện chuyên đề AWS Services](../../AWS_Services/) | [Đề thi PT1](./pt_1.md) | [PT2](./pt_2.md) | [PT3](./pt_3.md) | [PT4](./pt_4.md) | [PT5](./pt_5.md) | [PT6](./pt_6.md)
+> **Nguồn trích xuất thực chứng**: Tổng hợp và chuẩn hóa trực tiếp từ **650 câu hỏi thực chiến** qua 10 bộ đề thi thực hành chuyên sâu (**Cloud Mentor PT1 đến PT6** - 390 câu & **Udemy Stephane Maarek PT1, PT2, PT3, PT6** - 260 câu).  
+> **Tài liệu liên kết**: [Bảng thuật ngữ kỹ thuật tổng quan (GLOSSARY.md)](./GLOSSARY.md) | [Thư viện 21 chuyên đề AWS Services](./AWS_Services/) | [Bộ đề Cloud Mentor (PT1 - PT6)](./Practices_Test/Cloud_Mentor/) | [Bộ đề Udemy (PT1 - PT6)](./Practices_Test/Udemy/)
 
 ---
 
@@ -183,6 +183,16 @@ mindmap
 | Giảm thời gian gián đoạn (downtime) khi database RDS chuyển đổi dự phòng (**failover**) | Triển khai **Amazon RDS Proxy** | RDS Proxy duy trì các connection pool của ứng dụng và tự định tuyến lại sang DB standby trong vài giây. | CM-PT6 Q38 |
 | Tải các tệp tin có kích thước nhiều Gigabytes lên S3 với **băng thông tối đa** | **S3 Multipart Upload** kết hợp đọc ghi song song theo byte range | Chia nhỏ file thành nhiều phần tải lên song song; có thể tạm dừng và tiếp tục khi gặp sự cố mạng. | CM-PT6 Q05 |
 | Phát hiện và cắt giảm chi phí S3 Standard tăng cao do các đợt **upload bị đứt quãng dở dang** | **S3 Lifecycle Rule** với hành động **Abort Incomplete Multipart Uploads** | Tự động dọn dẹp các mảnh dữ liệu tải lên dở dang sau 7 ngày, tránh bị tính phí lưu trữ ngầm. | CM-PT5 Q27 |
+| Phân quyền đặc quyền tối thiểu (Least-Privilege) cho từng Pod trong cụm Kubernetes | **IAM Roles for Service Accounts (IRSA)** với OIDC Identity Provider | Cấp quyền theo ServiceAccount; không gán IAM role vào EC2 Node để tránh dùng chung quyền. | U-PT1 Q04 |
+| Khắc phục lỗi **`HTTP 503 Slow Down`** khi gửi hàng chục ngàn requests/giây vào S3 | **Phân bổ tiền tố (Custom Prefixes / Partitioning Keys)** | Mỗi prefix chịu được 3,500 PUT / 5,500 GET req/s; phân tán prefix giúp scale thông lượng không giới hạn. | U-PT1 Q15 |
+| Di chuyển ứng dụng sử dụng RabbitMQ / ActiveMQ lên AWS mà **không sửa mã nguồn** | **Amazon MQ** (quản lý hoàn toàn cụm RabbitMQ hoặc Apache ActiveMQ) | Hỗ trợ chuẩn mở AMQP, JMS, MQTT, STOMP; chỉ cần đổi URL kết nối broker trong cấu hình code. | U-PT6 Q04 |
+| Tuân thủ bản quyền phần mềm doanh nghiệp (BYOL) tính theo **Socket / Core vật lý** | **Amazon EC2 Dedicated Hosts** (kết hợp AWS License Manager) | Hiển thị chi tiết socket/core và ID máy chủ vật lý; kiểm soát placement và theo dõi giấy phép bản quyền. | U-PT6 Q34 |
+| Kết nối Direct Connect tới **AWS Transit Gateway** để định tuyến hàng ngàn VPCs | Cấu hình **Transit Virtual Interface (Transit VIF)** qua Direct Connect Gateway | Private VIF chỉ gắn vào VGW; bắt buộc dùng Transit VIF khi kết nối Direct Connect với Transit Gateway. | U-PT3 Q31 |
+| Mã hóa dữ liệu trên đường truyền cáp quang vật lý **AWS Direct Connect** | Thiết lập đường hầm **IPsec VPN chạy bên trên Direct Connect** (hoặc MACsec) | Direct Connect mặc định không mã hóa (Layer 2); chạy IPsec over Direct Connect đáp ứng tiêu chuẩn an ninh cao nhất. | U-PT1 Q42 |
+| Mở rộng dung lượng lưu trữ On-Premises chi phí thấp, **dữ liệu chính nằm trên S3** | **AWS Storage Gateway - Cached Volumes** | Ổ đĩa cục bộ chỉ làm bộ đệm cache cho dữ liệu hay dùng; dữ liệu chính lưu trên S3 chi phí thấp. | U-PT3 Q60 |
+| Thay thế kho băng từ vật lý tốn kém, giữ nguyên phần mềm sao lưu (Veeam, Commvault) | **AWS Storage Gateway - Tape Gateway (VTL)** | Giả lập thư viện băng từ ảo qua iSCSI VTL; lưu trữ dữ liệu lâu dài vào S3 Glacier / Deep Archive. | U-PT3 Q57 |
+| Di chuyển máy chủ vật lý / ảo hóa lên EC2 với **thời gian ngừng hoạt động tối thiểu** | **AWS Application Migration Service (AWS MGN)** | Nhân bản liên tục cấp độ khối (Block-level replication); cutover tự động chỉ mất vài phút downtime. | U-PT6 Q60 |
+| Tăng tốc độ xử lý hàng đợi **SQS FIFO lên 3,000 TPS** mà không mất thứ tự | Sử dụng thao tác **Batching** (`SendMessageBatch` tối đa 10 tin nhắn/lô) | Thao tác đơn lẻ chỉ đạt 300 TPS; gom lô 10 tin nhắn giúp thông lượng tăng gấp 10 lần mà vẫn bảo toàn FIFO. | U-PT1 Q43 |
 
 ---
 
@@ -276,11 +286,7 @@ flowchart TD
 
 ### Liên Kết Đến Các Bộ Đề Thi & Chuyên Đề Kiến Trúc
 
-- 📝 [Đề thi thử số 1 (CM-PT1 - 65 câu phân tích chi tiết)](./pt_1.md)
-- 📝 [Đề thi thử số 2 (CM-PT2 - 65 câu phân tích chi tiết)](./pt_2.md)
-- 📝 [Đề thi thử số 3 (CM-PT3 - 65 câu phân tích chi tiết)](./pt_3.md)
-- 📝 [Đề thi thử số 4 (CM-PT4 - 65 câu phân tích chi tiết)](./pt_4.md)
-- 📝 [Đề thi thử số 5 (CM-PT5 - 65 câu phân tích chi tiết)](./pt_5.md)
-- 📝 [Đề thi thử số 6 (CM-PT6 - 65 câu phân tích chi tiết)](./pt_6.md)
-- 📚 [Thư viện tài liệu chuyên sâu 15 chuyên đề AWS Services](../../AWS_Services/)
-- 📖 [Bảng thuật ngữ công nghệ Cloud & DevOps tổng quát](../../GLOSSARY.md)
+- 📝 [Bộ đề thi thực hành Cloud Mentor (PT1 đến PT6 - 390 câu)](./Practices_Test/Cloud_Mentor/)
+- 📝 [Bộ đề thi thực hành Udemy - Stephane Maarek (PT1 đến PT6 - 260 câu)](./Practices_Test/Udemy/)
+- 📚 [Thư viện tài liệu chuyên sâu 21 chuyên đề Master AWS Services](./AWS_Services/)
+- 📖 [Bảng thuật ngữ công nghệ Cloud & DevOps tổng quát (GLOSSARY.md)](./GLOSSARY.md)

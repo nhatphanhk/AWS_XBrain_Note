@@ -216,6 +216,23 @@ flowchart LR
 - **Giải pháp ĐÚNG**: **Amazon SQS FIFO Queue** kết hợp AWS Lambda.
   - SQS FIFO đảm bảo thứ tự chính xác (First-In-First-Out) và tự động khử trùng lặp (Exactly-Once processing) thông qua `MessageDeduplicationId` và `MessageGroupId`.
 
+#### 🪤 Bẫy 8: Tăng Tốc Độ Xử Lý SQS FIFO Lên 3,000 TPS Bằng Batching — (U-PT1 Q43)
+- **Tình huống đề thi**: *"Hệ thống sử dụng SQS FIFO Queue để bảo toàn thứ tự, nhưng lưu lượng giao dịch tăng cao vượt quá giới hạn 300 transactions/second gây ứ đọng hàng đợi. Làm cách nào để tăng thông lượng lên tới 3,000 tin nhắn/giây mà vẫn giữ nguyên SQS FIFO?"*
+- **Các phương án bẫy**:
+  - ❌ *Chuyển sang SQS Standard*: Sẽ làm mất tính năng bảo toàn thứ tự nghiêm ngặt và có thể gây xử lý trùng lặp giao dịch!
+  - ❌ *Tạo thêm hàng chục SQS FIFO Queues độc lập*: Phức tạp trong việc điều phối và gom nhóm dữ liệu.
+- **Giải pháp ĐÚNG**: Sử dụng kỹ thuật **Batching (gửi và nhận theo lô)** thông qua các API `SendMessageBatch` và `ReceiveMessageBatch` (tối đa 10 tin nhắn/batch), hoặc bật tính năng **High Throughput for FIFO Queues**.
+  - Bằng cách gửi theo lô 10 tin nhắn/request, thông lượng của SQS FIFO tăng vọt gấp 10 lần: từ **300 msgs/s lên tới 3,000 msgs/s** mà vẫn đảm bảo 100% thứ tự chuẩn xác!
+
+#### 🪤 Bẫy 9: Tự Động Co Giãn Đội Worker Theo Độ Dài Hàng Đợi SQS: Backlog per Instance — (U-PT6 Q41)
+- **Tình huống đề thi**: *"Đội máy chủ EC2 Auto Scaling làm nhiệm vụ lấy và xử lý các tác vụ từ hàng đợi SQS. Cần chính sách co giãn tự động nào để tăng giảm số lượng instance một cách chính xác theo độ dài hàng đợi?"*
+- **Các phương án bẫy**:
+  - ❌ *Scale theo CPUUtilization trung bình*: Worker có thể dùng ít CPU khi đang giải nén hoặc chờ đợi mạng, khiến ASG không scale kịp khi hàng đợi có cả triệu tin nhắn!
+  - ❌ *Scale trực tiếp theo metric `ApproximateNumberOfMessagesVisible`*: Nếu số lượng instance tăng từ 1 lên 10, tổng tin nhắn vẫn vậy sẽ khiến hệ thống liên tục tăng máy ảo vô tội vạ.
+- **Giải pháp ĐÚNG**: Tạo một **CloudWatch Custom Metric** tính toán chỉ số **Backlog per Instance**:
+  $$\text{Backlog per Instance} = \frac{\text{ApproximateNumberOfMessagesVisible}}{\text{ASG Capacity (Số lượng Instances đang chạy)}}$$
+  Sau đó cấu hình **Target Tracking Scaling Policy** bám sát chỉ số này (ví dụ: mục tiêu duy trì 50 tin nhắn tồn đọng trên mỗi instance).
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Tách Rời Kiến Trúc Nhanh (Exam Decision Matrix)
@@ -223,6 +240,8 @@ flowchart LR
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
 |:---|:---|:---|
 | **Đảm bảo thứ tự tuyệt đối, chống lặp tin nhắn** | **Amazon SQS FIFO Queue** | SQS Standard (chỉ đảm bảo At-Least-Once) |
+| **Tăng thông lượng SQS FIFO từ 300 lên 3,000 TPS** | **Batching (SendMessageBatch 10 msgs)** | Đổi sang SQS Standard (mất thứ tự nghiêm ngặt) |
+| **Scale ASG worker theo độ dài hàng đợi SQS** | **Target Tracking theo Backlog per Instance** | Target Tracking theo CPU (không phản ánh đúng tải hàng đợi) |
 | **Phân tầng ưu tiên tin nhắn (Pro vs Lite)** | **Multiple SQS Queues** (Priority Pattern) | SQS FIFO (không có khái niệm priority) |
 | **1 sự kiện cần gửi tới nhiều dịch vụ độc lập** | **Mô hình Fan-Out: Amazon SNS + SQS** | Gửi tuần tự từ app (dễ lỗi và chậm trễ) |
 | **Migrate RabbitMQ / ActiveMQ không sửa code** | **Amazon MQ** (hỗ trợ AMQP, MQTT, JMS) | Amazon SQS (chỉ hỗ trợ AWS SDK/HTTPS) |

@@ -231,6 +231,19 @@ flowchart TD
   - Bắt buộc sử dụng **S3 Multipart Upload** (bắt buộc cho file > 5 GB, khuyến nghị cho file > 100 MB).
   - Kết hợp đọc/ghi song song theo dải byte (**Parallel Byte-Range Fetches**). Nếu một part bị lỗi mạng, chỉ cần tải lại duy nhất part đó mà không phải tải lại toàn bộ file từ đầu.
 
+#### 🪤 Bẫy 9: Khắc Phục Lỗi `HTTP 503 Slow Down` Bằng Phân Bổ Tiền Tố (Custom Prefixes) — (U-PT1 Q15)
+- **Tình huống đề thi**: *"Ứng dụng phân tích dữ liệu lớn đẩy liên tục hơn 15,000 yêu cầu PUT/GET mỗi giây vào một S3 Bucket duy nhất. Hệ thống bắt đầu nhận về hàng loạt mã lỗi `HTTP 503 Slow Down`. Làm thế nào để tăng quy mô hiệu năng đọc/ghi của S3 mà không bị bóp nghẽn?"*
+- **Giới hạn cứng của S3 trên mỗi tiền tố (Prefix)**:
+  - **3,500 yêu cầu PUT/COPY/POST/DELETE mỗi giây trên mỗi Prefix**.
+  - **5,500 yêu cầu GET/HEAD mỗi giây trên mỗi Prefix**.
+- **Các phương án bẫy**:
+  - ❌ *Gửi yêu cầu tăng Service Quota cho S3*: Giới hạn RPS trên mỗi prefix là đặc tính kiến trúc phân vùng vật lý của S3, không phải soft quota tài khoản có thể xin tăng!
+  - ❌ *Tạo thêm nhiều S3 Buckets độc lập*: Không cần thiết và gây xáo trộn tổ chức dữ liệu.
+- **Giải pháp ĐÚNG**: **Phân bổ khóa đối tượng trên nhiều tiền tố (Custom Prefixes)**.
+  - S3 tự động mở rộng phân vùng vật lý độc lập theo từng Prefix.
+  - Ví dụ: Thay vì lưu toàn bộ tệp vào `bucket/data/file1`, `bucket/data/file2` (chung prefix `bucket/data/`), hãy phân tán sang các prefix ngẫu nhiên: `bucket/data/a1/file1`, `bucket/data/b2/file2`, `bucket/data/c3/file3` (mỗi prefix chịu được 3,500 PUT / 5,500 GET).
+  - Với 10 prefixes độc lập, thông lượng hệ thống đạt tới **35,000 PUT/s và 55,000 GET/s**!
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Lớp Lưu Trữ S3 Nhanh (Exam Decision Matrix)
@@ -238,6 +251,7 @@ flowchart TD
 | Tình huống / Yêu cầu trong đề thi | Lớp lưu trữ S3 chuẩn | Lớp bị loại & Lý do |
 |:---|:---|:---|
 | **Dữ liệu đọc/ghi thường xuyên, độ trễ millisecond** | **S3 Standard** | Các lớp IA/Glacier (tốn phí per-request) |
+| **Khắc phục lỗi S3 HTTP 503 Slow Down khi tải cao** | **Phân tán Key trên nhiều Custom Prefixes** | Tăng Service Quota (S3 prefix limit là kiến trúc cố định) |
 | **Mẫu truy cập không rõ hoặc biến động liên tục** | **S3 Intelligent-Tiering** | S3 Standard (bỏ lỡ cơ hội tự động giảm giá) |
 | **Dữ liệu ít đọc, cần lấy ngay tức thì (< 1s)** | **S3 Glacier Instant Retrieval** | Glacier Flexible (mất từ vài phút đến vài giờ) |
 | **Dữ liệu sao lưu lâu năm, chấp nhận chờ 3-5 giờ** | **S3 Glacier Flexible Retrieval** | Glacier Deep Archive (chờ 12 giờ) |

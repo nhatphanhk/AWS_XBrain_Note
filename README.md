@@ -1,4 +1,4 @@
-﻿# AWS Certified Solutions Architect Associate (SAA-C03) & Cloud DevOps Knowledge Base
+# AWS Certified Solutions Architect Associate (SAA-C03) & Cloud DevOps Knowledge Base
 
 > **Cơ sở tri thức kỹ thuật dài hạn và toàn diện về Điện toán đám mây AWS, Kiến trúc giải pháp (Cloud Solutions Architecture) và Thực hành Cloud DevOps.**
 > Tổng hợp, chuẩn hóa và nâng cao từ 389 bài giảng Udemy của giảng viên Stéphane Maarek kết hợp các tài liệu kỹ thuật chính thức từ AWS (AWS Whitepapers, AWS Well-Architected Framework, AWS Documentation).
@@ -26,14 +26,20 @@ AWS_XBrain_Note/
 ├── README.md                      # [Trang chủ] Cổng điều hướng, mục lục tổng thể & lộ trình học tập
 ├── GLOSSARY.md                    # [Từ điển] Thuật ngữ kỹ thuật Cloud DevOps & AWS (Danh mục A - J)
 ├── AWS_Resources/                 # [Nguồn gốc] 389 file transcripts gốc từ 31 section Udemy (Read-Only)
-├── AWS_Services/                  # [Chuyên đề Master] 15 tài liệu nghiên cứu chuyên sâu từng dịch vụ AWS
+├── AWS_Services/                  # [Chuyên đề Master] 21 tài liệu nghiên cứu chuyên sâu từng dịch vụ AWS
+│   ├── AI_Machine_Learning_Services.md
+│   ├── Analytics_Big_Data_Services.md
+│   ├── APIGateway_Cognito_StepFunctions.md
 │   ├── AWS_Well_Architected_Framework.md
+│   ├── CloudFormation_Systems_Manager.md
 │   ├── CloudWatch_CloudTrail_Observability.md
 │   ├── Disaster_Recovery_Migration.md
+│   ├── DynamoDB_NoSQL_Databases.md
 │   ├── EBS_EFS_Storage.md
 │   ├── EC2_Elastic_Compute_Cloud.md
 │   ├── ECS_Fargate_Containers.md
 │   ├── ELB_and_ASG_High_Availability.md
+│   ├── FSx_StorageGateway_HybridStorage.md
 │   ├── IAM_Identity_and_Access_Management.md
 │   ├── KMS_Security_Encryption.md
 │   ├── Lambda_Serverless_Architecture.md
@@ -84,17 +90,23 @@ Mỗi tài liệu trong thư mục này được xây dựng theo chuẩn cấu 
 | **IAM & Governance** | Identity, Security & Compliance | Users, Roles, Policies, Organizations, SCPs, Identity Center | [IAM_Identity_and_Access_Management.md](./AWS_Services/IAM_Identity_and_Access_Management.md) |
 | **Amazon EC2** | Compute & Virtualization | Instance Types, Purchasing Options, Placement Groups, ENI | [EC2_Elastic_Compute_Cloud.md](./AWS_Services/EC2_Elastic_Compute_Cloud.md) |
 | **EBS & EFS Storage** | Block & File Storage | gp3, io2 Block Express, Multi-Attach, Snapshots, EFS | [EBS_EFS_Storage.md](./AWS_Services/EBS_EFS_Storage.md) |
+| **Amazon FSx & Storage Gateway** | Hybrid Storage & Enterprise Files | FSx (Windows, Lustre, NetApp ONTAP, OpenZFS), Storage Gateway (File, Volume, Tape) | [FSx_StorageGateway_HybridStorage.md](./AWS_Services/FSx_StorageGateway_HybridStorage.md) |
 | **ELB & Auto Scaling** | High Availability & Scalability | ALB, NLB, GWLB, Target Groups, Scaling Policies | [ELB_and_ASG_High_Availability.md](./AWS_Services/ELB_and_ASG_High_Availability.md) |
 | **RDS & Aurora Databases** | Relational Databases & Caching | Multi-AZ, Read Replicas, Aurora Quorum, RDS Proxy, ElastiCache | [RDS_Aurora_Databases.md](./AWS_Services/RDS_Aurora_Databases.md) |
+| **Amazon DynamoDB NoSQL** | NoSQL Databases & In-Memory | Partition/Sort Key, GSI vs LSI, On-Demand, DAX, Streams, Global Tables | [DynamoDB_NoSQL_Databases.md](./AWS_Services/DynamoDB_NoSQL_Databases.md) |
 | **Amazon Route 53** | DNS & Traffic Management | Hosted Zones, CNAME vs Alias, 8 Routing Policies, Hybrid Resolver | [Route53_DNS.md](./AWS_Services/Route53_DNS.md) |
 | **S3 & CloudFront** | Object Storage & Edge Networking | Storage Classes, Lifecycle, Object Lock, OAC, CDN Edge Caching | [S3_and_CloudFront_Storage.md](./AWS_Services/S3_and_CloudFront_Storage.md) |
 | **Decoupling & Messaging** | Asynchronous & Event-Driven | SQS Standard/FIFO, SNS Pub/Sub, EventBridge, Kinesis, MQ | [SQS_SNS_EventBridge_Decoupling.md](./AWS_Services/SQS_SNS_EventBridge_Decoupling.md) |
 | **Containers (ECS & Fargate)** | Container Orchestration | Task Definitions, EC2 vs Fargate, Dynamic Port Mapping, ECR, EKS | [ECS_Fargate_Containers.md](./AWS_Services/ECS_Fargate_Containers.md) |
-| **Serverless Architecture** | Serverless & Microservices | Lambda Concurrency/Cold Starts, API Gateway, DynamoDB, Cognito | [Lambda_Serverless_Architecture.md](./AWS_Services/Lambda_Serverless_Architecture.md) |
+| **Lambda Serverless Architecture** | Serverless & Microservices | Lambda Concurrency/Cold Starts, SnapStart, Event Source Mapping | [Lambda_Serverless_Architecture.md](./AWS_Services/Lambda_Serverless_Architecture.md) |
+| **API Gateway, Cognito & Step Functions** | Serverless Integration & Workflow | REST vs HTTP API, Cognito User/Identity Pools, Step Functions Saga | [APIGateway_Cognito_StepFunctions.md](./AWS_Services/APIGateway_Cognito_StepFunctions.md) |
+| **Analytics & Big Data Services** | Big Data & Analytics Pipelines | Athena Presto, Glue ETL/Catalog, EMR Spark/Hadoop, Redshift, OpenSearch | [Analytics_Big_Data_Services.md](./AWS_Services/Analytics_Big_Data_Services.md) |
+| **AI & Machine Learning Services** | Artificial Intelligence & ML | SageMaker, Rekognition, Comprehend, Transcribe, Translate, Textract, Lex | [AI_Machine_Learning_Services.md](./AWS_Services/AI_Machine_Learning_Services.md) |
 | **VPC Networking** | Networking & Hybrid Connectivity | CIDRs, Subnets, Route Tables, NAT GW, Peering, Endpoints, TGW | [VPC_Networking.md](./AWS_Services/VPC_Networking.md) |
 | **Observability & Audit** | Monitoring, Logging & Governance | CloudWatch (Metrics, Logs, Alarms), CloudTrail, AWS Config Rules | [CloudWatch_CloudTrail_Observability.md](./AWS_Services/CloudWatch_CloudTrail_Observability.md) |
 | **KMS & Cloud Security** | Data Protection & Threat Defense | KMS Envelope Encryption, Secrets Manager, CloudHSM, WAF, Shield | [KMS_Security_Encryption.md](./AWS_Services/KMS_Security_Encryption.md) |
 | **Disaster Recovery & Migration** | Resiliency & Migration Strategy | RPO/RTO, 4 Chiến lược DR, AWS DRS, DMS, DataSync, Snow Family | [Disaster_Recovery_Migration.md](./AWS_Services/Disaster_Recovery_Migration.md) |
+| **CloudFormation & Systems Manager** | IaC & Fleet Automation | Stacks, StackSets, Drift, Helper Scripts, Session Manager, Patch Manager | [CloudFormation_Systems_Manager.md](./AWS_Services/CloudFormation_Systems_Manager.md) |
 
 ---
 
@@ -138,7 +150,7 @@ Mỗi tài liệu ghi chú tổng hợp các bài học theo cấu trúc chuẩn
 
 Hệ thống tài liệu luyện thi thực hành bám sát 100% cấu trúc đề thi thật của AWS Certified Solutions Architect - Associate (**SAA-C03**):
 
-* **[Cẩm Nang Từ Vựng & Giải Mã Đề Thi (EXAM_VOCABULARY.md)](./EXAM_VOCABULARY.md)**: Bí kíp phân tích từ khóa quyết định (Decision Qualifiers), 12 bẫy thi kinh điển, động từ hành động kỹ thuật, ma trận phản xạ giải pháp từ 390 câu hỏi thực tế và chiến lược loại trừ 4 bước.
+* **[Cẩm Nang Từ Vựng & Giải Mã Đề Thi (EXAM_VOCABULARY.md)](./EXAM_VOCABULARY.md)**: Bí kíp phân tích từ khóa quyết định (Decision Qualifiers), 12 bẫy thi kinh điển, động từ hành động kỹ thuật, ma trận phản xạ giải pháp từ 650 câu hỏi thực tế qua 10 bộ đề thi (Cloud Mentor & Udemy) và chiến lược loại trừ 4 bước.
 * **Bộ Đề Thi Thử Cloud Mentor (6 Bộ Đề Thực Hành - 390 Câu Hỏi Kèm Phân Tích Chuyên Sâu)**:
   - 📝 **[Practice Test 01 (65 câu - 21 câu trọng tâm ôn tập)](./Practices_Test/Cloud_Mentor/pt_1.md)**: PrivateLink overlapping CIDRs, FSx Multi-AZ DataSync, S3 aws:PrincipalOrgID, Lambda SnapStart hooks.
   - 📝 **[Practice Test 02 (65 câu - 18 câu trọng tâm ôn tập)](./Practices_Test/Cloud_Mentor/pt_2.md)**: EFS manuals zero-code, Aurora Serverless v2 spiky dev/test, Transfer Family SFTP, Egress-Only IGW.
@@ -146,6 +158,11 @@ Hệ thống tài liệu luyện thi thực hành bám sát 100% cấu trúc đ�
   - 📝 **[Practice Test 04 (65 câu - 23 câu trọng tâm ôn tập)](./Practices_Test/Cloud_Mentor/pt_4.md)**: Control Tower Proactive Controls, Organizations multi-account, KMS encrypted AMI sharing, DynamoDB Gateway Endpoint.
   - 📝 **[Practice Test 05 (65 câu - 16 câu trọng tâm ôn tập)](./Practices_Test/Cloud_Mentor/pt_5.md)**: GuardDuty RDS Protection, SQS FIFO ordering, S3 Lifecycle abort multipart, CloudWatch EC2 Auto-Recovery.
   - 📝 **[Practice Test 06 (65 câu - 31 câu trọng tâm ôn tập)](./Practices_Test/Cloud_Mentor/pt_6.md)**: S3 Presigned URLs surge, RDS Storage Auto Scaling zero-downtime, RDS Proxy failover, EBS Snapshot Lock.
+* **Bộ Đề Thi Thử Udemy - Stephane Maarek (4 Bộ Đề Thực Hành Chuẩn Quốc Tế - 260 Câu Hỏi Phân Tích Chuyên Sâu)**:
+  - 📝 **[Udemy Practice Test 01 (65 câu)](./Practices_Test/Udemy/udemy_pt1.md)**: SQS & Lambda car sensors, PrivateLink & NLB partner DB, AD Connector + Identity Center, EKS IRSA least-privilege, S3 Transfer Acceleration, S3 503 custom prefixes, FSx for Lustre HPC, Direct Connect + IPsec VPN.
+  - 📝 **[Udemy Practice Test 02 (65 câu)](./Practices_Test/Udemy/udemy_pt2.md)**: S3 CloudFront Route 53 static web, ECS Fargate long-running script, Aurora Serverless v2 web migration, Transfer Family SFTP, FSx for Windows DFS, Dedicated Instances compliance.
+  - 📝 **[Udemy Practice Test 03 (65 câu)](./Practices_Test/Udemy/udemy_pt3.md)**: SQS FIFO batching, CloudFront IP restriction WAF, FSx for Windows, FSx for NetApp ONTAP, Direct Connect Transit VIF + TGW, AWS Managed Microsoft AD, Storage Gateway Cached Volumes.
+  - 📝 **[Udemy Practice Test 06 (65 câu)](./Practices_Test/Udemy/udemy_pt6.md)**: Dedicated Hosts vs Dedicated Instances BYOL, Kinesis & Fargate streaming, Direct Connect Public VIF to S3, Amazon MQ RabbitMQ migration, EFA for HPC, AWS VPN CloudHub, AWS Application Migration Service (MGN).
 
 ---
 

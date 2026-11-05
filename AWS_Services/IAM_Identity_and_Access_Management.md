@@ -274,6 +274,26 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
   2. Cập nhật **KMS Key Policy** của khóa mã hóa tại tài khoản Shared Services để cấp quyền `kms:DescribeKey`, `kms:ReEncrypt*`, `kms:CreateGrant` cho tài khoản Dev.
   - Nếu chỉ chia sẻ AMI mà quên cấp quyền trên KMS Key Policy, máy ảo EC2 tại tài khoản Dev sẽ lập tức bị lỗi `Client.InternalError` khi boot vì không thể giải mã được ổ đĩa EBS root!
 
+#### 🪤 Bẫy 9: Bắt Buộc Ủy Quyền Tạo IAM Role Đi Kèm Permissions Boundary — (U-PT1 Q09)
+- **Tình huống đề thi**: *"Quản trị viên an ninh muốn ủy quyền cho các kỹ sư phát triển phần mềm (Developers) tự do tạo các IAM Roles phục vụ hàm AWS Lambda và máy chủ EC2 của họ, nhưng TUYỆT ĐỐI KHÔNG để các kỹ sư này tự tạo ra các IAM Role có quyền quản trị tối cao (`AdministratorAccess`) để leo thang đặc quyền (Privilege Escalation)."*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng Service Control Policy (SCP)*: SCP chỉ áp dụng từ cấp tài khoản AWS Organizations, không thể kiểm soát điều kiện khi một câu lệnh API `iam:CreateRole` được gọi bên trong tài khoản!
+  - ❌ *Không cho phép developer tạo IAM Role*: Gây nghẽn quy trình CI/CD, mỗi lần tạo microservice mới đều phải gửi ticket yêu cầu admin duyệt thủ công.
+- **Giải pháp ĐÚNG**: Sử dụng **IAM Permissions Boundary kết hợp IAM Condition**.
+  - Định nghĩa trước một Permissions Boundary (ví dụ: `DeveloperBoundaryPolicy`) quy định mức trần quyền hạn tối đa mà một role có thể có (ví dụ: chỉ được truy cập S3, DynamoDB, CloudWatch trong phạm vi project).
+  - Gán IAM Policy cho Developer cho phép gọi lệnh `iam:CreateRole` VÀ `iam:PutRolePolicy`, nhưng **BẮT BUỘC phải có Condition**:
+    `"StringEquals": { "iam:PermissionsBoundary": "arn:aws:iam::<Account>:policy/DeveloperBoundaryPolicy" }`.
+  - Nếu Developer tạo một role mới mà không đính kèm Boundary này, hoặc cố tình đính kèm một boundary khác $\rightarrow$ Yêu cầu API sẽ bị từ chối ngay lập tức!
+
+#### 🪤 Bẫy 10: Phân Biệt Giữa AWS Managed Microsoft AD và AD Connector — (U-PT3 Q34, U-PT3 Q54, U-PT6 Q22)
+- **Tình huống đề thi**: *"Doanh nghiệp chạy các ứng dụng Windows Server và cụm cơ sở dữ liệu Microsoft SQL Server AlwaysOn trên EC2 trong VPC. Hệ thống yêu cầu xác thực Kerberos nội bộ tốc độ cao trong mạng đám mây và cần thiết lập quan hệ tin cậy hai chiều (Two-Way Forest Trust) với Active Directory tại On-Premises."*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng AWS Directory Service AD Connector*: AD Connector chỉ là một proxy chuyển tiếp xác thực qua VPN/Direct Connect về On-Premises. AD Connector KHÔNG LƯU BẤT KỲ DỮ LIỆU NÀO và **KHÔNG HỖ TRỢ tạo Trust Relationships (Forest Trust)**! Nếu đứt kết nối mạng về On-Premises, toàn bộ ứng dụng trong VPC sẽ bị tê liệt xác thực.
+  - ❌ *Sử dụng Simple AD*: Simple AD chạy trên nền tảng Samba 4, không hỗ trợ quan hệ tin cậy (Trust) với Microsoft AD thực sự.
+- **Giải pháp ĐÚNG**: Triển khai **AWS Directory Service for Microsoft AD (AWS Managed Microsoft AD)**.
+  - Đây là cụm Active Directory thực sự chạy trên máy chủ Windows Server do AWS quản lý trên 2 Availability Zones.
+  - Hỗ trợ đầy đủ các tính năng doanh nghiệp: **Two-Way Forest Trust**, Group Policy (GPO), schema extension, xác thực Kerberos nội bộ tốc độ cao không phụ thuộc vào đường truyền mạng về On-Premises.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Phân Quyền & Danh Tính Nhanh (Exam Decision Matrix)
@@ -281,8 +301,13 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
 |:---|:---|:---|
 | **Chặn developer tự cấp quyền Admin cho role mới** | **IAM Permissions Boundary** | SCP không phân biệt được role do ai tạo |
+| **Bắt buộc đính kèm Boundary khi gọi CreateRole** | **Condition `iam:PermissionsBoundary`** | Tự review code thủ công (dễ sót lỗi) |
+| **Cần AD thực sự trong VPC, hỗ trợ Forest Trust** | **AWS Managed Microsoft AD** | AD Connector (chỉ là proxy gateway, không hỗ trợ trust) |
+| **Xác thực On-Prem AD vào AWS không lưu credentials** | **AWS Directory Service AD Connector** | Managed AD (chi phí đắt gấp 8 lần không cần thiết) |
+| **Quản trị truy cập đa tài khoản tập trung cho nhân viên** | **IAM Identity Center + Permission Sets** | Tạo IAM User thủ công tại từng tài khoản con |
 | **Chỉ cho phép tài khoản trong Org truy cập S3** | **S3 Policy + `aws:PrincipalOrgID`** | Liệt kê từng Account ID không thể scale |
 | **Giới hạn Region được phép tạo tài nguyên** | **SCP / Policy + `aws:RequestedRegion`** | `aws:SourceIp` chỉ kiểm tra IP người gọi |
+| **Xoay vòng mật khẩu DB tự động định kỳ** | **AWS Secrets Manager + Lambda** | KMS / Parameter Store (không có auto-rotation) |
 | **Kích hoạt Lambda xuyên tài khoản từ SNS** | **Dual-Policy: SNS Topic Policy + Lambda Resource Policy** | Cấu hình 1 phía sẽ bị lỗi AccessDenied |
 | **Phân quyền Pod EKS đọc S3/DynamoDB độc lập** | **IAM Roles for Service Accounts (IRSA)** | Gán quyền vào Node Instance Profile vi phạm Least Privilege |
 | **Đăng nhập một lần đa tài khoản qua On-Prem AD** | **AD Connector + IAM Identity Center + Permission Sets** | Tự quản trị IAM Role thủ công tốn operational overhead |

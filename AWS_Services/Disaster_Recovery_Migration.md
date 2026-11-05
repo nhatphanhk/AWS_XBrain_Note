@@ -193,13 +193,25 @@ Chi Phí Rẻ Nhất / RTO-RPO Lâu Nhất                Chi Phí Đắt Nhất
 - **Giải pháp ĐÚNG**: Sử dụng **Amazon RDS Custom for Oracle**.
   - Cho phép người dùng toàn quyền truy cập mức hệ điều hành (SSH/RDP với quyền root/administrator) và can thiệp file system của database server, trong khi vẫn duy trì các tính năng quản lý sao lưu và vá lỗi tự động của Amazon RDS.
 
+#### 🪤 Bẫy 8: Di Chuyển Máy Chủ Đa Nền Tảng Với Downtime Tối Thiểu: AWS MGN vs VM Import/Export — (U-PT6 Q60)
+- **Tình huống đề thi**: *"Doanh nghiệp cần di chuyển hàng trăm máy chủ vật lý và máy ảo VMware/Hyper-V chạy nhiều phiên bản hệ điều hành khác nhau lên Amazon EC2. Yêu cầu thời gian gián đoạn chuyển đổi (Cutover downtime) phải dưới vài phút và không làm ảnh hưởng đến hệ thống sản xuất tại chỗ trong suốt quá trình đồng bộ dữ liệu."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng VM Import/Export*: Quá trình xuất file OVA/VMDK thủ công rất lâu, bắt buộc phải tắt máy ảo nguồn khi export để tránh lệch dữ liệu (thời gian downtime kéo dài nhiều giờ tới nhiều ngày).
+  - ❌ *Dùng AWS DMS*: DMS chỉ hỗ trợ cơ sở dữ liệu quan hệ, không thể di chuyển toàn bộ hệ điều hành, cấu hình mạng và ứng dụng của máy chủ!
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Application Migration Service (AWS MGN)**.
+  - Cài đặt phần mềm **AWS Replication Agent** trực tiếp trên từng máy chủ nguồn.
+  - Dữ liệu ổ đĩa được nhân bản liên tục ở cấp độ khối (**Block-level continuous replication**) lên vùng lưu trữ đệm AWS Staging Area qua mạng TLS mà không làm gián đoạn máy chủ đang hoạt động.
+  - Hỗ trợ diễn tập chuyển đổi (**Non-disruptive cutover testing**) trước ngày chuyển giao. Khi cutover chính thức, AWS MGN tự động khởi chạy các máy chủ EC2 mới chỉ trong vòng vài phút (RPO tính bằng giây, RTO tính bằng phút).
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Công Cụ Di Chuyển & DR Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
 |:---|:---|:---|
-| **Di chuyển máy ảo/vật lý Lift-and-Shift lên EC2** | **AWS Application Migration Service (MGN)** | AWS DMS (chỉ dành cho database) |
+| **Di chuyển máy ảo/vật lý Lift-and-Shift lên EC2 (Downtime thấp)** | **AWS Application Migration Service (MGN)** | VM Import/Export (downtime nhiều giờ do phải tắt máy) |
+| **Di chuyển database quan hệ sang đám mây** | **AWS Database Migration Service (DMS)** | AWS MGN (MGN chuyển đổi toàn bộ máy chủ, không tối ưu cho DB) |
+| **Đổi engine Oracle/MSSQL sang Aurora PostgreSQL** | **AWS SCT (Schema) + AWS DMS (Dữ liệu)** | AWS DataSync (không chuyển đổi schema DB) |
 | **Đổi engine Oracle/MSSQL sang Aurora PostgreSQL** | **AWS SCT (Schema) + AWS DMS (Dữ liệu)** | AWS DataSync (không chuyển đổi schema DB) |
 | **Truyền Terabytes dữ liệu từ NFS/SMB On-Prem lên S3** | **AWS DataSync** | AWS Snowball (chỉ dùng khi mạng quá chậm) |
 | **Tập tin Windows SMB, tích hợp AD, DFS** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ giao thức Linux NFS) |

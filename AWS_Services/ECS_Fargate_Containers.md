@@ -114,6 +114,24 @@ classDiagram
   - Không thể dùng Lambda (do giới hạn cứng 15 phút).
   - Sử dụng **Amazon EventBridge Scheduler** kích hoạt một tác vụ **ECS on AWS Fargate** theo lịch cron (`RunTask` API). Fargate chạy xong sẽ tự động tắt và dừng tính phí.
 
+#### 4. Phân Quyền Chi Tiết Cho Từng Pod Kubernetes Bằng IRSA (IAM Roles for Service Accounts) — (U-PT1 Q04)
+- **Tình huống thi**: Một cụm **Amazon EKS (Elastic Kubernetes Service)** chạy hàng chục microservices trên cùng các worker nodes. Microservice xử lý thanh toán (Payment Pod) cần ghi dữ liệu vào Amazon DynamoDB và đọc file nhạy cảm từ S3, trong khi các microservices khác không được phép có bất kỳ quyền hạn nào trên AWS. Đội ngũ bảo mật yêu cầu thực thi nghiêm ngặt nguyên tắc đặc quyền tối thiểu (**Least Privilege**).
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Bật tính năng **IAM OpenID Connect (OIDC) Identity Provider** cho cụm Amazon EKS.
+  - Tạo một **IAM Role** với Trust Policy cho phép OIDC provider assume role và gán điều kiện theo đúng Namespace và tên ServiceAccount của Kubernetes:
+    `"StringEquals": { "<OIDC_PROVIDER>:sub": "system:serviceaccount:payments:payment-serviceaccount" }`.
+  - Khai báo một Kubernetes ServiceAccount mang tên `payment-serviceaccount` và thêm dòng Annotation:
+    `eks.amazonaws.com/role-arn: arn:aws:iam::<Account-ID>:role/PaymentServiceRole`.
+  - Pod của Payment microservice sử dụng ServiceAccount này. AWS EKS Pod Identity Webhook sẽ tự động chèn token và AWS credentials tạm thời vào container của Pod đó.
+  - **Kết quả**: Chỉ duy nhất Payment Pod có quyền truy cập DynamoDB/S3. Tất cả các Pod khác chạy chung trên cùng một máy chủ EC2 đều hoàn toàn không có quyền!
+
+#### 5. Chạy Cụm Kubernetes Chuẩn AWS Tại Hạ Tầng On-Premises Với EKS Anywhere — (U-PT1 Q65)
+- **Tình huống thi**: Doanh nghiệp tài chính có yêu cầu tuân thủ dữ liệu bắt buộc một số workload nhạy cảm phải chạy 100% trên phần cứng máy chủ vật lý đặt tại trung tâm dữ liệu On-Premises. Tuy nhiên, đội ngũ DevOps muốn đồng nhất hóa toàn bộ quy trình CI/CD, công cụ tự động hóa và API quản trị theo chuẩn Amazon EKS trên đám mây.
+- **Giải pháp tối ưu**:
+  - Triển khai **Amazon EKS Anywhere** trên hạ tầng ảo hóa VMware vSphere hoặc máy chủ vật lý Bare Metal tại chỗ của doanh nghiệp.
+  - Sử dụng cùng một phiên bản Kubernetes đã được AWS kiểm định và hỗ trợ (Amazon EKS Distro).
+  - Quản lý trạng thái cụm EKS tại chỗ tập trung thông qua **Amazon EKS Connector** trên AWS Management Console.
+
 ---
 
 ### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
@@ -150,6 +168,24 @@ classDiagram
   - Dịch vụ PaaS Serverless Container của riêng AWS: Lập trình viên chỉ cần trỏ tới Docker image trong Amazon ECR hoặc mã nguồn Git.
   - App Runner tự động cung cấp Load Balancer, chứng chỉ SSL/TLS, định tuyến lưu lượng, giám sát và co giãn tự động theo số lượng request đồng thời mà người dùng hoàn toàn không cần quản lý mạng hay cluster.
 
+#### 🪤 Bẫy 5: Cấp Quyền IAM Cho Pod Trên Kubernetes: Node Instance Role vs IRSA — (U-PT1 Q04)
+- **Tình huống đề thi**: *"Ứng dụng xử lý đơn hàng chạy trong một Pod trên Amazon EKS cần quyền ghi vào Amazon DynamoDB. Yêu cầu cấp quyền theo nguyên tắc đặc quyền tối thiểu (Least Privilege), đảm bảo các Pod khác chạy chung trên cùng máy chủ không được phép truy cập DynamoDB."*
+- **Các phương án bẫy**:
+  - ❌ *Gán IAM Policy truy cập DynamoDB vào EC2 Worker Node Instance Profile Role*: Vi phạm nghiêm trọng nguyên tắc Least Privilege! Khi gán quyền vào Node Role, mọi Pod (kể cả frontend web pod hay logging pod) chạy chung trên máy chủ EC2 đó đều có thể mượn quyền của Node để đọc/ghi vào DynamoDB.
+  - ❌ *Lưu trữ AWS Access Key và Secret Key cố định vào Kubernetes Secret*: Tiềm ẩn rủi ro lộ lọt thông tin xác thực tĩnh (Static Credentials), không có cơ chế tự động xoay vòng khóa.
+- **Giải pháp ĐÚNG**: Sử dụng **IAM Roles for Service Accounts (IRSA)**.
+  - Cấu hình OIDC Identity Provider cho cụm EKS.
+  - Tạo IAM Role với Trust Policy gắn với Kubernetes ServiceAccount của Pod xử lý đơn hàng.
+  - AWS EKS tự động cung cấp temporary credentials thông qua AWS STS chỉ riêng cho Pod đó.
+
+#### 🪤 Bẫy 6: Triển Khai Kubernetes Trên On-Premises Giữ Nguyên AWS API: EKS Anywhere vs Tự Dựng K8s — (U-PT1 Q65)
+- **Tình huống đề thi**: *"Doanh nghiệp bắt buộc phải giữ một số ứng dụng xử lý dữ liệu nhạy cảm tại trung tâm dữ liệu On-Premises vì lý do tuân thủ pháp lý, nhưng muốn tận dụng kiến trúc nhất quán, các công cụ quản trị và API chuẩn của Amazon EKS."*
+- **Phương án bẫy**:
+  - ❌ *Tự cài đặt cụm Kubernetes mã nguồn mở thủ công và tự viết script đồng bộ*: Tốn công sức quản trị và bảo trì phiên bản, không đồng bộ được trạng thái với AWS Console.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon EKS Anywhere** (hoặc triển khai **AWS Outposts** nếu cần phần cứng do AWS quản lý).
+  - Cho phép chạy cụm Kubernetes chuẩn AWS trên máy chủ On-Premises của khách hàng.
+  - Kết nối và hiển thị trạng thái tập trung trên AWS EKS Console thông qua **EKS Connector**.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Container Nhanh (Exam Decision Matrix)
@@ -158,6 +194,8 @@ classDiagram
 |:---|:---|:---|
 | **Chạy Container không quản trị OS, trả tiền theo giây** | **Amazon ECS on AWS Fargate** | ECS on EC2 (phải quản trị, vá lỗi máy ảo) |
 | **Workload Kubernetes hiện có, di chuyển lên AWS** | **Amazon EKS** (+ Fargate hoặc EC2 nodes) | Amazon ECS (phải viết lại Task Definition) |
+| **Phân quyền đặc quyền tối thiểu cho từng Pod EKS truy cập AWS** | **IAM Roles for Service Accounts (IRSA)** | Node IAM Role (vi phạm least privilege vì dùng chung host) |
+| **Chạy Kubernetes chuẩn AWS trên hạ tầng On-Premises** | **Amazon EKS Anywhere / AWS Outposts** | Tự dựng cụm K8s thủ công (tốn công vận hành) |
 | **Phân quyền cho code trong container gọi DynamoDB/S3** | **ECS Task Role** | ECS Task Execution Role (chỉ dành cho ECS agent) |
 | **Container cần chia sẻ file system đọc/ghi đồng thời** | **ECS on Fargate + Amazon EFS** | Amazon EBS (không chia sẻ nhiều AZ đồng thời) |
 | **Script chạy 30-60 phút cần serverless** | **EventBridge Scheduler + ECS Fargate Task** | AWS Lambda (hard limit timeout 15 phút) |

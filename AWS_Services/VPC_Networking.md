@@ -247,6 +247,29 @@ flowchart LR
   - **Gateway VPC Endpoint** (dành cho S3 và DynamoDB): CHỈ hoạt động cho các tài nguyên NỘI BỘ bên trong VPC thông qua Route Table. **KHÔNG THỂ** truy cập từ On-Premises qua Direct Connect / VPN / VPC Peering.
   - **Interface VPC Endpoint (AWS PrivateLink)**: Cấp phát một Card mạng ảo (ENI) có IP riêng trong subnet của VPC. Các máy chủ On-Premises định tuyến qua Direct Connect tới IP riêng của ENI này để truy cập S3 hoặc SQS một cách hoàn toàn riêng tư.
 
+#### 🪤 Bẫy 9: Kết Nối Direct Connect Vào AWS Transit Gateway Bắt Buộc Dùng Transit VIF — (U-PT3 Q31)
+- **Tình huống đề thi**: *"Doanh nghiệp có đường truyền AWS Direct Connect từ On-Premises và đang quản lý hàng chục VPCs kết nối qua AWS Transit Gateway. Cần thiết lập giao diện ảo nào trên Direct Connect để các máy chủ On-Premises giao tiếp được với toàn bộ các VPCs này?"*
+- **Các phương án bẫy**:
+  - ❌ *Tạo Private VIF kết nối vào từng VPC*: Phức tạp, phá vỡ kiến trúc Hub-and-Spoke của Transit Gateway và bị giới hạn số lượng VIF trên đường truyền.
+  - ❌ *Gắn Private VIF trực tiếp vào Transit Gateway*: **BỊ LỖI KỸ THUẬT!** Private VIF chỉ có thể gắn vào Virtual Private Gateway (VGW) hoặc Direct Connect Gateway (DXGW) trỏ tới VGW; Private VIF KHÔNG THỂ gắn vào Transit Gateway.
+- **Giải pháp ĐÚNG**: Cấu hình **Transit Virtual Interface (Transit VIF)**.
+  - Transit VIF kết nối tới **Direct Connect Gateway**, sau đó Direct Connect Gateway được gắn kết (attached) trực tiếp vào **AWS Transit Gateway**.
+  - Cho phép lưu lượng định tuyến xuyên suốt từ On-Premises tới hàng ngàn VPCs qua duy nhất một giao diện ảo!
+
+#### 🪤 Bẫy 10: Mã Hóa Dữ Liệu Trên Đường Truyền Direct Connect (IPsec over Direct Connect) — (U-PT1 Q42)
+- **Tình huống đề thi**: *"Doanh nghiệp ngân hàng yêu cầu đường truyền từ trung tâm dữ liệu On-Premises lên AWS phải đạt băng thông cao, độ trễ ổn định tuyệt đối và BẮT BUỘC toàn bộ dữ liệu phải được mã hóa theo tiêu chuẩn an ninh nghiêm ngặt (In-Transit Encryption) để chống nghe lén đường truyền vật lý."*
+- **Các phương án bẫy**:
+  - ❌ *Chỉ sử dụng AWS Direct Connect đơn thuần*: Sai vì đường truyền Direct Connect là một kết nối vật lý cấp 2 (Layer 2) riêng biệt, **MẶC ĐỊNH KHÔNG ĐƯỢC MÃ HÓA**!
+- **Giải pháp ĐÚNG**: Thiết lập đường hầm **AWS Site-to-Site VPN (IPsec) chạy bên trên AWS Direct Connect** (hoặc cấu hình **MACsec** nếu sử dụng cổng chuyên dụng 10 Gbps / 100 Gbps).
+  - Kết hợp hoàn hảo: Tận dụng băng thông lớn và tính ổn định của đường truyền cáp quang Direct Connect, đồng thời bảo mật tuyệt đối dữ liệu bằng giao thức mã hóa IPsec tiêu chuẩn!
+
+#### 🪤 Bẫy 11: Kết Nối Nhiều Chi Nhánh Văn Phòng Chi Phí Thấp Với AWS VPN CloudHub — (U-PT6 Q12)
+- **Tình huống đề thi**: *"Công ty có nhiều chi nhánh văn phòng ở các tỉnh thành khác nhau. Các chi nhánh cần giao tiếp dữ liệu an toàn với nhau và truy cập tài nguyên trên AWS VPC với chi phí tiết kiệm nhất và kiến trúc đơn giản nhất."*
+- **Giải pháp ĐÚNG**: Triển khai mô hình **AWS VPN CloudHub**.
+  - Tận dụng một **Virtual Private Gateway (VGW)** duy nhất trên VPC làm trung tâm điều phối.
+  - Mỗi chi nhánh thiết lập một kết nối Site-to-Site VPN tới VGW.
+  - Bật giao thức định tuyến động **BGP (Border Gateway Protocol)**; VGW tự động định tuyến lưu lượng giữa các chi nhánh qua lại với nhau mà không cần đầu tư thêm phần cứng mạng phức tạp hay tạo kết nối VPN chéo tốn kém!
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Kết Nối Mạng Nhanh (Exam Decision Matrix)
@@ -263,7 +286,9 @@ flowchart LR
 | **AWS VPC giải quyết DNS nội bộ của On-Prem** | **Route 53 Resolver Outbound Endpoint** | Loại Inbound Endpoint (sai chiều truy vấn) |
 | **IPv6 trong Private Subnet cần ra Internet** | **Egress-Only Internet Gateway** | Loại NAT Gateway (chỉ hỗ trợ IPv4) |
 | **On-Premises truy cập S3 qua Direct Connect** | **Direct Connect Public VIF** | Loại Private VIF (chỉ truy cập VPC nội bộ) |
+| **Kết nối Direct Connect vào AWS Transit Gateway** | **Direct Connect Transit VIF + DX Gateway** | Private VIF (không thể gắn vào Transit Gateway) |
 | **Truyền dữ liệu nhạy cảm qua Direct Connect an toàn** | **Direct Connect + Site-to-Site VPN (IPsec)** | Direct Connect đơn thuần chưa được mã hóa at-transit |
+| **Kết nối nhiều chi nhánh văn phòng chi phí thấp** | **AWS VPN CloudHub (BGP qua VGW)** | Tạo kết nối VPN full-mesh chéo nhau (chi phí đắt đỏ) |
 | **Kiểm tra an ninh gói tin sâu L3/L4 bằng Firewall ảo** | **Gateway Load Balancer (GWLB) cổng GENEVE 6081** | ALB / NLB (chấm dứt kết nối TCP/TLS, mất IP header gốc) |
 | **Cắt giảm chi phí NAT Gateway khi hỗ trợ IPv6** | **Egress-Only Internet Gateway ($0 chi phí)** | NAT Gateway ($0.045/giờ + phí dữ liệu data processing) |
 | **On-Premises truy cập S3/SQS riêng tư qua Direct Connect** | **Interface VPC Endpoint (PrivateLink)** | Gateway VPC Endpoint (không định tuyến qua Direct Connect) |
