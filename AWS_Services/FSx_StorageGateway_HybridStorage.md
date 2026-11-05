@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon FSx & AWS Storage Gateway (Hệ Thống Lưu Trữ Lai & Tệp Tin Chuyên Biệt Doanh Nghiệp)
+# Tài Liệu Học Tập Chuyên Sâu: Amazon FSx & AWS Storage Gateway (Hệ Thống Lưu Trữ Lai & Tệp Tin Chuyên Biệt Doanh Nghiệp)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal Storage & Hybrid Cloud Solutions Architect (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu 100% thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -144,6 +144,46 @@ sequenceDiagram
 
 ---
 
+### 2.3. Amazon FSx for NetApp ONTAP: Lưu Trữ Đa Giao Thức & Khối Đa Vùng (Multi-AZ iSCSI)
+
+```mermaid
+flowchart TD
+    subgraph MultiAZ_ONTAP["Amazon FSx for NetApp ONTAP (Multi-AZ File System)"]
+        direction LR
+        PrimaryNode[Active Storage Controller\nAvailability Zone A] <-->|Đồng bộ cấp khối tự động (NVMe Mirror)| StandbyNode[Standby Storage Controller\nAvailability Zone B]
+        PrimaryNode --- PoolA[(Primary Storage Tier: SSD)]
+        StandbyNode --- PoolB[(Standby Storage Tier: SSD)]
+        PoolA -.-> CapacityPool[(Capacity Pool Tier: Tự động chuyển dữ liệu nguội sang S3)]
+    end
+
+    ClientWin[EC2 Windows Server AZ-A] -->|iSCSI Block Protocol| PrimaryNode
+    ClientWinB[EC2 Windows Server AZ-B] -->|iSCSI Block Protocol / Failover| StandbyNode
+    ClientLinux[EC2 Linux Cluster] -->|NFS v3 / v4.1| PrimaryNode
+    ClientOffice[User Desktops] -->|SMB 3.0| PrimaryNode
+```
+
+1. **Đột phá Lưu Trữ Khối Đa Vùng Khả Dụng (Multi-AZ Block Storage via iSCSI)** (*TD-Set1 Q10, TD-Set8 Q18*):
+   - **Bản chất giới hạn của Amazon EBS**: EBS là tài nguyên **Single-AZ**. Ổ đĩa EBS không thể mount xuyên qua Availability Zone khác (ngay cả EBS Multi-Attach cũng chỉ hỗ trợ trong cùng 1 AZ).
+   - **Giải pháp của FSx for NetApp ONTAP**: Hỗ trợ giao thức **iSCSI Block Storage** trên kiến trúc **Multi-AZ**. Cho phép các máy chủ EC2 Windows hoặc Linux trải rộng trên 2 Availability Zones cùng truy cập vào một khối lưu trữ block dùng chung với độ trễ thấp và tự động failover, hoàn hảo cho các cụm giao dịch tài chính hoặc Windows Server Failover Cluster (WSFC).
+2. **Lưu trữ đa tầng tự động (Automated Storage Tiering)**:
+   - Dữ liệu nóng truy cập thường xuyên nằm trên **Primary Storage Tier (NVMe SSD)**.
+   - Dữ liệu nguội ít truy cập được tự động đẩy xuống **Capacity Pool Tier (lưu trữ S3 chi phí thấp)** không giới hạn dung lượng, giúp giảm chi phí lưu trữ lên đến 70%.
+3. **Đa giao thức đồng thời (Multi-Protocol)**:
+   - Cho phép cùng một khối dữ liệu có thể được truy cập đồng thời qua cả giao thức **NFS** (cho Linux) và **SMB** (cho Windows) mà không cần chuyển đổi định dạng.
+
+---
+
+### 2.4. Họ Thiết Bị Di Chuyển Dữ Liệu Ngoại Tuyến: AWS Snow Family
+
+| Thiết bị Snow | Dung lượng khả dụng | Năng lực tính toán (Compute) | Kịch bản sử dụng chuẩn |
+| :--- | :--- | :--- | :--- |
+| **AWS Snowcone** | **8 TB HDD** hoặc **14 TB SSD** | 2 vCPUs, 4 GB RAM, hỗ trợ **AWS IoT Greengrass** và EC2 | **(TD-Set4 Q51)**: Thiết bị siêu nhỏ gọn (2.1 kg), chạy bằng pin/USB-C; dùng ở môi trường khắc nghiệt không có mạng (xe cứu thương, trạm thời tiết, flycam). |
+| **AWS Snowball Edge Storage Optimized** | **80 TB** hoặc **210 TB NVMe** | 40 vCPUs, 80 GiB RAM, chạy EC2 AMIs & Lambda | Di chuyển hàng chục tới hàng trăm Terabytes dữ liệu cục bộ lên S3 khi đường truyền mạng Internet bị chậm (mất nhiều tuần/tháng nếu tải online). |
+| **AWS Snowball Edge Compute Optimized** | **28 TB NVMe** hoặc **42 TB** | **104 vCPUs, 416 GiB RAM, GPU NVIDIA** | Xử lý dữ liệu nặng tại biên (Edge Computing, máy học AI, phân tích video trực tiếp tại hiện trường không có Internet). |
+| **AWS Snowmobile** | Lên tới **100 PB** mỗi xe tải container | Container dài 45-foot, hộ tống an ninh 24/7 | Di chuyển toàn bộ trung tâm dữ liệu khổng lồ (hàng trăm Petabytes) lên AWS trong vài tuần. |
+
+---
+
 ## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Kịch Bản: Mở Rộng Dung Lượng Tệp Cục Bộ Bằng Storage Gateway Cached Volume
@@ -243,6 +283,22 @@ sequenceDiagram
   - Chia sẻ thư mục qua giao thức **SMB/NFS** cho máy tính của nhân viên.
   - Tệp thường xuyên sử dụng sẽ được đọc trực tiếp từ Local Cache SSD với độ trễ mili-giây. Dữ liệu mới được tự động đồng bộ bất đồng bộ lên Amazon S3 ở chế độ nền.
 
+#### 4. Lưu Trữ Khối Đa Vùng Khả Dụng (Multi-AZ Block Storage via iSCSI) Bằng FSx for NetApp ONTAP — (TD-Set1 Q10, TD-Set8 Q18)
+- **Tình huống thi**: Một công ty dịch vụ tài chính cần di chuyển ứng dụng giao dịch chứng khoán từ máy chủ Microsoft Windows Server tại chỗ lên AWS. Ứng dụng yêu cầu tính sẵn sàng cao trải rộng trên nhiều Availability Zones (Multi-AZ) và bắt buộc phải truy cập dữ liệu qua giao thức lưu trữ dạng khối (**Block Storage**) với độ trễ cực thấp.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Khởi chạy các máy ảo EC2 Windows Server trên 2 Availability Zones.
+  - Tạo hệ thống tệp **Amazon FSx for NetApp ONTAP** ở chế độ **Multi-AZ**.
+  - Cấu hình các máy chủ Windows kết nối và mount dữ liệu thông qua giao thức **iSCSI Block Storage Protocol**.
+  - *Lý do*: Ổ đĩa Amazon EBS chỉ là Single-AZ (không thể mount xuyên AZ); chỉ duy nhất FSx for NetApp ONTAP cung cấp giao diện khối iSCSI có tính sẵn sàng cao đa vùng Multi-AZ tự động failover trong tích tắc.
+
+#### 5. Tự Động Hóa Di Chuyển Hồ Sơ Dung Lượng Khổng Lồ Lên S3/Glacier Bằng AWS DataSync — (TD-Set2 Q18, TD-Set2 Q28, TD-Set4 Q51, TD-Set8 Q23)
+- **Tình huống thi**: Trung tâm dữ liệu tại chỗ của doanh nghiệp sắp cạn dung lượng ổ cứng. Cần di chuyển hàng trăm Terabytes hồ sơ tài chính lịch sử lên đám mây AWS để giải phóng không gian cho dữ liệu mới. Quá trình di chuyển phải được tự động hóa, kiểm tra tính toàn vẹn dữ liệu, tối ưu hóa băng thông mạng và lưu trữ trực tiếp vào Amazon S3 Glacier Deep Archive với chi phí và công sức quản trị thấp nhất.
+- **Giải pháp chuẩn**:
+  - Cài đặt **AWS DataSync Agent** tại trung tâm dữ liệu tại chỗ.
+  - Tạo **DataSync Task** với đích đến là Amazon S3 bucket (chọn cấu hình lưu trữ trực tiếp vào **S3 Glacier Deep Archive** hoặc S3 Standard-IA).
+  - Bật tính năng kiểm tra tính toàn vẹn dữ liệu tự động (**Checksum Verification**) và lên lịch chạy tác vụ vào ban đêm.
+  - DataSync tự động tăng tốc truyền tải mạng gấp 10 lần so với các công cụ mã nguồn mở và không đòi hỏi viết script tùy chỉnh.
+
 ---
 
 ## 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
@@ -267,21 +323,35 @@ sequenceDiagram
 - **Giải pháp ĐÚNG**: Triển khai **AWS Storage Gateway - Tape Gateway (VTL)**.
   - Tape Gateway cung cấp giao diện băng từ ảo iSCSI VTL, tương thích 100% với các phần mềm sao lưu hiện có mà không cần thay đổi quy trình vận hành của kỹ sư.
 
+#### 🪤 Bẫy 4: Lưu Trữ Khối (Block Storage) Đa Vùng Multi-AZ: EBS vs FSx for NetApp ONTAP — (TD-Set1 Q10)
+- **Tình huống đề thi**: *"Cần cung cấp lưu trữ dạng khối (Block Storage) có tính sẵn sàng cao trải rộng trên nhiều Availability Zones cho ứng dụng Windows với độ trễ thấp."*
+- **Phương án bẫy**:
+  - ❌ *Dùng Amazon EBS io2 Multi-Attach*: EBS Multi-Attach **CHỈ HOẠT ĐỘNG TRONG CÙNG 1 AVAILABILITY ZONE DUY NHẤT**! Không thể mount EBS xuyên sang AZ khác.
+- **Giải pháp ĐÚNG**: Triển khai **Amazon FSx for NetApp ONTAP (Multi-AZ)** kết nối qua giao thức **iSCSI Block Storage**.
+
+#### 🪤 Bẫy 5: Không Thể Nâng Cấp In-Place FSx for Windows Single-AZ Lên Multi-AZ — (TD-Set1 Q55)
+- **Tình huống đề thi**: *"Doanh nghiệp đang chạy FSx for Windows Single-AZ và muốn chuyển đổi sang Multi-AZ mà không gây gián đoạn dịch vụ."*
+- **Phương án bẫy**:
+  - ❌ *Vào AWS Console chỉnh sửa cấu hình in-place từ Single-AZ thành Multi-AZ*: AWS không hỗ trợ sửa đổi trực tiếp cấu hình này trên hệ thống tệp FSx đang chạy!
+- **Giải pháp ĐÚNG**: Khởi tạo một file system **FSx for Windows Multi-AZ mới**, sau đó sử dụng **AWS DataSync** để đồng bộ dữ liệu nền từ file system cũ sang file system mới mà không gây downtime.
+
 ---
 
-## 📊 III. Ma Trận Quyết Định Công Nghệ Lưu Trữ Nhanh (Exam Decision Matrix)
+### 📊 III. Ma Trận Quyết Định Công Nghệ Lưu Trữ Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Chia sẻ tệp cho Windows, giao thức SMB, Microsoft Active Directory** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ Linux NFS) |
-| **Tính toán HPC, Machine Learning, kết nối S3 hai chiều, sub-millisecond** | **Amazon FSx for Lustre** | Amazon EFS (băng thông và IOPS thấp hơn Lustre) |
-| **Di chuyển thiết bị lưu trữ NetApp tại chỗ lên AWS giữ nguyên SnapMirror** | **Amazon FSx for NetApp ONTAP** | FSx for Windows (không hỗ trợ tính năng NetApp ONTAP) |
-| **Ứng dụng On-Premises cần ghi dữ liệu trực tiếp vào S3 qua NFS/SMB** | **AWS Storage Gateway - S3 File Gateway** | Volume Gateway (chỉ hỗ trợ giao thức khối iSCSI) |
-| **Bộ đệm tệp cục bộ cho FSx for Windows tại chi nhánh văn phòng** | **Amazon FSx File Gateway** | S3 File Gateway (không tối ưu hóa cho FSx Windows) |
-| **Mở rộng dung lượng lưu trữ cục bộ giá rẻ, dữ liệu chính nằm trên S3** | **Storage Gateway - Cached Volumes** | Stored Volumes (yêu cầu toàn bộ dữ liệu nằm ở local) |
-| **Dữ liệu chính bắt buộc nằm ở local, chỉ backup snapshot định kỳ lên S3** | **Storage Gateway - Stored Volumes** | Cached Volumes (dữ liệu chính nằm trên S3) |
-| **Thay thế băng từ vật lý, giữ nguyên phần mềm sao lưu Veeam/Commvault** | **AWS Storage Gateway - Tape Gateway (VTL)** | AWS DataSync (không hỗ trợ giao diện băng từ iSCSI VTL) |
-| **Di chuyển nhanh hàng chục TB tệp từ NAS tại chỗ lên AWS EFS/FSx** | **AWS DataSync** | Chạy lệnh rsync thủ công (chậm gấp 10 lần, không tối ưu) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
+|:---|:---|:---|:---:|
+| **Chia sẻ tệp cho Windows, giao thức SMB, Microsoft Active Directory** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ Linux NFS) | U-PT1 Q64, TD-Set1 Q52 |
+| **Gom nhiều file system Windows thành 1 đường dẫn chia sẻ** | **FSx for Windows với DFS Namespaces** | LVM stripe trên EC2 (khó quản trị, không HA) | TD-Set1 Q55 |
+| **Lưu trữ khối (Block Storage) độ trễ thấp trải rộng Multi-AZ** | **FSx for NetApp ONTAP (iSCSI Protocol)** | Amazon EBS (EBS bị giới hạn trong 1 AZ duy nhất) | TD-Set1 Q10, TD-Set8 Q18 |
+| **Tính toán HPC, Machine Learning, kết nối S3 hai chiều, sub-millisecond** | **Amazon FSx for Lustre** | Amazon EFS (băng thông và IOPS thấp hơn Lustre) | TD-Set1 Q34 |
+| **Di chuyển thiết bị lưu trữ NetApp tại chỗ lên AWS giữ nguyên SnapMirror** | **Amazon FSx for NetApp ONTAP** | FSx for Windows (không hỗ trợ tính năng NetApp ONTAP) | U-PT3 Q18 |
+| **Di chuyển nhanh hàng chục/trăm TB tệp từ NAS lên S3/Glacier tự động** | **AWS DataSync** | Chạy lệnh rsync thủ công (chậm, tốn công vận hành) | TD-Set2 Q18, TD-Set2 Q28 |
+| **Ứng dụng On-Premises cần ghi dữ liệu trực tiếp vào S3 qua NFS/SMB** | **AWS Storage Gateway - S3 File Gateway** | Volume Gateway (chỉ hỗ trợ giao thức khối iSCSI) | U-PT1 Q21, TD-Set1 Q20 |
+| **Mở rộng dung lượng lưu trữ cục bộ giá rẻ, dữ liệu chính nằm trên S3** | **Storage Gateway - Cached Volumes** | Stored Volumes (yêu cầu toàn bộ dữ liệu nằm ở local) | U-PT3 Q60 |
+| **Dữ liệu chính bắt buộc nằm ở local, chỉ backup snapshot định kỳ lên S3** | **Storage Gateway - Stored Volumes** | Cached Volumes (dữ liệu chính nằm trên S3) | U-PT3 Q57 |
+| **Thay thế băng từ vật lý, giữ nguyên phần mềm sao lưu Veeam/Commvault** | **AWS Storage Gateway - Tape Gateway (VTL)** | AWS DataSync (không hỗ trợ giao diện băng từ iSCSI VTL) | U-PT3 Q57 |
+| **Thiết bị di chuyển dữ liệu siêu nhỏ gọn tại hiện trường khắc nghiệt** | **AWS Snowcone (8 TB HDD / 14 TB SSD)** | Snowball Edge (quá nặng, cần nguồn điện lớn) | TD-Set4 Q51 |
 
 ---
 

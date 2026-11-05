@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Các Dịch Vụ Trí Tuệ Nhân Tạo & Học Máy Trên AWS (AI & Machine Learning Services)
+# Tài Liệu Học Tập Chuyên Sâu: Các Dịch Vụ Trí Tuệ Nhân Tạo & Học Máy Trên AWS (AI & Machine Learning Services)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AI/ML Solutions Architect (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu 100% thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -178,21 +178,21 @@ flowchart TD
 
 ## 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
 
-#### 1. Kiểm Soát Nội Dung Nhạy Cảm Trong Ảnh Tải Lên Với Chi Phí Thấp Nhất — (CM-PT4 Q29)
-- **Tình huống thi**: Một mạng xã hội cho phép người dùng chia sẻ ảnh đại diện và bài viết. Để tuân thủ pháp luật, hệ thống bắt buộc phải kiểm duyệt và gỡ bỏ ngay lập tức những hình ảnh chứa nội dung nhạy cảm, bạo lực hoặc khiêu dâm. Yêu cầu giải pháp hoàn toàn tự động, co giãn theo nhu cầu và không cần đội ngũ Machine Learning tự xây dựng mô hình.
+#### 1. Kiểm Soát Nội Dung Nhạy Cảm Trong Ảnh Tải Lên: Amazon Rekognition Moderation — (TD-Set2 Q49, CM-PT4 Q29)
+- **Tình huống thi**: Một mạng xã hội/trang chia sẻ hình ảnh cho phép người dùng đăng ảnh đại diện và bài viết. Hệ thống bắt buộc phải tự động phát hiện, gắn nhãn kiểm duyệt và gỡ bỏ ngay lập tức những hình ảnh chứa nội dung nhạy cảm, bạo lực, hoặc phản cảm (inappropriate / explicit content) với chi phí vận hành thấp nhất và không cần tự huấn luyện mô hình máy học (`TD-Set2 Q49`).
 - **Giải pháp tối ưu chuẩn AWS**:
   - Người dùng tải ảnh lên **Amazon S3 Bucket**.
   - Thiết lập **S3 Event Notification** kích hoạt hàm **AWS Lambda**.
-  - Hàm Lambda gọi trực tiếp API `DetectModerationLabels` của **Amazon Rekognition**.
-  - Nếu kết quả trả về nhãn vi phạm với độ tin cậy cao (Confidence score > ngưỡng quy định), Lambda tự động chuyển file ảnh sang vùng cách ly (Quarantine Bucket) hoặc xóa bỏ và gửi cảnh báo tới quản trị viên.
+  - Hàm Lambda gọi trực tiếp API `DetectModerationLabels` của **Amazon Rekognition** (`TD-Set2 Q49`).
+  - Nếu kết quả trả về nhãn vi phạm (như `Explicit Nudity`, `Violence`) với độ tin cậy cao (Confidence score > 80%), Lambda tự động chuyển file ảnh sang vùng cách ly (Quarantine S3 Bucket) hoặc xóa bỏ và gửi cảnh báo tới quản trị viên.
 
-#### 2. Xây Dựng Hệ Thống Phân Tích Ý Kiến Khách Hàng Và Giấu Thông Tin Cá Nhân — (CM-PT4 Q08, CM-PT6 Q45)
-- **Tình huống thi**: Doanh nghiệp bảo hiểm nhận hàng triệu phản hồi và biên bản khiếu nại của khách hàng gửi về dưới dạng văn bản và file ghi âm cuộc gọi. Hệ thống cần tự động phân tích cảm xúc của khách hàng, trích xuất các từ khóa chính, đồng thời phải tự động ẩn đi các thông tin định danh cá nhân nhạy cảm (**PII - Personally Identifiable Information**) như số thẻ tín dụng, số an sinh xã hội để tuân thủ luật bảo vệ dữ liệu.
+#### 2. Xây Dựng Hệ Thống Phân Tích Ý Kiến Khách Hàng Và Giấu PII: Transcribe + Comprehend — (TD-Set6 Q56, CM-PT4 Q08)
+- **Tình huống thi**: Trung tâm chăm sóc khách hàng (Call Center) lưu trữ hàng ngàn file ghi âm cuộc gọi trên Amazon S3. Doanh nghiệp cần giải pháp tự động chuyển đổi file ghi âm thành văn bản, phân tích cảm xúc của khách hàng (Sentiment Analysis), trích xuất các từ khóa/chủ đề chính, và tự động ẩn đi các thông tin định danh cá nhân nhạy cảm (**PII - Personally Identifiable Information**) (`TD-Set6 Q56`).
 - **Giải pháp tối ưu**:
-  - Đối với file âm thanh: Sử dụng **Amazon Transcribe** với tùy chọn **PII Redaction** để chuyển giọng nói thành chữ và tự động thay thế số nhạy cảm bằng nhãn `[PII]`.
-  - Đối với văn bản: Sử dụng **Amazon Comprehend** để thực hiện:
-    - `DetectSentiment`: Phân loại mức độ hài lòng của khách hàng.
-    - `DetectEntities` / `DetectPiiEntities`: Phát hiện và gắn nhãn các thực thể PII để thực hiện che mờ hoặc mã hóa dữ liệu trước khi lưu trữ vào kho phân tích.
+  - Đối với file âm thanh cuộc gọi: Sử dụng **Amazon Transcribe** với tính năng **PII Redaction** để chuyển giọng nói thành văn bản JSON và tự động thay thế số thẻ ngân hàng, số điện thoại bằng nhãn `[PII]` (`TD-Set6 Q56`).
+  - Đối với văn bản đã gỡ PII: Đẩy vào **Amazon Comprehend** để thực hiện:
+    - `DetectSentiment`: Phân loại cảm xúc khách hàng thành `POSITIVE`, `NEGATIVE`, `NEUTRAL`, hoặc `MIXED` (`TD-Set6 Q56`, `TD-Set3 Q46`).
+    - `DetectEntities` / `DetectKeyPhrases`: Trích xuất tên sản phẩm, lỗi phàn nàn và địa điểm để lưu trữ vào cơ sở dữ liệu phân tích BI (`TD-Set6 Q56`).
 
 #### 3. Chuẩn Hóa Dữ Liệu Khổng Lồ Cho Huấn Luyện Machine Learning Bằng AWS Glue — (CM-PT1 Q59)
 - **Tình huống thi**: Nhóm khoa học dữ liệu (Data Science) cần huấn luyện mô hình dự báo nhu cầu hàng hóa trên tập dữ liệu thô hàng chục Terabytes nằm rải rác trên S3 ở định dạng CSV và JSON. Quá trình tiền xử lý dữ liệu và trích xuất đặc trưng (Feature extraction) đòi hỏi năng lực tính toán phân tán mạnh mẽ trước khi nạp vào Amazon SageMaker.
@@ -214,34 +214,57 @@ flowchart TD
   - 1 gói **Compute Savings Plans** cho EC2, Fargate và Lambda.
   - 1 gói **SageMaker Savings Plans** chuyên biệt cho các máy chủ của Amazon SageMaker!
 
-#### 🪤 Bẫy 2: Đọc Dữ Liệu Hóa Đơn & Giấy Tờ: Amazon Rekognition vs Amazon Textract — (CM-PT4 Q08)
-- **Tình huống đề thi**: *"Hệ thống kế toán cần quét hàng nghìn file PDF hóa đơn thanh toán để trích xuất số tiền, tên nhà cung cấp và danh sách các mặt hàng trong bảng thanh toán vào cơ sở dữ liệu."*
+#### 🪤 Bẫy 2: Đọc Dữ Liệu Hóa Đơn & Bảng Biểu: Amazon Rekognition vs Amazon Textract — (TD-Set4 Q50, CM-PT4 Q08)
+- **Tình huống đề thi**: *"Hệ thống kế toán cần quét hàng nghìn file PDF hóa đơn thanh toán và báo cáo thuế dạng bảng để trích xuất số tiền, tên nhà cung cấp và danh sách các mặt hàng trong bảng thanh toán thành dữ liệu có cấu trúc."*
 - **Phương án bẫy**:
-  - ❌ *Dùng Amazon Rekognition Text Detection*: Rekognition nhận diện chữ thô trong ảnh (ví dụ: biển báo giao thông, chữ trên áo phông), không có khả năng hiểu cấu trúc ngữ nghĩa bảng biểu hay cặp Key-Value của hóa đơn.
-- **Giải pháp ĐÚNG**: Sử dụng **Amazon Textract** với tính năng `AnalyzeExpense` hoặc `AnalyzeDocument (TABLES & FORMS)`. Textract được huấn luyện chuyên sâu để nhận dạng chính xác bảng dữ liệu và form biểu mẫu tài chính.
+  - ❌ *Dùng Amazon Rekognition Text Detection*: Rekognition nhận diện chữ thô trong ảnh (ví dụ: biển báo giao thông, chữ trên áo phông), không có khả năng hiểu cấu trúc ngữ nghĩa bảng biểu hay cặp Key-Value của hóa đơn (`TD-Set4 Q50`).
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon Textract** với tính năng `AnalyzeExpense` hoặc gọi API **`AnalyzeDocument` với `FeatureTypes: ['TABLES', 'FORMS']`** (`TD-Set4 Q50`).
+  - Textract được huấn luyện chuyên sâu để nhận dạng chính xác bảng dữ liệu phức tạp, cột hàng và form biểu mẫu tài chính.
 
-#### 🪤 Bẫy 3: Tự Viết Model AI Hay Dùng Dịch Vụ Có Sẵn? (Zero Operational Overhead) — (CM-PT4 Q29, CM-PT6 Q45)
-- **Tình huống đề thi**: *"Doanh nghiệp muốn tích hợp tính năng dịch thuật đa ngôn ngữ và chuyển giọng nói thành văn bản vào ứng dụng web với yêu cầu nỗ lực triển khai và vận hành thấp nhất (LEAST operational overhead / MINIMUM development effort)."*
+#### 🪤 Bẫy 3: Tự Viết Model AI Hay Dùng Dịch Vụ Có Sẵn? (Zero Operational Overhead) — (TD-Set5 Q12, TD-Set6 Q56, CM-PT4 Q29)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn tích hợp tính năng dịch thuật nội dung bài viết đa ngôn ngữ trong thời gian thực và chuyển giọng nói thành văn bản vào ứng dụng web với yêu cầu nỗ lực triển khai và vận hành thấp nhất (LEAST operational overhead / MINIMUM development effort)."*
 - **Phương án bẫy**:
   - ❌ *Thuê Data Scientist tự xây dựng và huấn luyện mô hình Deep Learning trên SageMaker*: Tốn hàng tháng trời thu thập dữ liệu, tốn chi phí GPU đắt đỏ và công sức bảo trì mô hình.
-- **Giải pháp ĐÚNG**: Tận dụng ngay các **Dịch vụ AI Tầng 3 (Amazon Transcribe & Amazon Translate)** thông qua việc gọi API trực tiếp. Tiết kiệm 95% thời gian phát triển và không phải quản lý bất kỳ máy chủ hay mô hình nào.
+- **Giải pháp ĐÚNG**: Tận dụng ngay các **Dịch vụ AI Tầng 3 (Amazon Transcribe & Amazon Translate)** thông qua việc gọi API trực tiếp (`TD-Set5 Q12`, `TD-Set6 Q56`). Tiết kiệm 95% thời gian phát triển và không phải quản lý bất kỳ máy chủ hay mô hình nào.
+
+#### 🪤 Bẫy 4: Chuyển Đổi Văn Bản Bài Báo Thành Giọng Nói Tự Nhiên: Amazon Polly — (TD-Set4 Q18)
+- **Tình huống đề thi**: *"Một trang tin tức điện tử muốn cung cấp tính năng phát âm thanh bài báo cho độc giả khiếm thị hoặc người dùng lái xe. Ứng dụng cần chuyển đổi văn bản bài viết thành giọng đọc âm thanh sống động, tự nhiên với nhiều tùy chọn ngôn ngữ và giọng đọc khác nhau."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Amazon Transcribe*: Transcribe là Speech-to-Text (chuyển âm thanh thành chữ), ngược hoàn toàn với yêu cầu Text-to-Speech (`TD-Set4 Q18`)!
+  - ❌ *Dùng Amazon Comprehend*: Comprehend chỉ phân tích ngôn ngữ tự nhiên (NLP) chứ không phát ra âm thanh.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon Polly** (`TD-Set4 Q18`).
+  - Dịch vụ Text-to-Speech (TTS) chuyển đổi văn bản thành giọng nói chuẩn phòng thu bằng công nghệ Neural TTS (NTTS), hỗ trợ SSML (Speech Synthesis Markup Language) và tạo file MP3 lưu trên S3.
+
+#### 🪤 Bẫy 5: Giám Sát Camera An Ninh & Phát Hiện Xâm Nhập Bằng Amazon Rekognition — (TD-Set2 Q30)
+- **Tình huống đề thi**: *"Doanh nghiệp lắp đặt hệ thống camera an ninh giám sát bên trong trung tâm dữ liệu. Ban quản lý yêu cầu ứng dụng Trí tuệ nhân tạo (AI) để phân tích luồng video thời gian thực và tự động phát hiện nhân viên lạ hoặc kẻ xâm nhập vào khu vực cấm để phát cảnh báo tức thì."*
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon Rekognition Video** kết hợp **Kinesis Video Streams** (`TD-Set2 Q30`).
+  - Rekognition hỗ trợ nhận diện khuôn mặt (Facial Search) và so sánh với kho dữ liệu khuôn mặt nhân viên đã đăng ký hợp lệ (Face Collection). Khi phát hiện người lạ, hệ thống lập tức kích hoạt cảnh báo an ninh qua EventBridge/SNS (`TD-Set2 Q30`).
+
+#### 🪤 Bẫy 6: Xây Dựng Chatbot Hội Thoại Tự Động Với Khách Hàng: Amazon Lex — (TD-Set5 Q35)
+- **Tình huống đề thi**: *"Một ngân hàng cần xây dựng trợ lý ảo (Chatbot) trên ứng dụng di động để hỗ trợ khách hàng tra cứu số dư tài khoản và khóa thẻ khẩn cấp qua cả giọng nói và tin nhắn văn bản, tự động kết nối với dịch vụ backend."*
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon Lex** kết hợp **AWS Lambda** (`TD-Set5 Q35`).
+  - Amazon Lex cung cấp công nghệ nhận dạng giọng nói (ASR) và hiểu ngôn ngữ tự nhiên (NLU) - cùng công nghệ với trợ lý ảo Alexa.
+  - Khi người dùng cung cấp đủ thông tin (Slots), Lex kích hoạt hàm AWS Lambda để gọi API xử lý nghiệp vụ ngân hàng an toàn (`TD-Set5 Q35`).
 
 ---
 
 ## 📊 III. Ma Trận Quyết Định Dịch Vụ AI/ML Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Dịch vụ chuẩn AWS | Dịch vụ bị loại & Lý do |
-|:---|:---|:---|
-| **Kiểm duyệt ảnh khiêu dâm, bạo lực người dùng đăng tải** | **Amazon Rekognition (Content Moderation)** | Amazon Textract (chỉ trích xuất văn bản tài liệu) |
-| **Chuyển đổi file ghi âm cuộc gọi thành văn bản và ẩn PII** | **Amazon Transcribe (PII Redaction)** | Amazon Polly (chuyển văn bản thành tiếng nói, ngược chiều) |
-| **Đo lường cảm xúc khách hàng (Positive / Negative) từ review** | **Amazon Comprehend** | Amazon Translate (chỉ dịch thuật ngôn ngữ) |
-| **Đọc dữ liệu bảng biểu, hóa đơn, CCCD từ file scan/PDF** | **Amazon Textract** | Rekognition (không hiểu cấu trúc Table & Key-Value) |
-| **Xây dựng Chatbot tự động đặt bàn, tích hợp giọng nói** | **Amazon Lex** | Amazon Comprehend (chỉ phân tích văn bản tĩnh) |
-| **Tìm kiếm nội bộ chuẩn doanh nghiệp hỗ trợ hỏi đáp tự nhiên** | **Amazon Kendra** | Amazon OpenSearch (cần tự cấu hình query và parser thủ công) |
-| **Tiền xử lý tập dữ liệu lớn hàng chục TB trước khi nạp vào ML** | **AWS Glue ETL (Spark phân tán)** | Tự viết script chạy trên 1 máy chủ EC2 (nghẽn RAM/CPU) |
-| **Tiết kiệm chi phí máy chủ Amazon SageMaker ml.*** | **SageMaker Savings Plans** | Compute Savings Plans (không hỗ trợ cho họ máy chủ `ml.*`) |
-| **Huấn luyện mô hình SageMaker tiết kiệm tới 90% chi phí** | **Managed Spot Training + Checkpointing** | Chạy On-Demand Instance liên tục (tốn kém chi phí) |
-| **Deploy mô hình ML với lưu lượng ngắt quãng, scale về 0** | **SageMaker Serverless Inference** | Real-time Inference (phải trả tiền máy chủ chạy 24/7) |
+| Tình huống / Yêu cầu trong đề thi | Dịch vụ chuẩn AWS | Dịch vụ bị loại & Lý do | Tham chiếu đề thi |
+|:---|:---|:---|:---|
+| **Kiểm duyệt ảnh khiêu dâm, bạo lực người dùng đăng tải** | **Amazon Rekognition (`DetectModerationLabels`)** | Amazon Textract (chỉ trích xuất văn bản tài liệu) | `TD-Set2 Q49` |
+| **Phát hiện kẻ xâm nhập qua camera giám sát video thời gian thực** | **Amazon Rekognition Video + Kinesis Video Streams** | Amazon SageMaker (phải tự code và train model thị giác từ đầu) | `TD-Set2 Q30` |
+| **Chuyển đổi file ghi âm cuộc gọi thành văn bản và ẩn PII** | **Amazon Transcribe (PII Redaction)** | Amazon Polly (chuyển văn bản thành tiếng nói, ngược chiều) | `TD-Set6 Q56` |
+| **Đo lường cảm xúc khách hàng (Positive / Negative) từ văn bản** | **Amazon Comprehend (`DetectSentiment`)** | Amazon Translate (chỉ dịch thuật ngôn ngữ) | `TD-Set3 Q46`, `TD-Set6 Q56` |
+| **Đọc dữ liệu bảng biểu, hóa đơn, CCCD từ file scan/PDF** | **Amazon Textract (`AnalyzeDocument TABLES & FORMS`)** | Rekognition (chỉ OCR thô, không hiểu Table & Form) | `TD-Set4 Q50` |
+| **Chuyển văn bản bài viết thành giọng đọc audio sống động** | **Amazon Polly (Neural Text-to-Speech)** | Amazon Transcribe (Transcribe là Speech-to-Text) | `TD-Set4 Q18` |
+| **Xây dựng Chatbot tự động hội thoại giọng nói & văn bản** | **Amazon Lex (tích hợp AWS Lambda fulfillment)** | Amazon Comprehend (chỉ phân tích văn bản tĩnh, không hội thoại) | `TD-Set5 Q35` |
+| **Dịch thuật nội dung bài viết đa ngôn ngữ thời gian thực** | **Amazon Translate** | Amazon Comprehend (chỉ phân tích cảm xúc/ngôn ngữ, không dịch) | `TD-Set5 Q12` |
+| **Tìm kiếm nội bộ chuẩn doanh nghiệp hỗ trợ hỏi đáp tự nhiên** | **Amazon Kendra** | Amazon OpenSearch (cần tự cấu hình query và parser thủ công) | Chuẩn AWS |
+| **Tiền xử lý tập dữ liệu lớn hàng chục TB trước khi nạp vào ML** | **AWS Glue ETL (Spark phân tán) $\rightarrow$ Parquet S3** | Tự viết script chạy trên 1 máy chủ EC2 (nghẽn RAM/CPU) | `CM-PT1 Q59` |
+| **Tiết kiệm chi phí máy chủ Amazon SageMaker ml.*** | **SageMaker Savings Plans (lên tới 64%)** | Compute Savings Plans (không hỗ trợ cho họ máy chủ `ml.*`) | `CM-PT3 Q05` |
+| **Huấn luyện mô hình SageMaker tiết kiệm tới 90% chi phí** | **Managed Spot Training + Checkpointing lên S3** | Chạy On-Demand Instance liên tục (tốn kém chi phí) | Chuẩn AWS |
+| **Deploy mô hình ML với lưu lượng ngắt quãng, scale về 0** | **SageMaker Serverless Inference** | Real-time Inference (phải trả tiền máy chủ chạy 24/7) | Chuẩn AWS |
 
 ---
 

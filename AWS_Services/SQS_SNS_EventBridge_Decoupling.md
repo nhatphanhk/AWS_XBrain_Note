@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon SQS, SNS, EventBridge & Kinesis (Kiến Trúc Tách Rời & Hướng Sự Kiện)
+# Tài Liệu Học Tập Chuyên Sâu: Amazon SQS, SNS, EventBridge & Kinesis (Kiến Trúc Tách Rời & Hướng Sự Kiện)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -40,14 +40,15 @@ flowchart TD
 ```
 
 - **Amazon SQS Standard Queue**:
-  - Không giới hạn thông lượng tin nhắn mỗi giây.
+  - Không giới hạn thông lượng tin nhắn mỗi giây (Unlimited Throughput).
   - Đảm bảo giao nhận **Tối thiểu một lần (At-least-once Delivery)**: Đôi khi consumer có thể nhận được 2 bản sao của cùng một tin nhắn do cơ chế phân tán của AWS.
   - Thứ tự tin nhắn là **Best-effort**: Thứ tự có thể bị xáo trộn nhẹ nếu tin nhắn đến dồn dập.
 - **Amazon SQS FIFO Queue**:
   - Tên hàng đợi **bắt buộc phải kết thúc bằng hậu tố `.fifo`** (ví dụ: `payment-orders.fifo`).
-  - Đảm bảo thứ tự nghiêm ngặt **First-In, First-Out** và xử lý **Đúng duy nhất một lần (Exactly-once Processing)**.
-  - Cơ chế chống trùng lặp dựa trên **Message Deduplication ID** (hoặc Content-Based Deduplication băm nội dung SHA-256 trong khoảng thời gian cửa sổ 5 phút).
-  - Phân nhóm tin nhắn bằng **Message Group ID**: Cho phép xử lý song song các nhóm khách hàng khác nhau mà vẫn đảm bảo thứ tự tuyệt đối cho từng nhóm riêng lẻ.
+  - Đảm bảo thứ tự nghiêm ngặt **First-In, First-Out** và xử lý **Đúng duy nhất một lần (Exactly-once Processing)** (`TD-Set1 Q40`, `TD-Set4 Q14`).
+  - Cơ chế chống trùng lặp dựa trên **Message Deduplication ID** (hoặc Content-Based Deduplication băm nội dung SHA-256 trong khoảng thời gian cửa sổ 5 phút) (`TD-Set1 Q40`).
+  - Phân nhóm tin nhắn bằng **Message Group ID**: Cho phép xử lý song song các nhóm khách hàng/đơn hàng khác nhau mà vẫn đảm bảo thứ tự tuyệt đối cho từng nhóm riêng lẻ (`TD-Set4 Q14`).
+  - Hỗ trợ kiến trúc tách rời lai (**Hybrid Decoupled Architecture**): Hàng đợi SQS có thể được poll an toàn qua HTTPS từ các tiến trình chạy trên Amazon EC2, Amazon ECS containers, hoặc các máy chủ on-premises trong trung tâm dữ liệu truyền thống (`TD-Set2 Q13`).
 
 ---
 
@@ -80,10 +81,10 @@ sequenceDiagram
 - **Visibility Timeout (Thời gian ẩn tin nhắn)**:
   - Khi một consumer nhận được tin nhắn, tin nhắn không bị xóa ngay mà tạm thời ẩn đi (mặc định 30 giây) để các consumer khác không đọc trùng.
   - Consumer phải chủ động gọi `DeleteMessage` kèm theo chuỗi `ReceiptHandle` sau khi xử lý xong.
-  - Nếu tác vụ kéo dài, consumer có thể gọi API `ChangeMessageVisibility` để gia hạn thêm thời gian.
+  - **Kỹ thuật xử lý tác vụ kéo dài**: Nếu tác vụ xử lý tin nhắn tốn nhiều thời gian hơn mức thiết lập mặc định (ví dụ xử lý tốn 2 phút trong khi visibility timeout là 30 giây), tin nhắn sẽ xuất hiện trở lại và bị worker khác xử lý trùng lặp! Để khắc phục, worker consumer phải chủ động gọi API **`ChangeMessageVisibility`** để gia hạn thêm thời gian trước khi visibility timeout hết hạn (`TD-Set3 Q10`).
 - **Dead-Letter Queue (DLQ) & DLQ Redrive**:
   - Khi một tin nhắn bị lỗi cú pháp hoặc mã nguồn bị bug khiến worker bị crash liên tục, tin nhắn sẽ bị nhận lại nhiều lần.
-  - Khi số lần nhận vượt quá `maxReceiveCount` (ví dụ: 3 - 5 lần), SQS tự động chuyển tin nhắn sang DLQ để cô lập "viên thuốc độc" (**Poison Pill**).
+  - Khi số lần nhận vượt quá `maxReceiveCount` (ví dụ: 3 - 5 lần), SQS tự động chuyển tin nhắn sang Dead-Letter Queue (DLQ) để cô lập "viên thuốc độc" (**Poison Pill**) tránh làm treo toàn bộ worker fleet (`TD-Set2 Q47`).
   - Tính năng **DLQ Redrive** cho phép quản trị viên điều tra lỗi, cập nhật mã nguồn ứng dụng, và đẩy toàn bộ tin nhắn lỗi từ DLQ quay trở lại hàng đợi chính chỉ bằng 1 thao tác click chuột hoặc CLI.
 - **Short Polling vs Long Polling**:
   - *Short Polling (`WaitTimeSeconds = 0`)*: Trả lời ngay lập tức dù hàng đợi rỗng, gây lãng phí hàng triệu API calls rỗng.
@@ -108,11 +109,11 @@ flowchart LR
     SQS4 --> Worker4[Analytics Service]
 ```
 
-- **Nguyên lý Fan-Out**: Một thông điệp xuất bản vào SNS Topic được tự động nhân bản và đẩy vào nhiều hàng đợi SQS độc lập.
+- **Nguyên lý Fan-Out**: Một thông điệp xuất bản vào SNS Topic được tự động nhân bản và đẩy song song vào nhiều hàng đợi SQS độc lập (`TD-Set5 Q64`).
 - **Lợi ích**:
   - Tách rời hoàn toàn nhà xuất bản khỏi các đối tượng tiêu thụ.
   - Nếu một dịch vụ bị lỗi (ví dụ Email Service bị sập), các tin nhắn vẫn nằm an toàn trong Email SQS Queue mà không làm ảnh hưởng đến dịch vụ thanh toán hay trừ kho.
-  - Áp dụng **SNS Subscription Filter Policy** để từng subscriber chỉ nhận đúng các tin nhắn mình quan tâm (ví dụ: Analytics chỉ nhận đơn có giá trị `amount > 1000`).
+  - Áp dụng **SNS Subscription Filter Policy**: Thiết lập bộ lọc trên các Message Attributes (ví dụ: `event_type = "ORDER_COMPLETED"` hoặc `quote_type = "CAR_INSURANCE"`), giúp từng SQS queue chỉ nhận đúng luồng tin nhắn phù hợp mà không cần viết mã Lambda trung gian (`TD-Set2 Q36`).
 
 ---
 
@@ -211,47 +212,81 @@ flowchart LR
 - **Giải pháp ĐÚNG**: Chuyển request từ API Gateway thẳng vào **Amazon EventBridge Event Bus** và cấu hình **EventBridge Rules với Content-based Event Patterns**.
   - EventBridge hỗ trợ lọc theo giá trị số học (`"amount": [{"numeric": [">", 10000]}]`), tiền tố, danh sách giá trị hoặc sự hiện diện của trường JSON trực tiếp mà không cần dựng thêm Lambda function để parse code.
 
-#### 🪤 Bẫy 7: Xử Lý Giao Dịch Tài Chính Đúng Thứ Tự Bằng SQS FIFO — (CM-PT5 Q08)
-- **Tình huống đề thi**: *"Hệ thống thanh toán trực tuyến cần xử lý giao dịch tài chính yêu cầu tuyệt đối không được phép xử lý lặp lại tin nhắn và phải bảo toàn thứ tự nghiêm ngặt (Strict Ordering) với hạ tầng ít phải quản trị nhất."*
-- **Giải pháp ĐÚNG**: **Amazon SQS FIFO Queue** kết hợp AWS Lambda.
-  - SQS FIFO đảm bảo thứ tự chính xác (First-In-First-Out) và tự động khử trùng lặp (Exactly-Once processing) thông qua `MessageDeduplicationId` và `MessageGroupId`.
+#### 🪤 Bẫy 7: Xử Lý Giao Dịch Đúng Thứ Tự & Chống Trùng Lặp Bằng SQS FIFO — (TD-Set1 Q40, TD-Set4 Q14, CM-PT5 Q08)
+- **Tình huống đề thi**: *"Hệ thống thanh toán trực tuyến cần xử lý giao dịch tài chính từ hàng ngàn khách hàng khác nhau. Yêu cầu tuyệt đối không được xử lý lặp giao dịch và phải bảo toàn thứ tự nghiêm ngặt (Strict Ordering) theo từng khách hàng với nỗ lực quản trị thấp nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng SQS Standard kết hợp DynamoDB để kiểm tra trùng*: Quá phức tạp, phát sinh độ trễ đọc/ghi và không đảm bảo thứ tự First-In-First-Out.
+  - ❌ *Gán chung một `MessageGroupId` cho toàn bộ tin nhắn*: Làm giảm hiệu năng xử lý vì hàng đợi FIFO chỉ xử lý tuần tự từng tin một trên cùng 1 group ID!
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon SQS FIFO Queue** (`TD-Set1 Q40`).
+  - Thiết lập **`MessageGroupId`** gán theo Customer ID hoặc Order ID (`TD-Set4 Q14`): Cho phép nhiều consumers xử lý song song các nhóm khách hàng khác nhau mà vẫn đảm bảo 100% thứ tự chuẩn xác cho từng khách hàng riêng biệt.
+  - Cấu hình **`MessageDeduplicationId`** (hoặc Content-Based Deduplication băm SHA-256) để tự động loại bỏ mọi tin nhắn trùng lặp gửi vào trong cửa sổ 5 phút (`TD-Set1 Q40`).
 
-#### 🪤 Bẫy 8: Tăng Tốc Độ Xử Lý SQS FIFO Lên 3,000 TPS Bằng Batching — (U-PT1 Q43)
+#### 🪤 Bẫy 8: Tăng Tốc Độ Xử Lý SQS FIFO Lên 3,000 TPS Bằng Batching — (TD-Set1 Q40, U-PT1 Q43)
 - **Tình huống đề thi**: *"Hệ thống sử dụng SQS FIFO Queue để bảo toàn thứ tự, nhưng lưu lượng giao dịch tăng cao vượt quá giới hạn 300 transactions/second gây ứ đọng hàng đợi. Làm cách nào để tăng thông lượng lên tới 3,000 tin nhắn/giây mà vẫn giữ nguyên SQS FIFO?"*
 - **Các phương án bẫy**:
   - ❌ *Chuyển sang SQS Standard*: Sẽ làm mất tính năng bảo toàn thứ tự nghiêm ngặt và có thể gây xử lý trùng lặp giao dịch!
   - ❌ *Tạo thêm hàng chục SQS FIFO Queues độc lập*: Phức tạp trong việc điều phối và gom nhóm dữ liệu.
 - **Giải pháp ĐÚNG**: Sử dụng kỹ thuật **Batching (gửi và nhận theo lô)** thông qua các API `SendMessageBatch` và `ReceiveMessageBatch` (tối đa 10 tin nhắn/batch), hoặc bật tính năng **High Throughput for FIFO Queues**.
-  - Bằng cách gửi theo lô 10 tin nhắn/request, thông lượng của SQS FIFO tăng vọt gấp 10 lần: từ **300 msgs/s lên tới 3,000 msgs/s** mà vẫn đảm bảo 100% thứ tự chuẩn xác!
+  - Bằng cách gửi theo lô 10 tin nhắn/request, thông lượng của SQS FIFO tăng vọt gấp 10 lần: từ **300 msgs/s lên tới 3,000 msgs/s** mà vẫn đảm bảo 100% thứ tự chuẩn xác (`TD-Set1 Q40`)!
 
-#### 🪤 Bẫy 9: Tự Động Co Giãn Đội Worker Theo Độ Dài Hàng Đợi SQS: Backlog per Instance — (U-PT6 Q41)
-- **Tình huống đề thi**: *"Đội máy chủ EC2 Auto Scaling làm nhiệm vụ lấy và xử lý các tác vụ từ hàng đợi SQS. Cần chính sách co giãn tự động nào để tăng giảm số lượng instance một cách chính xác theo độ dài hàng đợi?"*
+#### 🪤 Bẫy 9: Tự Động Co Giãn Đội Worker Theo Độ Dài Hàng Đợi SQS: Backlog per Instance — (TD-Set1 Q04, TD-Set6 Q60, U-PT6 Q41)
+- **Tình huống đề thi**: *"Đội máy chủ EC2 Auto Scaling làm nhiệm vụ lấy và xử lý các tác vụ từ hàng đợi SQS. Tải công việc tăng đột biến trong giờ cao điểm nhưng các worker chỉ xử lý I/O nên CPU không tăng cao. Cần cấu hình chính sách Auto Scaling nào để kịp thời xử lý backlog hàng đợi?"*
 - **Các phương án bẫy**:
-  - ❌ *Scale theo CPUUtilization trung bình*: Worker có thể dùng ít CPU khi đang giải nén hoặc chờ đợi mạng, khiến ASG không scale kịp khi hàng đợi có cả triệu tin nhắn!
+  - ❌ *Scale theo CPUUtilization trung bình*: Worker có thể dùng ít CPU khi đang giải nén hoặc chờ đợi mạng, khiến ASG không scale kịp khi hàng đợi có cả triệu tin nhắn (`TD-Set1 Q04`)!
   - ❌ *Scale trực tiếp theo metric `ApproximateNumberOfMessagesVisible`*: Nếu số lượng instance tăng từ 1 lên 10, tổng tin nhắn vẫn vậy sẽ khiến hệ thống liên tục tăng máy ảo vô tội vạ.
 - **Giải pháp ĐÚNG**: Tạo một **CloudWatch Custom Metric** tính toán chỉ số **Backlog per Instance**:
   $$\text{Backlog per Instance} = \frac{\text{ApproximateNumberOfMessagesVisible}}{\text{ASG Capacity (Số lượng Instances đang chạy)}}$$
-  Sau đó cấu hình **Target Tracking Scaling Policy** bám sát chỉ số này (ví dụ: mục tiêu duy trì 50 tin nhắn tồn đọng trên mỗi instance).
+  Sau đó cấu hình **Target Tracking Scaling Policy** (hoặc Step Scaling Policy [`TD-Set6 Q60`]) bám sát chỉ số này (ví dụ: duy trì 50 tin nhắn tồn đọng trên mỗi instance) (`TD-Set1 Q04`).
+
+#### 🪤 Bẫy 10: Tác Vụ Xử Lý Kéo Dài Bị Xử Lý Trùng Lặp: Visibility Timeout & ChangeMessageVisibility — (TD-Set3 Q10)
+- **Tình huống đề thi**: *"Một tiến trình worker EC2 nhận tin nhắn từ hàng đợi SQS để render video. Thời gian render trung bình mất 4 phút, nhưng Visibility Timeout của hàng đợi đang để mặc định là 30 giây. Hậu quả là sau 30 giây, tin nhắn lại xuất hiện trong hàng đợi và bị một worker khác nhận xử lý, gây lãng phí tài nguyên và xung đột file. Cần giải pháp xử lý thế nào?"*
+- **Các phương án bẫy**:
+  - ❌ *Xóa tin nhắn ngay khi vừa nhận bằng `DeleteMessage`*: Nếu worker bị crash giữa chừng trong lúc render, tin nhắn sẽ bị mất vĩnh viễn không thể phục hồi!
+  - ❌ *Chuyển sang dùng SQS FIFO*: SQS FIFO vẫn có Visibility Timeout và vẫn gặp lỗi xử lý trùng lặp nếu tác vụ chạy quá thời gian timeout!
+- **Giải pháp ĐÚNG**: 
+  - Worker tiếp tục xử lý và định kỳ gọi API **`ChangeMessageVisibility`** để gia hạn thêm thời gian ẩn của tin nhắn trước khi Visibility Timeout ban đầu kết thúc (`TD-Set3 Q10`).
+  - Hoặc cấu hình giá trị `VisibilityTimeout` của hàng đợi lên mức đủ an toàn (ví dụ 5-10 phút, tối đa 12 giờ) và chỉ gọi `DeleteMessage` sau khi render hoàn tất thành công.
+
+#### 🪤 Bẫy 11: Cô Lập "Viên Thuốc Độc" Bằng SQS Dead-Letter Queue (DLQ) — (TD-Set2 Q47)
+- **Tình huống đề thi**: *"Một vài tin nhắn trong hàng đợi SQS có định dạng payload bị lỗi khiến consumer liên tục bị crash exception mỗi khi nhận tin nhắn. Các tin nhắn này liên tục xuất hiện lại trong hàng đợi, làm tắc nghẽn toàn bộ hệ thống xử lý. Cần giải pháp gì để tự động cô lập các tin nhắn lỗi này?"*
+- **Giải pháp ĐÚNG**: Cấu hình **Dead-Letter Queue (DLQ)** với tham số **`maxReceiveCount`** (ví dụ: đặt là 3 hoặc 5) (`TD-Set2 Q47`).
+  - Khi một tin nhắn bị nhận không thành công vượt quá `maxReceiveCount` lần, SQS sẽ tự động chuyển tin nhắn đó sang hàng đợi DLQ riêng biệt.
+  - Sau khi sửa lỗi mã nguồn, quản trị viên có thể dùng **DLQ Redrive** để đẩy tin nhắn từ DLQ quay lại hàng đợi chính xử lý bình thường.
+
+#### 🪤 Bẫy 12: Đẩy Đồng Thời Tới Nhiều Hàng Đợi Phân Tán Bằng SNS Fanout Pattern — (TD-Set5 Q64)
+- **Tình huống đề thi**: *"Một ứng dụng thương mại điện tử sau khi nhận đơn hàng cần đồng thời kích hoạt 3 hệ thống: thanh toán (Payment), đóng gói (Packaging), và gửi hóa đơn (Invoice). Yêu cầu mỗi hệ thống phải xử lý độc lập và có tốc độ tiêu thụ tin nhắn riêng biệt mà không làm gián đoạn lẫn nhau."*
+- **Giải pháp ĐÚNG**: Áp dụng mô hình **Fan-Out: Amazon SNS Topic + Nhiều Amazon SQS Queues** (`TD-Set5 Q64`).
+  - Đơn hàng được publish 1 lần duy nhất vào SNS Topic.
+  - SNS tự động nhân bản và đẩy song song vào từng SQS Queue của Payment, Packaging và Invoice. Các worker fleet độc lập tự poll từ queue riêng để xử lý.
+
+#### 🪤 Bẫy 13: Lọc Luồng Tin Nhắn Đăng Ký SNS Không Cần Mã Lambda: Subscription Filter Policy — (TD-Set2 Q36)
+- **Tình huống đề thi**: *"Một công ty bảo hiểm sử dụng SNS Topic để nhận các yêu cầu báo giá. Có nhiều loại báo giá khác nhau (bảo hiểm xe hơi, bảo hiểm nhà, bảo hiểm y tế). Cần định tuyến từng loại báo giá vào đúng SQS Queue chuyên trách mà KHÔNG cần viết thêm hàm Lambda để kiểm tra."*
+- **Các phương án bẫy**:
+  - ❌ *Tạo một Lambda function subscribe vào SNS để phân loại payload rồi gửi vào các SQS queues*: Hoạt động được nhưng tốn chi phí Lambda và thêm công sức quản trị mã nguồn.
+- **Giải pháp ĐÚNG**: Cấu hình **SNS Subscription Filter Policy** trên các **Message Attributes** của từng subscription (`TD-Set2 Q36`).
+  - Publisher chỉ cần đính kèm thuộc tính `quote_type = "car"`. SNS sẽ tự động lọc và chỉ đẩy tin nhắn đó vào `car-insurance-queue`, hoàn toàn không tốn chi phí tính toán trung gian.
 
 ---
 
 ### 📊 III. Ma Trận Quyết Định Tách Rời Kiến Trúc Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Đảm bảo thứ tự tuyệt đối, chống lặp tin nhắn** | **Amazon SQS FIFO Queue** | SQS Standard (chỉ đảm bảo At-Least-Once) |
-| **Tăng thông lượng SQS FIFO từ 300 lên 3,000 TPS** | **Batching (SendMessageBatch 10 msgs)** | Đổi sang SQS Standard (mất thứ tự nghiêm ngặt) |
-| **Scale ASG worker theo độ dài hàng đợi SQS** | **Target Tracking theo Backlog per Instance** | Target Tracking theo CPU (không phản ánh đúng tải hàng đợi) |
-| **Phân tầng ưu tiên tin nhắn (Pro vs Lite)** | **Multiple SQS Queues** (Priority Pattern) | SQS FIFO (không có khái niệm priority) |
-| **1 sự kiện cần gửi tới nhiều dịch vụ độc lập** | **Mô hình Fan-Out: Amazon SNS + SQS** | Gửi tuần tự từ app (dễ lỗi và chậm trễ) |
-| **Migrate RabbitMQ / ActiveMQ không sửa code** | **Amazon MQ** (hỗ trợ AMQP, MQTT, JMS) | Amazon SQS (chỉ hỗ trợ AWS SDK/HTTPS) |
-| **Khách hàng legacy kết nối SFTP đẩy file vào S3** | **AWS Transfer Family** | Tự dựng EC2 SFTP (tốn công quản trị) |
-| **Hoãn thời gian xử lý tin nhắn tới 15 phút** | **SQS Delay Queues** | Viết lệnh sleep trong code worker |
-| **Chuyển đổi lưu lượng tức thì, bypass DNS cache** | **AWS Global Accelerator (Traffic Dial)** | Route 53 Weighted (bị nghẽn bởi DNS cache) |
-| **Điều phối các sự kiện định dạng JSON phân tán** | **Amazon EventBridge** | Amazon SQS (không có bộ lọc rules JSON native) |
-| **Lưu trữ & phát lại tin nhắn sự kiện trong 30 ngày** | **Amazon EventBridge Archive and Replay** | SQS (chỉ lưu 14 ngày, không có replay) |
-| **Lọc tin nhắn JSON nâng cao (số học, tiền tố)** | **EventBridge Rules (Content-based filtering)** | Viết code Lambda parse JSON thủ công |
-| **Giao dịch tài chính yêu cầu đúng thứ tự tuyệt đối** | **Amazon SQS FIFO Queue** | SQS Standard (chỉ đảm bảo Best-effort ordering) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Tham chiếu đề thi |
+|:---|:---|:---|:---|
+| **Đảm bảo thứ tự tuyệt đối & chống trùng lặp theo nhóm đơn** | **SQS FIFO Queue (`.fifo`) + `MessageGroupId` & `MessageDeduplicationId`** | SQS Standard (chỉ đảm bảo Best-effort, At-Least-Once) | `TD-Set1 Q40`, `TD-Set4 Q14` |
+| **Tăng thông lượng SQS FIFO từ 300 lên 3,000 TPS** | **Batching (`SendMessageBatch` 10 msgs) / High Throughput Mode** | Đổi sang SQS Standard (mất thứ tự nghiêm ngặt) | `TD-Set1 Q40`, `U-PT1 Q43` |
+| **Worker xử lý tác vụ lâu hơn visibility timeout mặc định** | **Gọi API `ChangeMessageVisibility` để gia hạn thời gian ẩn** | Xóa tin nhắn trước khi xử lý (mất dữ liệu nếu worker crash) | `TD-Set3 Q10` |
+| **Tự động cô lập tin nhắn lỗi làm sập worker (Poison Pill)** | **SQS Dead-Letter Queue (DLQ) + `maxReceiveCount`** | Để tin nhắn lặp lại vô tận trong hàng đợi chính | `TD-Set2 Q47` |
+| **Scale ASG worker EC2 theo độ dài hàng đợi SQS** | **Target Tracking / Step Scaling theo Backlog per Instance** | Target Tracking theo CPU (không phản ánh đúng tải I/O hàng đợi) | `TD-Set1 Q04`, `TD-Set6 Q60` |
+| **Kích hoạt batch job container Fargate khi có file S3 mới** | **S3 Event Notification $\rightarrow$ SQS Queue $\rightarrow$ ECS Fargate Auto Scaling** | Polling S3 định kỳ bằng cronjob (chậm, tốn chi phí API S3) | `TD-Set1 Q59`, `TD-Set1 Q15` |
+| **1 sự kiện xuất bản cần đẩy đồng thời tới nhiều dịch vụ độc lập** | **Mô hình Fan-Out: Amazon SNS Topic + Nhiều SQS Queues** | Gửi tuần tự từ ứng dụng (dễ lỗi, chậm trễ, nghẽn mạng) | `TD-Set5 Q64` |
+| **Định tuyến tin nhắn SNS vào từng SQS Queue theo loại dữ liệu** | **SNS Subscription Filter Policy trên Message Attributes** | Dựng hàm Lambda trung gian để phân loại payload JSON | `TD-Set2 Q36` |
+| **Tách rời kiến trúc lai giữa EC2/Fargate và On-Premises data center** | **Amazon SQS Queue (hỗ trợ polling an toàn qua HTTPS)** | Mở cổng socket TCP trực tiếp qua Internet (kém an toàn) | `TD-Set2 Q13` |
+| **Phân tầng ưu tiên tin nhắn (Khách VIP vs Khách thường)** | **Multiple SQS Queues (Priority Queue Pattern: poll VIP trước)** | SQS FIFO (FIFO không có cơ chế phân tầng độ ưu tiên) | `U-PT6 Q20` |
+| **Migrate RabbitMQ / ActiveMQ mà không muốn sửa đổi mã nguồn** | **Amazon MQ (hỗ trợ đầy đủ AMQP, MQTT, OpenWire, JMS)** | Amazon SQS (SQS chỉ hỗ trợ giao thức AWS SDK/HTTPS độc quyền) | `U-PT2 Q33` |
+| **Khách hàng bên ngoài kết nối SFTP đẩy file báo cáo vào S3** | **AWS Transfer Family (Fully-managed SFTP endpoint)** | Tự dựng EC2 cài OpenSSH SFTP server (tốn công vá lỗi) | `U-PT2 Q04` |
+| **Hoãn thời gian xử lý tin nhắn đơn hàng mới tới 15 phút** | **SQS Delay Queues (`DelaySeconds` lên tới 900s)** | Viết vòng lặp sleep trong mã nguồn worker (lãng phí CPU) | Chuẩn AWS |
+| **Lưu trữ & phát lại tin nhắn sự kiện trong vòng 30 ngày** | **Amazon EventBridge Archive and Replay** | SQS (SQS chỉ lưu tối đa 14 ngày và không hỗ trợ replay) | `CM-PT2 Q21` |
+| **Lọc và định tuyến sự kiện JSON dựa trên nội dung chi tiết** | **Amazon EventBridge Rules (Content-based Event Filtering)** | Viết code Lambda tự giải mã và chuyển tiếp JSON | `CM-PT5 Q20` |
 
 ---
 

@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Elastic Load Balancing (ELB) & Auto Scaling Groups (ASG) (Kiến Trúc Co Giãn & Độ Sẵn Sàng Cao)
+# Tài Liệu Học Tập Chuyên Sâu: Elastic Load Balancing (ELB) & Auto Scaling Groups (ASG) (Kiến Trúc Co Giãn & Độ Sẵn Sàng Cao)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -134,6 +134,9 @@ flowchart TD
 4. **ASG Warm Pools & Instance Refresh**:
    - **Warm Pools**: Duy trì một cụm máy ảo ở trạng thái dừng (**Stopped**) đã cài đặt sẵn phần mềm. Khi cần scale-out, máy chỉ mất 30 giây để Start thay vì mất 5–10 phút để cài đặt từ đầu qua User Data.
    - **Instance Refresh**: Cho phép triển khai cập nhật phiên bản AMI mới theo cơ chế rolling update từng phần với các chốt kiểm tra sức khỏe (**Checkpointing**) mà không gây gián đoạn hệ thống.
+5. **ASG Lifecycle Hooks (Can thiệp vòng đời máy ảo)** (*TD-Set5 Q45*):
+   - Cho phép tạm dừng tiến trình đưa máy ảo vào hoạt động (`Pending:Wait`) hoặc tiến trình chấm dứt máy ảo (`Terminating:Wait`) trong một khoảng thời gian chờ (Heartbeat Timeout - mặc định 3,600 giây).
+   - **Ứng dụng sống còn trong đề thi**: Khi máy ảo bị ALB đánh dấu Unhealthy do lỗi ứng dụng, ASG mặc định sẽ terminate máy ngay lập tức làm mất toàn bộ các ephemeral log chẩn đoán cục bộ. Bằng cách thêm **Lifecycle Hook (`Terminating:Wait`)**, ASG giữ máy lại ở trạng thái chờ, phát sự kiện qua Amazon EventBridge kích hoạt Lambda/SSM Run Command đẩy toàn bộ file log lên **CloudWatch Logs**, sau đó mới gọi hàm `CompleteLifecycleAction` để tiếp tục terminate instance an toàn!
 
 ---
 
@@ -164,6 +167,22 @@ flowchart TD
     - `ASGAverageCPUUtilization` = 50% (giữ CPU trung bình của cụm ở mức 50%).
     - `ALBRequestCountPerTarget` = 1000 (mỗi instance chịu tối đa 1000 requests/phút).
   - ASG tự động tính toán số lượng instances cần thêm hoặc bớt để giữ chỉ số bám sát mục tiêu.
+
+#### 4. Phục Vụ Nhiều Tên Miền Độc Lập Qua Cùng Một ALB Bằng Server Name Indication (SNI) — (TD-Set3 Q20)
+- **Tình huống thi**: Công ty du lịch vận hành nhiều trang web khác nhau (`i-love-manila.com`, `i-love-boracay.com`, `i-love-cebu.com`) trên một cụm máy chủ EC2 Auto Scaling. Cần chuyển đổi toàn bộ các trang web sang giao thức bảo mật HTTPS với chi phí thấp nhất mà không cần tạo riêng mỗi domain một bộ cân bằng tải và không phải cấp lại chứng chỉ số khi bổ sung thêm domain mới.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Sử dụng một **Application Load Balancer (ALB)** duy nhất.
+  - Tải toàn bộ chứng chỉ SSL/TLS của các domain lên **AWS Certificate Manager (ACM)**.
+  - Gắn nhiều chứng chỉ SSL này vào cùng một HTTPS Listener (cổng 443) trên ALB.
+  - ALB tự động sử dụng phần mở rộng **Server Name Indication (SNI)** của giao thức TLS để phục vụ chứng chỉ số chính xác tương ứng với tên miền mà người dùng truy cập.
+
+#### 5. Tự Động Thu Thập Nhật Ký Ứng Dụng Khi Máy Bị Xóa Bằng ASG Lifecycle Hooks — (TD-Set5 Q45)
+- **Tình huống thi**: Khi một máy ảo EC2 trong Auto Scaling Group bị Application Load Balancer đánh dấu Unhealthy (lỗi HTTPS Health Check), ASG lập tức chấm dứt (terminate) máy ảo đó, khiến toàn bộ các file log lỗi cục bộ trên máy bị biến mất vĩnh viễn và không thể điều tra nguyên nhân gốc rễ (Root Cause Analysis). Cần tự động hóa việc thu thập log trước khi instance bị xóa sổ.
+- **Giải pháp chuẩn**:
+  - Thêm một **Lifecycle Hook** vào Auto Scaling Group để chuyển các instance chuẩn bị bị xóa từ trạng thái `Terminating` sang trạng thái **`Terminating:Wait`** (hoãn việc chấm dứt máy).
+  - Cấu hình một **Amazon EventBridge Rule** bắt sự kiện `EC2 Instance-terminate Lifecycle Action` để kích hoạt một hàm **AWS Lambda**.
+  - Hàm Lambda ra lệnh cho CloudWatch Agent trên instance đẩy toàn bộ file log cục bộ lên **CloudWatch Logs**.
+  - Sau khi log được nạp xong, Lambda gọi hàm `CompleteLifecycleAction` để cho phép ASG tiếp tục tiến trình terminate instance an toàn.
 
 ---
 
@@ -214,28 +233,42 @@ flowchart TD
 - **Giải pháp ĐÚNG**: Bật tính năng **Sticky Sessions (Session Affinity)** trên Target Group của Application Load Balancer.
   - ALB sử dụng cookie (hoặc mã hóa cookie tùy chỉnh từ ứng dụng) để nhận diện người dùng và đảm bảo toàn bộ các HTTP requests tiếp theo của client đó luôn được chuyển hướng chính xác tới cùng một máy chủ backend ban đầu.
 
-#### 🪤 Bẫy 7: Chèn Tường Lửa Ảo Kiểm Tra Gói Tin Sâu L3/L4 Bằng Gateway Load Balancer (GWLB) — (CM-PT2 Q48)
+#### 🪤 Bẫy 7: Chèn Tường Lửa Ảo Kiểm Tra Gói Tin Sâu L3/L4 Bằng Gateway Load Balancer (GWLB) — (CM-PT2 Q48, TD-Set6 Q28, TD-Set8 Q02)
 - **Tình huống đề thi**: *"Doanh nghiệp yêu cầu chèn cụm thiết bị tường lửa ảo của bên thứ 3 (Firewalls, IDS/IPS) để kiểm tra gói tin sâu cho toàn bộ luồng mạng ra vào VPC mà không làm đứt kết nối hay thay đổi IP header gốc."*
 - **Giải pháp ĐÚNG**: **Gateway Load Balancer (GWLB)**.
   - Hoạt động ở OSI Layer 3 (Network Layer), sử dụng giao thức **GENEVE (port UDP 6081)** để dẫn toàn bộ gói tin nguyên bản qua cụm firewall ảo và tự động kiểm tra sức khỏe, cân bằng tải giữa các firewall instances.
+
+#### 🪤 Bẫy 8: Phân Bổ Tải Đồng Đều Giữa Các AZ: Cross-Zone Load Balancing Trên ALB vs NLB — (TD-Set6 Q28)
+- **Tình huống đề thi**: *"Ứng dụng phát trực tuyến video chạy trên Auto Scaling Group của EC2 trên nhiều AZs. Cần cấu hình bộ cân bằng tải phân phối các yêu cầu đến đồng đều cho tất cả các máy ảo trên mọi AZ."*
+- **Quy tắc phân biệt trạng thái Cross-Zone Load Balancing**:
+  - Với **Application Load Balancer (ALB)**: Tính năng Cross-Zone Load Balancing **luôn luôn được BẬT mặc định ở cấp độ Load Balancer** và hoàn toàn miễn phí (không thể tắt).
+  - Với **Network Load Balancer (NLB)**: Mặc định tính năng này bị **TẮT**. Muốn phân bổ đều traffic tới các target xuyên AZ, người dùng **bắt buộc phải chủ động BẬT Cross-Zone Load Balancing trên NLB Target Group** (AWS có tính phí data transfer cross-AZ).
+- **Giải pháp ĐÚNG**: Đảm bảo **Cross-zone load balancing** được kích hoạt để mỗi node load balancer phân phối đều các request cho các target ở mọi AZ.
+
+#### 🪤 Bẫy 9: Tạo Nhiều Load Balancer Cho Từng Domain HTTPS Thay Vì Dùng SNI — (TD-Set3 Q20)
+- **Tình huống đề thi**: *"Doanh nghiệp sở hữu 10 tên miền độc lập cần chuyển sang HTTPS. Đội ngũ đề xuất khởi tạo 10 Application Load Balancers riêng biệt để gắn từng chứng chỉ SSL của từng domain."*
+- **Phương án bẫy**: Rất tốn kém chi phí (10 ALBs $\approx \$220\text{/tháng}$ tiền phí duy trì cơ sở chưa tính LCU), phức tạp vận hành và lãng phí tài nguyên.
+- **Giải pháp ĐÚNG**: Chỉ cần sử dụng **1 Application Load Balancer duy nhất**. Bật tính năng **Server Name Indication (SNI)** và gắn toàn bộ 10 chứng chỉ SSL vào chung một HTTPS listener (cổng 443).
 
 ---
 
 ### 📊 III. Ma Trận Quyết Định Cân Bằng Tải & Co Giãn Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Định tuyến HTTP/HTTPS, Path-based, microservices** | **Application Load Balancer (ALB)** | Network Load Balancer (chỉ hoạt động ở Layer 4) |
-| **Giao thức TCP/UDP, độ trễ cực thấp, Static IP** | **Network Load Balancer (NLB)** | Application Load Balancer (chỉ hoạt động ở Layer 7) |
-| **Giữ máy chủ lỗi để điều tra root cause** | **Suspend `ReplaceUnhealthy` process** | Để mặc định (instance bị terminate mất log) |
-| **Cân bằng tải toàn cầu giữa nhiều AWS Regions** | **Route 53 DNS / Global Accelerator** | Dùng ELB (ELB chỉ hoạt động trong 1 Region) |
-| **Co giãn tự động bám sát mức CPU trung bình** | **Target Tracking Scaling Policy** | Simple Scaling (phải tính toán thủ công alarm) |
-| **Đáp ứng tăng tải đột biến theo từng nấc** | **Step Scaling Policy** | Scheduled Scaling (không dự đoán được thời điểm) |
-| **Chuẩn bị hạ tầng trước đợt sale Black Friday** | **Scheduled Scaling Actions** | Dynamic Scaling (bị trễ khi lưu lượng ùa vào đột ngột) |
-| **Dung lượng dự phòng chịu sập 1 AZ rẻ nhất** | **Triển khai 3 AZs (mỗi AZ gánh N/2 instances)** | Triển khai 2 AZs (tốn thêm 25% chi phí máy) |
-| **Cung cấp Static IP cố định & cân bằng tải Hybrid** | **Network Load Balancer (NLB)** | Application Load Balancer (IP động, không cố định) |
-| **Duy trì phiên đăng nhập/giỏ hàng ứng dụng web** | **ALB Sticky Sessions (Session Affinity)** | Tắt sticky session (user bị mất giỏ hàng khi đổi server) |
-| **Kiểm tra an ninh gói tin sâu bằng Firewall ảo bên thứ 3** | **Gateway Load Balancer (GWLB, UDP 6081)** | ALB / NLB (không giữ nguyên IP packet thô) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
+|:---|:---|:---|:---:|
+| **Phục vụ nhiều domain SSL độc lập chi phí thấp nhất** | **ALB với Server Name Indication (SNI)** | Tạo nhiều ALB riêng biệt (tốn kém chi phí) | TD-Set3 Q20 |
+| **Thu thập log trước khi instance lỗi bị terminate** | **ASG Lifecycle Hook (`Terminating:Wait`)** | Không cấu hình hook (instance bị terminate mất log) | TD-Set5 Q45 |
+| **Phân phối request đồng đều cho targets ở mọi AZ** | **Cross-Zone Load Balancing** | Disabled Cross-zone (gây lệch tải giữa các AZ) | TD-Set6 Q28 |
+| **Tải công việc tăng giảm định kỳ theo giờ mỗi ngày** | **ASG Scheduled Scaling Actions** | Dynamic Scaling (bị trễ khi lưu lượng ùa vào) | TD-Set1 Q04 |
+| **Định tuyến HTTP/HTTPS, Path-based, microservices** | **Application Load Balancer (ALB)** | Network Load Balancer (chỉ hoạt động ở Layer 4) | TD-Set1 Q16 |
+| **Giao thức TCP/UDP, độ trễ cực thấp, Static IP** | **Network Load Balancer (NLB)** | Application Load Balancer (chỉ hoạt động ở Layer 7) | TD-Set2 Q51 |
+| **Giữ máy chủ lỗi để điều tra root cause trực tiếp** | **Suspend `ReplaceUnhealthy` process** | Để mặc định (instance bị terminate mất dữ liệu RAM) | U-PT1 Q22 |
+| **Cân bằng tải toàn cầu giữa nhiều AWS Regions** | **Route 53 DNS / Global Accelerator** | Dùng ELB (ELB chỉ hoạt động trong 1 Region) | U-PT6 Q48 |
+| **Co giãn tự động bám sát mức CPU trung bình** | **Target Tracking Scaling Policy** | Simple Scaling (phải tính toán thủ công alarm) | TD-Set1 Q38 |
+| **Dung lượng dự phòng chịu sập 1 AZ rẻ nhất** | **Triển khai 3 AZs (mỗi AZ gánh N/2 instances)** | Triển khai 2 AZs (tốn thêm 25% chi phí máy) | U-PT2 Q19 |
+| **Cung cấp Static IP cố định & cân bằng tải Hybrid** | **Network Load Balancer (NLB)** | Application Load Balancer (IP động, không cố định) | CM-PT2 Q61 |
+| **Duy trì phiên đăng nhập/giỏ hàng ứng dụng web** | **ALB Sticky Sessions (Session Affinity)** | Tắt sticky session (user bị mất giỏ hàng khi đổi server) | CM-PT6 Q40 |
+| **Kiểm tra an ninh gói tin sâu bằng Firewall ảo bên thứ 3** | **Gateway Load Balancer (GWLB, UDP 6081)** | ALB / NLB (không giữ nguyên IP packet thô) | TD-Set6 Q28, TD-Set8 Q02 |
 
 ---
 

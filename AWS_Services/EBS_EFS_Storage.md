@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon EBS, Amazon EFS & EC2 Instance Store (Lưu Trữ Khối & Tệp Tin Đám Mây)
+# Tài Liệu Học Tập Chuyên Sâu: Amazon EBS, Amazon EFS & EC2 Instance Store (Lưu Trữ Khối & Tệp Tin Đám Mây)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -221,58 +221,59 @@ sequenceDiagram
 
 ### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
 
-#### 🪤 Bẫy 1: Hệ Thống Tệp Tin Chia Sẻ Cho Cụm ASG: EFS vs EBS — (U-PT2 Q21)
-- **Tình huống đề thi**: *"Ứng dụng chia sẻ video chạy trên một cụm máy chủ EC2 được quản lý bởi Auto Scaling Group. Người dùng tải video lên một máy chủ bất kỳ, nhưng video đó phải được hiển thị ngay lập tức cho toàn bộ các máy chủ khác trong cụm."*
+#### 🪤 Bẫy 1: Hệ Thống Tệp Tin Chia Sẻ Cho Cụm ASG: EFS vs EBS — (TD-Set1 Q07, U-PT2 Q21)
+- **Tình huống đề thi**: *"Ứng dụng chia sẻ video/CMS chạy trên một cụm máy chủ EC2 được quản lý bởi Auto Scaling Group. Hiện tại ứng dụng đang lưu tệp tin người dùng tải lên trong một ổ đĩa Amazon EBS gắn vào máy chủ. Khi máy chủ mới được khởi chạy bởi ASG, nó không thấy được các tệp tin này. Cần thay đổi kiến trúc lưu trữ như thế nào?"*
 - **Nguyên lý bất biến**:
-  - **Amazon EBS**: Ổ cứng gắn trực tiếp vào **1 máy chủ duy nhất** trong **1 Availability Zone duy nhất** (trừ io1/io2 Multi-Attach trong cùng AZ). Khi ASG sinh thêm máy chủ ở các AZ khác nhau, mỗi máy chủ mang ổ đĩa riêng -> Dữ liệu tải lên máy A hoàn toàn vô hình đối với máy B!
-  - **Amazon EFS**: Hệ thống tệp tin mạng chuẩn **POSIX NFSv4**, hỗ trợ mount đồng thời trên hàng trăm máy chủ EC2 trải dài trên nhiều AZs trong cùng Region -> **Tất cả các máy chủ đều nhìn thấy chung một thư mục chia sẻ**.
+  - **Amazon EBS**: Ổ cứng gắn trực tiếp vào **1 máy chủ duy nhất** trong **1 Availability Zone duy nhất** (trừ io1/io2 Multi-Attach trong cùng AZ). Khi ASG sinh thêm máy chủ ở các AZ khác nhau, mỗi máy chủ mang ổ đĩa riêng -> Dữ liệu tải lên máy A hoàn toàn vô hình đối với máy B (`TD-Set1 Q07`)!
+  - **Amazon EFS**: Hệ thống tệp tin mạng chuẩn **POSIX NFSv4**, hỗ trợ mount đồng thời trên hàng trăm máy chủ EC2 trải dài trên nhiều AZs trong cùng Region -> **Tất cả các máy chủ đều nhìn thấy chung một thư mục chia sẻ** (`TD-Set1 Q07`).
 
-#### 🪤 Bẫy 2: Tiết Kiệm Tới 91% Chi Phí Cho EFS Bằng EFS Standard-IA — (U-PT2 Q38)
-- **Tình huống đề thi**: *"Doanh nghiệp sử dụng Amazon EFS để lưu trữ tệp tin chia sẻ giữa các máy chủ. Qua phân tích, hơn 85% tệp tin sau 30 ngày hầu như không còn được truy cập nữa. Cần tối ưu chi phí lưu trữ mà ứng dụng không phải thay đổi đường dẫn tệp."*
-- **Giải pháp ĐÚNG**: Kích hoạt **EFS Lifecycle Management** chuyển đổi sang lớp lưu trữ **EFS Standard-IA (Infrequent Access)** sau 30 ngày không truy cập.
-  - Chi phí lưu trữ giảm từ $0.30/GB xuống chỉ còn **$0.025/GiB/tháng** (tiết kiệm ~91%).
+#### 🪤 Bẫy 2: Tiết Kiệm Tới 92% Chi Phí Cho EFS Bằng EFS Lifecycle Management — (TD-Set4 Q39, U-PT2 Q38)
+- **Tình huống đề thi**: *"Doanh nghiệp sử dụng Amazon EFS để lưu trữ tệp tin chia sẻ giữa các máy chủ. Hơn 80% tệp tin sau 30 ngày hầu như không còn được truy cập nữa. Cần tối ưu chi phí lưu trữ với nỗ lực vận hành thấp nhất mà không làm thay đổi cấu trúc thư mục hay đường dẫn tệp của ứng dụng."*
+- **Giải pháp ĐÚNG**: Kích hoạt **EFS Lifecycle Management** (`TD-Set4 Q39`).
+  - Cấu hình chính sách tự động chuyển tệp tin sang tầng **EFS Infrequent Access (EFS IA)** hoặc **EFS Archive** sau chu kỳ không truy cập (ví dụ: 30 ngày) (`TD-Set4 Q39`).
+  - Chi phí lưu trữ giảm từ $0.30/GB xuống chỉ còn **$0.025/GiB/tháng** (tiết kiệm ~92%).
   - Đường dẫn tệp tin trên hệ điều hành Linux vẫn giữ nguyên, trong suốt hoàn toàn với ứng dụng.
 
-#### 🪤 Bẫy 3: Đặc Tính Vòng Đời Của EC2 Ephemeral Instance Store — (U-PT6 Q50)
+#### 🪤 Bẫy 3: Đặc Tính Vòng Đời Của EC2 Ephemeral Instance Store — (TD-Set6 Q57, U-PT6 Q50)
 - **Bẫy bất biến**:
-  - Instance Store là ổ cứng NVMe vật lý gắn trực tiếp vào bo mạch chủ của máy chủ EC2.
+  - Instance Store là ổ cứng NVMe vật lý gắn trực tiếp vào bo mạch chủ của máy chủ EC2 (`TD-Set6 Q57`).
   - **KHÔNG THỂ gỡ ra (Detach)** khỏi instance này để gắn vào instance khác.
   - Dữ liệu bị **xóa sạch hoàn toàn** khi instance bị **STOP** hoặc **TERMINATE** hoặc gặp sự cố phần cứng máy chủ vật lý.
   - Dữ liệu trong Instance Store **KHÔNG được lưu vào AMI**.
-  - *Chỉ dùng cho*: Cache, swap, buffer, và dữ liệu tạm thời cần IOPS cực cao.
+  - *Chỉ dùng cho*: Cache, swap, buffer, và dữ liệu tạm thời cần IOPS cực cao và độ trễ cực thấp (`TD-Set6 Q57`).
 
-#### 🪤 Bẫy 4: Quy Trình 4 Bước Bắt Buộc Để Mã Hóa EBS Volume Đang Tồn Tại — (U-PT2 Q16)
-- **Quy tắc**: AWS **KHÔNG cho phép bật mã hóa trực tiếp (in-place)** trên một EBS volume đang unencrypted.
+#### 🪤 Bẫy 4: Quy Trình 4 Bước Bắt Buộc Để Mã Hóa EBS Volume Đang Tồn Tại — (TD-Set6 Q04, U-PT2 Q16)
+- **Quy tắc**: AWS **KHÔNG cho phép bật mã hóa trực tiếp (in-place)** trên một EBS volume đang unencrypted (`TD-Set6 Q04`).
 - **Quy trình 4 bước chuẩn xác**:
   1. Chụp **Snapshot** từ volume chưa mã hóa hiện tại.
-  2. **Copy Snapshot** đó và tích hợp bật cờ mã hóa kèm chọn **KMS Key**.
+  2. **Copy Snapshot** đó và tích hợp bật cờ mã hóa kèm chọn **KMS Key** (`TD-Set6 Q04`).
   3. Tạo **EBS Volume MỚI** từ Encrypted Snapshot vừa copy.
   4. Stop máy chủ EC2 -> Detach volume cũ -> Attach volume mới mã hóa -> Start lại máy chủ.
 
-#### 🪤 Bẫy 5: Điều Kiện Khắt Khe Của Tính Năng EBS Multi-Attach — (U-PT6 Q45)
-- **Bẫy thi**: Đề thi hỏi về việc gắn một EBS volume vào nhiều máy chủ EC2 cùng một lúc.
-- **Ràng buộc kỹ thuật**:
-  - Chỉ hỗ trợ trên các dòng ổ đĩa cao cấp: **`io1`** hoặc **`io2`**.
-  - Các máy chủ EC2 và ổ đĩa EBS **bắt buộc phải nằm trong CÙNG MỘT Availability Zone** (không hỗ trợ Cross-AZ Multi-Attach).
-  - Hệ điều hành trên các máy chủ bắt buộc phải sử dụng **Cluster-Aware File System** (ví dụ: GFS2, OCFS2) để điều phối ghi đĩa, tránh xung đột hỏng dữ liệu.
+#### 🪤 Bẫy 5: Điều Kiện Khắt Khe Của Tính Năng EBS Multi-Attach — (TD-Set1 Q10, U-PT6 Q45)
+- **Tình huống đề thi**: *"Ứng dụng giao dịch tài chính chạy trên Windows/Linux cần gắn một ổ cứng lưu trữ khối block storage dùng chung có độ trễ cực thấp cho nhiều máy ảo EC2 cùng một lúc."*
+- **Ràng buộc kỹ thuật sống còn**:
+  - Chỉ hỗ trợ trên các dòng ổ đĩa cao cấp: **`io1`** hoặc **`io2`** (`TD-Set1 Q10`).
+  - Các máy chủ EC2 và ổ đĩa EBS **bắt buộc phải nằm trong CÙNG MỘT Availability Zone** (hoàn toàn KHÔNG hỗ trợ Cross-AZ Multi-Attach) (`TD-Set1 Q10`).
+  - Hệ điều hành trên các máy chủ bắt buộc phải sử dụng **Cluster-Aware File System** (ví dụ: GFS2, OCFS2, Windows Server Failover Cluster) để điều phối ghi đĩa, tránh xung đột hỏng dữ liệu.
 
-#### 🪤 Bẫy 6: Nhiều EC2 Đọc Chung Dữ Liệu Tức Thời Không Đổi Code Ứng Dụng — (CM-PT2 Q01)
+#### 🪤 Bẫy 6: Nhiều EC2 Đọc Chung Dữ Liệu Tức Thời Không Đổi Code Ứng Dụng — (TD-Set1 Q07, CM-PT2 Q01)
 - **Tình huống đề thi**: *"Ứng dụng thương mại điện tử chạy trên nhiều EC2 instance trong Auto Scaling Group. Ứng dụng cần phục vụ tài liệu hướng dẫn sản phẩm (product manuals) được cập nhật liên tục bởi nhóm quản trị nội dung. Dữ liệu phải luôn nhất quán, truy cập tức thời trên mọi instance mà không được sửa đổi mã nguồn ứng dụng."*
 - **Các phương án bẫy**:
   - ❌ *Lưu manuals trên Amazon S3*: Đòi hỏi ứng dụng phải viết lại mã nguồn để gọi AWS SDK API (`GetObject`), vi phạm yêu cầu "no code changes".
   - ❌ *Dùng Amazon EBS gắn vào máy chủ*: EBS chỉ nằm trong 1 AZ duy nhất, không thể mount đồng thời xuyên đa AZ cho cụm ASG.
   - ❌ *Viết script định kỳ copy dữ liệu từ 1 máy chủ sang các máy khác*: Dữ liệu bị trễ (inconsistent), tốn công vận hành script.
-- **Giải pháp ĐÚNG**: Lưu trữ toàn bộ manuals trong một **Amazon EFS volume**.
+- **Giải pháp ĐÚNG**: Lưu trữ toàn bộ manuals trong một **Amazon EFS volume** (`TD-Set1 Q07`).
   - EFS cung cấp giao diện hệ thống tệp chuẩn POSIX (NFSv4), mount trực tiếp vào hệ điều hành Linux của mọi instance trong ASG như một thư mục nội bộ.
   - Khi file được cập nhật, tất cả instance đều nhìn thấy nội dung mới ngay lập tức mà không cần sửa 1 dòng code ứng dụng nào.
 
-#### 🪤 Bẫy 7: Xử Lý Log Tuần Tự Thông Lượng 500 MB/s Chi Phí Tối Ưu — (CM-PT2 Q51)
+#### 🪤 Bẫy 7: Xử Lý Log Tuần Tự Thông Lượng Lớn Chi Phí Tối Ưu: st1 vs sc1 — (TD-Set2 Q40, CM-PT2 Q51)
 - **Tình huống đề thi**: *"Khối lượng công việc phân tích dữ liệu lớn và xử lý log yêu cầu đọc/ghi dữ liệu tuần tự với kích thước tệp lớn. Hệ thống yêu cầu băng thông xử lý lên tới 500 MB/s. Lựa chọn loại ổ đĩa EBS nào tối ưu chi phí nhất?"*
 - **Các phương án bẫy**:
-  - ❌ *Chọn Cold HDD (`sc1`)*: Băng thông tối đa của `sc1` chỉ đạt **250 MB/s**, không đáp ứng được yêu cầu 500 MB/s của đề bài.
+  - ❌ *Chọn Cold HDD (`sc1`)*: Băng thông tối đa của `sc1` chỉ đạt **250 MB/s**, không đáp ứng được yêu cầu 500 MB/s của đề bài (`TD-Set2 Q40`).
   - ❌ *Chọn General Purpose SSD (`gp3`)* hoặc *io2*: Chi phí tính theo GB đắt hơn rất nhiều so với HDD và lãng phí tính năng ngẫu nhiên IOPS thấp không cần thiết cho luồng tuần tự.
-- **Giải pháp ĐÚNG**: **Throughput Optimized HDD (`st1`)**.
-  - `st1` cung cấp băng thông tối đa lên tới **500 MB/s** và 500 IOPS, được thiết kế chuyên biệt cho luồng I/O tuần tự khối lớn (Big Data, MapReduce, Kafka, Log Processing) với đơn giá chỉ bằng 1/2 so với SSD.
+- **Giải pháp ĐÚNG**: **Throughput Optimized HDD (`st1`)** (`TD-Set2 Q40`).
+  - `st1` cung cấp băng thông tối đa lên tới **500 MB/s** và 500 IOPS, được thiết kế chuyên biệt cho luồng I/O tuần tự khối lớn (Big Data, MapReduce, Kafka, Log Processing) với đơn giá chỉ bằng 1/2 so với SSD (`TD-Set2 Q40`).
 
 #### 🪤 Bẫy 8: Khóa Snapshot Ngăn Chặn Xóa Vô Tình Hay Ác Ý Bằng EBS Snapshot Lock — (CM-PT6 Q20)
 - **Tình huống đề thi**: *"Doanh nghiệp chụp snapshot hàng ngày cho các ổ đĩa EBS để đáp ứng quy định tuân thủ bảo lưu dữ liệu. Cần ngăn chặn việc xóa bản chụp do vô tình hoặc do bị chiếm đoạt tài khoản quản trị (Ransomware)."*
@@ -281,32 +282,36 @@ sequenceDiagram
     - **Governance Mode**: Cho phép người dùng có quyền IAM đặc biệt mở khóa khi cần.
     - **Compliance Mode**: **Không ai (kể cả tài khoản Root của AWS) có thể xóa snapshot** hoặc giảm thời gian khóa trước khi hết hạn. Cung cấp khoảng thời gian dùng thử (cooling-off period) trước khi khóa vĩnh viễn.
 
-#### 🪤 Bẫy 9: Tách Biệt Cấu Hình IOPS Độc Lập Khỏi Dung Lượng Bằng EBS gp3 — (CM-PT6 Q46)
+#### 🪤 Bẫy 9: Tách Biệt Cấu Hình IOPS Độc Lập Khỏi Dung Lượng Bằng EBS gp3 — (TD-Set5 Q04, CM-PT6 Q46)
 - **Tình huống đề thi**: *"Migrate cơ sở dữ liệu lên EC2 yêu cầu tốc độ 12,000 IOPS nhưng dung lượng lưu trữ chỉ cần 200 GB. Cần chọn cấu hình ổ đĩa EBS tiết kiệm chi phí nhất."*
 - **Bẫy tính toán giữa gp2 và gp3**:
   - Trên `gp2`, tỷ lệ cố định là 3 IOPS/GB $\rightarrow$ Muốn có 12,000 IOPS, bạn **bắt buộc phải mua ổ đĩa 4,000 GB (4 TB)**! Dù chỉ dùng 200 GB, bạn vẫn phải trả tiền cho 4,000 GB đĩa SSD!
-  - Trên `gp3`, baseline có sẵn 3,000 IOPS và 125 MB/s miễn phí. Bạn chỉ cần mua ổ đĩa **200 GB** và mua thêm **9,000 Provisioned IOPS** độc lập. Tổng chi phí rẻ hơn gp2 tới 70%!
+  - Trên `gp3`, baseline có sẵn 3,000 IOPS và 125 MB/s miễn phí. Bạn chỉ cần mua ổ đĩa **200 GB** và mua thêm **9,000 Provisioned IOPS** độc lập (`TD-Set5 Q04`). Tổng chi phí rẻ hơn gp2 tới 70%!
+
+#### 🪤 Bẫy 10: Tối Ưu Chi Phí Khi Thừa IOPS: Hạ Cấp Từ io2 Xuống gp3 — (TD-Set8 Q03)
+- **Tình huống đề thi**: *"Một công ty sử dụng nhiều ổ đĩa EBS loại Provisioned IOPS SSD (`io2 Block Express`) gắn vào các máy chủ EC2 trong môi trường Production. Qua kiểm tra báo cáo chi phí AWS Cost and Usage Report (CUR), kiến trúc sư nhận thấy ứng dụng chỉ sử dụng dưới 10,000 IOPS và băng thông dưới 300 MB/s. Cần làm gì để cắt giảm chi phí mà không gây downtime?"*
+- **Giải pháp ĐÚNG**: Sử dụng tính năng **EBS Elastic Volumes** để chuyển đổi loại ổ đĩa từ **`io2` sang `gp3`** trực tiếp trong thời gian chạy (in-flight modification) (`TD-Set8 Q03`).
+  - Ổ đĩa `gp3` đáp ứng tối đa tới 16,000 IOPS và 1,000 MB/s thông lượng với chi phí rẻ hơn tới 75-80% so với `io2 Block Express`. Quá trình chuyển đổi diễn ra hoàn toàn không cần tháo đĩa hay tắt máy chủ (`TD-Set8 Q03`).
 
 ---
 
 ### 📊 III. Ma Trận Quyết Định Lưu Trữ Khối & Tệp Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Hệ thống tệp tin chia sẻ nhiều máy chủ Linux** | **Amazon EFS** | Amazon EBS (chỉ gắn 1 máy chủ/1 AZ) |
-| **Hệ thống tệp tin Windows SMB, tích hợp AD** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ giao thức Linux NFS) |
-| **Tính toán HPC, Machine Learning, kết nối S3** | **Amazon FSx for Lustre** | Amazon EFS (băng thông thấp hơn Lustre) |
-| **Ổ đĩa hệ điều hành EC2 đa dụng rẻ nhất** | **Amazon EBS `gp3`** | `gp2` (đắt hơn 20%, bị trói buộc IOPS theo GB) |
-| **Cơ sở dữ liệu Oracle/SAP cần > 100,000 IOPS** | **Amazon EBS `io2 Block Express`** | `gp3` (giới hạn tối đa 16,000 IOPS) |
-| **Xử lý dữ liệu lớn tuần tự (Hadoop, Kafka, Logs)** | **Amazon EBS `st1` (Throughput Optimized)** | `sc1` (băng thông thấp hơn) |
-| **Tự động chụp và dọn dẹp snapshot định kỳ** | **Amazon Data Lifecycle Manager (DLM)** | Viết Lambda cron script thủ công |
-| **Bộ nhớ tạm IOPS hàng triệu, mất khi tắt máy** | **EC2 Instance Store** | Amazon EBS (độ trễ cao hơn Instance Store) |
-| **Gắn 1 ổ đĩa EBS vào nhiều EC2 cùng lúc** | **EBS Multi-Attach (`io1`/`io2`, cùng 1 AZ)** | `gp3` (không hỗ trợ Multi-Attach) |
-| **Nhiều EC2 chia sẻ tài liệu đọc tức thời không sửa code** | **Amazon EFS (POSIX NFS)** | S3 (phải sửa code SDK), EBS (chỉ 1 AZ) |
-| **Xử lý dữ liệu tuần tự lớn băng thông tới 500 MB/s** | **Amazon EBS `st1` (Throughput Optimized)** | `sc1` (bị giới hạn 250 MB/s), `gp3` (đắt hơn) |
-| **Khóa chống xóa snapshot đáp ứng compliance kể cả Root** | **Amazon EBS Snapshot Lock (Compliance Mode)** | IAM Policy Deny (Root vẫn có thể can thiệp) |
-| **Cần IOPS cao nhưng dung lượng đĩa nhỏ (tối ưu chi phí)** | **Amazon EBS `gp3` (Provisioned IOPS độc lập)** | `gp2` (bị ép mua đĩa dung lượng khổng lồ) |
-| **Hệ thống tệp Windows SMB có Active Directory** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ giao thức Linux NFS) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Tham chiếu đề thi |
+|:---|:---|:---|:---|
+| **Cụm EC2 ASG cần chia sẻ tệp tin tải lên xuyên nhiều AZ** | **Amazon EFS (POSIX NFSv4)** | Amazon EBS (EBS bị khóa trong 1 AZ duy nhất) | `TD-Set1 Q07` |
+| **Gắn 1 ổ đĩa block storage vào nhiều EC2 cùng lúc** | **EBS Multi-Attach (`io1`/`io2`, cùng 1 AZ)** | `gp3` (không hỗ trợ Multi-Attach) | `TD-Set1 Q10` |
+| **Tự động chuyển tệp EFS ít truy cập sang lớp lưu trữ rẻ** | **EFS Lifecycle Management $\rightarrow$ EFS IA / Archive** | Di chuyển thủ công qua S3 (phải sửa mã nguồn ứng dụng) | `TD-Set4 Q39` |
+| **Mã hóa ổ đĩa EBS đang tồn tại chưa được mã hóa** | **Snapshot $\rightarrow$ Copy Snapshot với KMS $\rightarrow$ Restore New Volume** | Bật mã hóa trực tiếp (AWS cấm bật mã hóa in-place) | `TD-Set6 Q04` |
+| **Xử lý Big Data / Logs tuần tự cần băng thông 500 MB/s rẻ nhất** | **Amazon EBS `st1` (Throughput Optimized HDD)** | `sc1` (bị giới hạn 250 MB/s), `gp3` (đắt hơn HDD) | `TD-Set2 Q40` |
+| **Workload thừa IOPS trên io2 cần cắt giảm chi phí không downtime** | **EBS Elastic Volumes chuyển từ `io2` sang `gp3`** | Tạo đĩa mới rồi tắt máy copy file (gây downtime lâu) | `TD-Set8 Q03` |
+| **Cần IOPS cao (12,000 IOPS) nhưng dung lượng nhỏ (200 GB)** | **Amazon EBS `gp3` (cấu hình IOPS độc lập với size)** | `gp2` (bắt buộc phải mua 4TB đĩa để đạt 12,000 IOPS) | `TD-Set5 Q04` |
+| **Bộ nhớ tạm IOPS hàng triệu, độ trễ microsecond, mất khi tắt máy** | **EC2 Instance Store (NVMe SSD cục bộ)** | Amazon EBS (truy cập qua mạng Nitro, độ trễ millisecond) | `TD-Set6 Q57` |
+| **Hệ thống tệp Windows SMB, tích hợp Active Directory** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ giao thức Linux NFS) | Chuẩn AWS |
+| **Tính toán HPC, Machine Learning, kết nối trực tiếp S3** | **Amazon FSx for Lustre** | Amazon EFS (thông lượng song song thấp hơn Lustre) | `TD-Set6 Q42` |
+| **Cơ sở dữ liệu Oracle/SAP cực lớn cần > 100,000 IOPS** | **Amazon EBS `io2 Block Express` (lên tới 256,000 IOPS)** | `gp3` (giới hạn tối đa 16,000 IOPS) | `TD-Set8 Q03` |
+| **Tự động chụp và dọn dẹp snapshot EBS định kỳ theo lịch** | **Amazon Data Lifecycle Manager (DLM)** | Viết Lambda cron script thủ công (tốn công duy trì) | Chuẩn AWS |
+| **Khóa chống xóa snapshot đáp ứng tuân thủ pháp lý kể cả Root** | **Amazon EBS Snapshot Lock (Compliance Mode)** | IAM Policy Deny (Root vẫn có thể xóa hoặc sửa) | `CM-PT6 Q20` |
 
 ---
 

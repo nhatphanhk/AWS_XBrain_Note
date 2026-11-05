@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon S3 & Amazon CloudFront (Lưu Trữ Đối Tượng, Bảo Mật & Mạng Phân Phối Nội Dung Toàn Cầu)
+# Tài Liệu Học Tập Chuyên Sâu: Amazon S3 & Amazon CloudFront (Lưu Trữ Đối Tượng, Bảo Mật & Mạng Phân Phối Nội Dung Toàn Cầu)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -90,9 +90,24 @@ flowchart TD
 * **MFA Delete**: Bắt buộc phải cung cấp mã OTP từ thiết bị phần cứng MFA của tài khoản **AWS Root Account** khi muốn **Xóa vĩnh viễn một Version** hoặc **Tắt tính năng Versioning**. Chống lại hành vi phá hoại dữ liệu từ tin tặc chiếm quyền admin.
 
 #### C. S3 Object Lock (Mô hình WORM - Write Once, Read Many)
-* **Compliance Mode (Chế độ tuân thủ pháp lý tuyệt đối)**: Không một ai (kể cả tài khoản AWS Root Account hay quản trị viên cao cấp nhất) có thể xóa hay ghi đè đối tượng trong suốt khoảng thời gian Retention đã thiết lập.
+* **Compliance Mode (Chế độ tuân thủ pháp lý tuyệt đối)**: Không một ai (kể cả tài khoản AWS Root Account hay quản trị viên cao cấp nhất) có thể xóa hay ghi đè đối tượng trong suốt khoảng thời gian Retention đã thiết lập (*TD-Set1 Q54, TD-Set2 Q65, TD-Set4 Q19*).
 * **Governance Mode (Chế độ quản trị)**: Người dùng thông thường không thể xóa file, nhưng các tài khoản có quyền IAM đặc biệt (`s3:BypassGovernanceRetention`) có thể gỡ bỏ khóa hoặc xóa đối tượng khi cần thiết.
-* **Legal Hold**: Khóa tệp tin vô thời hạn phục vụ công tác điều tra tư pháp cho đến khi được gỡ bỏ thủ công bằng cờ `OFF`.
+* **Legal Hold**: Khóa tệp tin **vô thời hạn (indefinitely)** phục vụ công tác điều tra tư pháp cho đến khi được gỡ bỏ thủ công bằng cờ `OFF`, hoàn toàn độc lập với Retention Period (*TD-Set1 Q49*).
+
+#### D. S3 Multi-Region Access Points (MRAP) & Global Accelerator
+* **Bản chất**: Cung cấp một Endpoint toàn cầu duy nhất (`arn:aws:s3::account-id:accesspoint/mrap-alias`) để định tuyến lưu lượng truy cập tới nhiều S3 buckets nằm ở các AWS Regions khác nhau (*TD-Set1 Q49*).
+* **Tích hợp AWS Global Accelerator**: Sử dụng mạng trục toàn cầu của AWS để tự động định tuyến các yêu cầu đọc/ghi của client tới S3 bucket gần nhất có độ trễ thấp nhất.
+* **Failover Controls**: Cho phép chuyển đổi dự phòng lưu lượng giữa các Region trong vài phút khi một Region gặp sự cố mà không cần thay đổi cấu hình ứng dụng client.
+
+#### E. S3 Batch Operations & S3 Inventory
+* **S3 Batch Operations**: Cho phép thực thi một hành động duy nhất lên **hàng triệu hoặc hàng tỷ đối tượng** trong S3 một cách tự động (*TD-Set4 Q48*).
+  - Hỗ trợ các hành động: Sao chép đối tượng (Copy), Kích hoạt hàm AWS Lambda, Thay thế thẻ (Replace tags), Thay đổi ACLs, Khôi phục từ Glacier (Restore), Thiết lập S3 Object Lock (Retention & Legal Hold).
+  - Đầu vào công việc: Nhận danh sách đối tượng từ báo cáo **S3 Inventory (file CSV)** hoặc file manifest CSV tùy chỉnh.
+* **S3 Inventory**: Cung cấp báo cáo định kỳ hàng ngày hoặc hàng tuần liệt kê toàn bộ danh sách đối tượng và metadata (kích thước, encryption status, storage class) trong bucket để thay thế cho câu lệnh `ListObjects` API vốn rất chậm và tốn kém khi bucket có hàng chục triệu tệp tin.
+
+#### F. S3 Replication Time Control (RTC)
+* Tính năng mở rộng của S3 Replication (áp dụng cho cả Cross-Region Replication - CRR và Same-Region Replication - SRR).
+* **Cam kết SLA 99.9%**: Đảm bảo nhân bản **99.99% các đối tượng mới tải lên trong vòng 15 phút**, đi kèm hệ thống giám sát thời gian thực CloudWatch Metrics theo dõi độ trễ nhân bản.
 
 ---
 
@@ -134,6 +149,18 @@ flowchart TD
 
 ---
 
+### 6. CloudFront Origin Groups & Tự Động Chuyển Đổi Dự Phòng (Origin Failover)
+
+* **Bản chất**: Cho phép cấu hình tính năng dự phòng sẵn sàng cao (**High Availability**) cho nguồn dữ liệu gốc của CloudFront bằng cách thiết lập một **Origin Group** chứa:
+  - **Primary Origin**: Máy chủ gốc chính (ví dụ: S3 Bucket ở `us-east-1` hoặc ALB chính).
+  - **Secondary Origin**: Máy chủ gốc phụ dự phòng (ví dụ: S3 Bucket ở `us-west-2` hoặc ALB phụ).
+* **Cơ chế Failover tự động** (*TD-Set1 Q60*):
+  - Khi người dùng gửi request, CloudFront luôn thử kết nối tới **Primary Origin** trước.
+  - Nếu Primary Origin trả về một trong các mã lỗi HTTP cấu hình trước: **`500 Internal Server Error`**, **`502 Bad Gateway`**, **`503 Service Unavailable`**, **`504 Gateway Timeout`**, hoặc bị timeout kết nối, CloudFront sẽ **tự động chuyển hướng request sang Secondary Origin** ngay lập tức.
+  - Người dùng cuối nhận được nội dung nguyên vẹn mà không bao giờ nhìn thấy trang báo lỗi sập server.
+
+---
+
 ### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
 
 #### 1. Tải Lên Tệp Lớn Siêu Tốc Xuyên Lục Địa: S3 Transfer Acceleration + Multipart Uploads
@@ -166,6 +193,27 @@ flowchart TD
   - Giữ nguyên S3 bucket ở trạng thái **Private** (Block all public access).
   - Cấu hình **Origin Access Control (OAC)** (chuẩn khuyến nghị mới nhất, thay thế cho OAI cũ) trên CloudFront Distribution.
   - Cập nhật S3 Bucket Policy: Chỉ cấp quyền `s3:GetObject` cho Principal `cloudfront.amazonaws.com` với điều kiện `aws:SourceArn` trỏ chính xác về ARN của CloudFront Distribution.
+
+#### 5. Tự Động Chuyển Đổi Dự Phòng Origin Bằng CloudFront Origin Groups — (TD-Set1 Q60)
+- **Tình huống thi**: Website mạng xã hội phân phối nội dung tĩnh tới hàng triệu người dùng qua Amazon CloudFront. Thời gian gần đây, máy chủ gốc (Primary Origin) thỉnh thoảng gặp sự cố trả về mã lỗi `HTTP 500` hoặc `504 Gateway Timeout`. Cần giải pháp tự động chuyển hướng lưu lượng sang máy chủ gốc dự phòng (Secondary Origin) ngay lập tức mà không làm gián đoạn trải nghiệm người dùng.
+- **Giải pháp chuẩn**:
+  - Tạo một **Origin Group** trong CloudFront Distribution gồm: Primary Origin (chính) và Secondary Origin (dự phòng).
+  - Cấu hình tiêu chí chuyển đổi dự phòng (**Criteria for failover**): Chọn các mã lỗi HTTP 500, 502, 503, 504.
+  - Khi Primary Origin phản hồi mã lỗi trên, CloudFront tự động định tuyến lại truy vấn sang Secondary Origin trong tích tắc mà người dùng không nhìn thấy lỗi.
+
+#### 6. Xử Lý Quy Mô Hàng Tỷ Đối Tượng Bằng S3 Batch Operations — (TD-Set4 Q48)
+- **Tình huống thi**: Doanh nghiệp cần cập nhật cấu hình bảo mật hoặc gắn thẻ (Tagging) cho hơn 500 triệu đối tượng hiện có trong S3 bucket. Việc viết script duyệt qua từng object bằng API `ListObjects` và gọi lệnh update tuần tự mất nhiều tuần lễ và hay bị gián đoạn mạng.
+- **Giải pháp chuẩn**:
+  - Sử dụng báo cáo **S3 Inventory** để xuất ra danh sách tệp CSV chứa toàn bộ objects trong bucket.
+  - Tạo một tác vụ **S3 Batch Operations** nạp file manifest CSV này làm đầu vào.
+  - S3 Batch Operations tự động điều phối hàng ngàn luồng xử lý song song trên hạ tầng AWS để thực hiện hành động gắn thẻ hoặc thay đổi Object Lock cho 500 triệu đối tượng chỉ trong vài giờ với báo cáo kiểm toán chi tiết.
+
+#### 7. Bảo Vệ Thùng Chứa Khỏi Hành Vi Phá Hoại Bằng S3 Versioning & MFA Delete — (TD-Set1 Q56)
+- **Tình huống thi**: Nhóm kỹ sư DevOps quản trị cơ sở hạ tầng đám mây. Ban an ninh thông tin yêu cầu thiết lập cơ chế bảo vệ tối cao: ngay cả khi tài khoản quản trị viên bị lộ Access Keys thì kẻ tấn công cũng **hoàn toàn không thể xóa vĩnh viễn các phiên bản tệp tin** hoặc tắt tính năng phiên bản trên S3.
+- **Giải pháp chuẩn**:
+  - Bật tính năng **S3 Versioning** trên bucket.
+  - Kích hoạt tính năng **MFA Delete** thông qua AWS CLI/API sử dụng thông tin định danh của tài khoản **AWS Root Account**.
+  - Khi MFA Delete được bật, bất kỳ thao tác xóa vĩnh viễn một object version hoặc thao tác đổi trạng thái Versioning đều bắt buộc phải cung cấp mã OTP từ thiết bị phần cứng MFA của tài khoản Root.
 
 ---
 
@@ -244,22 +292,46 @@ flowchart TD
   - Ví dụ: Thay vì lưu toàn bộ tệp vào `bucket/data/file1`, `bucket/data/file2` (chung prefix `bucket/data/`), hãy phân tán sang các prefix ngẫu nhiên: `bucket/data/a1/file1`, `bucket/data/b2/file2`, `bucket/data/c3/file3` (mỗi prefix chịu được 3,500 PUT / 5,500 GET).
   - Với 10 prefixes độc lập, thông lượng hệ thống đạt tới **35,000 PUT/s và 55,000 GET/s**!
 
+#### 🪤 Bẫy 10: Tăng Tốc Ứng Dụng Chơi Game UDP Bằng CloudFront — (TD-Set2 Q02)
+- **Tình huống đề thi**: *"Công ty trò chơi điện tử phát triển game trực tuyến đa nền tảng (PS5, Xbox, Switch). Trò chơi giao tiếp qua các gói tin UDP thời gian thực và yêu cầu bảo toàn địa chỉ Client IP của người chơi để tính toán vị trí và ghép trận (Matchmaking). Đâu là giải pháp tối ưu mạng toàn cầu?"*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Amazon CloudFront*: CloudFront là mạng CDN hoạt động ở Layer 7 (HTTP/HTTPS/WebSocket). Hoàn toàn **KHÔNG HỖ TRỢ giao thức UDP** và không phục vụ được ứng dụng game UDP!
+  - ❌ *Dùng Route 53 Geolocation Routing*: Bản ghi DNS bị cache bởi ISP, không thể chuyển đổi tức thì khi có sự cố và không tối ưu hóa đường truyền mạng trục.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Global Accelerator**.
+  - Hoạt động ở Layer 4, hỗ trợ đầy đủ cả **TCP và UDP**.
+  - Cung cấp 2 Anycast IP tĩnh toàn cầu và định tuyến qua mạng trục cáp quang riêng của AWS.
+  - Hỗ trợ tính năng **Client IP Preservation** giúp backend nhận biết chính xác IP thật của người chơi.
+
+#### 🪤 Bẫy 11: Bảo Vệ Dữ Liệu Bất Biến Vô Thời Hạn Cho Điều Tra: Legal Hold vs Retention Period — (TD-Set1 Q49)
+- **Tình huống đề thi**: *"Cơ quan thuế lưu trữ hồ sơ tài liệu nhạy cảm trên S3. Do đang trong quá trình thanh tra tư pháp, tài liệu phải được bảo vệ chống ghi đè hoặc xóa BẤT BIẾN VÔ THỜI HẠN (indefinitely) cho đến khi có phán quyết của tòa án."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng S3 Object Lock ở Compliance Mode với thời hạn 10 năm*: Mặc dù Compliance Mode ngăn chặn mọi người kể cả root xóa file, nhưng nó vẫn gắn với một khoảng thời gian hữu hạn cụ thể. Hết 10 năm file sẽ bị xóa được, không thỏa mãn tiêu chí "vô thời hạn" (indefinitely).
+  - ❌ *Chỉ bật S3 Versioning*: User có quyền `s3:DeleteObjectVersion` vẫn có thể xóa vĩnh viễn các version cũ.
+- **Giải pháp ĐÚNG**: Kích hoạt **S3 Object Lock** và thiết lập chế độ **Legal Hold**. Legal Hold không có ngày hết hạn; chỉ bị hủy bỏ khi người có quyền hạn chủ động gỡ cờ.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Lớp Lưu Trữ S3 Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Lớp lưu trữ S3 chuẩn | Lớp bị loại & Lý do |
-|:---|:---|:---|
-| **Dữ liệu đọc/ghi thường xuyên, độ trễ millisecond** | **S3 Standard** | Các lớp IA/Glacier (tốn phí per-request) |
-| **Khắc phục lỗi S3 HTTP 503 Slow Down khi tải cao** | **Phân tán Key trên nhiều Custom Prefixes** | Tăng Service Quota (S3 prefix limit là kiến trúc cố định) |
-| **Mẫu truy cập không rõ hoặc biến động liên tục** | **S3 Intelligent-Tiering** | S3 Standard (bỏ lỡ cơ hội tự động giảm giá) |
-| **Dữ liệu ít đọc, cần lấy ngay tức thì (< 1s)** | **S3 Glacier Instant Retrieval** | Glacier Flexible (mất từ vài phút đến vài giờ) |
-| **Dữ liệu sao lưu lâu năm, chấp nhận chờ 3-5 giờ** | **S3 Glacier Flexible Retrieval** | Glacier Deep Archive (chờ 12 giờ) |
-| **Lưu trữ tuân thủ 7-10 năm, rẻ nhất thị trường** | **S3 Glacier Deep Archive** | Glacier Flexible (đắt hơn gấp 3 lần) |
-| **Dữ liệu phụ tái tạo được, tiết kiệm chi phí** | **S3 One Zone-IA** | Standard-IA (One Zone-IA rẻ hơn 20%) |
-| **Chống ghi đè vô thời hạn phục vụ pháp lý** | **S3 Object Lock (Legal Hold)** | Retention Period (có ngày hết hạn) |
-| **Tải file lớn > 100 MB xuyên lục địa nhanh nhất** | **S3 Transfer Acceleration + Multipart** | Direct Connect / VPN (tốn kém và chậm triển khai) |
-| **Bảo vệ nội dung S3 chỉ phát qua CloudFront** | **CloudFront Origin Access Control (OAC)** | CNAME / S3 Public Website Endpoint |
+| Tình huống / Yêu cầu trong đề thi | Lớp lưu trữ / Dịch vụ S3 chuẩn | Lớp bị loại & Lý do | Đề thi thực chứng |
+|:---|:---|:---|:---:|
+| **Dữ liệu đọc/ghi thường xuyên, độ trễ millisecond** | **S3 Standard** | Các lớp IA/Glacier (tốn phí per-request) | CM-PT1 Q55 |
+| **Khắc phục lỗi S3 HTTP 503 Slow Down khi tải cao** | **Phân tán Key trên nhiều Custom Prefixes** | Tăng Service Quota (S3 prefix limit là kiến trúc cố định) | U-PT1 Q15 |
+| **Mẫu truy cập không rõ hoặc biến động liên tục** | **S3 Intelligent-Tiering** | S3 Standard (bỏ lỡ cơ hội tự động giảm giá) | TD-Set1 Q23 |
+| **Dữ liệu ít đọc, cần lấy ngay tức thì (< 1s)** | **S3 Glacier Instant Retrieval** | Glacier Flexible (mất từ vài phút đến vài giờ) | CM-PT1 Q46 |
+| **Dữ liệu sao lưu lâu năm, chấp nhận chờ 3-5 giờ** | **S3 Glacier Flexible Retrieval** | Glacier Deep Archive (chờ 12 giờ) | TD-Set1 Q40 |
+| **Lưu trữ tuân thủ 7-10 năm, rẻ nhất thị trường** | **S3 Glacier Deep Archive** | Glacier Flexible (đắt hơn gấp 3 lần) | TD-Set1 Q37, TD-Set2 Q28 |
+| **Dữ liệu phụ tái tạo được, tiết kiệm chi phí** | **S3 One Zone-IA** | Standard-IA (One Zone-IA rẻ hơn 20%) | CM-PT2 Q01 |
+| **Chống ghi đè vô thời hạn phục vụ pháp lý điều tra** | **S3 Object Lock (Legal Hold)** | Retention Period (có ngày hết hạn) | TD-Set1 Q49 |
+| **Bảo vệ bất biến cố định không ai xóa được kể cả root** | **S3 Object Lock (Compliance Mode)** | Governance Mode (admin có thể bypass xóa) | TD-Set1 Q54, TD-Set4 Q19 |
+| **Ngăn chặn xóa vĩnh viễn version tệp kể cả khi lộ key** | **S3 Versioning + MFA Delete (Root MFA)** | Chỉ bật Versioning (vẫn xóa được version ID) | TD-Set1 Q56 |
+| **Tự động chuyển dự phòng khi Origin lỗi 500/504** | **CloudFront Origin Groups & Origin Failover** | Tự viết script đổi DNS (chậm và gián đoạn) | TD-Set1 Q60 |
+| **Thực hiện thao tác hàng loạt trên hàng trăm triệu file** | **S3 Batch Operations (kèm S3 Inventory)** | Viết script gọi SDK tuần tự (quá chậm, dễ đứt) | TD-Set4 Q48 |
+| **Tăng tốc UDP game online và bảo toàn Client IP** | **AWS Global Accelerator** | Amazon CloudFront (chỉ hỗ trợ HTTP/HTTPS) | TD-Set2 Q02 |
+| **Tải file lớn > 100 MB xuyên lục địa nhanh nhất** | **S3 Transfer Acceleration + Multipart** | Direct Connect / VPN (tốn kém và chậm triển khai) | TD-Set1 Q31 |
+| **Bảo vệ nội dung S3 chỉ phát qua CloudFront** | **CloudFront Origin Access Control (OAC)** | CNAME / S3 Public Website Endpoint | TD-Set2 Q39 |
+| **Hàng triệu user upload ảnh sự kiện không sập web tier** | **Amazon S3 Presigned URLs** | Scale EC2 hàng trăm máy (tốn kém & nghẽn I/O) | CM-PT6 Q33 |
+| **Ngăn chặn chi phí ẩn do upload file lớn đứt quãng** | **S3 Lifecycle (Abort Incomplete Multipart Uploads)** | Quét script thủ công (dễ bỏ sót parts dở dang) | CM-PT5 Q27 |
 | **Bảo vệ bất biến cố định 1 năm không ai xóa được** | **S3 Object Lock (Compliance Mode + Retention Period)** | Governance Mode (admin có thể bypass xóa) |
 | **Hàng triệu user upload ảnh sự kiện không sập web tier** | **Amazon S3 Presigned URLs** | Scale EC2 hàng trăm máy (tốn kém & nghẽn I/O) |
 | **Ngăn chặn chi phí ẩn do upload file lớn đứt quãng** | **S3 Lifecycle (Abort Incomplete Multipart Uploads)** | Quét script thủ công (dễ bỏ sót parts dở dang) |

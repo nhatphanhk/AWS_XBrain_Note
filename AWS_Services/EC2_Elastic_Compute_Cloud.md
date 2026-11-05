@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon EC2 (Elastic Compute Cloud) & Kiến Trúc Máy Chủ Ảo Đám Mây
+# Tài Liệu Học Tập Chuyên Sâu: Amazon EC2 (Elastic Compute Cloud) & Kiến Trúc Máy Chủ Ảo Đám Mây
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -139,8 +139,11 @@ flowchart TD
 
 1. **Cluster Placement Group**:
    - Toàn bộ máy ảo được đặt trên cùng một cụm rack phần cứng vật lý trong **1 Availability Zone**.
-   - *Ưu điểm*: Băng thông cực đại (lên tới 100 Gbps hoặc 200 Gbps), độ trễ cực thấp (< 1ms).
-   - *Nhược điểm*: Rủi ro sập toàn bộ nếu rack gặp sự cố nguồn/mạng. Phù hợp cho High Performance Computing (HPC), Big Data phân tích khoa học.
+   - *Ưu điểm*: Băng thông cực đại (lên tới 100 Gbps hoặc 200 Gbps), độ trễ cực thấp (< 1ms). Phù hợp cho High Performance Computing (HPC), Big Data phân tích khoa học (*TD-Set3 Q14*).
+   - *Nhược điểm*: Rủi ro sập toàn bộ nếu rack gặp sự cố nguồn/mạng.
+   - ⚠️ **KỸ THUẬT XỬ LÝ LỖI KHẢ NĂNG CẤP PHÁT (INSUFFICIENT CAPACITY ERROR)** (*TD-Set6 Q13*):  
+     Khi bạn cố gắng thêm các instance mới vào một Cluster Placement Group đang có các instance chạy sẵn và nhận về lỗi `Insufficient capacity error`, nguyên nhân là do **tủ rack vật lý hiện tại của AWS đã hết chỗ cắm server**.  
+     👉 *Cách xử lý chuẩn xác*: **Dừng (Stop) toàn bộ tất cả các instances** trong Placement Group đó, sau đó **khởi động (Start) lại tất cả cùng lúc**. Khi khởi động lại đồng thời, AWS sẽ tự động tìm kiếm một tủ rack phần cứng mới có đủ chỗ trống cho toàn bộ số lượng máy đã tăng thêm và cấp phát thành công!
 2. **Spread Placement Group**:
    - Mỗi máy ảo được đặt trên một rack phần cứng vật lý hoàn toàn riêng biệt (riêng nguồn điện và switch mạng).
    - *Giới hạn cứng*: **Tối đa 7 máy ảo trên mỗi Availability Zone**.
@@ -165,7 +168,8 @@ flowchart TD
 
 #### C. Chế độ ngủ đông (EC2 Hibernate)
 * Khi **Stop** thông thường: Dữ liệu trên RAM bị xóa sạch; khi Start lại phải boot lại toàn bộ OS và nạp lại ứng dụng vào RAM (tốn từ 1–3 phút).
-* Khi **Hibernate**: Trạng thái bộ nhớ RAM được ghi tức thời vào ổ đĩa **EBS Root Volume**. Khi Start lại, nội dung RAM được nạp ngược lại, ứng dụng tiếp tục xử lý ngay tại trạng thái trước đó chỉ trong vài giây.
+* Khi **Hibernate** (*TD-Set3 Q52*): Trạng thái bộ nhớ RAM được ghi tức thời vào ổ đĩa **EBS Root Volume**. Khi Start lại, nội dung RAM được nạp ngược lại, ứng dụng tiếp tục xử lý ngay tại trạng thái trước đó chỉ trong vài giây.
+  - *Ứng dụng thực tiễn trong đề thi*: Các ứng dụng Windows Server kết nối FSx hoặc cơ sở dữ liệu mất từ 5 đến 10 phút để khởi động lại dịch vụ; doanh nghiệp muốn tắt máy ngoài giờ để tiết kiệm chi phí tính toán nhưng yêu cầu khi bật lại phải sẵn sàng tức thì $\rightarrow$ Bật **EC2 Hibernation**.
 * *Điều kiện kỹ thuật bắt buộc*: Ổ đĩa Root EBS **phải được mã hóa (KMS Encrypted)**; dung lượng trống của EBS Root phải lớn hơn dung lượng RAM; hỗ trợ các dòng máy có dung lượng RAM dưới 150 GiB.
 
 ---
@@ -283,27 +287,52 @@ flowchart TD
   - EFA là một thiết bị mạng tùy biến của AWS dành riêng cho các tác vụ HPC và Deep Learning phân tán.
   - Tính năng cốt lõi: **OS Bypass (Bỏ qua nhân hệ điều hành)** — cho phép ứng dụng MPI và NVIDIA NCCL giao tiếp trực tiếp với phần cứng mạng EFA mà không cần can thiệp của OS kernel, đưa độ trễ liên nút xuống mức microsecond thấp nhất!
 
+#### 🪤 Bẫy 12: Lỗi Insufficient Capacity Khi Thêm Instance Mới Vào Cluster Placement Group — (TD-Set6 Q13)
+- **Tình huống đề thi**: *"Hệ thống quan trắc thời tiết sử dụng cụm máy ảo EC2 trong một Cluster Placement Group. Cụm chạy bình thường trong vài tuần, nhưng khi kiến trúc sư cố gắng bổ sung thêm các máy ảo mới vào Placement Group này, AWS liên tục trả về lỗi `Insufficient capacity error`."*
+- **Nguyên nhân cốt lõi**:
+  - Toàn bộ máy ảo trong Cluster Placement Group phải nằm trên cùng một tủ rack phần cứng mạng vật lý trong 1 AZ.
+  - Khi tủ rack vật lý hiện tại đã hết chỗ cắm server mới, AWS không thể cấp phát thêm máy ảo vào rack này trong khi các máy cũ vẫn đang chạy.
+- **Giải pháp ĐÚNG**:
+  - **Dừng (Stop) toàn bộ các instances** đang chạy trong Placement Group.
+  - Sau đó tiến hành **Khởi động (Start) lại tất cả các máy cùng một lúc** (bao gồm cả các máy mới).
+  - AWS sẽ tìm một tủ rack mới có đủ dung lượng cho toàn bộ cụm máy và khởi chạy thành công.
+
+#### 🪤 Bẫy 13: Mất Dữ Liệu Trên Root Volume Khi Terminate Máy Ảo Instance Store-Backed — (TD-Set4 Q25, TD-Set4 Q27)
+- **Tình huống đề thi**: *"Một máy ảo EC2 cũ chạy ứng dụng legacy sử dụng bản ảnh Instance Store-Backed AMI. Khi quản trị viên thực hiện lệnh Terminate máy ảo này, điều gì sẽ xảy ra với dữ liệu nằm trên root volume?"*
+- **Bản chất kỹ thuật**:
+  - Ổ đĩa **Instance Store** là ổ cứng thể rắn vật lý gắn trực tiếp vào máy chủ host.
+  - Khác với EBS (có thể chọn thuộc tính `DeleteOnTermination = false`), dữ liệu trên ổ đĩa gốc Instance Store **TỰ ĐỘNG BỊ XÓA HOÀN TOÀN (Permanently Deleted)** ngay khi instance bị terminate!
+  - Tuyệt đối không lưu trữ dữ liệu vĩnh viễn trên Instance Store nếu chưa có cơ chế sao lưu hoặc nhân bản sang S3/EBS.
+
+#### 🪤 Bẫy 14: Đặt Trước Dung Lượng Máy Chủ Theo Khung Giờ Đêm Bằng On-Demand Capacity Reservations — (TD-Set6 Q35)
+- **Tình huống đề thi**: *"Ngân hàng đầu tư cần chạy các phép tính tài chính quan trọng từ 22h00 đến 03h00 sáng mỗi đêm tại trung tâm dữ liệu tại chỗ, sau đó đưa lên AWS. Ban giám đốc yêu cầu khi chuyển lên AWS, hệ thống PHẢI ĐẢM BẢO CHẮC CHẮN CÓ ĐỦ DUNG LƯỢNG TÍNH TOÁN trong 1 Availability Zone cụ thể vào khung giờ định kỳ này mà không bao giờ bị trễ hay từ chối."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Spot Instances*: Bị thu hồi bất cứ lúc nào, vi phạm yêu cầu không được gián đoạn.
+  - ❌ *Dùng On-Demand thuần túy*: Vào giờ cao điểm của Region, AWS có thể tạm thời hết tài nguyên instance type đó trong AZ chỉ định.
+- **Giải pháp ĐÚNG**: Sử dụng **On-Demand Capacity Reservations (ODCR)**.
+  - Cho phép đặt chỗ trước dung lượng máy ảo tại một Availability Zone cụ thể theo lịch trình định kỳ (recurring schedule).
+  - Có thể kết hợp với Savings Plans để được hưởng chiết khấu giảm giá.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định EC2 & Tính Toán Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Bản quyền BYOL tính theo Socket/Core vật lý** | **EC2 Dedicated Hosts** | Dedicated Instances (không kiểm soát được socket/core) |
-| **Tính toán HPC mạng siêu nhanh, độ trễ thấp** | **Cluster Placement Group** (+ ENA/EFA) | Spread / Partition Placement Group |
-| **Ứng dụng HPC/MPI cần OS Bypass độ trễ microsecond** | **Elastic Fabric Adapter (EFA)** | Elastic Network Adapter (ENA đi qua kernel stack) |
-| **VPC có Tenancy: Dedicated, máy ảo khai báo Default** | **Máy ảo TỰ ĐỘNG thành Dedicated Instance** | Chạy shared (VPC Tenancy luôn ghi đè Launch Template) |
-| **Ứng dụng cực kỳ quan trọng, chống sập phần cứng** | **Spread Placement Group** (tối đa 7 instances/AZ) | Cluster Placement Group (rủi ro sập chung rack) |
-| **Xử lý Batch chịu lỗi, tối thiểu chi phí 90%** | **EC2 Spot Fleet (Diversified Strategy)** | On-Demand Instances (chi phí quá cao) |
-| **Phục hồi tự động máy chủ đơn khối (Monolith) + EIP** | **ASG (Min=1, Max=1) + EIP re-attach qua User Data** | Dùng ALB (tốn thêm chi phí duy trì hàng tháng) |
-| **Tự động tắt máy chủ Dev ngoài giờ làm việc** | **AWS Instance Scheduler** | Viết script cron thủ công trên EC2 |
-| **Lưu trữ tạm thời tốc độ cực cao, mất khi tắt máy** | **EC2 Instance Store** | Amazon EBS (độ trễ cao hơn Instance Store) |
-| **Cụm EMR chạy Spot tự động chọn AZ có capacity** | **EMR Instance Fleets (đa Subnet/Instance Types)** | Instance Groups (bị khóa vào 1 AZ cố định) |
-| **Tự động phục hồi máy ảo lỗi phần cứng giữ nguyên IP** | **CloudWatch Alarm (StatusCheckFailed_System) + Auto-Recovery** | Tạo mới máy ảo thủ công (mất thời gian & đổi IP) |
-| **Tải công việc tăng giảm định kỳ theo giờ mỗi ngày** | **EC2 Auto Scaling Scheduled Scaling** | Dynamic Target Tracking (bị chậm trễ vài phút ban đầu) |
-| **Ứng dụng cực kỳ quan trọng, chống sập phần cứng** | **Spread Placement Group** (tối đa 7 instances/AZ) | Cluster Placement Group (rủi ro sập chung rack) |
-| **Xử lý Batch chịu lỗi, tối thiểu chi phí 90%** | **EC2 Spot Fleet (Diversified Strategy)** | On-Demand Instances (chi phí quá cao) |
-| **Phục hồi tự động máy chủ đơn khối (Monolith) + EIP** | **ASG (Min=1, Max=1) + EIP re-attach qua User Data** | Dùng ALB (tốn thêm chi phí duy trì hàng tháng) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
+|:---|:---|:---|:---:|
+| **Bản quyền BYOL tính theo Socket/Core vật lý** | **EC2 Dedicated Hosts** | Dedicated Instances (không kiểm soát được socket/core) | U-PT6 Q34 |
+| **Tính toán HPC mạng siêu nhanh, độ trễ thấp** | **Cluster Placement Group** (+ ENA/EFA) | Spread / Partition Placement Group | TD-Set3 Q14 |
+| **Khắc phục lỗi Insufficient Capacity trên Cluster PG** | **Stop toàn bộ máy $\rightarrow$ Start lại cùng lúc** | Cố thử launch lại từng máy lẻ tẻ (vẫn bị lỗi rack cũ) | TD-Set6 Q13 |
+| **Ứng dụng Windows boot chậm, cần tắt máy ngoài giờ** | **Bật EC2 Hibernation** (Root EBS encrypted) | Stop/Start thông thường (mất nhiều phút boot lại RAM) | TD-Set3 Q52 |
+| **Đảm bảo chắc chắn có máy ảo trong AZ theo lịch đêm** | **On-Demand Capacity Reservations (ODCR)** | On-Demand thông thường (nguy cơ thiếu capacity) | TD-Set6 Q35 |
+| **Bộ đệm tạm thời / NoSQL node cần IOPS cực đại** | **EC2 Instance Store (NVMe SSD)** | Amazon EBS (độ trễ cao hơn, tốn thêm phí IOPS) | TD-Set4 Q27 |
+| **Dữ liệu Root volume khi Terminate Instance Store** | **Tự động bị xóa sạch vĩnh viễn** | Lưu giữ lại (Instance store không thể detach) | TD-Set4 Q25 |
+| **Ứng dụng HPC/MPI cần OS Bypass độ trễ microsecond** | **Elastic Fabric Adapter (EFA)** | Elastic Network Adapter (ENA đi qua kernel stack) | U-PT6 Q23 |
+| **VPC có Tenancy: Dedicated, máy ảo khai báo Default** | **Máy ảo TỰ ĐỘNG thành Dedicated Instance** | Chạy shared (VPC Tenancy luôn ghi đè Launch Template) | U-PT3 Q07 |
+| **Ứng dụng cực kỳ quan trọng, chống sập phần cứng** | **Spread Placement Group** (tối đa 7 instances/AZ) | Cluster Placement Group (rủi ro sập chung rack) | CM-PT1 Q18 |
+| **Xử lý Batch chịu lỗi, tối thiểu chi phí 90%** | **EC2 Spot Fleet (Diversified Strategy)** | On-Demand Instances (chi phí quá cao) | U-PT2 Q42 |
+| **Phục hồi tự động máy chủ đơn khối (Monolith) + EIP** | **ASG (Min=1, Max=1) + EIP re-attach qua User Data** | Dùng ALB (tốn thêm chi phí duy trì hàng tháng) | U-PT6 Q44 |
+| **Tự động phục hồi máy ảo lỗi phần cứng giữ nguyên IP** | **CloudWatch Alarm (StatusCheckFailed_System) + Auto-Recovery** | Tạo mới máy ảo thủ công (mất thời gian & đổi IP) | CM-PT5 Q03 |
+| **Tải công việc tăng giảm định kỳ theo giờ mỗi ngày** | **EC2 Auto Scaling Scheduled Scaling** | Dynamic Target Tracking (bị chậm trễ vài phút ban đầu) | TD-Set1 Q04 |
 | **Tự động tắt máy chủ Dev ngoài giờ làm việc** | **AWS Instance Scheduler** | Viết script cron thủ công trên EC2 |
 | **Lưu trữ tạm thời tốc độ cực cao, mất khi tắt máy** | **EC2 Instance Store** | Amazon EBS (độ trễ cao hơn Instance Store) |
 | **Cụm EMR chạy Spot tự động chọn AZ có capacity** | **EMR Instance Fleets (đa Subnet/Instance Types)** | Instance Groups (bị khóa vào 1 AZ cố định) |

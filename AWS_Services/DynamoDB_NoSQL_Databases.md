@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon DynamoDB & Cơ Sở Dữ Liệu NoSQL Đám Mây (DAX, Streams, Global Tables)
+# Tài Liệu Học Tập Chuyên Sâu: Amazon DynamoDB & Cơ Sở Dữ Liệu NoSQL Đám Mây (DAX, Streams, Global Tables)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Database Specialist (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -195,18 +195,46 @@ sequenceDiagram
 
 ## 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
 
-#### 1. Tăng Tốc Độ Đọc DynamoDB Lên Hàng Chục Lần Không Sửa Mã Nguồn Bằng DAX — (CM-PT2 Q25, CM-PT4 Q60)
-- **Tình huống thi**: Ứng dụng thương mại điện tử gặp tình trạng độ trễ đọc dữ liệu danh mục sản phẩm từ DynamoDB tăng cao vào các khung giờ cao điểm (mất từ 5 đến 12 mili-giây). Doanh nghiệp muốn giảm độ trễ xuống mức microsecond mà **không được phép sửa đổi mã nguồn logic nghiệp vụ** của ứng dụng.
+#### 1. Tăng Tốc Độ Đọc DynamoDB Lên Hàng Chục Lần Không Sửa Mã Nguồn Bằng DAX — (CM-PT2 Q25, CM-PT4 Q60, TD-Set2 Q48, TD-Set3 Q04)
+- **Tình huống thi**: Ứng dụng thương mại điện tử, GraphQL API hoặc mobile game gặp tình trạng độ trễ đọc dữ liệu từ DynamoDB tăng cao vào các khung giờ cao điểm. Doanh nghiệp muốn giảm độ trễ đọc xuống mức **microsecond** mà **không được phép sửa đổi mã nguồn logic nghiệp vụ** của ứng dụng (`TD-Set2 Q48`, `TD-Set3 Q04`).
 - **Giải pháp tối ưu chuẩn AWS**:
   - Triển khai một cụm **Amazon DynamoDB Accelerator (DAX)** trong cùng VPC với ứng dụng.
   - Cập nhật SDK client của ứng dụng: Chỉ cần trỏ endpoint kết nối từ URL DynamoDB mặc định sang **DAX Cluster Endpoint**.
   - Không cần sửa đổi bất kỳ câu lệnh truy vấn nào. DAX tự động đóng vai trò là một in-memory cache thông minh (Item Cache & Query Cache), cung cấp tốc độ phản hồi dưới 1 mili-giây.
 
-#### 2. Cấu Hình DynamoDB Cho Tải Lưu Lượng Hoàn Toàn Không Thể Dự Đoán Trước — (CM-PT2 Q43, CM-PT6 Q42)
-- **Tình huống thi**: Một công ty khởi nghiệp chuẩn bị phát hành một tựa game di động mới. Họ hoàn toàn không thể dự đoán được số lượng người chơi (có thể chỉ vài trăm người hoặc đột ngột tăng vọt lên hàng triệu người chơi nếu game viral). Yêu cầu hệ thống phải tự động co giãn tức thì, không bị lỗi nghẽn và chi phí tối ưu nhất.
+#### 2. Cấu Hình DynamoDB Cho Tải Lưu Lượng Hoàn Toàn Không Thể Dự Đoán Trước — (CM-PT2 Q43, CM-PT6 Q42, TD-Set5 Q26)
+- **Tình huống thi**: Một công ty khởi nghiệp chuẩn bị phát hành một tựa game di động mới. Họ hoàn toàn không thể dự đoán được số lượng người chơi (có thể chỉ vài trăm người hoặc đột ngột tăng vọt lên hàng triệu người chơi nếu game viral). Yêu cầu hệ thống phải tự động co giãn tức thì, không bị lỗi nghẽn và chi phí tối ưu nhất (`TD-Set5 Q26`).
 - **Giải pháp chuẩn**:
   - Thiết lập bảng DynamoDB ở chế độ **On-Demand Capacity Mode**.
   - Không cần ước lượng hay cấp phát trước RCU/WCU. Bảng tự động đáp ứng mọi đợt bùng nổ lưu lượng và doanh nghiệp chỉ phải trả tiền cho số lượng request thực tế phát sinh.
+
+#### 3. Thiết Kế Partition Key Có Độ Biến Thiên Cao (High Cardinality) Chống Hot Partition — (TD-Set1 Q37)
+- **Tình huống thi**: Ứng dụng container chạy trên Amazon ECS cluster đọc/ghi tải rất nặng vào DynamoDB. Mặc dù tổng dung lượng provisioned throughput đã được cấu hình rất lớn, ứng dụng vẫn liên tục bị lỗi nghẽn tải (Throttling) ở một số thời điểm nhất định (`TD-Set1 Q37`).
+- **Nguyên nhân & Khắc phục**:
+  - Do thiết kế **Partition Key có độ biến thiên thấp (Low Cardinality)** (ví dụ: dùng `Status` hoặc `CountryCode` làm khóa phân vùng), khiến 90% các bản ghi bị gom vào cùng một partition vật lý duy nhất (**Hot Partition**), làm partition đó bị vượt trần 1,000 WCU / 3,000 RCU trong khi các partition khác rảnh rỗi.
+  - **Giải pháp ĐÚNG**: Chọn Partition Key có tính ngẫu nhiên và phân tán cao (High Cardinality - ví dụ `UserID`, `DeviceID`, `TransactionUUID`) hoặc áp dụng kỹ thuật **Write Sharding (Partition Key Salting)** (thêm hậu tố số ngẫu nhiên từ `1` đến `N` vào sau khóa) để phân bổ đều tải trên tất cả các partitions vật lý.
+
+#### 4. Bắt Thay Đổi Dữ Liệu Thời Gian Thực Bằng DynamoDB Streams & Lambda — (TD-Set1 Q65)
+- **Tình huống thi**: Mạng xã hội lưu trữ thông tin trên DynamoDB. Cần phát triển tính năng "Theo dõi (Follow)" người dùng: Khi một người dùng đăng bài viết mới hoặc có người bấm theo dõi, hệ thống phải tự động gửi email thông báo qua Amazon SNS cho tất cả người theo dõi theo thời gian thực (`TD-Set1 Q65`).
+- **Giải pháp chuẩn AWS**:
+  - Bật tính năng **Amazon DynamoDB Streams** trên bảng dữ liệu.
+  - Tạo một hàm **AWS Lambda** làm consumer và liên kết với DynamoDB Streams qua cơ chế **Event Source Mapping**.
+  - Khi có hành động `INSERT` hoặc `MODIFY` phát sinh, DynamoDB Streams ghi lại bản ghi thay đổi theo đúng thứ tự 24 giờ và tự động kích hoạt Lambda để gửi email qua **Amazon SNS** hoặc **Amazon SES**.
+
+#### 5. Ứng Dụng Toàn Cầu Đa Vùng Active-Active Với DynamoDB Global Tables — (TD-Set5 Q39)
+- **Tình huống thi**: Nền tảng game trực tuyến toàn cầu phục vụ hàng triệu game thủ tại Bắc Mỹ, Châu Âu và Châu Á. Yêu cầu người chơi ở bất kỳ khu vực nào cũng có thể đọc và cập nhật hồ sơ cá nhân với độ trễ dưới 10 mili-giây, đồng thời cung cấp khả năng tự động chịu lỗi toàn diện khi một Region AWS gặp thảm họa (`TD-Set5 Q39`).
+- **Giải pháp chuẩn AWS**:
+  - Sử dụng **Amazon DynamoDB Global Tables**.
+  - Tự động sao chép đa hướng (Fully Managed Multi-Region Active-Active Replication) giữa các bảng DynamoDB ở các Region khác nhau.
+  - Người chơi đọc và ghi cục bộ tại Region gần nhất, dữ liệu được đồng bộ hóa ngầm xuyên đại dương trong vòng dưới 1 giây. Nếu một Region sập, ứng dụng tự động chuyển hướng sang Region khả dụng kế tiếp mà không mất mát dữ liệu.
+
+#### 6. Tính Toán Chuẩn Xác Thông Lượng Cấp Phát (RCU & WCU Formula) — (TD-Set2 Q14)
+- **Quy tắc tính toán cốt lõi trong đề thi**:
+  - **WCU (Write Capacity Unit)**: Mỗi WCU = 1 item ghi/giây có dung lượng tối đa 1 KB.  
+    $$\text{WCU cần thiết} = \text{Số item ghi mỗi giây} \times \lceil \frac{\text{Dung lượng item (KB)}}{1\text{ KB}} \rceil$$
+  - **RCU (Read Capacity Unit)**: Mỗi RCU = 1 item đọc/giây (Strongly Consistent) hoặc 2 items đọc/giây (Eventually Consistent) cho item tối đa 4 KB.  
+    $$\text{RCU (Strongly Consistent)} = \text{Số item đọc mỗi giây} \times \lceil \frac{\text{Dung lượng item (KB)}}{4\text{ KB}} \rceil$$  
+    $$\text{RCU (Eventually Consistent)} = \frac{\text{RCU Strongly Consistent}}{2}$$
 
 ---
 
@@ -226,27 +254,38 @@ sequenceDiagram
 - **Giải pháp ĐÚNG**: Bật tính năng **Deletion Protection** trên bảng DynamoDB.
   - Khi bật Deletion Protection, mọi API call `DeleteTable` đều bị từ chối ngay lập tức, kể cả khi được gọi bởi tài khoản có quyền `AdministratorAccess`!
 
-#### 🪤 Bẫy 3: Quét Bảng Lấy Dữ Liệu Thay Đổi: Scan vs DynamoDB Streams — (CM-PT3 Q45)
+#### 🪤 Bẫy 3: Quét Bảng Lấy Dữ Liệu Thay Đổi: Scan vs DynamoDB Streams — (CM-PT3 Q45, TD-Set1 Q65)
 - **Tình huống đề thi**: *"Hệ thống cần theo dõi các thay đổi dữ liệu trong DynamoDB (khi có đơn hàng mới) để gửi thông báo real-time qua SNS với chi phí và hiệu năng tối ưu nhất."*
 - **Các phương án bẫy**:
   - ❌ *Dùng Lambda chạy định kỳ mỗi 5 phút gọi lệnh `Scan` toàn bộ bảng*: Lệnh `Scan` đọc toàn bộ partition, tiêu tốn lượng RCU khổng lồ và làm chậm hệ thống.
-- **Giải pháp ĐÚNG**: Kích hoạt **DynamoDB Streams** kết hợp **AWS Lambda Event Source Mapping**.
+- **Giải pháp ĐÚNG**: Kích hoạt **DynamoDB Streams** kết hợp **AWS Lambda Event Source Mapping** (`TD-Set1 Q65`).
   - DynamoDB Streams tự động bắt mọi thay đổi (Insert, Modify, Remove) theo đúng thứ tự thời gian thực và kích hoạt hàm Lambda xử lý ngay lập tức mà không tiêu tốn RCU của bảng!
+
+#### 🪤 Bẫy 4: Xử Lý Lỗi ProvisionedThroughputExceededException Khi Tải Bùng Nổ — (TD-Set4 Q15)
+- **Tình huống đề thi**: *"Ứng dụng AR Mobile Game sử dụng DynamoDB với capacity cố định. Khi lượng người chơi tăng vọt trong sự kiện, ứng dụng gặp lỗi `ProvisionedThroughputExceededException` làm rớt kết nối của game thủ."*
+- **Các giải pháp ĐÚNG**:
+  - Giải pháp 1: Bật **DynamoDB Auto Scaling** để tự động nâng RCU/WCU khi tải đạt ngưỡng (ví dụ 70%).
+  - Giải pháp 2: Chuyển sang **On-Demand Capacity Mode** để hệ thống tự động hấp thụ các đợt bùng nổ tức thì.
+  - Giải pháp 3: Đặt một hàng đợi **Amazon SQS** phía trước DynamoDB để lưu trữ các yêu cầu ghi và san phẳng đỉnh tải (**Load Leveling**).
+  - Giải pháp 4: Phía client áp dụng thuật toán **Exponential Backoff with Jitter** khi retry.
 
 ---
 
 ## 📊 III. Ma Trận Quyết Định Công Nghệ NoSQL Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Độ trễ đọc microsecond, không sửa mã nguồn** | **Amazon DynamoDB Accelerator (DAX)** | ElastiCache Redis (bắt buộc phải sửa code ứng dụng) |
-| **Lưu lượng truy cập không thể dự đoán trước** | **DynamoDB On-Demand Mode** | Provisioned Mode (dễ bị throttling hoặc cấp phát thừa) |
-| **EC2 Private truy cập DynamoDB an toàn miễn phí** | **Gateway VPC Endpoint cho DynamoDB** | NAT Gateway (tốn phí data processing đắt đỏ) |
-| **Chống xóa nhầm bảng Production kể cả Admin** | **Bật Deletion Protection** | IAM Policy (Admin vẫn có quyền sửa policy xóa) |
-| **Bắt mọi thay đổi dữ liệu thời gian thực để gọi Lambda** | **DynamoDB Streams** | Viết cronjob chạy lệnh Scan (ngốn RCU, độ trễ cao) |
-| **Đồng bộ dữ liệu đa vùng Active-Active, RPO < 1s** | **DynamoDB Global Tables** | Tự viết script sao chép dữ liệu cross-region |
-| **Tự động xóa các session đăng nhập sau 7 ngày** | **DynamoDB Time to Live (TTL)** | Viết Lambda cron quét và xóa (tốn WCU đắt đỏ) |
-| **Phục hồi dữ liệu về bất kỳ giây nào trong 35 ngày** | **Point-in-Time Recovery (PITR)** | Chỉ chụp snapshot thủ công định kỳ |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
+|:---|:---|:---|:---|
+| **Độ trễ đọc microsecond, không sửa mã nguồn** | **Amazon DynamoDB Accelerator (DAX)** | ElastiCache Redis (bắt buộc phải sửa code ứng dụng) | `TD-Set2 Q48`, `TD-Set3 Q04` |
+| **Lưu lượng truy cập không thể dự đoán trước** | **DynamoDB On-Demand Mode** | Provisioned Mode (dễ bị throttling hoặc cấp phát thừa) | `TD-Set5 Q26` |
+| **EC2 Private truy cập DynamoDB an toàn miễn phí** | **Gateway VPC Endpoint cho DynamoDB** | NAT Gateway (tốn phí data processing đắt đỏ) | `TD-Set1 Q33` |
+| **Chống xóa nhầm bảng Production kể cả Admin** | **Bật Deletion Protection** | IAM Policy (Admin vẫn có quyền sửa policy xóa) | Chuẩn AWS |
+| **Bắt mọi thay đổi dữ liệu thời gian thực để gọi Lambda** | **DynamoDB Streams** | Viết cronjob chạy lệnh Scan (ngốn RCU, độ trễ cao) | `TD-Set1 Q65` |
+| **Đồng bộ dữ liệu đa vùng Active-Active, RPO < 1s** | **DynamoDB Global Tables** | Tự viết script sao chép dữ liệu cross-region | `TD-Set1 Q28`, `TD-Set5 Q39` |
+| **Tự động xóa các session đăng nhập sau 7 ngày** | **DynamoDB Time to Live (TTL)** | Viết Lambda cron quét và xóa (tốn WCU đắt đỏ) | Chuẩn AWS |
+| **Phục hồi dữ liệu về bất kỳ giây nào trong 35 ngày** | **Point-in-Time Recovery (PITR)** | Chỉ chụp snapshot thủ công định kỳ | Chuẩn AWS |
+| **Xử lý lỗi Throttling khi traffic bùng nổ đột biến** | **Auto Scaling / DAX / SQS Buffer** | Tăng thủ công RCU/WCU (chậm trễ, không phản ứng kịp) | `TD-Set4 Q15` |
+| **Tránh hiện tượng Hot Partition làm nghẽn throughput** | **Partition Key High Cardinality (hoặc Salting)** | Dùng Enum/Status làm partition key (dồn tải 1 partition) | `TD-Set1 Q37` |
+| **Tính toán RCU đọc Eventually Consistent rẻ hơn 50%** | **1 RCU = 2 Reads/giây (item tối đa 4 KB)** | Mặc định tính 1 RCU cho 1 read (tính thừa chi phí) | `TD-Set2 Q14` |
 
 ---
 

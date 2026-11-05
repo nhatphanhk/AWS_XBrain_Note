@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon API Gateway, Amazon Cognito & AWS Step Functions (Serverless Integration & Orchestration)
+# Tài Liệu Học Tập Chuyên Sâu: Amazon API Gateway, Amazon Cognito & AWS Step Functions (Serverless Integration & Orchestration)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal Serverless Solutions Architect (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu 100% thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -276,6 +276,42 @@ sequenceDiagram
   - Kích hoạt tính năng **Advanced Security Features: Adaptive Authentication (Xác thực thích ứng dựa trên rủi ro)**.
   - Cognito tự động phân tích IP, vị trí địa lý, dấu vân tay thiết bị để tính toán điểm rủi ro và tự động kích hoạt thử thách SMS MFA hoặc TOTP khi phát hiện dấu hiệu bất thường.
 
+#### 5. Quản Trị Đột Biến Lưu Lượng Bằng Throttling & Burst Limits Trên API Gateway — (TD-Set1 Q14)
+- **Tình huống thi**: Một cổng thông tin trực tuyến sử dụng kết hợp Amazon API Gateway và AWS Lambda phục vụ hàng trăm nghìn lượt truy cập mỗi ngày. Công ty chuẩn bị công bố một sản phẩm đột phá mới, dự kiến lưu lượng truy cập vào REST API sẽ tăng vọt gấp hàng chục lần chỉ trong vài giây. Cần thiết kế giải pháp bảo vệ hệ thống backend không bị quá tải sập nguồn mà vẫn duy trì khả năng phục vụ tối đa (`TD-Set1 Q14`).
+- **Giải pháp chuẩn AWS**:
+  - Cấu hình **Throttling Limits (Steady-state Rate Limit)** và **Burst Limits** trên API Gateway Stage / Usage Plan tương ứng với tải chịu đựng của hệ thống backend.
+  - Thuật toán **Token Bucket**: Cho phép các đợt lưu lượng bùng nổ tức thời (Burst) được xử lý trong giới hạn token có sẵn trong xô. Khi xô token cạn kiệt, API Gateway tự động trả về mã lỗi **`HTTP 429 Too Many Requests`** để làm chậm tốc độ gửi của client.
+  - Kết hợp thiết lập **Reserved Concurrency trên AWS Lambda** để ngăn chặn việc Lambda chiếm dụng toàn bộ quota concurrency của tài khoản làm ảnh hưởng các ứng dụng khác.
+
+#### 6. Kiểm Thử Phiên Bản API Mới An Toàn Bằng API Gateway Canary Release — (TD-Set1 Q19)
+- **Tình huống thi**: Doanh nghiệp thương mại điện tử triển khai REST API trên API Gateway với custom domain name. Để cải tiến liên tục mà không gây gián đoạn cho khách hàng, nhóm phát triển muốn triển khai phiên bản API mới vào môi trường production và chỉ chuyển hướng một tỷ lệ phần trăm nhỏ lưu lượng người dùng thực tế vào phiên bản mới để theo dõi lỗi trước khi chuyển toàn bộ (`TD-Set1 Q19`).
+- **Giải pháp chuẩn AWS**:
+  - Kích hoạt tính năng **Canary Release** trên Deployment Stage của API Gateway.
+  - Thiết lập tỷ lệ phần trăm lưu lượng gửi tới Canary (ví dụ: `10%` lưu lượng trỏ vào bản build mới, `90%` vẫn chạy trên bản production cũ ổn định).
+  - Giám sát các chỉ số CloudWatch Metrics riêng biệt của Canary (`CanaryErrors`, `CanaryLatency`). Sau khi kiểm thử đạt yêu cầu, nhấn **Promote Canary** để nâng cấp phiên bản mới thành bản chính thức với zero-downtime.
+
+#### 7. Thiết Lập Custom Domain Name Cho Regional API Gateway Với Route 53 & ACM — (TD-Set4 Q12, TD-Set1 Q19)
+- **Tình huống thi**: Doanh nghiệp vận hành một Regional API Gateway tại Region `us-east-2` làm proxy cho backend microservices. Khách hàng đang kết nối qua Invoke URL mặc định (`https://<api-id>.execute-api.us-east-2.amazonaws.com/prod`). Doanh nghiệp muốn người dùng truy cập qua tên miền thân thiện của công ty (`api.mycompany.com`) với chứng chỉ SSL/TLS an toàn (`TD-Set4 Q12`).
+- **Quy trình chuẩn AWS**:
+  1. Yêu cầu hoặc nhập chứng chỉ SSL/TLS công khai trong **AWS Certificate Manager (ACM) TẠI CÙNG REGION `us-east-2`**.
+  2. Tạo một **Custom Domain Name** kiểu **Regional** trong Amazon API Gateway, gán chứng chỉ ACM vừa tạo.
+  3. Tạo **API Mapping** liên kết custom domain name với API và Stage tương ứng.
+  4. Trong **Amazon Route 53 Hosted Zone**, tạo bản ghi **Alias Record (loại A)** trỏ tên miền `api.mycompany.com` vào địa chỉ **Regional API Gateway Target Domain Name**.
+
+#### 8. Cấp Quyền Tạm Thời Cho Mobile App Truy Cập Trực Tiếp Tài Nguyên Bằng Cognito Identity Pools — (TD-Set8 Q01, TD-Set3 Q16)
+- **Tình huống thi**: Ứng dụng di động bình chọn giọng hát hoặc phân tích web với hàng triệu người dùng toàn cầu. Ứng dụng cần gửi trực tiếp dữ liệu bình chọn hoặc log phân tích vào Amazon Kinesis Data Streams / DynamoDB mà không muốn xây dựng một cụm web server trung gian tốn kém (`TD-Set8 Q01`, `TD-Set3 Q16`).
+- **Giải pháp chuẩn AWS**:
+  - Người dùng đăng nhập qua **Cognito User Pools** (hoặc Google/Facebook/Apple/Guest unauthenticated).
+  - Ứng dụng gửi JWT ID Token nhận được tới **Amazon Cognito Identity Pools (Federated Identities)**.
+  - Identity Pools kiểm tra tính hợp lệ, gọi **AWS STS** để cấp phát bộ **Temporary AWS Credentials** (Access Key, Secret Key, Session Token) gắn với một IAM Role có quyền tối thiểu (`kinesis:PutRecord` hoặc `dynamodb:PutItem`).
+  - Mobile App dùng AWS SDK sử dụng credentials tạm thời này để ghi trực tiếp vào Kinesis / DynamoDB, đạt khả năng co giãn không giới hạn với chi phí thấp nhất.
+
+#### 9. Triển Khai Container Web Nhanh Chóng Không Cần Quản Lý Hạ Tầng Bằng AWS App Runner — (TD-Set2 Q55, TD-Set5 Q33)
+- **Tình huống thi**: Doanh nghiệp cần triển khai một ứng dụng web/REST API đóng gói trong container Docker (hoặc từ mã nguồn Python/Node.js trên GitHub). Đội ngũ lập trình viên không có nhiều kinh nghiệm quản trị hạ tầng mạng đám mây, muốn dịch vụ tự động lo việc cân bằng tải, chứng chỉ SSL, tự động scale theo lưu lượng HTTP, mà không cần phải tự cấu hình VPC, subnets, hay quản lý ECS cluster / task definitions phức tạp (`TD-Set2 Q55`, `TD-Set5 Q33`).
+- **Giải pháp chuẩn AWS**:
+  - Triển khai ứng dụng lên **AWS App Runner**.
+  - App Runner là dịch vụ Serverless Container Platform hoàn toàn được quản trị: Tự động trích xuất image từ Amazon ECR, tự động cấp phát Load Balancer, chứng chỉ HTTPS, và co giãn số lượng container instances dựa trên số lượng request đồng thời gửi tới.
+
 ---
 
 ## 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
@@ -303,21 +339,42 @@ sequenceDiagram
   - API Gateway tiếp nhận yêu cầu, kích hoạt **AWS Step Functions** hoặc đẩy vào **SQS**, sau đó trả ngay về client mã phản hồi `HTTP 202 Accepted` kèm theo một `JobID`.
   - Client định kỳ polling kiểm tra trạng thái của `JobID` hoặc nhận kết quả qua WebSocket API / Webhook.
 
+#### 🪤 Bẫy 4: Thuật Toán Throttling Token Bucket Trả Về Lỗi HTTP 429 — (TD-Set1 Q14)
+- **Tình huống đề thi**: *"Khi một trang web gặp lượng truy cập tăng vọt đột biến, người dùng nhận thông báo lỗi từ API Gateway. Mã lỗi nào được trả về và cách xử lý?"*
+- **Quy tắc bất biến**:
+  - Khi lưu lượng vượt quá giới hạn Rate Limit hoặc Burst Limit, API Gateway trả về mã trạng thái **`HTTP 429 Too Many Requests`**.
+  - Xử lý: Phía máy khách (Client) phải áp dụng cơ chế **Exponential Backoff with Jitter**. Phía máy chủ: Tăng Throttling Limits hoặc áp dụng API Caching.
+
+#### 🪤 Bẫy 5: Vị Trí Của Chứng Chỉ ACM: Regional API Gateway vs Edge-Optimized — (TD-Set4 Q12)
+- **Bẫy đề thi về Region của chứng chỉ SSL**:
+  - Với **Edge-Optimized API Gateway**: Do lưu lượng được phân phối qua CloudFront toàn cầu, chứng chỉ ACM **BẮT BUỘC PHẢI TẠO TẠI REGION `us-east-1` (N. Virginia)**.
+  - Với **Regional API Gateway**: Do endpoint chạy cục bộ trong Region, chứng chỉ ACM **BẮT BUỘC PHẢI TẠO TẠI CÙNG REGION VỚI API GATEWAY** (ví dụ: API ở `us-east-2` thì cert phải ở `us-east-2`). Nếu tạo ở `us-east-1` thì Regional API Gateway sẽ không nhìn thấy chứng chỉ!
+
+#### 🪤 Bẫy 6: AWS App Runner vs ECS/Fargate: Lựa Chọn Đơn Giản Nhất Cho Web Containers — (TD-Set2 Q55, TD-Set5 Q33)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn chạy ứng dụng web container với ít công sức quản trị nhất, không muốn cấu hình VPC, subnets, Load Balancer hay Auto Scaling Group thủ công."*
+- **Phân biệt**:
+  - ❌ *Dùng Amazon ECS với Fargate*: Tuy không cần quản lý EC2, bạn vẫn phải tự thiết kế VPC, Public/Private Subnets, Internet Gateway, Application Load Balancer, Target Groups, ECS Cluster, Task Definitions, và Service Auto Scaling.
+  -  *Dùng AWS App Runner*: AWS tự động quản lý toàn bộ tầng mạng, load balancing, SSL, và auto-scaling từ zero đến hàng trăm instances. Thích hợp nhất cho web apps và REST APIs tiêu chuẩn.
+
 ---
 
 ## 📊 III. Ma Trận Quyết Định Công Nghệ Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Cần xây dựng REST API giá rẻ nhất, chỉ cần xác thực JWT đơn giản** | **API Gateway HTTP API** | REST API (đắt hơn gấp 3 lần, tính năng thừa) |
-| **Cần bán gói API cho đối tác thứ 3 với giới hạn quota theo khách hàng** | **API Gateway REST API + Usage Plans & API Keys** | HTTP API (không hỗ trợ Usage Plans và API Keys) |
-| **Bảo vệ REST API khỏi tấn công SQL Injection và XSS** | **AWS WAF gắn vào API Gateway** | AWS Shield (chỉ chống DDoS L3/L4, không chống SQLi/XSS) |
-| **Đăng ký, đăng nhập người dùng, hỗ trợ Adaptive Risk-based MFA** | **Amazon Cognito User Pools** | Cognito Identity Pools (chỉ phân quyền, không lưu user) |
-| **Cho phép Mobile App upload file trực tiếp lên S3 không qua server** | **Cognito Identity Pools (Cấp quyền IAM tạm thời)** | Tạo tài khoản IAM cứng trong code app (Lỗ hổng bảo mật nghiêm trọng) |
-| **Quy trình nghiệp vụ xử lý dài ngày (lên tới 1 năm), có bước duyệt thủ công** | **AWS Step Functions Standard Workflows** | Express Workflows (chỉ chạy tối đa 5 phút) |
-| **Xử lý luồng sự kiện IoT / Streaming tốc độ > 50,000 req/s, chạy dưới 5 phút** | **AWS Step Functions Express Workflows** | Standard Workflows (bị giới hạn tốc độ và tốn chi phí transition) |
-| **Đẩy dữ liệu từ API Gateway vào EventBridge với chi phí và độ trễ thấp nhất** | **Direct Service Integration (Không dùng Lambda)** | Viết Lambda trung gian (tốn tiền chạy compute, tăng latency) |
-| **Truy cập API nội bộ từ EC2 trong VPC an toàn không qua Internet** | **Private API Gateway + Interface VPC Endpoint** | NAT Gateway (tốn phí truyền dữ liệu, lưu lượng đi ra ngoài) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
+|:---|:---|:---|:---|
+| **Cần xây dựng REST API giá rẻ nhất, chỉ cần xác thực JWT đơn giản** | **API Gateway HTTP API** | REST API (đắt hơn gấp 3 lần, tính năng thừa) | Chuẩn AWS |
+| **Cần bán gói API cho đối tác thứ 3 với giới hạn quota theo khách hàng** | **API Gateway REST API + Usage Plans & API Keys** | HTTP API (không hỗ trợ Usage Plans và API Keys) | Chuẩn AWS |
+| **Bảo vệ REST API khỏi tấn công SQL Injection và XSS** | **AWS WAF gắn vào API Gateway** | AWS Shield (chỉ chống DDoS L3/L4, không chống SQLi/XSS) | `TD-Set1 Q16` |
+| **Đăng ký, đăng nhập người dùng, hỗ trợ Adaptive Risk-based MFA** | **Amazon Cognito User Pools** | Cognito Identity Pools (chỉ phân quyền, không lưu user) | `TD-Set8 Q01` |
+| **Cho phép Mobile App upload file trực tiếp lên S3 không qua server** | **Cognito Identity Pools (Cấp quyền IAM tạm thời)** | Tạo tài khoản IAM cứng trong code app (Lỗ hổng bảo mật nghiêm trọng) | `TD-Set8 Q01`, `TD-Set3 Q16` |
+| **Quy trình nghiệp vụ xử lý dài ngày (lên tới 1 năm), có bước duyệt thủ công** | **AWS Step Functions Standard Workflows** | Express Workflows (chỉ chạy tối đa 5 phút) | `TD-Set2 Q09`, `TD-Set2 Q13` |
+| **Xử lý luồng sự kiện IoT / Streaming tốc độ > 50,000 req/s, chạy dưới 5 phút** | **AWS Step Functions Express Workflows** | Standard Workflows (bị giới hạn tốc độ và tốn chi phí transition) | `TD-Set5 Q13` |
+| **Đẩy dữ liệu từ API Gateway vào EventBridge với chi phí và độ trễ thấp nhất** | **Direct Service Integration (Không dùng Lambda)** | Viết Lambda trung gian (tốn tiền chạy compute, tăng latency) | `TD-Set2 Q09` |
+| **Truy cập API nội bộ từ EC2 trong VPC an toàn không qua Internet** | **Private API Gateway + Interface VPC Endpoint** | NAT Gateway (tốn phí truyền dữ liệu, lưu lượng đi ra ngoài) | `TD-Set1 Q33` |
+| **Bảo vệ backend khỏi spike tải đột biến khi ra mắt sản phẩm** | **API Gateway Throttling & Burst Limits** | Mở rộng unconstrained (làm sập backend database) | `TD-Set1 Q14` |
+| **Kiểm thử phiên bản API mới với tỷ lệ % lưu lượng thực tế** | **API Gateway Canary Release Deployment** | Deploy thẳng lên Prod (rủi ro downtime toàn bộ) | `TD-Set1 Q19` |
+| **Custom domain name cho Regional API Gateway** | **ACM Certificate tại cùng Region + Route 53 Alias** | ACM Certificate tại `us-east-1` (chỉ dùng cho Edge-Optimized) | `TD-Set4 Q12` |
+| **Chạy container web/API với ít công sức quản trị nhất, không cấu hình VPC** | **AWS App Runner** | Amazon ECS Fargate (vẫn phải tự cấu hình VPC, ALB, Target Groups) | `TD-Set2 Q55`, `TD-Set5 Q33` |
 
 ---
 

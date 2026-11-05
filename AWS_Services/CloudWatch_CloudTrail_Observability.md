@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon CloudWatch, AWS CloudTrail & AWS Config (Hệ Thống Quan Sát, Kiểm Toán & Quản Trị Tuân Thủ)
+# Tài Liệu Học Tập Chuyên Sâu: Amazon CloudWatch, AWS CloudTrail & AWS Config (Hệ Thống Quan Sát, Kiểm Toán & Quản Trị Tuân Thủ)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -45,10 +45,11 @@ flowchart TD
 - **CloudWatch Metrics**:
   - Dữ liệu chuỗi thời gian (Time-series) bao gồm: **Namespace** (ví dụ `AWS/EC2`), **Metric Name** (ví dụ `CPUUtilization`), các chiều phân loại **Dimensions** (ví dụ `InstanceId=i-0123456789`), và **Timestamp**.
   - *Basic Monitoring (Mặc định)*: Tần suất gửi số liệu mỗi **5 phút** (hoàn toàn miễn phí).
-  - *Detailed Monitoring*: Tần suất gửi số liệu mỗi **1 phút** ($2.10/instance/tháng cho EC2).
-  - **Lưu ý sống còn về RAM**: Hypervisor của AWS **KHÔNG THỂ tự động biết được mức sử dụng bộ nhớ RAM (Memory Utilization)** hoặc dung lượng trống của ổ đĩa bên trong hệ điều hành! Muốn thu thập RAM và Disk Space, bạn **bắt buộc phải cài đặt Unified CloudWatch Agent** bên trong máy ảo EC2.
+  - *Detailed Monitoring*: Tần suất gửi số liệu mỗi **1 phút** ($2.10/instance/tháng cho EC2) — bắt buộc khi cần Auto Scaling Group thu phóng phản hồi nhanh chóng theo chu kỳ 1 phút trước các đợt tăng đột biến lưu lượng (`TD-Set1 Q45`).
+  - **Lưu ý sống còn về RAM & Swap Space**: Hypervisor của AWS **KHÔNG THỂ tự động biết được mức sử dụng bộ nhớ RAM (Memory Utilization)**, không gian hoán đổi (**Swap Space**), hoặc dung lượng trống của ổ đĩa bên trong hệ điều hành (`TD-Set2 Q61`)! Muốn thu thập RAM, Swap và Disk Space, bạn **bắt buộc phải cài đặt Unified CloudWatch Agent** bên trong máy ảo EC2 (`TD-Set1 Q12`, `TD-Set2 Q61`) và gán IAM Role có AWS Managed Policy **`CloudWatchAgentServerPolicy`** (`TD-Set6 Q19`).
 - **CloudWatch Logs & Logs Insights**:
   - Cấu trúc: **Log Groups** (đại diện cho ứng dụng) chứa nhiều **Log Streams** (đại diện cho từng máy ảo/container).
+  - **Subscription Filters**: Cho phép stream log thời gian thực từ CloudWatch Logs tới **Amazon Kinesis Data Firehose**, **AWS Lambda**, hoặc **Amazon OpenSearch Service** để phân tích SIEM và lưu trữ phân tích quy mô lớn (`TD-Set3 Q05`).
   - **CloudWatch Logs Insights**: Công cụ truy vấn mạnh mẽ phân tích hàng triệu dòng log bằng cú pháp SQL-like trong vài giây:
     ```sql
     fields @timestamp, @message
@@ -79,11 +80,11 @@ flowchart TD
 
 ### 3. Phân Tích Chuyên Sâu AWS CloudTrail
 
-- **Event History**: Mặc định lưu giữ lịch sử các sự kiện quản trị (Management Events) trong vòng **90 ngày** hoàn toàn miễn phí trên Console.
-- **CloudTrail Trails**: Tạo Trail xuất toàn bộ nhật ký nén dạng JSON về **Amazon S3 Bucket** lưu trữ vĩnh viễn, kết hợp tính năng **CloudTrail Log File Integrity Validation** (sử dụng chữ ký số SHA-256 HMAC) để chứng minh trước tòa án rằng file log không bị kẻ tấn công sửa đổi hay xóa dấu vết.
+- **Event History**: Mặc định lưu giữ lịch sử các sự kiện quản trị (Management Events) trong vòng **90 ngày** hoàn toàn miễn phí trên Console (`TD-Set5 Q47`). Sau 90 ngày hoặc khi cần lưu trữ lâu dài phục vụ kiểm toán tài chính/pháp lý, **bắt buộc phải tạo CloudTrail Trail** để xuất log về **Amazon S3 Bucket** (`TD-Set5 Q28`, `TD-Set5 Q47`).
+- **CloudTrail Trails**: Tạo Trail xuất toàn bộ nhật ký nén dạng JSON về **Amazon S3 Bucket** lưu trữ vĩnh viễn, kết hợp tính năng **CloudTrail Log File Integrity Validation** (sử dụng chữ ký số SHA-256 HMAC) để chứng minh trước tòa án rằng file log không bị kẻ tấn công sửa đổi hay xóa dấu vết (`TD-Set5 Q28`).
 - **Phân loại sự kiện (Event Types)**:
   - *Management Events*: Các thao tác cấu hình tài nguyên mặt phẳng điều khiển (`RunInstances`, `CreateBucket`, `AttachRolePolicy`).
-  - *Data Events*: Các thao tác trên dữ liệu (mặc định bị tắt do lưu lượng khổng lồ): `s3:GetObject`, `s3:PutObject`, `lambda:Invoke`.
+  - *Data Events*: Các thao tác mức đối tượng dữ liệu (**mặc định bị tắt** do lưu lượng khổng lồ): `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`, `lambda:Invoke`. Khi cần kiểm toán chi tiết ai tải/xóa từng object trong S3 bucket nhạy cảm, phải chủ động kích hoạt S3 Data Events (`TD-Set8 Q12`).
   - *CloudTrail Insights*: Ứng dụng học máy phân tích tự động các đợt bùng nổ gọi API bất thường (ví dụ: bùng nổ lỗi `AccessDenied` hoặc đột ngột xuất hiện hàng ngàn lệnh xóa tài nguyên lúc nửa đêm).
   - *CloudTrail Lake*: Kho dữ liệu kiểm toán được quản lý hoàn toàn cho phép chạy truy vấn SQL trực tiếp trên lịch sử sự kiện nhiều năm mà không cần thiết lập hạ tầng Athena hay ETL.
 
@@ -93,9 +94,9 @@ flowchart TD
 
 - **Configuration Items (CIs)**: Bản chụp trạng thái của một tài nguyên (thuộc tính, mối quan hệ phụ thuộc, thẻ tags) mỗi khi có sự thay đổi.
 - **Config Rules & Conformance Packs**:
-  - Đánh giá liên tục các tài nguyên dựa trên bộ quy tắc tuân thủ (ví dụ: cấm mở cổng 22 SSH ra Internet, bắt buộc mã hóa EBS volume bằng KMS, cấm S3 bucket công khai).
+  - Đánh giá liên tục các tài nguyên dựa trên bộ quy tắc tuân thủ (ví dụ: kiểm tra IAM Password Policy đạt chuẩn `iam-password-policy` [`TD-Set4 Q45`], cấm mở cổng 22 SSH ra Internet, bắt buộc mã hóa EBS volume bằng KMS, cấm S3 bucket công khai).
   - **Conformance Packs**: Tập hợp hàng chục Config Rules đóng gói theo các chuẩn bảo mật quốc tế: **CIS AWS Foundations Benchmark, PCI-DSS, HIPAA, SOC2**.
-- **Automated Remediation**: Khi phát hiện tài nguyên ở trạng thái `NON-COMPLIANT`, Config tự động kích hoạt một **Systems Manager Automation Runbook** để tự động vá lỗi (ví dụ: tự động thu hồi Security Group Rule mở cổng 22 vi phạm, tự động bật mã hóa S3).
+- **Automated Remediation**: Khi phát hiện tài nguyên ở trạng thái `NON-COMPLIANT`, Config tự động kích hoạt một **Systems Manager Automation Runbook** để tự động vá lỗi (ví dụ: tự động thu hồi Security Group Rule mở cổng 22 vi phạm, tự động cấu hình lại tài nguyên lệch chuẩn) (`TD-Set5 Q04`).
 
 ---
 
@@ -170,27 +171,71 @@ flowchart TD
 - **Giải pháp ĐÚNG**: Tạo một **Amazon CloudWatch Alarm** theo dõi metric **`StatusCheckFailed_System`** và gắn action **Recover this instance**.
   - Khi metric vượt ngưỡng (phần cứng AWS bị lỗi), CloudWatch tự động di dời máy ảo sang một host vật lý mới nguyên vẹn trong cùng Availability Zone mà giữ nguyên Private IP, Public/Elastic IP, cấu hình mạng và ổ đĩa EBS.
 
-#### 🪤 Bẫy 7: Tự Động Phát Hiện Tài Nguyên Không Tuân Thủ Bằng AWS Config — (CM-PT6 Q13, CM-PT4 Q36)
-- **Tình huống đề thi**: *"Doanh nghiệp muốn tự động phát hiện (automatically detect) các thay đổi cấu hình làm tài nguyên bị lệch chuẩn an ninh (như EBS volumes không được mã hóa, S3 bucket mở public, port 22 mở ra 0.0.0.0/0) trên toàn bộ tổ chức với ít công vận hành nhất."*
-- **Giải pháp ĐÚNG**: Kích hoạt **AWS Config** kết hợp sử dụng **AWS Config Managed Rules**.
-  - Config liên tục ghi nhận trạng thái cấu hình và kiểm tra đối soát với các quy chuẩn đề ra, tự động kích hoạt cảnh báo qua EventBridge/SNS và hỗ trợ tài liệu khắc phục tự động (Remediation).
+#### 🪤 Bẫy 7: Tự Động Phát Hiện Tài Nguyên Không Tuân Thủ Bằng AWS Config — (TD-Set4 Q45, TD-Set5 Q04, CM-PT6 Q13)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn tự động phát hiện (automatically detect) các thay đổi cấu hình làm tài nguyên bị lệch chuẩn an ninh (như IAM Password Policy không đạt chuẩn, EBS volumes không được mã hóa, S3 bucket mở public, port 22 mở ra 0.0.0.0/0) và tự động kích hoạt khắc phục (Remediation) trên toàn bộ tổ chức với ít công vận hành nhất."*
+- **Giải pháp ĐÚNG**: Kích hoạt **AWS Config** kết hợp sử dụng **AWS Config Managed Rules** (ví dụ: `iam-password-policy` [`TD-Set4 Q45`]).
+  - Khi phát hiện Non-compliant, Config tự động kích hoạt **Systems Manager Automation Runbook** để tự động sửa lỗi cấu hình theo thời gian thực (`TD-Set5 Q04`).
+
+#### 🪤 Bẫy 8: Thiếu Hụt Bộ Nhớ RAM & Swap Space Trên Máy Ảo EC2 — (TD-Set2 Q61, TD-Set6 Q19, TD-Set1 Q12)
+- **Tình huống đề thi**: *"Máy chủ EC2 chạy ứng dụng xử lý dữ liệu tài chính gặp sự cố treo do cạn kiệt bộ nhớ RAM và không gian hoán đổi ổ đĩa (swap space exhaustion). Quản trị viên kiểm tra CloudWatch Console nhưng không tìm thấy metric nào phản ánh tình trạng swap hay memory. Cần làm gì để giám sát và cảnh báo khi RAM/Swap sắp hết?"*
+- **Các phương án bẫy**:
+  - ❌ *Bật Detailed Monitoring cho EC2 Instance*: Detailed Monitoring chỉ tăng tần suất thu thập CPU/Network/Disk I/O từ 5 phút lên 1 phút, **hoàn toàn KHÔNG thu thập thêm metric RAM hay Swap**!
+  - ❌ *Tạo custom script chạy curl đẩy metric lên CloudWatch bằng cronjob*: Mất công duy trì script, dễ lỗi xác thực và thiếu chuẩn hóa.
+- **Giải pháp ĐÚNG**: Cài đặt **Unified CloudWatch Agent** trên hệ điều hành máy ảo (hỗ trợ cả Windows và Linux [`TD-Set1 Q12`]).
+  - Cấu hình file agent JSON để thu thập các metrics hệ điều hành chuyên sâu: `mem_used_percent` và `swap_used_percent` (`TD-Set2 Q61`).
+  - Đảm bảo gán IAM Role cho EC2 chứa AWS Managed Policy **`CloudWatchAgentServerPolicy`** để máy chủ có quyền đẩy metrics vào CloudWatch (`TD-Set6 Q19`).
+
+#### 🪤 Bẫy 9: Tần Suất Giám Sát EC2 Cho Auto Scaling Group Phản Hồi Nhanh — (TD-Set1 Q45)
+- **Tình huống đề thi**: *"Một hệ thống thương mại điện tử trải qua các đợt bùng nổ flash sale đột ngột. Auto Scaling Group cần phát hiện lưu lượng tăng và scale out trong vòng 1-2 phút thay vì phải chờ 5-10 phút. Tuy nhiên hệ thống hiện tại phản hồi quá trễ làm sập máy chủ."*
+- **Các phương án bẫy**:
+  - ❌ *Giữ nguyên Basic Monitoring và giảm Period của CloudWatch Alarm xuống 60 giây*: Basic Monitoring chỉ gửi dữ liệu 5 phút một lần, nên alarm ở period 60 giây sẽ rơi vào trạng thái `INSUFFICIENT_DATA` hoặc chậm trễ 5 phút!
+- **Giải pháp ĐÚNG**: Kích hoạt **Detailed Monitoring** trên EC2 instances / Auto Scaling Launch Template (`TD-Set1 Q45`).
+  - Dữ liệu metric CPU/Network được đẩy vào CloudWatch mỗi **1 phút**.
+  - CloudWatch Alarm cấu hình đánh giá theo chu kỳ 1 phút (1-minute period) giúp Auto Scaling kích hoạt scale out kịp thời.
+
+#### 🪤 Bẫy 10: Lưu Trữ Nhật Ký Kiểm Toán CloudTrail Sau 90 Ngày — (TD-Set5 Q47, TD-Set5 Q28)
+- **Tình huống đề thi**: *"Doanh nghiệp cần tra cứu các lệnh xóa tài nguyên xảy ra cách đây 6 tháng để phục vụ thanh tra an ninh. Quản trị viên truy cập CloudTrail Console nhưng không tìm thấy dữ liệu. Cần kiến trúc giải pháp như thế nào để đáp ứng lưu trữ kiểm toán dài hạn?"*
+- **Nguyên lý cốt lõi**:
+  - **CloudTrail Event History** mặc định chỉ lưu trữ sự kiện quản trị (Management Events) trong vòng **90 ngày** hoàn toàn miễn phí (`TD-Set5 Q47`). Sau 90 ngày, dữ liệu sẽ tự động biến mất!
+- **Giải pháp ĐÚNG**: Tạo một **CloudTrail Trail** (áp dụng cho All Regions) và cấu hình chuyển tiếp log về một **Amazon S3 Bucket** lưu trữ dài hạn (`TD-Set5 Q28`, `TD-Set5 Q47`).
+  - Kết hợp **SSE-KMS Encryption**, **S3 Lifecycle Rules** chuyển sang S3 Glacier Flexible Archive, và bật **Log File Integrity Validation** để ngăn ngừa chỉnh sửa file log (`TD-Set5 Q28`).
+
+#### 🪤 Bẫy 11: Kiểm Toán Thao Tác Mức Đối Tượng S3 Object: Data Events — (TD-Set8 Q12)
+- **Tình huống đề thi**: *"Một ngân hàng lưu trữ hàng triệu tài liệu hồ sơ khách hàng nhạy cảm trên Amazon S3. Đội kiểm toán yêu cầu phải ghi lại nhật ký chi tiết mỗi khi có bất kỳ ai truy cập tải xuống (`GetObject`) hoặc tải lên (`PutObject`) các tệp tin này với thông tin danh tính IAM caller rõ ràng."*
+- **Các phương án bẫy**:
+  - ❌ *Trông cậy vào CloudTrail mặc định*: CloudTrail mặc định **CHỈ GHI Management Events**, hoàn toàn **KHÔNG ghi nhận Data Events** của S3!
+  - ❌ *Chỉ bật S3 Server Access Logging*: S3 Access Logs ghi lại IP và request HTTP nhưng không tích hợp sâu với IAM ARN và không đẩy sang CloudWatch Alarms/EventBridge được một cách native.
+- **Giải pháp ĐÚNG**: Bật **CloudTrail S3 Data Events** (Object-level logging) cho các S3 Buckets chứa dữ liệu nhạy cảm (`TD-Set8 Q12`).
+  - Cho phép ghi lại chính xác caller identity, IP, thời gian và API `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`.
+
+#### 🪤 Bẫy 12: Điều Tra Sự Cố Kết Nối & Độ Trễ HTTP: ALB Access Logs vs VPC Flow Logs — (TD-Set5 Q23)
+- **Tình huống đề thi**: *"Khách hàng phản ánh ứng dụng web chạy sau Application Load Balancer (ALB) thỉnh thoảng bị lỗi gián đoạn HTTP 504 Gateway Timeout hoặc thời gian phản hồi quá lâu. Cần phân tích địa chỉ IP client, thời gian xử lý của backend targets và HTTP request URL."*
+- **Các phương án bẫy**:
+  - ❌ *Bật VPC Flow Logs*: VPC Flow Logs hoạt động ở Layer 4 (Network Interface metadata: Source IP, Dest IP, Port, Bytes, Action ACCEPT/REJECT). Flow Logs **KHÔNG THỂ thấy** HTTP request headers, URL path, response status code (200/404/504), hay target processing time (`TD-Set5 Q23`)!
+  - ❌ *Kiểm tra CloudTrail*: CloudTrail chỉ ghi các lệnh API gọi lên AWS, không ghi traffic của end-user truy cập website!
+- **Giải pháp ĐÚNG**: Kích hoạt **Application Load Balancer Access Logs** và đẩy log vào Amazon S3 (`TD-Set5 Q23`).
+  - ALB Access Logs chứa đầy đủ: client IP, request processing time, target processing time, response processing time, HTTP status code và request URL path. Dùng **Amazon Athena** để chạy SQL phân tích tìm ra request nào bị chậm trễ (`TD-Set5 Q23`).
 
 ---
 
 ### 📊 III. Ma Trận Quyết Định Giám Sát & Kiểm Toán Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Cảnh báo cuộc gọi API trái phép/Root login** | **CloudTrail + CloudWatch Metric Filter + SNS** | Chỉ dùng CloudWatch Logs (thiếu bộ lọc sự kiện) |
-| **Kiểm tra chứng chỉ ACM bên thứ 3 sắp hết hạn** | **AWS Config managed rule `acm-certificate-expiration-check`** | Tự động gia hạn của ACM (không áp dụng cho imported certs) |
-| **Tìm nút thắt cổ chai độ trễ microservices** | **AWS X-Ray** (Tracing: Active) | CloudWatch Metrics (chỉ đo tổng quan, không map request) |
-| **Lịch sử thay đổi cấu hình Security Group/S3** | **AWS Config** (Config Timeline) | CloudTrail (chỉ thấy API call, khó theo dõi diff cấu hình) |
-| **Kiểm toán hoạt động người dùng toàn tổ chức** | **CloudTrail Organizational Trail** | Cấu hình CloudTrail riêng lẻ từng account |
-| **Giám sát độ trễ & mất gói tin Hybrid Network** | **CloudWatch Network Monitor** | VPC Flow Logs (chỉ lưu metadata IP/port, không đo RTT) |
-| **Báo cáo tuân thủ sao lưu đa tài khoản** | **AWS Backup Audit Manager** | Viết Lambda script kiểm tra thủ công |
-| **Phát hiện tấn công đăng nhập bất thường vào RDS** | **Amazon GuardDuty RDS Protection** | CloudWatch Metric Filter (khó phân tích hành vi phức tạp) |
-| **Tự động phục hồi máy ảo khi lỗi phần cứng AWS** | **CloudWatch Alarm + EC2 Auto-Recovery** | Can thiệp thủ công (downtime kéo dài) |
-| **Tự động phát hiện tài nguyên sai lệch quy chuẩn** | **AWS Config (Managed Rules)** | Quét script thủ công (tốn công vận hành) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Tham chiếu đề thi |
+|:---|:---|:---|:---|
+| **Giám sát thiếu hụt bộ nhớ RAM & Swap Space của EC2** | **Unified CloudWatch Agent + `mem_used_percent`, `swap_used_percent`** | Detailed Monitoring (chỉ đo CPU/Network/Disk, không đo OS memory) | `TD-Set2 Q61`, `TD-Set6 Q19`, `TD-Set1 Q12` |
+| **Cấp quyền IAM cho EC2 gửi metrics CloudWatch Agent** | **IAM Role gắn policy `CloudWatchAgentServerPolicy`** | `AdministratorAccess` (thừa quyền), `AmazonEC2RoleforSSM` (sai mục đích) | `TD-Set6 Q19` |
+| **Auto Scaling Group cần phản hồi nhanh trong 1 phút** | **EC2 Detailed Monitoring (chu kỳ 1 phút)** | Basic Monitoring (chu kỳ 5 phút gây trễ phản ứng) | `TD-Set1 Q45` |
+| **Lưu trữ nhật ký kiểm toán API dài hơn 90 ngày** | **Tạo CloudTrail Trail xuất về S3 Bucket** | CloudTrail Event History (tự động biến mất sau 90 ngày) | `TD-Set5 Q47`, `TD-Set5 Q28` |
+| **Kiểm toán chi tiết ai tải/xóa từng file trên S3 (`GetObject`, `PutObject`)** | **Bật CloudTrail S3 Data Events** | CloudTrail mặc định (chỉ ghi Management Events, không ghi Data Events) | `TD-Set8 Q12` |
+| **Phân tích lỗi HTTP 504, request URL và độ trễ backend target** | **Application Load Balancer (ALB) Access Logs + Athena** | VPC Flow Logs (Layer 4, không thấy URL/HTTP code/target latency) | `TD-Set5 Q23` |
+| **Truyền log thời gian thực từ CloudWatch sang OpenSearch/SIEM** | **CloudWatch Logs Subscription Filter $\rightarrow$ Kinesis Data Firehose** | Xuất log thủ công qua Console (độ trễ cao, không tự động) | `TD-Set3 Q05` |
+| **Tìm nút thắt cổ chai độ trễ microservices/Lambda/DynamoDB** | **AWS X-Ray** (`Tracing: Active`) | CloudWatch Logs thông thường (khó tái tạo Service Map phân tán) | `TD-Set3 Q60`, `TD-Set4 Q51` |
+| **Kiểm tra tuân thủ chính sách mật khẩu IAM Password Policy** | **AWS Config Managed Rule `iam-password-policy`** | Viết script quét thủ công (tốn công, không liên tục) | `TD-Set4 Q45` |
+| **Tự động vá lỗi tài nguyên lệch chuẩn cấu hình** | **AWS Config + SSM Automation Remediation** | Thông báo email chờ con người xử lý thủ công | `TD-Set5 Q04` |
+| **Bảo vệ tính toàn vẹn file log kiểm toán trước tòa án** | **CloudTrail Log File Integrity Validation (SHA-256 HMAC)** | Lưu text file thông thường (dễ bị nghi ngờ chỉnh sửa) | `TD-Set5 Q28` |
+| **Cảnh báo cuộc gọi API trái phép/Root login** | **CloudTrail + CloudWatch Metric Filter + SNS** | Chỉ dùng CloudWatch Logs (thiếu bộ lọc sự kiện API) | Chuẩn AWS |
+| **Kiểm tra chứng chỉ ACM bên thứ 3 sắp hết hạn** | **AWS Config managed rule `acm-certificate-expiration-check`** | Tự động gia hạn của ACM (không áp dụng cho imported certs) | `U-PT2 Q35` |
+| **Tự động phục hồi máy ảo khi lỗi phần cứng AWS** | **CloudWatch Alarm trên `StatusCheckFailed_System` + EC2 Auto-Recovery** | Can thiệp thủ công (downtime kéo dài) | `CM-PT5 Q03` |
 
 ---
 

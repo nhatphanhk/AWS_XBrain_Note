@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon ECS, AWS Fargate, ECR & EKS (Công Nghệ Điều Phối Container Đám Mây)
+# Tài Liệu Học Tập Chuyên Sâu: Amazon ECS, AWS Fargate, ECR & EKS (Công Nghệ Điều Phối Container Đám Mây)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -88,6 +88,44 @@ classDiagram
 - **ECS Service Connect (Hiện đại)**:
   - Cung cấp mạng dịch vụ nội bộ (Service Mesh) cho các microservices trên ECS.
   - Thay vì phải tạo ALB nội bộ hoặc Cloud Map phức tạp, Service Connect tự động triển khai proxy sidecar gọn nhẹ trong từng task. Microservice A có thể gọi trực tiếp sang Microservice B qua tên miền thân thiện (ví dụ `http://payment-service:8080`) với cơ chế tự động cân bằng tải và giám sát độ trễ P99.
+
+---
+
+### 4. Chiến Lược Phân Bổ Tác Vụ ECS: Placement Strategies & Constraints (EC2 Launch Type)
+
+Khi vận hành cụm ECS với kiểu khởi chạy **EC2 Launch Type**, kiến trúc sư có toàn quyền điều khiển cách các task container được đặt lên các máy ảo EC2 thông qua **Task Placement Strategies** và **Task Placement Constraints** (`TD-Set6 Q46`):
+
+```mermaid
+flowchart TD
+    subgraph Strategies[1. Task Placement Strategies - Thuật Toán Phân Bổ]
+        BP[binpack\nNén task vào ít EC2 nhất dựa trên CPU hoặc Memory còn trống\n-> Tối ưu hóa chi phí, giảm số lượng instance cần chạy]
+        SP[spread\nRải đều task qua các Availability Zone hoặc Instance Id\n-> Tối đa hóa tính sẵn sàng cao High Availability]
+        RD[random\nĐặt tác vụ hoàn toàn ngẫu nhiên]
+    end
+
+    subgraph Constraints[2. Task Placement Constraints - Bộ Lọc Điều Kiện Tiên Quyết]
+        DI[distinctInstance\nMỗi máy chủ EC2 chỉ được phép chạy tối đa 1 task duy nhất của cùng một task definition]
+        MO[memberOf\nTask bắt buộc phải nằm trên EC2 thỏa mãn biểu thức\nví dụ: attribute:ecs.instance-type =~ t3.* hoặc runningTasksCount == 0]
+    end
+```
+
+- **Quy tắc phối hợp chuẩn kiến trúc**:
+  - *Tối ưu High Availability (HA)*: Kết hợp Strategy `spread(attribute:ecs.availability-zone)` tiếp theo là `spread(instanceId)`.
+  - *Tối ưu chi phí sản xuất*: Kết hợp Strategy `binpack(memory)` hoặc `binpack(cpu)` để gom task vào ít máy ảo nhất, cho phép Auto Scaling Group tắt bớt các EC2 instances nhàn rỗi (`TD-Set6 Q46`).
+  - *Chạy duy nhất 1 task trên mỗi máy ảo*: Áp dụng Constraint `distinctInstance` (`TD-Set6 Q46`).
+  - ⚠️ **Lưu ý thi cử sống còn**: Task Placement Strategies & Constraints **CHỈ ÁP DỤNG CHO EC2 LAUNCH TYPE**, hoàn toàn không áp dụng cho AWS Fargate vì Fargate là serverless, AWS tự động quản lý hạ tầng bên dưới (`TD-Set6 Q46`)!
+
+---
+
+### 5. Cơ Chế Tự Động Co Giãn ECS (Service Auto Scaling & Cluster Auto Scaling)
+
+- **ECS Service Auto Scaling**:
+  - Tự động điều chỉnh số lượng Task mong muốn (**Desired Task Count**) dựa trên các metric CloudWatch:
+    1. *Target Tracking Scaling*: Duy trì mức tải CPU trung bình (`ECSServiceAverageCPUUtilization`) hoặc Memory ở mức mục tiêu (ví dụ 70%).
+    2. *ALB RequestCountPerTarget*: Duy trì số lượng requests trung bình trên mỗi container task phía sau ALB, phản hồi ngay lập tức trước các đợt bùng nổ traffic (`TD-Set6 Q59`).
+    3. *Step Scaling theo SQS Queue Backlog*: Khi có tệp tin upload lên S3, S3 gửi thông báo vào SQS Queue; ECS Service Auto Scaling tăng số lượng Fargate batch worker tasks tương ứng với số lượng tin nhắn trong hàng đợi (`TD-Set1 Q59`).
+- **Amazon ECS Capacity Providers**:
+  - Tự động đồng bộ giữa tầng Tasks và tầng EC2 Instances (Cluster Auto Scaling), đảm bảo khi Service cần scale out thêm tasks thì Capacity Provider sẽ tự động ra lệnh cho EC2 Auto Scaling Group bổ sung thêm máy ảo tương ứng.
 
 ---
 
@@ -186,22 +224,65 @@ classDiagram
   - Cho phép chạy cụm Kubernetes chuẩn AWS trên máy chủ On-Premises của khách hàng.
   - Kết nối và hiển thị trạng thái tập trung trên AWS EKS Console thông qua **EKS Connector**.
 
+#### 🪤 Bẫy 7: Chiến Lược Đặt Tác Vụ ECS Tối Ưu Chi Phí vs Tính Sẵn Sàng: Placement Strategies & Constraints — (TD-Set6 Q46)
+- **Tình huống đề thi**: *"Hệ thống High-Performance Computing (HPC) chạy trên Amazon ECS với kiểu khởi chạy Amazon EC2 Launch Type. Cần cấu hình phân bổ tác vụ sao cho: (1) Nén các task vào số lượng ít máy ảo nhất dựa trên RAM/CPU trống để tối ưu hóa chi phí và tắt bớt EC2 thừa, hoặc (2) Rải đều task sang các Availability Zone để đạt tính sẵn sàng cao nhất, hoặc (3) Mỗi máy chủ EC2 chỉ được chạy duy nhất 1 task."*
+- **Các phương án bẫy**:
+  - ❌ *Cấu hình Placement Strategy trên AWS Fargate*: Fargate là serverless, AWS tự quản lý máy chủ bên dưới nên **hoàn toàn không hỗ trợ và không thể cấu hình Placement Strategies/Constraints**!
+  - ❌ *Nhầm lẫn giữa `binpack` và `spread`*: `binpack` gom nén để tiết kiệm chi phí; `spread` rải đều để đảm bảo High Availability.
+- **Giải pháp ĐÚNG**: Áp dụng các chiến lược chuẩn trên **EC2 Launch Type** (`TD-Set6 Q46`):
+  - Tiết kiệm chi phí, nén task vào ít host nhất: Strategy **`binpack`** (theo `memory` hoặc `cpu`).
+  - Tối đa hóa tính sẵn sàng cao (HA): Strategy **`spread`** (theo `attribute:ecs.availability-zone` hoặc `instanceId`).
+  - Chạy duy nhất 1 task trên 1 máy ảo: Constraint **`distinctInstance`** (`TD-Set6 Q46`).
+
+#### 🪤 Bẫy 8: Tự Động Co Giãn Tác Vụ Container Fargate Xử Lý Lô Theo SQS: S3 Upload Batch — (TD-Set1 Q59)
+- **Tình huống đề thi**: *"Doanh nghiệp có ứng dụng xử lý batch job chạy trên AWS Fargate mỗi khi có đối tượng mới được tải lên Amazon S3. Số lượng ECS task ban đầu đặt là 1 để tiết kiệm chi phí, và chỉ được phép tăng lên khi có nhiều tệp tin mới được tải lên S3. Cần giải pháp tự động co giãn nào với chi phí tối ưu nhất?"*
+- **Các phương án bẫy**:
+  - ❌ *Cấu hình CloudWatch Alarm theo dõi CPU của Fargate task để scale out*: Khi tệp mới tải lên S3, task có thể chưa kịp chạy hoặc CPU chưa tăng, gây chậm trễ xử lý backlog.
+  - ❌ *Tự viết cronjob Lambda thăm dò S3 bucket*: Tốn chi phí API S3 LIST requests và tạo độ trễ.
+- **Giải pháp ĐÚNG**: Kiến trúc **S3 Event Notification $\rightarrow$ Amazon SQS Queue $\rightarrow$ ECS Service Auto Scaling** (`TD-Set1 Q59`).
+  - S3 gửi sự kiện tạo file vào SQS Queue.
+  - Cấu hình ECS Service Auto Scaling sử dụng chính sách Step Scaling hoặc Target Tracking dựa trên metric số lượng tin nhắn trong hàng đợi SQS (`ApproximateNumberOfMessagesVisible`). Khi tin nhắn tăng, ECS tự động mở rộng số lượng Fargate tasks để xử lý batch job (`TD-Set1 Q59`).
+
+#### 🪤 Bẫy 9: Website ECS Sau ALB Tải Chậm Giờ Cao Điểm: ECS Service Auto Scaling — (TD-Set6 Q59)
+- **Tình huống đề thi**: *"Một trang web thương mại điện tử triển khai trên Amazon ECS container instances chạy phía sau Application Load Balancer (ALB). Trong các khung giờ cao điểm, trang web bị tải chậm nghiêm trọng do số lượng container hiện tại không đủ đáp ứng. Cần giải pháp nào để khắc phục tự động và cải thiện tính sẵn sàng?"*
+- **Các phương án bẫy**:
+  - ❌ *Chỉ cấu hình CloudWatch Alarm gửi email thông báo cho kỹ sư để tăng Desired Count bằng tay*: Can thiệp thủ công gây downtime và phản hồi trễ hàng chục phút.
+  - ❌ *Nâng cấu hình vCPU/RAM của task definition lên gấp đôi*: Gây lãng phí tài nguyên lớn trong các khung giờ bình thường khi không có khách.
+- **Giải pháp ĐÚNG**: Thiết lập **ECS Service Auto Scaling** tích hợp với Application Load Balancer (`TD-Set6 Q59`).
+  - Cấu hình Target Tracking Scaling Policy dựa trên metric **`ALBRequestCountPerTarget`** hoặc `ECSServiceAverageCPUUtilization`.
+  - Khi lưu lượng người dùng đổ về ALB tăng cao, ECS tự động tăng số lượng container tasks tương ứng trong vài phút, chia đều tải và khôi phục tốc độ phản hồi website ngay lập tức (`TD-Set6 Q59`).
+
+#### 🪤 Bẫy 10: Tách Rời Hai Tác Vụ Container Bằng Hàng Đợi SQS: Upload Task & Processing Task — (TD-Set2 Q01)
+- **Tình huống đề thi**: *"Ứng dụng xử lý hình ảnh dạng batch được thiết kế chạy trên Amazon ECS với 2 tác vụ: Tác vụ 1 nhận ảnh tải lên từ người dùng và lưu tạm; Tác vụ 2 lấy ảnh để giải mã và áp dụng các hiệu ứng đồ họa phức tạp. Tác vụ 2 chạy rất lâu. Cần thiết kế kiến trúc phân rã kết nối giữa 2 tác vụ này để hệ thống vận hành bền bỉ."*
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon SQS Queue** đặt làm bộ đệm trung gian giữa hai ECS Tasks (`TD-Set2 Q01`).
+  - Tác vụ 1 sau khi lưu ảnh vào S3 sẽ gửi tin nhắn thông báo metadata vào hàng đợi SQS.
+  - Tác vụ 2 độc lập poll tin nhắn từ SQS để xử lý tuần tự/song song theo năng lực của mình, đảm bảo lỗi ở Tác vụ 2 không làm gián đoạn việc tải ảnh của Tác vụ 1 (`TD-Set2 Q01`).
+
+#### 🪤 Bẫy 11: Lựa Chọn Launch Type Tối Giản Vận Hành: Fargate vs EC2 — (TD-Set2 Q10, TD-Set4 Q03, TD-Set6 Q07)
+- **Tình huống đề thi**: *"Doanh nghiệp chuyển đổi các container Docker lên AWS và yêu cầu nỗ lực quản trị hạ tầng thấp nhất (LEAST operational overhead), không muốn quản lý máy chủ máy ảo, không muốn vá lỗi hệ điều hành hay quản lý cụm EC2."*
+- **Giải pháp ĐÚNG**: Chọn kiểu khởi chạy **AWS Fargate (Serverless Launch Type)** (`TD-Set2 Q10`, `TD-Set4 Q03`, `TD-Set6 Q07`).
+  - Fargate loại bỏ 100% gánh nặng quản lý máy ảo, quản lý ECS-optimized AMI hay vá lỗi kernel Linux.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Container Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Chạy Container không quản trị OS, trả tiền theo giây** | **Amazon ECS on AWS Fargate** | ECS on EC2 (phải quản trị, vá lỗi máy ảo) |
-| **Workload Kubernetes hiện có, di chuyển lên AWS** | **Amazon EKS** (+ Fargate hoặc EC2 nodes) | Amazon ECS (phải viết lại Task Definition) |
-| **Phân quyền đặc quyền tối thiểu cho từng Pod EKS truy cập AWS** | **IAM Roles for Service Accounts (IRSA)** | Node IAM Role (vi phạm least privilege vì dùng chung host) |
-| **Chạy Kubernetes chuẩn AWS trên hạ tầng On-Premises** | **Amazon EKS Anywhere / AWS Outposts** | Tự dựng cụm K8s thủ công (tốn công vận hành) |
-| **Phân quyền cho code trong container gọi DynamoDB/S3** | **ECS Task Role** | ECS Task Execution Role (chỉ dành cho ECS agent) |
-| **Container cần chia sẻ file system đọc/ghi đồng thời** | **ECS on Fargate + Amazon EFS** | Amazon EBS (không chia sẻ nhiều AZ đồng thời) |
-| **Script chạy 30-60 phút cần serverless** | **EventBridge Scheduler + ECS Fargate Task** | AWS Lambda (hard limit timeout 15 phút) |
-| **Kéo image ECR trong Private Subnet không có NAT** | **VPC Endpoints cho ECR API, DKR + S3 Gateway** | Chỉ tạo ECR endpoints (thiếu S3 endpoint) |
-| **Triển khai Web App Container ít công vận hành nhất** | **AWS App Runner** | Tự dựng cụm ECS + ALB + VPC (quá nhiều cấu hình) |
-| **Phân quyền truy cập S3/DB theo chuẩn Least Privilege** | **ECS Task Role** | Instance Role (vi phạm least privilege vì dùng chung host) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Tham chiếu đề thi |
+|:---|:---|:---|:---|
+| **Nén tasks vào ít host nhất để tiết kiệm chi phí EC2** | **Task Placement Strategy: `binpack` (CPU hoặc Memory)** | Strategy `spread` (rải đều gây lãng phí nhiều EC2 chạy dở) | `TD-Set6 Q46` |
+| **Rải đều tasks qua các AZ để đạt High Availability tối đa** | **Task Placement Strategy: `spread(availability-zone)`** | Strategy `binpack` (dồn hết vào 1 AZ rủi ro mất điện) | `TD-Set6 Q46` |
+| **Mỗi máy chủ EC2 chỉ được phép chạy duy nhất 1 task** | **Task Placement Constraint: `distinctInstance`** | Task Placement Strategy (không ép buộc được tính độc nhất) | `TD-Set6 Q46` |
+| **Co giãn Fargate batch task dựa trên file mới tải lên S3** | **S3 Event $\rightarrow$ SQS Queue $\rightarrow$ ECS Service Auto Scaling** | Polling S3 bằng cronjob thủ công (chậm, tốn chi phí API S3) | `TD-Set1 Q59` |
+| **Website ECS sau ALB bị nghẽn tải trong giờ cao điểm** | **ECS Service Auto Scaling (`ALBRequestCountPerTarget` / CPU)** | Can thiệp thủ công tăng task hoặc nâng cứng RAM task | `TD-Set6 Q59` |
+| **Tách rời tác vụ upload ảnh và xử lý ảnh nặng trên ECS** | **Đặt hàng đợi Amazon SQS làm bộ đệm giữa 2 ECS Tasks** | Kết nối trực tiếp giữa 2 tasks (dễ gây nghẽn và mất ảnh) | `TD-Set2 Q01` |
+| **Chạy Container không quản lý OS/máy chủ với ít công sức nhất** | **Amazon ECS on AWS Fargate (Serverless)** | ECS on EC2 (phải tự vá lỗi hệ điều hành và quản lý cluster) | `TD-Set2 Q10`, `TD-Set4 Q03`, `TD-Set6 Q07` |
+| **Bảo mật bí mật kết nối database cho cụm Amazon EKS** | **AWS Secrets Manager / KMS CMK envelope encryption** | Lưu mật khẩu dạng plain text trong container Dockerfile | `TD-Set1 Q13` |
+| **Phân quyền cho code trong container gọi DynamoDB/S3** | **ECS Task Role** | ECS Task Execution Role (chỉ dành cho ECS agent hạ tầng) | `CM-PT2 Q20` |
+| **Container cần chia sẻ file system đọc/ghi đồng thời xuyên AZ** | **ECS on Fargate + Amazon EFS** | Amazon EBS (EBS không thể mount đồng thời qua nhiều AZ) | `CM-PT1 Q36` |
+| **Workload Kubernetes hiện có, di chuyển lên AWS** | **Amazon EKS** (+ Fargate hoặc EC2 nodes) | Amazon ECS (phải viết lại toàn bộ Task Definition) | Chuẩn AWS |
+| **Phân quyền đặc quyền tối thiểu cho từng Pod EKS truy cập AWS** | **IAM Roles for Service Accounts (IRSA)** | Node IAM Role (vi phạm least privilege vì dùng chung host) | `U-PT1 Q04` |
+| **Kéo image ECR trong Private Subnet không có Internet/NAT** | **VPC Endpoints cho ECR API, DKR + Gateway Endpoint S3** | Chỉ tạo ECR endpoints (thiếu S3 endpoint chứa binary layer) | Chuẩn AWS |
+| **Triển khai Web App Container với ít công vận hành nhất** | **AWS App Runner** | Tự dựng cụm ECS + ALB + VPC (quá nhiều tham số cấu hình) | `CM-PT2 Q57`, `CM-PT4 Q05` |
 
 ---
 

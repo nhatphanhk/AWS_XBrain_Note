@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: AWS KMS, Secrets Manager, CloudHSM, WAF & Dịch Vụ An Ninh Đám Mây (Security & Encryption)
+# Tài Liệu Học Tập Chuyên Sâu: AWS KMS, Secrets Manager, CloudHSM, WAF & Dịch Vụ An Ninh Đám Mây (Security & Encryption)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -202,6 +202,42 @@ flowchart LR
   - Sử dụng **AWS Glue ETL Jobs (Serverless Spark)**.
   - Cấu hình **Glue Security Configuration** tích hợp với **AWS KMS Customer Managed Key (CMK)**: Tự động mã hóa dữ liệu ghi vào S3 target, mã hóa metadata catalog, và mã hóa shuffle storage tạm thời trên các node Glue.
 
+#### 4. Kiểm Soát Khóa Tuyệt Đối Với KMS Custom Key Store Backed by AWS CloudHSM — (TD-Set1 Q64, TD-Set6 Q47)
+- **Tình huống thi**: Doanh nghiệp tài chính/y tế có yêu cầu pháp lý nghiêm ngặt: Toàn bộ dữ liệu đám mây phải được mã hóa ở trạng thái nghỉ, tích hợp dễ dàng với các dịch vụ AWS, nhưng doanh nghiệp phải **toàn quyền kiểm soát vật liệu khóa (exclusive control)**, lưu trữ khóa trên thiết bị phần cứng chuyên dụng đơn khách hàng (**Single-tenant FIPS 140-2 Level 3 Dedicated HSM**), có khả năng **xóa sạch vật liệu khóa ngay lập tức (immediate key material removal)** và kiểm toán việc dùng khóa độc lập hoàn toàn với AWS CloudTrail (`TD-Set1 Q64`, `TD-Set6 Q47`).
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Tạo một **AWS KMS Custom Key Store** được hỗ trợ bởi cụm **AWS CloudHSM (CloudHSM-backed KMS key)**.
+  - KMS quản lý vòng đời logic và giao diện API cho các dịch vụ AWS (EBS, S3, RDS), nhưng vật liệu khóa mật mã thực tế được sinh ra, lưu trữ an toàn và thực thi mật mã độc quyền bên trong phần cứng CloudHSM của khách hàng.
+  - Để vô hiệu hóa/xóa khóa ngay lập tức: Khách hàng chỉ cần ngắt kết nối Custom Key Store hoặc xóa trực tiếp key trên cluster CloudHSM. Nhật ký hoạt động được ghi nhận độc lập qua log daemon của CloudHSM.
+
+#### 5. Bảo Mật Biến Môi Trường Lambda Bằng KMS Encryption Helpers — (TD-Set1 Q58)
+- **Tình huống thi**: Hàm AWS Lambda lưu các biến môi trường nhạy cảm như database credentials, API tokens. Mặc dù Lambda mặc định mã hóa biến môi trường bằng KMS, nhưng các lập trình viên hoặc người dùng có quyền truy cập console Lambda vẫn nhìn thấy các giá trị mật khẩu này dưới dạng **văn bản rõ (Plaintext)**. Cần giải pháp bảo mật tối đa ngăn chặn đồng nghiệp nhìn thấy credentials (`TD-Set1 Q58`).
+- **Giải pháp chuẩn AWS**:
+  - Tạo một **Customer Managed KMS Key (CMK)** riêng biệt.
+  - Kích hoạt tính năng **Encryption Helpers** trong AWS Lambda Console: Sử dụng khóa KMS CMK để mã hóa biến môi trường phía client trước khi lưu trữ.
+  - Trong mã nguồn hàm Lambda, sử dụng AWS SDK gọi lệnh `kms:Decrypt` trong thời gian chạy (runtime) để giải mã lấy giá trị sử dụng.
+  - Phân quyền IAM: Chỉ cấp quyền `kms:Decrypt` cho Execution Role của Lambda, không cấp cho nhóm lập trình viên, khiến giá trị trên console luôn bị che giấu dưới dạng Ciphertext nhị phân an toàn.
+
+#### 6. Tối Ưu Chi Phí Lưu Trữ Bí Mật: Parameter Store SecureString vs Secrets Manager — (TD-Set3 Q33)
+- **Tình huống thi**: Hệ thống ứng dụng nhiều tầng chạy trên EC2 và Aurora MySQL cần lưu trữ an toàn có mã hóa các biến môi trường cấu hình, database hostnames, license keys và mật khẩu. Doanh nghiệp yêu cầu giải pháp có **chi phí triển khai tối ưu nhất (Lowest implementation cost)** và không yêu cầu tính năng tự động xoay vòng mật khẩu (`TD-Set3 Q33`).
+- **Giải pháp chuẩn AWS**:
+  - Lưu trữ các biến cấu hình bằng tham số kiểu **`SecureString` trong AWS Systems Manager Parameter Store**, sử dụng **AWS KMS** để mã hóa at-rest.
+  - Cập nhật ứng dụng gọi Parameter Store API để lấy cấu hình khi khởi động.
+  - *Phân tích chi phí*: SSM Parameter Store Standard Parameters là **HOÀN TOÀN MIỄN PHÍ ($0.00/tháng)** cho việc lưu trữ tham số (chỉ chịu phí truy vấn KMS rất nhỏ). Trong khi đó, AWS Secrets Manager tính phí **$0.40/secret/tháng** (lưu 100 bí mật tốn $40/tháng), chỉ nên dùng Secrets Manager khi thực sự cần tính năng tự động xoay vòng (Auto-rotation).
+
+#### 7. Tự Động Quét Phát Hiện Dữ Liệu Cá Nhân PII Trên S3 Bằng Amazon Macie — (TD-Set1 Q44, TD-Set5 Q44, TD-Set6 Q44)
+- **Tình huống thi**: Đơn vị điều tra dân số hoặc sàn thương mại điện tử tải hàng triệu hồ sơ dữ liệu lên các Amazon S3 buckets. Cần cơ chế tự động liên tục kiểm tra và cảnh báo nếu có dữ liệu định danh cá nhân nhạy cảm (PII: Số CCCD/SSN, số hộ chiếu, số thẻ tín dụng, hồ sơ bệnh án) bị rò rỉ hoặc lưu trữ không an toàn (`TD-Set1 Q44`, `TD-Set5 Q44`, `TD-Set6 Q44`).
+- **Giải pháp chuẩn AWS**:
+  - Kích hoạt **Amazon Macie**.
+  - Thiết lập các tác vụ **Macie Sensitive Data Discovery Jobs** định kỳ quét các đối tượng lưu trữ trong S3 buckets chỉ định.
+  - Macie sử dụng thuật toán Machine Learning và đối sánh mẫu (Pattern Matching) tự động phân loại mức độ nhạy cảm của dữ liệu, gắn nhãn rủi ro và đẩy các cảnh báo an ninh (**Findings**) sang **Amazon EventBridge** để tự động kích hoạt Lambda xử lý (cách ly file, siết chặt quyền S3 Bucket Policy).
+
+#### 8. Khôi Phục Snapshot EBS Chưa Mã Hóa Thành Volume Đã Mã Hóa — (TD-Set6 Q04)
+- **Tình huống thi**: Trong tài khoản AWS có nhiều bản snapshot của các ổ đĩa Amazon EBS chưa được mã hóa. Kiến trúc sư an ninh cần đảm bảo rằng tất cả các ổ đĩa EBS mới được tạo hoặc khôi phục từ các snapshot này đều **bắt buộc phải được mã hóa tự động** (`TD-Set6 Q04`).
+- **Giải pháp chuẩn AWS**:
+  - Kích hoạt tính năng **EBS Encryption by Default** ở cấp độ Region trong tài khoản AWS.
+  - Khi tính năng này được bật, bất kỳ volume mới nào được tạo hoặc khôi phục từ snapshot (kể cả unencrypted snapshot) sẽ tự động được mã hóa bằng khóa KMS mặc định hoặc CMK chỉ định.
+  - Hoặc sao chép snapshot bằng lệnh `aws ec2 copy-snapshot --encrypted --kms-key-id <key-id>` và khôi phục volume từ snapshot bản sao đã mã hóa.
+
 ---
 
 ### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
@@ -232,11 +268,12 @@ flowchart LR
   - Khóa KMS thông thường là **tài nguyên cục bộ trong 1 Region (Regional Resource)**. Khóa tạo ở Region A hoàn toàn không tồn tại và không thể dùng để giải mã ở Region B.
   - **Giải pháp ĐÚNG**: Sử dụng **AWS KMS Multi-Region Key (`mrk-xxxxxxxx`)**. Khóa này chia sẻ cùng một Key ID và Key Material trên nhiều Region, cho phép mã hóa ở Region A và giải mã liền mạch tại Region B.
 
-#### 🪤 Bẫy 4: Tự Kiểm Soát Khóa Mã Hóa (Retain Control Over Key Material) — (CM-PT2 Q23)
-- **Tình huống đề thi**: *"Khách hàng yêu cầu toàn bộ dữ liệu lưu trữ trên Amazon S3 Glacier phải được mã hóa khi lưu trữ. Tuy nhiên, doanh nghiệp bắt buộc phải TỰ MÌNH KIỂM SOÁT toàn bộ chuỗi bit khóa mã hóa (Key Material), tuyệt đối không để AWS tự sinh ra hay nắm giữ key material trong HSM của AWS. Chọn 2 giải pháp kết hợp."*
+#### 🪤 Bẫy 4: Tự Kiểm Soát Khóa Mã Hóa (Retain Control Over Key Material) — (CM-PT2 Q23, TD-Set1 Q06)
+- **Tình huống đề thi**: *"Khách hàng yêu cầu toàn bộ dữ liệu lưu trữ trên Amazon S3 Glacier phải được mã hóa khi lưu trữ. Tuy nhiên, doanh nghiệp bắt buộc phải TỰ MÌNH KIỂM SOÁT toàn bộ chuỗi bit khóa mã hóa (Key Material), tuyệt đối không để AWS tự sinh ra hay nắm giữ key material trong HSM của AWS."*
 - **Phân tích giải pháp**:
   - **Giải pháp 1**: Tạo một **AWS KMS Key với Imported Key Material (BYOK - Bring Your Own Key)**. Khách hàng sử dụng thiết bị HSM tại chỗ (On-Premises HSM) để sinh key material, sau đó import vào KMS key rỗng. Khách hàng toàn quyền xóa hoặc thay thế key material bất cứ lúc nào.
-  - **Giải pháp 2**: Sử dụng phương thức mã hóa **Server-Side Encryption with Customer-Provided Keys (SSE-C)**. Khách hàng tự lưu trữ và quản lý khóa hoàn toàn ngoài AWS; mỗi khi upload/download qua S3/Glacier, khách hàng truyền key trong HTTPS headers (`x-amz-server-side-encryption-customer-key`). AWS chỉ dùng key đó trong RAM để mã hóa/giải mã rồi lập tức xóa bỏ khỏi bộ nhớ.
+  - **Giải pháp 2**: Sử dụng **Client-Side Encryption with Customer-Provided Keys (CSE-C)** (`TD-Set1 Q06`): Khách hàng tự mã hóa file cục bộ trước khi upload lên S3. Cả Plaintext Data và Master Key không bao giờ chạm tới hạ tầng đám mây AWS.
+  - **Giải pháp 3**: Sử dụng **Server-Side Encryption with Customer-Provided Keys (SSE-C)**: Khách hàng truyền key trong HTTPS header, AWS chỉ mã hóa trong bộ nhớ đệm RAM rồi xóa ngay lập tức.
 
 #### 🪤 Bẫy 5: Quyền Kiểm Soát Lịch Xoay Vòng Khóa Bắt Buộc Dùng Customer Managed Key (CMK) — (CM-PT6 Q14)
 - **Tình huống đề thi**: *"Chính sách bảo mật của doanh nghiệp quy định đội ngũ an ninh phải chủ động kiểm soát và thiết lập lịch xoay vòng khóa mã hóa (Key Rotation Schedule) theo yêu cầu riêng hoặc định kỳ 90 ngày một lần. Chọn loại khóa KMS nào?"*
@@ -258,24 +295,39 @@ flowchart LR
   - Chứng chỉ SSL/TLS dùng cho **Amazon CloudFront Distribution** BẮT BUỘC PHẢI ĐƯỢC REQUEST TẠI REGION **`us-east-1` (N. Virginia)**!
   - Nếu tạo chứng chỉ ở bất kỳ Region nào khác (ví dụ `ap-southeast-1` Singapore hay `eu-west-1` Ireland), CloudFront Distribution sẽ hoàn toàn không nhìn thấy chứng chỉ đó trong danh sách dropdown!
 
+#### 🪤 Bẫy 8: AWS KMS vs AWS CloudHSM: Môi Trường Phần Cứng Chuyên Dụng — (TD-Set6 Q47, TD-Set1 Q64)
+- **Tình huống đề thi**: *"Doanh nghiệp xử lý thẻ tín dụng phân vân giữa KMS và CloudHSM. Khi nào bắt buộc phải dùng CloudHSM?"*
+- **Điểm mấu chốt**:
+  - **AWS KMS**: Dịch vụ đa người dùng (**Multi-tenant**), AWS quản lý phần cứng ngầm. Thích hợp cho hầu hết các workload thông thường, chi phí thấp ($1/key/tháng).
+  - **AWS CloudHSM**: Thiết bị phần cứng đơn khách hàng (**Single-tenant dedicated hardware appliance**), khách hàng sở hữu độc quyền thông tin đăng nhập HSM (`crypto-user`), tuân thủ chuẩn **FIPS 140-2 Level 3**, hỗ trợ giao thức tiêu chuẩn công nghiệp (PKCS#11, JCE, CNG). Chi phí cao (tính theo giờ phần cứng).
+
+#### 🪤 Bẫy 9: Cơ Chế Chờ Xóa Khóa KMS Để Tránh Mất Mát Dữ Liệu Ngoài Ý Muốn — (TD-Set8 Q05)
+- **Tình huống đề thi**: *"Kỹ sư vô tình gọi API xóa khóa KMS. Dữ liệu mã hóa có bị mất vĩnh viễn ngay lập tức không?"*
+- **Quy tắc KMS bất biến**:
+  - AWS KMS **KHÔNG BAO GIỜ hỗ trợ xóa khóa ngay lập tức** qua API thông thường.
+  - Lệnh xóa khóa bắt buộc phải lên lịch chờ (**ScheduleKeyDeletion**) với khoảng thời gian chờ an toàn (**Waiting Period**) từ **7 đến 30 ngày** (mặc định 30 ngày).
+  - Trong thời gian chờ này, khóa ở trạng thái `PendingDeletion` (không thể encrypt/decrypt nhưng có thể gọi `CancelKeyDeletion` để khôi phục an toàn).
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định An Ninh & Mã Hóa Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Dịch vụ / Giải pháp chuẩn | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Chống xóa bản sao lưu tuyệt đối (kể cả Root)** | **AWS Backup Vault Lock (Compliance Mode)** | Governance Mode (Root vẫn có thể xóa) |
-| **Phát hiện máy chủ bị hack đào crypto / IP độc** | **Amazon GuardDuty** | Amazon Inspector (chỉ quét CVE, không monitor traffic) |
-| **Quét lỗ hổng CVE trên EC2, ECR, Lambda** | **Amazon Inspector** | GuardDuty (không quét lỗ hổng phần mềm) |
-| **Tự động tìm kiếm số thẻ tín dụng/PII trong S3** | **Amazon Macie** | AWS IAM Access Analyzer (chỉ phân tích quyền) |
-| **Chống tấn công SQL Injection, XSS, HTTP Flood** | **AWS WAF** (gắn trên ALB/CloudFront) | AWS Shield Standard (chỉ bảo vệ Layer 3/4) |
-| **Mã hóa S3 CRR xuyên nhiều AWS Regions** | **AWS KMS Multi-Region Key** | Single-Region KMS Key (không giải mã được ở Region khác) |
-| **Quản lý & xoay vòng chứng chỉ SSL tự động** | **AWS Certificate Manager (ACM)** | Tự upload cert bên thứ 3 (không tự renew được) |
-| **Truy vết ai đã sử dụng khóa để giải mã dữ liệu** | **SSE-KMS** (ghi log vào CloudTrail) | SSE-S3 (không có audit trail chi tiết cho từng object) |
-| **Tự kiểm soát key material không để AWS sinh** | **KMS Imported Key Material (BYOK) hoặc SSE-C** | AWS Managed Keys (AWS tự sinh và nắm giữ) |
-| **Kiểm soát chủ động lịch xoay vòng khóa mã hóa** | **KMS Customer Managed Key (CMK)** | AWS Managed Key (bị cố định 1 năm 1 lần) |
-| **Cấp chứng chỉ SSL/TLS cho CloudFront Distribution** | **ACM tại Region `us-east-1` (bắt buộc)** | ACM tại các Region khác (CloudFront không nhận) |
-| **Giải mã KMS xuyên tài khoản S3 sang Lambda** | **IAM Policy (Caller) + Key Policy (Owner)** | Chỉ cấu hình 1 bên (bị lỗi Access Denied) |
+| Tình huống / Yêu cầu trong đề thi | Dịch vụ / Giải pháp chuẩn | Giải pháp bị loại & Lý do | Nguồn thực chứng |
+|:---|:---|:---|:---|
+| **Chống xóa bản sao lưu tuyệt đối (kể cả Root)** | **AWS Backup Vault Lock (Compliance Mode)** | Governance Mode (Root vẫn có thể xóa) | Chuẩn AWS |
+| **Phát hiện máy chủ bị hack đào crypto / IP độc** | **Amazon GuardDuty** | Amazon Inspector (chỉ quét CVE, không monitor traffic) | `TD-Set2 Q07`, `TD-Set5 Q14` |
+| **Quét lỗ hổng CVE trên EC2, ECR, Lambda** | **Amazon Inspector** | GuardDuty (không quét lỗ hổng phần mềm) | `TD-Set1 Q12`, `TD-Set4 Q38` |
+| **Tự động tìm kiếm số thẻ tín dụng/PII trong S3** | **Amazon Macie** | AWS IAM Access Analyzer (chỉ phân tích quyền) | `TD-Set1 Q44`, `TD-Set5 Q44`, `TD-Set6 Q44` |
+| **Chống tấn công SQL Injection, XSS, HTTP Flood** | **AWS WAF** (gắn trên ALB/CloudFront) | AWS Shield Standard (chỉ bảo vệ Layer 3/4) | `TD-Set1 Q16` |
+| **Phần cứng FIPS 140-2 Level 3 độc quyền kiểm soát khóa** | **AWS CloudHSM** (hoặc KMS Custom Key Store) | AWS KMS Standard (môi trường Multi-tenant) | `TD-Set1 Q64`, `TD-Set6 Q47` |
+| **Lưu trữ bí mật/mật khẩu rẻ nhất (không cần auto-rotate)** | **SSM Parameter Store (SecureString)** | AWS Secrets Manager ($0.40/secret/tháng đắt đỏ) | `TD-Set3 Q33` |
+| **Tự động xoay vòng mật khẩu DB không gián đoạn** | **AWS Secrets Manager** (kết hợp Lambda) | SSM Parameter Store (không tích hợp xoay vòng tự động) | `TD-Set2 Q10` |
+| **Giấu biến môi trường Lambda khỏi Console Plaintext** | **KMS Encryption Helpers (Customer Managed Key)** | Mã hóa mặc định Lambda (vẫn xem được Plaintext console) | `TD-Set1 Q58` |
+| **Mã hóa S3 CRR xuyên nhiều AWS Regions** | **AWS KMS Multi-Region Key** | Single-Region KMS Key (không giải mã được ở Region khác) | Chuẩn AWS |
+| **Khôi phục snapshot chưa mã hóa thành volume mã hóa** | Bật **EBS Encryption by Default** ở cấp Region | Khôi phục trực tiếp (volume sinh ra vẫn unencrypted) | `TD-Set6 Q04` |
+| **Ngăn chặn xóa nhầm khóa mã hóa KMS** | **ScheduleKeyDeletion (Chờ 7-30 ngày)** | Lệnh xóa tức thì (KMS không cho phép xóa ngay) | `TD-Set8 Q05` |
+| **Master Key & Plaintext không bao giờ chạm tới AWS** | **Client-Side Encryption with Customer Key (CSE-C)** | SSE-KMS / SSE-S3 (dữ liệu rõ vẫn gửi lên AWS) | `TD-Set1 Q06` |
+| **Cấp chứng chỉ SSL/TLS cho CloudFront Distribution** | **ACM tại Region `us-east-1` (bắt buộc)** | ACM tại các Region khác (CloudFront không nhận) | `TD-Set1 Q19` |
 
 ---
 

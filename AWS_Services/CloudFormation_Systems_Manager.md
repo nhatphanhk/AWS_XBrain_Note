@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: AWS CloudFormation & AWS Systems Manager (Infrastructure as Code & Fleet Automation)
+# Tài Liệu Học Tập Chuyên Sâu: AWS CloudFormation & AWS Systems Manager (Infrastructure as Code & Fleet Automation)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal DevOps & Automation Solutions Architect (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu 100% thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -48,7 +48,7 @@ flowchart TD
 
 ## 2. Đi Sâu AWS CloudFormation (Infrastructure as Code)
 
-### 2.1. Cấu Trúc Giải Phẫu Của Template CloudFormation (Template Anatomy)
+### 2.1. Cấu Trúc Giải Phẫu Của Template CloudFormation (Template Anatomy) — (TD-Set6 Q32)
 
 Một tệp template CloudFormation (YAML) hoàn chỉnh bao gồm các thành phần sau:
 * **`AWSTemplateFormatVersion`**: Phiên bản định dạng (hiện tại luôn là `"2010-09-09"`).
@@ -56,7 +56,7 @@ Một tệp template CloudFormation (YAML) hoàn chỉnh bao gồm các thành p
 * **`Parameters`**: Các tham số đầu vào do người dùng truyền vào khi tạo hoặc cập nhật Stack (ví dụ: Tên môi trường `prod`/`dev`, Instance Type `t3.micro`).
 * **`Mappings`**: Bảng tra cứu giá trị cố định dạng Key-Value (ví dụ: Tra cứu AMI ID tương ứng cho từng Region).
 * **`Conditions`**: Biểu thức logic (`Fn::Equals`, `Fn::If`) để quyết định tài nguyên nào có được tạo hay không (ví dụ: Chỉ tạo Read Replica nếu môi trường là `prod`).
-* **`Resources` (BẮT BUỘC DUY NHẤT)**: Khai báo các tài nguyên AWS thực tế cần khởi tạo (ví dụ: `AWS::EC2::Instance`, `AWS::S3::Bucket`).
+* **`Resources` (PHẦN BẮT BUỘC DUY NHẤT — `TD-Set6 Q32`)**: Khai báo các tài nguyên AWS thực tế cần khởi tạo (ví dụ: `AWS::EC2::Instance`, `AWS::S3::Bucket`). Một template hợp lệ chỉ cần duy nhất khối `Resources`, tất cả các phần khác đều là tùy chọn (**Optional**).
 * **`Outputs`**: Xuất ra các giá trị sau khi stack tạo thành công (ví dụ: URL của ALB, VPC ID). Có thể dùng `Export: Name` để chia sẻ sang các Stack khác!
 
 ---
@@ -98,9 +98,9 @@ flowchart LR
   - **`Snapshot`**: Tự động chụp một bản sao lưu (Snapshot) của EBS Volume, RDS DB Instance trước khi tài nguyên bị hủy.
   - **`Delete` (Mặc định)**: Xóa hoàn toàn tài nguyên.
 
-#### 4. Các Script Hỗ Trợ Khởi Tạo EC2 (Helper Scripts)
-- **`cfn-init`**: Đọc cấu hình từ metadata `AWS::CloudFormation::Init` trên EC2 để tự động cài đặt packages, tạo files cấu hình, chạy lệnh shell và khởi động service.
-- **`cfn-signal`**: Gửi tín hiệu thành công (Success) hoặc thất bại về CloudFormation `WaitCondition` để báo hiệu instance đã khởi động xong ứng dụng.
+#### 4. Các Script Hỗ Trợ Khởi Tạo EC2 (Helper Scripts) — (TD-Set3 Q27)
+- **`cfn-init`**: Đọc cấu hình từ metadata `AWS::CloudFormation::Init` trên EC2 để tự động cài đặt packages, tạo files cấu hình, chạy lệnh shell và khởi động service phức tạp (ví dụ: SharePoint, Microsoft SQL Server, Active Directory).
+- **`cfn-signal`**: Gửi tín hiệu mã thoát (Exit code 0 = Success) hoặc thất bại về CloudFormation `CreationPolicy` / `WaitCondition` để báo hiệu instance đã khởi động xong ứng dụng. Nếu CloudFormation không nhận đủ số tín hiệu thành công trong thời gian Timeout cấu hình, stack sẽ tự động rollback.
 - **`cfn-hup`**: Một tiến trình chạy ngầm (Daemon) trên EC2 định kỳ kiểm tra xem metadata của template có thay đổi không để tự động cập nhật phần mềm trên máy chủ mà không cần tạo lại instance mới!
 
 ---
@@ -165,6 +165,18 @@ sequenceDiagram
 - **Patch Baseline**: Định nghĩa quy tắc phê duyệt bản vá tự động (ví dụ: Tự động phê duyệt các bản vá có mức độ nghiêm trọng `Critical` hoặc `Important` sau 7 ngày kể từ khi nhà phát hành tung ra).
 - **Maintenance Windows**: Lên lịch khung thời gian bảo trì (ví dụ: 02:00 sáng Chủ Nhật hàng tuần) để hệ thống tự động tải và cài đặt bản vá.
 - **Hỗ trợ đa nền tảng**: Quản lý đồng nhất trên cả các bản phân phối Linux (Amazon Linux, RHEL, Ubuntu, SUSE) và Windows Server.
+
+---
+
+### 3.4. Quản Trị Hàng Loạt Với SSM Run Command & State Manager — (TD-Set5 Q33, TD-Set5 Q04)
+
+- **SSM Run Command** (`TD-Set5 Q33`, `TD-Set4 Q38`):
+  - Cho phép thực thi lệnh shell (bash/PowerShell) hoặc các SSM Documents an toàn từ xa trên hàng nghìn máy ảo EC2 hoặc on-premises servers đồng thời.
+  - **Không yêu cầu mở bất kỳ cổng Inbound nào (Zero Inbound Ports: No SSH/RDP, No Bastion Host)**; giao tiếp hoàn toàn qua outbound HTTPS 443 của SSM Agent.
+  - Tích hợp kiểm soát phân quyền IAM chi tiết, giới hạn tỷ lệ lỗi (**Error Threshold**) và tỷ lệ đồng thời (**Concurrency Rate**), tự động ghi log kết quả thực thi vào Amazon S3 hoặc CloudWatch Logs.
+- **SSM State Manager** (`TD-Set5 Q04`):
+  - Dịch vụ duy trì cấu hình máy chủ theo trạng thái mong muốn (Desired State Configuration).
+  - Tự động kiểm tra và áp dụng cấu hình (ví dụ: đảm bảo phần mềm diệt virus luôn chạy, cổng firewall nội bộ đóng, CloudWatch Agent luôn active) theo lịch định kỳ, tự động chống hiện tượng trôi cấu hình (**Configuration Drift Prevention**).
 
 ---
 
@@ -233,6 +245,27 @@ sequenceDiagram
   - Kích hoạt **AWS Config Recorder** trên toàn bộ tài nguyên để tự động ghi lại lịch sử cấu hình chi tiết theo thời gian thực.
   - Bật các quy tắc kiểm tra tuân thủ (**AWS Config Managed Rules**); khi có bất kỳ thay đổi nào làm tài nguyên vi phạm tiêu chuẩn an ninh, AWS Config tự động gửi cảnh báo qua Amazon SNS.
 
+#### 4. Cài Đặt Phần Mềm Doanh Nghiệp Phức Tạp Bằng CloudFormation `cfn-init` & `CreationPolicy` — (TD-Set3 Q27)
+- **Tình huống thi**: Doanh nghiệp triển khai môi trường Microsoft SharePoint Server trên AWS bằng CloudFormation. Kiến trúc gồm Active Directory Domain Controllers, cụm Microsoft SQL Server AlwaysOn và các SharePoint web front-end servers. Quá trình tạo máy ảo EC2 phải tạm dừng và chờ đợi cho đến khi các script cài đặt phần mềm và cấu hình AD hoàn tất thành công thì CloudFormation mới đánh dấu Stack tạo thành công (`TD-Set3 Q27`).
+- **Giải pháp chuẩn AWS**:
+  - Khai báo metadata **`AWS::CloudFormation::Init`** chứa các chỉ thị cài đặt packages, file cấu hình và commands.
+  - Trong `UserData` của EC2 instance, gọi helper script **`cfn-init`** để thực thi cài đặt và sau đó gọi **`cfn-signal`** gửi mã trạng thái thoát về CloudFormation.
+  - Cấu hình thuộc tính **`CreationPolicy`** trên tài nguyên EC2 với `Count: 1` và `Timeout: PT30M`. CloudFormation sẽ chờ tín hiệu từ `cfn-signal` trước khi chuyển trạng thái instance sang `CREATE_COMPLETE`.
+
+#### 5. Quản Trị Và Cấu Hình Hàng Loạt Máy Chủ Game Không Cần Mở Port Bằng SSM Run Command — (TD-Set5 Q33, TD-Set4 Q38)
+- **Tình huống thi**: Một công ty khởi nghiệp vận hành đội máy ảo EC2 On-Demand trong Auto Scaling Group để phục vụ tựa game nhập vai nhiều người chơi (MMORPG). Đội ngũ vận hành cần định kỳ cấu hình, cập nhật file patch game và cài đặt CloudWatch Agent trên hàng trăm máy ảo cùng lúc mà **tuyệt đối không cần mở bất kỳ kết nối trực tiếp nào (No SSH/RDP, No Bastion Host)** (`TD-Set5 Q33`, `TD-Set4 Q38`).
+- **Giải pháp chuẩn AWS**:
+  - Cấu hình máy ảo EC2 với IAM Role chứa policy **`AmazonSSMManagedInstanceCore`**.
+  - Sử dụng **AWS Systems Manager Run Command** để thực thi lệnh hoặc SSM Document (`AWS-RunShellScript` / `AWS-RunPowerShellScript`) trên các máy ảo được chọn theo Tag (ví dụ: `Environment=Production`).
+  - Lệnh được gửi qua kết nối HTTPS outbound tới Systems Manager service, thực thi an toàn trong nền và ghi toàn bộ output về CloudWatch Logs hoặc S3 bucket.
+
+#### 6. Duy Trì Trạng Thái Cấu Hình Nhất Quán Cho Máy Chủ Y Tế Bằng SSM State Manager — (TD-Set5 Q04)
+- **Tình huống thi**: Tổ chức y tế sử dụng các máy ảo Dedicated EC2 để chạy ứng dụng hồ sơ bệnh án. Để đảm bảo tính tuân thủ pháp lý và sự nhất quán an ninh, tổ chức cần một giải pháp tự động định kỳ kiểm tra và ép cấu hình hệ điều hành (antivirus, firewall rules, logging agent) luôn ở trạng thái mong muốn, tự động sửa đổi nếu có sai lệch phát sinh (`TD-Set5 Q04`).
+- **Giải pháp chuẩn AWS**:
+  - Tạo một **State Manager Association** trong AWS Systems Manager.
+  - Chọn tài liệu SSM Document tương ứng và gán target là các máy ảo EC2 theo Tag.
+  - Thiết lập lịch chạy định kỳ (ví dụ: mỗi 30 phút hoặc hàng ngày). State Manager tự động quét và áp dụng cấu hình mong muốn, ngăn chặn triệt để hiện tượng trôi cấu hình (Configuration Drift).
+
 ---
 
 ## 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
@@ -259,22 +292,37 @@ sequenceDiagram
   - ❌ *Sử dụng policy cũ `AmazonEC2RoleforSSM`*: Policy này đã bị AWS đánh dấu deprecated (lỗi thời) từ lâu.
 - **Giải pháp ĐÚNG**: Gán AWS Managed Policy chuẩn hiện nay là **`AmazonSSMManagedInstanceCore`** vào IAM Role của máy chủ EC2.
 
+#### 🪤 Bẫy 4: Khối Duy Nhất Bắt Buộc Trong CloudFormation Template: Resources — (TD-Set6 Q32)
+- **Tình huống đề thi**: *"Một kỹ sư DevOps tạo template CloudFormation và tạo Pull Request. Template bao gồm Parameters, Mappings, Conditions, Outputs nhưng không có khối Resources. Template có chạy được không?"*
+- **Quy tắc bất biến**:
+  - Template chắc chắn bị lỗi và không thể triển khai!
+  - Trong CloudFormation, **chỉ có duy nhất khối `Resources` là bắt buộc (Mandatory)**; mọi thành phần khác (`Parameters`, `Mappings`, `Outputs`, `Conditions`, `Metadata`) đều là tùy chọn.
+
+#### 🪤 Bẫy 5: cfn-signal Bị Timeout Rollback Nếu Không Nhận Đủ Số Tín Hiệu — (TD-Set3 Q27)
+- **Tình huống đề thi**: *"Khởi tạo EC2 bằng CloudFormation với CreationPolicy nhưng sau 30 phút stack bị lỗi `CREATE_FAILED` và rollback."*
+- **Nguyên nhân**:
+  - Script cài đặt phần mềm trong EC2 bị lỗi khiến lệnh `cfn-signal -e 1` gửi mã lỗi, hoặc script bị treo không gọi tới `cfn-signal`.
+  - CloudFormation chờ hết khoảng thời gian `Timeout` quy định trong `CreationPolicy` mà không nhận đủ tín hiệu thành công (`-e 0`) $\rightarrow$ Tự động hủy stack và rollback để tránh tốn chi phí cho tài nguyên lỗi.
+
 ---
 
 ## 📊 III. Ma Trận Quyết Định Công Nghệ Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Truy cập shell EC2 trong Private Subnet không mở Port 22, không Bastion** | **SSM Session Manager + Interface VPC Endpoints** | Bastion Host (tốn chi phí, rủi ro an ninh mạng) |
-| **Quyền IAM tối thiểu chuẩn xác cho EC2 giao tiếp với SSM** | **Policy `AmazonSSMManagedInstanceCore`** | Policy `AmazonEC2RoleforSSM` (đã deprecated) |
-| **Lưu trữ cấu hình ứng dụng miễn phí, phân cấp, không cần auto-rotation** | **SSM Parameter Store (Standard Tier)** | AWS Secrets Manager (tốn phí $0.40/secret/tháng) |
-| **Lưu mật khẩu database yêu cầu tự động xoay vòng định kỳ** | **AWS Secrets Manager** | SSM Parameter Store (không hỗ trợ native auto-rotation) |
-| **Vá lỗi hệ điều hành định kỳ cho dàn máy chủ Windows & Linux** | **SSM Patch Manager + Maintenance Windows** | Tự viết script SSH thủ công (khó kiểm soát, dễ lỗi) |
-| **Chạy một script cấu hình trên 1,000 máy chủ EC2 đồng thời** | **SSM Run Command** | Mở SSH từng máy để chạy lệnh (tốn công, không audit được) |
-| **Triển khai hạ tầng IaC đồng loạt trên nhiều AWS Accounts và Regions** | **AWS CloudFormation StackSets** | Viết script gọi CLI từng vùng (dễ sai lệch, khó quản lý) |
-| **Bảo vệ cơ sở dữ liệu RDS không bị xóa khi CloudFormation Stack bị xóa** | **Thuộc tính `DeletionPolicy: Retain` (hoặc `Snapshot`)** | Để mặc định (mặc định CloudFormation sẽ xóa sạch) |
-| **Phát hiện ai đó tự ý sửa đổi Security Group bên ngoài CloudFormation** | **CloudFormation Drift Detection** | Đọc CloudWatch Logs thủ công (không tự động so sánh diff) |
-| **Chặn CloudFormation deploy tài nguyên vi phạm quy chuẩn an toàn** | **AWS Control Tower Proactive Controls** | Reactive remediation (chỉ sửa sau khi đã deploy vi phạm) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
+|:---|:---|:---|:---|
+| **Truy cập shell EC2 trong Private Subnet không mở Port 22, không Bastion** | **SSM Session Manager + Interface VPC Endpoints** | Bastion Host (tốn chi phí, rủi ro an ninh mạng) | Chuẩn AWS |
+| **Quyền IAM tối thiểu chuẩn xác cho EC2 giao tiếp với SSM** | **Policy `AmazonSSMManagedInstanceCore`** | Policy `AmazonEC2RoleforSSM` (đã deprecated) | Chuẩn AWS |
+| **Lưu trữ cấu hình ứng dụng rẻ nhất, mã hóa KMS, không auto-rotate** | **SSM Parameter Store (SecureString)** | AWS Secrets Manager (tốn phí $0.40/secret/tháng) | `TD-Set3 Q33` |
+| **Lưu mật khẩu database yêu cầu tự động xoay vòng định kỳ** | **AWS Secrets Manager** | SSM Parameter Store (không hỗ trợ native auto-rotation) | `TD-Set2 Q10` |
+| **Vá lỗi hệ điều hành định kỳ cho dàn máy chủ Windows & Linux** | **SSM Patch Manager + Maintenance Windows** | Tự viết script SSH thủ công (khó kiểm soát, dễ lỗi) | `TD-Set5 Q45` |
+| **Chạy script cấu hình trên hàng trăm máy chủ không cần kết nối trực tiếp** | **SSM Run Command** | Mở SSH từng máy để chạy lệnh (tốn công, không audit được) | `TD-Set5 Q33`, `TD-Set4 Q38` |
+| **Duy trì cấu hình máy chủ nhất quán theo thời gian (Anti-Drift)** | **SSM State Manager Association** | Kiểm tra thủ công (dễ bị sót cấu hình) | `TD-Set5 Q04` |
+| **Triển khai hạ tầng IaC đồng loạt trên nhiều AWS Accounts và Regions** | **AWS CloudFormation StackSets** | Viết script gọi CLI từng vùng (dễ sai lệch, khó quản lý) | `TD-Set4 Q29`, `TD-Set8 Q22` |
+| **Cài đặt phần mềm phức tạp và chờ tín hiệu thành công trước khi hoàn tất** | **`cfn-init` + `cfn-signal` + `CreationPolicy`** | UserData thông thường (không đồng bộ hóa trạng thái hoàn tất) | `TD-Set3 Q27` |
+| **Thành phần duy nhất bắt buộc trong CloudFormation Template** | **Khối `Resources`** | Khối Parameters / Outputs (chỉ là tùy chọn) | `TD-Set6 Q32` |
+| **Bảo vệ cơ sở dữ liệu RDS không bị xóa khi CloudFormation Stack bị xóa** | **Thuộc tính `DeletionPolicy: Retain` (hoặc `Snapshot`)** | Để mặc định (mặc định CloudFormation sẽ xóa sạch) | Chuẩn AWS |
+| **Phát hiện ai đó tự ý sửa đổi Security Group bên ngoài CloudFormation** | **CloudFormation Drift Detection** | Đọc CloudWatch Logs thủ công (không tự động so sánh diff) | Chuẩn AWS |
+| **Chặn CloudFormation deploy tài nguyên vi phạm quy chuẩn an toàn** | **AWS Control Tower Proactive Controls** | Reactive remediation (chỉ sửa sau khi đã deploy vi phạm) | Chuẩn AWS |
 
 ---
 

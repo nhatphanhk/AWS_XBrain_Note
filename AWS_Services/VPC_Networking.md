@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon VPC & Kiến Trúc Mạng Đám Mây Doanh Nghiệp (Virtual Private Cloud)
+# Tài Liệu Học Tập Chuyên Sâu: Amazon VPC & Kiến Trúc Mạng Đám Mây Doanh Nghiệp (Virtual Private Cloud)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -145,6 +145,72 @@ flowchart LR
 
 ---
 
+### 6. AWS Network Firewall & Kiểm Tra Gói Tin Sâu Cấp VPC (Stateful L3-L7 Inspection)
+
+```mermaid
+flowchart LR
+    Internet((Internet)) <--> IGW[Internet Gateway]
+    IGW <--> FWEP[AWS Network Firewall Endpoint\nFirewall Subnet]
+    FWEP <--> AppSubnet[App Subnet / ALB / EC2]
+
+    subgraph Engine["Bộ Máy Kiểm Tra Tường Lửa (Stateful Engine)"]
+        FWEP --- Rule1[Stateless Rules: 5-tuple packet inspection]
+        FWEP --- Rule2[Stateful Rules: Suricata IPS/IDS Engine]
+        FWEP --- Rule3[Domain List / FQDN Filtering: Chặn URL độc hại]
+    end
+```
+
+* **Bản chất**: Dịch vụ tường lửa mạng có trạng thái (Stateful) được quản lý hoàn toàn ở cấp độ VPC (*TD-Set1 Q57, TD-Set2 Q60, TD-Set5 Q27, TD-Set6 Q54*).
+* **Khả năng kiểm tra sâu gói tin (L3-L7 Deep Packet Inspection)**:
+  - **Domain List Filtering (Lọc FQDN)**: Chặn đứng truy cập tới các tên miền/URL độc hại hoặc chỉ cho phép các danh sách tên miền được phê duyệt (Whitelisted Domains).
+  - **Suricata-compatible Rules**: Tích hợp các tập luật phát hiện và ngăn chặn xâm nhập (IPS/IDS) mã nguồn mở.
+  - **Stateful 5-tuple Inspection**: Theo dõi nguồn, đích, cổng, giao thức và trạng thái kết nối.
+* **Cơ chế định tuyến qua Route Table**: Triển khai các **Firewall Endpoints** trong các Firewall Subnets chuyên biệt; cập nhật Route Table của Internet Gateway/Subnets để ép buộc toàn bộ lưu lượng Ingress và Egress phải đi qua endpoint của Network Firewall trước khi tới máy chủ ứng dụng.
+* **Kết hợp IPv6 Egress-Only Internet Gateway**: Với mạng IPv6, gắn Egress-Only IGW kết hợp AWS Network Firewall để vừa cho phép máy chủ trong Private Subnet khởi tạo kết nối ra ngoài Internet vừa kiểm soát và lọc gói tin an toàn (*TD-Set1 Q57*).
+
+---
+
+### 7. Chi Tiết Giao Diện Ảo AWS Direct Connect (VIF Types) & Dự Phòng VPN
+
+```mermaid
+flowchart TD
+    OnPrem[Data Center On-Premises] -->|Đường Cáp Quang Vật Lý| DXPort[AWS Direct Connect Location]
+    DXPort --> DXGW[Direct Connect Gateway]
+
+    DXPort -.->|1. Public VIF| PublicAWS[Dịch Vụ AWS Public\nAmazon S3, DynamoDB, SNS]
+    DXGW -->|2. Private VIF| VGW1[VGW: Single VPC us-east-1]
+    DXGW -->|2. Private VIF| VGW2[VGW: Single VPC eu-west-1]
+    DXGW -->|3. Transit VIF| TGW[AWS Transit Gateway\nKết nối hàng trăm VPCs & Peering]
+```
+
+1. **Phân Biệt 3 Loại Virtual Interfaces (VIF)**:
+   - **Public VIF**: Dùng để kết nối trực tiếp từ mạng nội bộ tới các **Public IP Endpoints** của AWS (như Amazon S3, DynamoDB, Amazon SQS) qua đường cáp quang riêng mà không cần đi qua Internet công cộng (*TD-Set1 Q31*).
+   - **Private VIF**: Dùng để kết nối tới duy nhất một VPC (thông qua Virtual Private Gateway - VGW) hoặc kết nối tới **Direct Connect Gateway** để truy cập tối đa 3 VPC ở các Region khác nhau (*TD-Set1 Q33*).
+   - **Transit VIF**: Bắt buộc sử dụng khi cần kết nối Direct Connect với **AWS Transit Gateway (TGW)** thông qua Direct Connect Gateway (*TD-Set3 Q22, TD-Set4 Q18*). Cho phép một kết nối Direct Connect duy nhất phục vụ hàng trăm VPC trên nhiều tài khoản và nhiều Region.
+2. **Kiến Trúc Dự Phòng: Direct Connect (Chính) + Site-to-Site VPN (Dự Phòng) với BGP**:
+   - Sử dụng định tuyến động **BGP (Border Gateway Protocol)**.
+   - Để đường truyền chính luôn đi qua Direct Connect và chỉ chuyển sang VPN khi Direct Connect đứt cáp, áp dụng kỹ thuật **BGP AS-Path Prepending**: Chèn thêm nhiều ASN vào đường VPN để tạo ra đường dẫn AS-Path dài hơn. Bộ định tuyến sẽ tự động ưu tiên đường Direct Connect có AS-Path ngắn hơn.
+
+---
+
+### 8. Chia Sẻ Tài Nguyên Mạng Qua AWS Resource Access Manager (RAM)
+
+* **Bản chất**: Dịch vụ cho phép chia sẻ tài nguyên an toàn giữa các tài khoản trong cùng **AWS Organization** mà không cần khởi tạo lại tài nguyên (*TD-Set1 Q03*).
+* **Các tài nguyên mạng chia sẻ phổ biến**:
+  - **VPC Subnets (VPC Sharing)**: Tài khoản mạng trung tâm tạo VPC và Subnet, sau đó chia sẻ Subnet cho các tài khoản phát triển (Dev, Test). Các tài khoản con có thể khởi chạy EC2, RDS, Lambda trong cùng Subnet đó mà không cần tạo VPC riêng, tiết kiệm chi phí NAT Gateway và IP.
+  - **AWS Transit Gateway (TGW)**: Chia sẻ hub trung chuyển mạng giữa các tài khoản.
+  - **Route 53 Resolver Rules**: Chia sẻ các quy tắc phân giải DNS lai (Hybrid DNS) cho toàn tổ chức.
+
+---
+
+### 9. Khôi Phục Nhanh Bằng Secondary Private IPv4 / Secondary ENI
+
+* Trong trường hợp máy chủ dịch vụ chính (chạy trên EC2 Spot hoặc On-Demand) gặp sự cố, để khôi phục lưu lượng nội bộ mà không cần chờ cập nhật DNS hay thay đổi cấu hình client:
+  - Tạo một **Secondary Elastic Network Interface (ENI)** gắn địa chỉ Private IPv4 cố định trỏ tới tên miền nội bộ của ứng dụng (*TD-Set2 Q38*).
+  - Khi máy chính gặp sự cố, gỡ bỏ Secondary ENI khỏi máy cũ và gắn nóng (**Hot Attach**) sang máy chủ dự phòng (Standby Instance) đã cấu hình sẵn. Luồng lưu lượng mạng được phục hồi chỉ trong vài giây.
+
+---
+
 ### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
 
 #### 1. Kiến trúc Bảo mật Đa Tầng Tham Chiếu Security Group ID (Security Group Chaining)
@@ -171,11 +237,32 @@ flowchart LR
   - Gán IAM Role với policy `AmazonSSMManagedInstanceCore` cho EC2 instance.
   - Kết nối thông qua AWS Console hoặc AWS CLI (`aws ssm start-session`). Không cần mở cổng 22/3389 ở Security Group Inbound.
 
-#### 4. Mạng Hub-and-Spoke Quy Mô Doanh Nghiệp Với AWS Transit Gateway
+#### 4. Mạng Hub-and-Spoke Quy Mô Doanh Nghiệp Với AWS Transit Gateway — (CM-PT1 Q14, TD-Set4 Q18, TD-Set8 Q04)
 - **Tình huống thi**: Doanh nghiệp mở rộng lên hàng chục đến hàng trăm VPCs cần kết nối với nhau và kết nối về Datacenter On-Premises qua Direct Connect hoặc VPN.
 - **Giải pháp chuẩn**:
   - Thay thế mô hình Full-Mesh VPC Peering phức tạp (cần $N(N-1)/2$ kết nối) bằng **AWS Transit Gateway (TGW)**.
   - Transit Gateway đóng vai trò Cloud Router hỗ trợ **Transitive Routing** (VPC A -> TGW -> VPC B hoặc On-Premises), chia sẻ tập trung qua AWS RAM (Resource Access Manager).
+
+#### 5. Chia Sẻ Tài Nguyên Mạng Tập Trung Bằng AWS Resource Access Manager (RAM) — (TD-Set1 Q03)
+- **Tình huống thi**: Công ty đa quốc gia có hàng chục tài khoản AWS khác nhau. Ban giám đốc CNTT muốn mua sắm và quản lý tập trung các tài nguyên mạng đắt đỏ như AWS Transit Gateways, Subnets dùng chung, và quy tắc phân giải Route 53 Resolver Rules, sau đó chia sẻ an toàn cho các tài khoản thành viên để tối ưu chi phí và tăng tính nhất quán.
+- **Giải pháp chuẩn**:
+  - Hợp nhất các tài khoản thông qua **AWS Organizations**.
+  - Sử dụng dịch vụ **AWS Resource Access Manager (RAM)** tại tài khoản quản trị mạng trung tâm để tạo các chia sẻ tài nguyên (Resource Shares).
+  - Chia sẻ **AWS Transit Gateway**, **VPC Subnets (VPC Sharing)**, và **Route 53 Resolver Rules** cho các tài khoản thành viên trong Organization mà không cần cấu hình lặp lại.
+
+#### 6. Kiểm Tra Gói Tin Sâu L3-L7 Và Lọc Tên Miền Độc Hại Bằng AWS Network Firewall — (TD-Set1 Q57, TD-Set2 Q60, TD-Set5 Q27)
+- **Tình huống thi**: Hệ thống thanh toán yêu cầu kiểm tra toàn bộ luồng mạng ra vào VPC (cả IPv4 và IPv6) ở tầng sâu ứng dụng: tự động chặn đứng các truy cập tới các URL độc hại đã biết và lập tức hủy bỏ (drop) các yêu cầu từ các tên miền bị đưa vào danh sách đen (Blacklisted FQDNs).
+- **Giải pháp chuẩn**:
+  - Khởi tạo tường lửa **AWS Network Firewall** ở cấp độ VPC với các quy tắc kiểm tra gói tin có trạng thái (**Stateful Rules**) và chính sách lọc danh sách tên miền (**Domain List / FQDN Filtering**).
+  - Với mạng IPv6, kết hợp **Egress-Only Internet Gateway** để cho phép outbound traffic và định tuyến luồng qua Firewall Endpoints.
+  - Cập nhật Route Table để điều hướng toàn bộ gói tin mạng đi qua Firewall Endpoints trước khi ra Internet hoặc tới Application Load Balancer.
+
+#### 7. Khôi Phục Dịch Vụ Siêu Tốc Bằng Secondary Elastic Network Interface (ENI) — (TD-Set2 Q38)
+- **Tình huống thi**: Một ứng dụng bảng điều khiển (Dashboard) chạy trên một máy ảo EC2 Spot trong Private Subnet. Ứng dụng được người dùng nội bộ truy cập qua tên miền trỏ vào IP riêng của máy. Cần giải pháp tăng tính sẵn sàng mạng, đảm bảo luồng lưu lượng có thể chuyển đổi ngay sang một máy ảo khác khi máy ảo Spot hiện tại bị thu hồi hoặc gặp sự cố mà không cần cấu hình lại tên miền.
+- **Giải pháp chuẩn**:
+  - Tạo một **Secondary Elastic Network Interface (Secondary ENI)** và gán địa chỉ Private IPv4 cố định trỏ tới tên miền nội bộ của dashboard.
+  - Gắn Secondary ENI này vào máy chủ chính đang chạy.
+  - Khi máy chính gặp sự cố hoặc bị thu hồi, gỡ bỏ Secondary ENI khỏi máy cũ và gắn nóng (**Hot Attach**) vào một máy chủ dự phòng (Hot Standby Instance) đã được chuẩn bị sẵn cùng vai trò.
 
 ---
 
@@ -274,25 +361,24 @@ flowchart LR
 
 ### 📊 III. Ma Trận Quyết Định Kết Nối Mạng Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **2 VPC trùng IP CIDR cần giao tiếp an toàn** | **AWS PrivateLink** (NLB + Interface Endpoint) | Loại VPC Peering / TGW (lỗi xung đột route) |
-| **Kết nối ít VPC (< 10 VPCs), chi phí tối thiểu** | **VPC Peering** ($0 cước kết nối) | Loại Transit Gateway (tốn phí attachment hàng tháng) |
-| **Hàng chục VPCs + On-Prem, Transitive Routing** | **AWS Transit Gateway** | Loại VPC Peering (không hỗ trợ bắc cầu) |
-| **EC2 Private truy cập S3 / DynamoDB miễn phí** | **Gateway VPC Endpoint** | Loại NAT Gateway (tốn phí data processing) |
-| **EC2 Private truy cập SQS / SSM / Secrets Manager** | **Interface VPC Endpoint** (PrivateLink) | Gateway Endpoint không hỗ trợ các dịch vụ này |
-| **Quản trị EC2 không mở port 22 / không Public IP** | **Systems Manager Session Manager** | Loại Bastion Host (tốn chi phí & rủi ro bảo mật) |
-| **On-Prem giải quyết DNS của AWS** | **Route 53 Resolver Inbound Endpoint** | Loại Outbound Endpoint (sai chiều truy vấn) |
-| **AWS VPC giải quyết DNS nội bộ của On-Prem** | **Route 53 Resolver Outbound Endpoint** | Loại Inbound Endpoint (sai chiều truy vấn) |
-| **IPv6 trong Private Subnet cần ra Internet** | **Egress-Only Internet Gateway** | Loại NAT Gateway (chỉ hỗ trợ IPv4) |
-| **On-Premises truy cập S3 qua Direct Connect** | **Direct Connect Public VIF** | Loại Private VIF (chỉ truy cập VPC nội bộ) |
-| **Kết nối Direct Connect vào AWS Transit Gateway** | **Direct Connect Transit VIF + DX Gateway** | Private VIF (không thể gắn vào Transit Gateway) |
-| **Truyền dữ liệu nhạy cảm qua Direct Connect an toàn** | **Direct Connect + Site-to-Site VPN (IPsec)** | Direct Connect đơn thuần chưa được mã hóa at-transit |
-| **Kết nối nhiều chi nhánh văn phòng chi phí thấp** | **AWS VPN CloudHub (BGP qua VGW)** | Tạo kết nối VPN full-mesh chéo nhau (chi phí đắt đỏ) |
-| **Kiểm tra an ninh gói tin sâu L3/L4 bằng Firewall ảo** | **Gateway Load Balancer (GWLB) cổng GENEVE 6081** | ALB / NLB (chấm dứt kết nối TCP/TLS, mất IP header gốc) |
-| **Cắt giảm chi phí NAT Gateway khi hỗ trợ IPv6** | **Egress-Only Internet Gateway ($0 chi phí)** | NAT Gateway ($0.045/giờ + phí dữ liệu data processing) |
-| **On-Premises truy cập S3/SQS riêng tư qua Direct Connect** | **Interface VPC Endpoint (PrivateLink)** | Gateway VPC Endpoint (không định tuyến qua Direct Connect) |
-| **Quản trị EC2 trong Private Subnet không có NAT Gateway** | **Interface VPC Endpoints (`ssmmessages`, `ssm`)** | Bastion Host (cần Public IP hoặc mở cổng 22) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
+|:---|:---|:---|:---:|
+| **2 VPC trùng IP CIDR cần giao tiếp an toàn** | **AWS PrivateLink** (NLB + Interface Endpoint) | Loại VPC Peering / TGW (lỗi xung đột route) | CM-PT1 Q02, TD-Set5 Q03 |
+| **Chia sẻ Subnets & Transit Gateway đa tài khoản** | **AWS Resource Access Manager (RAM)** | Tạo duplicate tài nguyên ở từng account (lãng phí tiền) | TD-Set1 Q03 |
+| **Kiểm tra gói tin sâu L3-L7 và chặn FQDN độc hại** | **AWS Network Firewall** | Security Groups / NACL (chỉ lọc L4, không lọc URL/FQDN) | TD-Set1 Q57, TD-Set2 Q60 |
+| **Chuyển dự phòng luồng mạng tức thì khi máy sập** | **Secondary ENI / Secondary Private IPv4** | Sửa bản ghi DNS (bị trễ do TTL của client cache) | TD-Set2 Q38 |
+| **Hàng chục VPCs + On-Prem, Transitive Routing** | **AWS Transit Gateway** | Loại VPC Peering (không hỗ trợ bắc cầu) | TD-Set4 Q18, TD-Set8 Q04 |
+| **EC2 Private truy cập S3 / DynamoDB miễn phí** | **Gateway VPC Endpoint** ($0.00 cước phí) | Loại NAT Gateway (tốn phí $0.045/h + data processing) | TD-Set1 Q33 |
+| **EC2 Private truy cập SQS / SSM / Secrets Manager** | **Interface VPC Endpoint** (PrivateLink) | Gateway Endpoint không hỗ trợ các dịch vụ này | TD-Set1 Q30, TD-Set5 Q10 |
+| **Quản trị EC2 không mở port 22 / không Public IP** | **Systems Manager Session Manager** | Loại Bastion Host (tốn chi phí & rủi ro bảo mật) | TD-Set6 Q54 |
+| **On-Prem giải quyết DNS của AWS** | **Route 53 Resolver Inbound Endpoint** | Loại Outbound Endpoint (sai chiều truy vấn) | TD-Set1 Q03 |
+| **AWS VPC giải quyết DNS nội bộ của On-Prem** | **Route 53 Resolver Outbound Endpoint** | Loại Inbound Endpoint (sai chiều truy vấn) | TD-Set6 Q54 |
+| **IPv6 trong Private Subnet cần ra Internet tải bản vá** | **Egress-Only Internet Gateway** | Loại NAT Gateway (chỉ hỗ trợ IPv4) | TD-Set1 Q57 |
+| **On-Premises truy cập S3 qua Direct Connect** | **Direct Connect Public VIF** | Loại Private VIF (chỉ truy cập VPC nội bộ) | TD-Set1 Q31 |
+| **Kết nối Direct Connect vào AWS Transit Gateway** | **Direct Connect Transit VIF + DX Gateway** | Private VIF (không thể gắn vào Transit Gateway) | TD-Set3 Q22, TD-Set4 Q18 |
+| **Truyền dữ liệu nhạy cảm qua Direct Connect an toàn** | **Direct Connect + Site-to-Site VPN (IPsec)** | Direct Connect đơn thuần chưa được mã hóa at-transit | U-PT1 Q42 |
+| **Kiểm tra an ninh gói tin sâu L3/L4 bằng Firewall ảo 3rd-party** | **Gateway Load Balancer (GWLB) cổng GENEVE 6081** | ALB / NLB (chấm dứt kết nối TCP/TLS, mất IP header gốc) | TD-Set6 Q28, TD-Set8 Q02 |
+| **Cắt giảm chi phí NAT Gateway khi hỗ trợ IPv6** | **Egress-Only Internet Gateway ($0 chi phí)** | NAT Gateway ($0.045/giờ + phí dữ liệu data processing) | CM-PT2 Q09 |
 
 ---
 

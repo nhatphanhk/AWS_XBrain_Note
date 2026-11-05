@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: AWS Lambda, Amazon API Gateway, DynamoDB & Kiến Trúc Phi Máy Chủ (Serverless Architecture)
+# Tài Liệu Học Tập Chuyên Sâu: AWS Lambda, Amazon API Gateway, DynamoDB & Kiến Trúc Phi Máy Chủ (Serverless Architecture)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -51,10 +51,24 @@ flowchart LR
 
 ### 2. Quản Trị Concurrency, Cold Start & SnapStart
 
-- **Cold Start (Khởi động lạnh)**: Khi có request mới mà chưa có môi trường thực thi nào sẵn sàng, Lambda phải tải code, khởi động container runtime, và chạy đoạn mã khởi tạo bên ngoài handler (`init code`). Gây độ trễ từ vài trăm ms đến vài giây (đặc biệt với Java/.NET).
-- **Reserved Concurrency**: Cố định số lượng thực thi đồng thời dành riêng cho một hàm (ví dụ: cấp 200 execution slots). Vừa đảm bảo hàm luôn có slot chạy, vừa đóng vai trò làm trần giới hạn bảo vệ database phía sau khỏi bị sập do quá tải kết nối.
-- **Provisioned Concurrency**: Khởi tạo và "làm ấm" sẵn môi trường thực thi 24/7, **triệt tiêu hoàn toàn độ trễ Cold Start**, phản hồi ngay lập tức dưới 10ms.
+- **Cold Start (Khởi động lạnh)**: Khi có request mới mà chưa có môi trường thực thi nào sẵn sàng, Lambda phải tải code, khởi động container runtime, và chạy đoạn mã khởi tạo bên ngoài handler (`init code`). Gây độ trễ từ vài trăm ms đến vài giây (đặc biệt với ứng dụng Java/.NET và container image) (`TD-Set8 Q09`).
+- **Reserved Concurrency**: 
+  - Cố định số lượng thực thi đồng thời tối đa dành riêng cho một hàm từ pool tài khoản (ví dụ: gán 200 execution slots) (`TD-Set1 Q39`).
+  - **Mục đích kép sống còn**:
+    1. Đảm bảo hàm quan trọng luôn có đủ tài nguyên thực thi, không bị các hàm khác trong tài khoản chiếm đoạt (ngăn ngừa cạn kiệt pool 1,000 unreserved concurrency của Region).
+    2. Đóng vai trò làm trần giới hạn thông lượng tối đa nhằm **bảo vệ cơ sở dữ liệu hạ nguồn (RDS / Aurora)** khỏi bị sập do cạn kiệt connection pool khi traffic tăng đột biến (`TD-Set1 Q39`).
+- **Provisioned Concurrency**:
+  - Khởi tạo và "làm ấm" sẵn một số lượng môi trường thực thi cố định 24/7.
+  - **Triệt tiêu hoàn toàn độ trễ Cold Start**, đảm bảo thời gian phản hồi ở mức 2 chữ số millisecond cho các workload nhạy cảm về độ trễ (như API tài chính, giao dịch chứng khoán, hoặc containerized Java microservices) (`TD-Set1 Q39`, `TD-Set8 Q09`).
 - **Lambda SnapStart (cho Java 11/17/21)**: Chụp snapshot toàn bộ trạng thái bộ nhớ MicroVM sau khi hoàn tất init và cache lại; khi có request, Lambda khôi phục tức thời từ snapshot, giảm độ trễ khởi động tới **90%** mà không mất thêm chi phí duy trì.
+- **Lambda Function URLs**:
+  - Cung cấp một điểm cuối HTTPS chuyên dụng (Dedicated HTTPS Endpoint) trỏ trực tiếp vào hàm Lambda mà **KHÔNG CẦN tạo Amazon API Gateway hay Application Load Balancer** (`TD-Set2 Q56`, `TD-Set6 Q43`).
+  - Hỗ trợ loại xác thực `AWS_IAM` (bảo vệ nội bộ) hoặc `NONE` (công khai internet) kết hợp CORS. Rất tối ưu chi phí và tinh gọn cho các kịch bản tiếp nhận **Webhook từ bên thứ ba** (như GitHub, Stripe, hoặc dịch vụ y tế gửi JSON payload) (`TD-Set6 Q43`).
+- **Mã Hóa Biến Môi Trường (Environment Variables) Bằng KMS**:
+  - Mặc định AWS Lambda mã hóa biến môi trường bằng AWS managed key (`aws/lambda`).
+  - Khi doanh nghiệp yêu cầu kiểm soát toàn diện vòng đời khóa, chính sách truy cập hoặc khả năng thu hồi key ngay lập tức, bắt buộc kích hoạt **Lambda Encryption Helpers** và sử dụng **AWS KMS Customer Managed Key (CMK)** để mã hóa các chuỗi kết nối và mật khẩu nhạy cảm (`TD-Set1 Q58`).
+- **Lambda Asynchronous Destinations**:
+  - Định tuyến tự động kết quả thực thi của các tác vụ bất đồng bộ mà không cần viết mã trong hàm: gửi bản ghi thành công tới **On-Success Destination** hoặc gửi chi tiết lỗi tới **On-Failure Destination** (đích đến hỗ trợ: Amazon SQS, Amazon SNS, Amazon EventBridge, hoặc một Lambda function khác) (`TD-Set2 Q09`).
 - **Response Streaming**: Cho phép hàm Lambda truyền luồng phản hồi dữ liệu về client theo từng phần (Chunked Transfer) mà không cần đợi toàn bộ payload hoàn tất, giúp giảm Time-to-First-Byte (TTFB) và vượt giới hạn payload 6 MB (lên tới 20 MB).
 
 ---
@@ -200,28 +214,66 @@ flowchart TD
   - Một nhóm worker Lambda khác cấu hình **SQS Event Source Mapping** với Batch Size phù hợp để lấy tin nhắn ra xử lý tuần tự/song song có kiểm soát.
   - SQS hoạt động như một hồ chứa đệm (Buffer leveling), triệt tiêu hoàn toàn nguy cơ quá tải backend.
 
-#### 🪤 Bẫy 8: Điều Phối Luồng Xử Lý Serverless Phức Tạp Bằng AWS Step Functions — (CM-PT1 Q06, CM-PT1 Q38)
+#### 🪤 Bẫy 8: Điều Phối Luồng Xử Lý Serverless Phức Tạp Bằng AWS Step Functions — (TD-Set2 Q09, CM-PT1 Q06, CM-PT1 Q38)
 - **Tình huống đề thi**: *"Quy trình xử lý ảnh và trích xuất dữ liệu ETL serverless bao gồm nhiều bước: kiểm tra định dạng ảnh, gọi AWS Batch để resize nhiều kích cỡ, gọi AWS Glue để trích xuất text, và lưu kết quả vào S3. Các bước có logic rẽ nhánh điều kiện và cần tự động thử lại khi gặp lỗi mạng."*
 - **Giải pháp ĐÚNG**: Sử dụng **AWS Step Functions (State Machines)**.
   - Step Functions cung cấp giao diện trực quan hóa trạng thái thực thi.
   - Tự động hóa việc xử lý lỗi (Catch & Retry với Exponential Backoff), kiểm soát timeout từng bước và hỗ trợ cả luồng công việc chạy dài hạn (lên tới 1 năm). Loại bỏ hoàn toàn việc viết code spaghetti Lambda gọi lồng nhau!
 
+#### 🪤 Bẫy 9: Ngăn Ngừa Cạn Kiệt Concurrency & Bảo Vệ Database Bằng Reserved Concurrency — (TD-Set1 Q39)
+- **Tình huống đề thi**: *"Một ứng dụng thương mại điện tử trải qua sự kiện bùng nổ flash sale. Hàng ngàn request đổ dồn vào một hàm Lambda kết nối trực tiếp với Amazon RDS MySQL. Cơ sở dữ liệu bị cạn kiệt connection pool dẫn đến sập toàn bộ hệ thống. Cần giải pháp gì ở tầng Lambda để giới hạn số lượng kết nối tối đa?"*
+- **Các phương án bẫy**:
+  - ❌ *Tăng RAM cho Lambda lên 10 GB*: Tăng RAM chỉ tăng CPU, càng khiến Lambda tạo nhiều kết nối dồn dập vào database nhanh hơn!
+  - ❌ *Tăng Provisioned Concurrency*: Càng làm sẵn nhiều execution environments làm DB quá tải tức thì.
+- **Giải pháp ĐÚNG**: Cấu hình **Reserved Concurrency** cho hàm Lambda (ví dụ: đặt mức 50 hoặc 100) (`TD-Set1 Q39`).
+  - Reserved Concurrency áp đặt một "trần cứng" (Hard Limit) về số lượng thực thi đồng thời tối đa của hàm. Mọi request vượt quá sẽ bị throttle tạm thời (kết hợp với Amazon SQS đệm phía trước hoặc RDS Proxy), bảo vệ tuyệt đối database không bị chết kết nối.
+
+#### 🪤 Bẫy 10: Xóa Bỏ Độ Trễ Cold Start Cho Workload Java & Container Bằng Provisioned Concurrency — (TD-Set1 Q39, TD-Set8 Q09)
+- **Tình huống đề thi**: *"Doanh nghiệp chuyển đổi một ứng dụng microservices viết bằng Java chạy trong container lên AWS Lambda. Hệ thống yêu cầu thời gian phản hồi API phải nhất quán và dưới 50ms cho các giao dịch tài chính quan trọng. Tuy nhiên các request đầu tiên thường bị trễ vài giây do Cold Start."*
+- **Các phương án bẫy**:
+  - ❌ *Tạo cronjob EventBridge gọi "làm ấm" hàm mỗi 5 phút*: Phương pháp Ping thủ công chỉ làm ấm được 1 instance duy nhất, khi có traffic bùng nổ đồng thời các request khác vẫn dính Cold Start!
+- **Giải pháp ĐÚNG**: Kích hoạt **Provisioned Concurrency** cho Lambda function / alias (`TD-Set1 Q39`, `TD-Set8 Q09`).
+  - AWS tự động phân bổ và khởi động sẵn môi trường thực thi runtime Java.
+  - Mã nguồn và JVM được khởi tạo sẵn sàng, triệt tiêu 100% độ trễ Cold Start và đáp ứng nghiêm ngặt SLA dưới 50ms (`TD-Set8 Q09`).
+
+#### 🪤 Bẫy 11: Tích Hợp Webhook Bên Thứ Ba Chi Phí Thấp Bằng Lambda Function URLs — (TD-Set2 Q56, TD-Set6 Q43)
+- **Tình huống đề thi**: *"Một công ty y tế cần tích hợp một dịch vụ phân tích dữ liệu bên thứ ba. Mỗi khi có dữ liệu bệnh nhân mới, bên thứ ba sẽ gửi HTTP POST request vào một Webhook trên AWS. Yêu cầu triển khai endpoint tiếp nhận request này để gọi hàm Lambda với CHI PHÍ VẬN HÀNH VÀ HẠ TẦNG THẤP NHẤT (LEAST operational overhead & cost)."*
+- **Các phương án bẫy**:
+  - ❌ *Tạo một Application Load Balancer (ALB) chuyển tiếp tới Lambda*: ALB phát sinh chi phí cố định tối thiểu ~$16-20/tháng và tốn công cấu hình VPC/Subnet.
+  - ❌ *Dựng Amazon API Gateway REST API*: Hoạt động được nhưng phát sinh thêm một tầng dịch vụ và chi phí API Gateway không cần thiết cho một webhook đơn giản.
+- **Giải pháp ĐÚNG**: Cấu hình **Lambda Function URL** với `AuthType: NONE` (kèm xác thực token/HMAC bên trong code) (`TD-Set2 Q56`, `TD-Set6 Q43`).
+  - Cung cấp trực tiếp một URL HTTPS bảo mật cho hàm Lambda.
+  - Hoàn toàn miễn phí hạ tầng trung gian (chỉ trả tiền thực thi Lambda), thiết lập nhanh chóng chỉ trong vài giây.
+
+#### 🪤 Bẫy 12: Bảo Mật Biến Môi Trường Lambda Bằng KMS Customer Managed Key — (TD-Set1 Q58)
+- **Tình huống đề thi**: *"Hàm AWS Lambda cần lưu trữ các chuỗi kết nối và thông tin bí mật kết nối tới MongoDB Atlas hoặc database bên ngoài. Quy định an ninh của công ty yêu cầu toàn bộ dữ liệu bí mật phải được mã hóa tại chỗ (at-rest) bằng khóa mã hóa do công ty tự quản lý và có thể thu hồi quyền bất cứ lúc nào."*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng AWS managed key mặc định của Lambda (`aws/lambda`)*: Không đáp ứng yêu cầu vì khách hàng không thể chỉnh sửa policy, không thể xoay vòng thủ công hay thu hồi key.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS KMS Customer Managed Key (CMK)** kết hợp **Lambda Encryption Helpers** (`TD-Set1 Q58`).
+  - Quản trị viên cấu hình mã hóa biến môi trường bằng KMS CMK riêng.
+  - Mã nguồn Lambda gọi AWS KMS API để giải mã biến môi trường trong runtime và phân quyền chi tiết qua KMS Key Policy.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Công Nghệ Serverless Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Tác vụ tính toán chạy > 15 phút (20-60 phút)** | **ECS on AWS Fargate** (+ EventBridge) | Loại Lambda (hard limit timeout 15 phút) |
-| **Chia sẻ mã tiện ích/lib giữa nhiều Lambda** | **AWS Lambda Layers** | Loại S3 download (tăng Cold Start & chi phí) |
-| **Giảm Cold Start cho ứng dụng Java 90%** | **AWS Lambda SnapStart** | Provisioned Concurrency tốn chi phí 24/7 |
-| **Xác thực người dùng Web trên ALB không viết code** | **ALB + Cognito User Pool** | Loại tự dựng IdP server trên EC2 |
-| **Cấp quyền cho Mobile App ghi trực tiếp vào S3** | **Cognito Identity Pool** (+ User Pool) | User Pool đơn thuần không sinh AWS IAM credentials |
-| **Bảo vệ RDS không bị sập kết nối bởi Lambda** | **Amazon RDS Proxy** (+ Reserved Concurrency) | Loại tăng RAM Lambda (không giải quyết connection pool) |
-| **Điều phối luồng nghiệp vụ phân tán, có retry** | **AWS Step Functions** | Loại viết code logic lồng nhau trong 1 hàm Lambda |
-| **Xử lý luồng dữ liệu thời gian thực hàng ngàn record** | **Kinesis Data Streams + Lambda** | SQS không hỗ trợ replay dữ liệu theo shard |
-| **Gọi Lambda cross-account từ SNS topic** | **Lambda Resource-based Policy + SNS Topic Policy** | Chỉ cấu hình 1 bên (bị lỗi Access Denied) |
-| **Hấp thụ tải tăng vọt burst tránh sập backend** | **Amazon SQS Buffer + Lambda Batch Processing** | Gọi trực tiếp Lambda (dễ cạn concurrency & sập DB) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Tham chiếu đề thi |
+|:---|:---|:---|:---|
+| **Giới hạn kết nối đồng thời bảo vệ database hạ nguồn** | **Lambda Reserved Concurrency** (kết hợp SQS buffer) | Tăng RAM Lambda (không hạn chế được số kết nối đồng thời) | `TD-Set1 Q39` |
+| **Triệt tiêu Cold Start cho Java/Container microservices** | **Lambda Provisioned Concurrency** | Gọi ping cronjob thủ công (chỉ làm ấm được 1 instance đơn lẻ) | `TD-Set1 Q39`, `TD-Set8 Q09` |
+| **Bảo vệ Lambda trước đợt tăng vọt traffic hàng trăm ngàn user** | **Amazon API Gateway Throttling (Steady-state + Burst)** | Để Lambda co giãn tự do (dễ vượt account concurrency limit) | `TD-Set1 Q14` |
+| **Tích hợp Webhook bên thứ 3 (HTTP POST) với chi phí thấp nhất** | **Lambda Function URLs (`AuthType: NONE` + HMAC check)** | Dựng ALB hoặc API Gateway REST API (tốn thêm chi phí & hạ tầng) | `TD-Set2 Q56`, `TD-Set6 Q43` |
+| **Mã hóa biến môi trường Lambda với toàn quyền kiểm soát khóa** | **AWS KMS Customer Managed Key (CMK) + Encryption Helpers** | AWS managed key `aws/lambda` (không tùy biến được key policy) | `TD-Set1 Q58` |
+| **Tự động định tuyến kết quả Lambda async (Success / Failure)** | **Lambda Destinations (đẩy tới SQS / SNS / EventBridge)** | Tự viết code custom try/catch gửi tin nhắn trong handler | `TD-Set2 Q09` |
+| **Tác vụ tính toán chạy > 15 phút (20-60 phút)** | **ECS on AWS Fargate** (+ EventBridge Scheduler) | AWS Lambda (hard limit execution timeout tối đa 15 phút) | `U-PT2 Q02` |
+| **Chia sẻ mã tiện ích/lib giữa nhiều hàm Lambda** | **AWS Lambda Layers** (tối đa 5 layers/hàm) | S3 download thủ công (tăng Cold Start & chi phí request) | `CM-PT1 Q17` |
+| **Giảm Cold Start cho ứng dụng Java miễn phí hạ tầng** | **AWS Lambda SnapStart (CRaC API)** | Provisioned Concurrency tốn chi phí duy trì 24/7 | `CM-PT1 Q27` |
+| **Xác thực người dùng Web trên ALB không viết code** | **ALB + Cognito User Pool** | Tự dựng máy chủ IdP riêng trên EC2 (tốn công quản trị) | `U-PT6 Q39` |
+| **Cấp quyền cho Mobile App ghi trực tiếp vào S3** | **Cognito Identity Pool** (+ User Pool) | User Pool đơn thuần không sinh AWS Temporary Credentials | `TD-Set8 Q01`, `U-PT2 Q14` |
+| **Bảo vệ RDS không bị sập kết nối bởi hàng ngàn Lambda** | **Amazon RDS Proxy** (+ Reserved Concurrency) | Tăng RAM Lambda (không tối ưu hóa connection pooling) | Chuẩn AWS |
+| **Điều phối luồng nghiệp vụ phân tán phức tạp, có retry** | **AWS Step Functions (State Machines)** | Viết code logic lồng nhau spaghetti trong 1 hàm Lambda | `TD-Set2 Q09`, `CM-PT1 Q06` |
+| **Hấp thụ tải tăng vọt burst tránh sập backend** | **Amazon SQS Buffer + Lambda Batch Processing** | Gọi trực tiếp Lambda (dễ cạn concurrency & sập DB) | `CM-PT1 Q35`, `CM-PT5 Q08` |
+| **Tiếp nhận payload JSON 5KB và lưu vào Aurora Serverless** | **Amazon API Gateway + AWS Lambda + Aurora Serverless** | Dựng cụm EC2 Web Server (lãng phí khi tải thấp) | `TD-Set8 Q20` |
 
 ---
 

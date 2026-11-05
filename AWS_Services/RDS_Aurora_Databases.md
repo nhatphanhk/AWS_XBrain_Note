@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon RDS, Amazon Aurora & Dịch Vụ Cơ Sở Dữ Liệu Đám Mây (Databases in AWS)
+# Tài Liệu Học Tập Chuyên Sâu: Amazon RDS, Amazon Aurora & Dịch Vụ Cơ Sở Dữ Liệu Đám Mây (Databases in AWS)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -196,6 +196,44 @@ flowchart TD
 
 ---
 
+#### C. Hệ Thống Điểm Cuối (Aurora Endpoints Architecture) & Phân Phối Tải Đọc
+
+Khi kết nối vào cụm Amazon Aurora, ứng dụng không trỏ trực tiếp vào IP của từng máy ảo mà kết nối thông qua các **Endpoints** logic do AWS quản lý:
+
+```mermaid
+flowchart TD
+    AppWrite[Ứng dụng Ghi / Web API] -->|Write Operations| ClusterEP[Cluster Endpoint / Writer Endpoint\nLuôn trỏ tới Primary Writer Instance duy nhất]
+    ClusterEP --> Primary[(Aurora Primary Writer Node\nAZ-1a)]
+
+    AppRead[Ứng dụng Đọc Thông Thường] -->|Read Queries| ReaderEP[Reader Endpoint\nCân bằng tải Round-Robin giữa tất cả Replicas]
+    ReaderEP --> RR1[(Aurora Read Replica 1\nAZ-1b)]
+    ReaderEP --> RR2[(Aurora Read Replica 2\nAZ-1c)]
+
+    AppReport[Ứng dụng Báo Cáo Nặng / ETL] -->|Heavy Analytic Queries| CustomEP[Custom Endpoint: 'reporting-endpoint'\nChỉ gom các Replicas cấu hình lớn]
+    CustomEP --> RR_Heavy[(Aurora Replica 3: db.r6g.2xlarge\nAZ-1c Dedicated cho Analytics)]
+
+    style ClusterEP fill:#f96,stroke:#333,stroke-width:2px
+    style ReaderEP fill:#9cf,stroke:#333,stroke-width:2px
+    style CustomEP fill:#fc9,stroke:#333,stroke-width:2px
+```
+
+1. **Cluster Endpoint (Writer Endpoint)**:
+   - Điểm cuối mặc định trỏ tới **Primary DB Instance** hiện tại của cụm.
+   - Là endpoint duy nhất hỗ trợ các thao tác ghi dữ liệu (`INSERT`, `UPDATE`, `DELETE`) và thay đổi cấu trúc bảng (`DDL`).
+   - Khi xảy ra sự cố failover, Aurora sẽ tự động chuyển Cluster Endpoint sang trỏ vào Read Replica vừa được thăng cấp thành Primary.
+2. **Reader Endpoint**:
+   - Điểm cuối mặc định cho toàn bộ các thao tác chỉ đọc (`SELECT`).
+   - Tự động **cân bằng tải (Round-Robin Load Balancing)** đều giữa **tất cả các Aurora Replicas** sẵn có trong cụm (*TD-Set3 Q58*).
+   - Khi có replica mới được thêm vào qua Aurora Auto Scaling hoặc khi có replica bị lỗi, Reader Endpoint tự động cập nhật danh sách mà không cần sửa đổi mã nguồn ứng dụng.
+3. **Custom Endpoints (Điểm Cuối Tùy Chỉnh)**:
+   - Cho phép kiến trúc sư nhóm một tập hợp các DB instance cụ thể theo tiêu chí công việc (**Workload Isolation**) (*TD-Set1 Q51*).
+   - **Kịch bản thực chiến**: Hệ thống thương mại điện tử cần chạy các truy vấn báo cáo nặng vào ban ngày. Nếu để truy vấn báo cáo chạy chung qua Reader Endpoint, người dùng web thông thường sẽ bị ảnh hưởng độ trễ.  
+     👉 *Giải pháp*: Tạo một **Custom Endpoint** liên kết riêng với các instance cấu hình bộ nhớ lớn (`db.r6g.2xlarge`) dành riêng cho đội ngũ BI/Báo cáo; lưu lượng người dùng web tiếp tục đi qua Reader Endpoint bình thường.
+4. **Instance Endpoint**:
+   - Điểm cuối trỏ trực tiếp vào một DB instance xác định trong cụm. Thường chỉ dùng cho mục đích chẩn đoán, debug hoặc kiểm tra hiệu năng riêng biệt của từng node.
+
+---
+
 ### 4. Cơ chế Sao lưu, Phục hồi & Vận hành không gián đoạn (Backup, Recovery & Zero-Downtime)
 
 #### A. Phân biệt Automated Backups và Manual Snapshots
@@ -273,13 +311,37 @@ sequenceDiagram
 * Khách hàng tải chứng chỉ bảo mật **AWS Root CA Certificate** nạp vào client để xác thực máy chủ.
 * Thiết lập tham số bắt buộc kết nối bảo mật: Trong **DB Parameter Group**, đặt thuộc tính `rds.force_ssl = 1` (đối với PostgreSQL/MySQL) để từ chối mọi kết nối dùng PlainText không an toàn.
 
-#### C. Quản lý danh tính và Thông tin bí mật (IAM & Secrets Manager)
-* **IAM Database Authentication**:
-  - Không cần lưu trữ mật khẩu cơ sở dữ liệu hardcoded trong mã nguồn hoặc file cấu hình.
-  - Ứng dụng xác thực vào RDS MySQL/PostgreSQL thông qua một **Authentication Token tạm thời** được ký bằng thuật toán AWS Signature Version 4 (SigV4) với thời gian sống tối đa **15 phút**.
-* **AWS Secrets Manager**:
-  - Lưu trữ an toàn thông tin đăng nhập Master DB.
+#### C. Quản lý danh tính và Thông tin bí mật (IAM Database Auth & Secrets Manager)
+
+* **IAM Database Authentication (Triệt tiêu hoàn toàn mật khẩu tĩnh)** (*TD-Set1 Q18, TD-Set5 Q52, TD-Set6 Q41*):
+  - **Bản chất**: Không sử dụng mật khẩu cơ sở dữ liệu truyền thống. Thay vào đó, ứng dụng (chạy trên EC2, ECS, Lambda) sử dụng IAM Credentials của Instance Profile / Task Role để yêu cầu AWS STS sinh ra một **Authentication Token tạm thời** (chuỗi mã hóa SigV4 có thời hạn sống tối đa **15 phút**).
+  - **Động cơ hỗ trợ**: **Amazon RDS for MySQL**, **Amazon RDS for PostgreSQL**, và **Amazon Aurora (MySQL & PostgreSQL)**.
+  - **Điều kiện tiên quyết bắt buộc**: Bắt buộc mọi kết nối từ client phải được mã hóa qua **SSL/TLS**.
+  - **Cấu hình trên Database Engine**:
+    - *MySQL*: Tạo tài khoản với plugin xác thực AWS:  
+      `CREATE USER 'app_user'@'%' IDENTIFIED WITH AWSAuthenticationPlugin AS 'RDS';`
+    - *PostgreSQL*: Gán role xác thực IAM:  
+      `GRANT rds_iam TO app_user;`
+  - **Cấu hình IAM Policy**: Gán quyền `rds-db:connect` cho IAM Role tương ứng:
+    ```json
+    {
+      "Effect": "Allow",
+      "Action": "rds-db:connect",
+      "Resource": "arn:aws:rds-db:us-east-1:123456789012:dbuser:db-ABC123XYZ/app_user"
+    }
+    ```
+  - **Lợi ích kiến trúc**: Quản trị quyền truy cập tập trung qua IAM; loại bỏ 100% rủi ro lộ mật khẩu database hardcoded trong mã nguồn hoặc file cấu hình; tự động tích hợp xoay vòng theo IAM credentials.
+
+* **AWS Secrets Manager (Lưu trữ và xoay vòng mật khẩu tự động)** (*TD-Set2 Q10*):
+  - Lưu trữ an toàn thông tin đăng nhập Master DB, API keys và chứng chỉ.
   - Hỗ trợ tính năng **Auto-rotation (Tự động xoay vòng mật khẩu)** theo chu kỳ (ví dụ mỗi 30 hoặc 60 ngày) thông qua một hàm AWS Lambda chuyên dụng mà không làm gián đoạn ứng dụng.
+  - Khác biệt với Parameter Store: Secrets Manager tích hợp sẵn mẫu Lambda xoay vòng cho RDS/Redshift/DocumentDB, trong khi Parameter Store Standard chỉ miễn phí lưu trữ cấu hình tĩnh không có tính năng native auto-rotation.
+
+* **Cơ chế Failover Của RDS Multi-AZ Thông Qua Đổi Bản Ghi DNS CNAME** (*TD-Set2 Q15*):
+  - Khi triển khai RDS Multi-AZ, AWS duy trì 1 Primary Instance và 1 Standby Replica ở AZ khác với dữ liệu đồng bộ ở tầng lưu trữ EBS.
+  - Khi xảy ra sự cố (Primary sập phần cứng, mất kết nối, hoặc AZ mất điện), RDS tự động kích hoạt **Failover**:
+    - Chuyển đổi bản ghi **Canonical Name (CNAME)** của DB Endpoint trong hệ thống DNS nội bộ của AWS để trỏ sang địa chỉ IP của Standby Instance.
+    - Quá trình này diễn ra hoàn toàn tự động trong **60 đến 120 giây** mà ứng dụng không cần thay đổi connection string. Standby thăng cấp thành Primary mới, và một Standby mới sẽ tự động được provision lại sau đó.
 
 #### D. Quản trị tham số hệ thống: DB Parameter Groups
 * Mọi cấu hình engine (bộ nhớ đệm, timezone, timeout, connection limits) được quản lý tập trung thông qua **DB Parameter Groups** (cho từng instance) và **DB Cluster Parameter Groups** (cho cụm Aurora).
@@ -315,6 +377,22 @@ sequenceDiagram
 - **Giải pháp chuẩn**:
   - Kích hoạt tính năng **Amazon RDS Storage Auto Scaling**.
   - Khi dung lượng trống giảm xuống dưới 10% và tình trạng kéo dài trên 5 phút, RDS sẽ tự động tăng kích thước ổ đĩa lên mức cần thiết (lên tới 64 TB) mà **hoàn toàn không gây gián đoạn hoạt động (Zero Downtime)**.
+
+#### 5. Phân Lập Tải Đọc Cho Báo Cáo Nặng Bằng Aurora Custom Endpoints — (TD-Set1 Q51)
+- **Tình huống thi**: Hệ thống bán hàng trực tuyến chạy trên Amazon Aurora PostgreSQL. Ban giám đốc yêu cầu tối ưu hóa tải cho cụm database: toàn bộ lưu lượng giao dịch sản xuất (Production API) phải được chuyển tới các máy chủ cấu hình mạnh, trong khi các câu truy vấn báo cáo của nhân viên nội bộ (Reporting queries) phải được chuyển tới các máy chủ cấu hình vừa phải để không làm chậm website chính.
+- **Giải pháp chuẩn**:
+  - Tạo một **Aurora Custom Endpoint** dành riêng cho Production Traffic (gom các instance cấu hình lớn).
+  - Tạo một **Aurora Custom Endpoint** thứ hai dành riêng cho Reporting Queries (gom các instance cấu hình thấp/tiết kiệm).
+  - Cấu hình ứng dụng web kết nối tới Custom Endpoint sản xuất và công cụ BI kết nối tới Custom Endpoint báo cáo.
+
+#### 6. Xác Thực Truy Cập Database Bằng IAM DB Authentication Không Dùng Password — (TD-Set1 Q18, TD-Set5 Q52, TD-Set6 Q41)
+- **Tình huống thi**: Ứng dụng tài chính chạy trên cụm EC2 Auto Scaling kết nối vào cơ sở dữ liệu Amazon RDS MySQL Multi-AZ. Để tuân thủ bảo mật tuyệt đối, công ty cấm lưu trữ mật khẩu tĩnh (hardcoded passwords) trong mã nguồn hoặc tệp cấu hình, và yêu cầu mọi kết nối phải được cấp quyền thông qua thông tin xác thực IAM của EC2 Instance Profile với token xác thực tạm thời.
+- **Giải pháp chuẩn**:
+  - Kích hoạt tính năng **IAM DB Authentication** trên cụm RDS instance.
+  - Tạo tài khoản người dùng MySQL sử dụng plugin `AWSAuthenticationPlugin`:  
+    `CREATE USER 'app_user'@'%' IDENTIFIED WITH AWSAuthenticationPlugin AS 'RDS';`
+  - Gán IAM Policy cho EC2 Instance Profile chứa quyền `rds-db:connect`.
+  - Ứng dụng sử dụng AWS SDK sinh Auth Token (có hiệu lực 15 phút) kết hợp giao thức bảo mật **SSL/TLS** để kết nối vào database.
 
 ---
 
@@ -375,31 +453,40 @@ sequenceDiagram
   - Tự động đáp ứng hàng trăm ngàn requests/giây ngay tức thì mà không cần ước lượng dung lượng.
   - Chỉ trả tiền cho số lượng thao tác đọc/ghi thực tế phát sinh (Pay-per-request).
 
-#### 🪤 Bẫy 8: Giảm Thiểu Downtime Khi Failover Cho Ứng Dụng Serverless Bằng RDS Proxy — (CM-PT6 Q38)
+#### 🪤 Bẫy 8: Giảm Thiểu Downtime Khi Failover Cho Ứng Dụng Serverless Bằng RDS Proxy — (CM-PT6 Q38, TD-Set2 Q56, TD-Set6 Q06)
 - **Tình huống đề thi**: *"Hệ thống sử dụng hàng ngàn hàm AWS Lambda kết nối vào cơ sở dữ liệu quan hệ Amazon RDS. Trong quá trình kiểm thử chuyển đổi dự phòng (failover) hoặc khi có tải tăng đột biến, ứng dụng bị nghẽn và thời gian downtime kéo dài do cạn kiệt connection pool."*
 - **Giải pháp ĐÚNG**: Đặt **Amazon RDS Proxy** nằm giữa Lambda và cơ sở dữ liệu RDS.
   - RDS Proxy duy trì một pool các kết nối mở sẵn tới database và chia sẻ dùng chung giữa các hàm Lambda (Connection Pooling), ngăn chặn Lambda làm sập database.
   - Giảm thời gian gián đoạn chuyển đổi dự phòng (**Failover Downtime**) xuống dưới 66% bằng cách giữ nguyên kết nối của client và tự động chuyển hướng truy vấn sang DB Standby mới.
 
+#### 🪤 Bẫy 9: Sử Dụng RDS Read Replica Để Dự Phòng Thảm Họa Đồng Bộ — (TD-Set1 Q01, TD-Set2 Q15)
+- **Tình huống đề thi**: *"Cần cải thiện độ sẵn sàng của database MySQL bằng cách đảm bảo dữ liệu được sao chép ĐỒNG BỘ (synchronous replication) sang một instance khác."*
+- **Các phương án bẫy**:
+  - ❌ *RDS Read Replica*: Read Replica sử dụng cơ chế sao chép **bất đồng bộ (asynchronous replication)** của MySQL/Postgres engine, có replication lag và **KHÔNG** tự động failover đồng bộ khi instance chính sập!
+  - ❌ *DynamoDB Read Replica*: DynamoDB không có tính năng gọi là Read Replica (chỉ có Global Tables).
+- **Giải pháp ĐÚNG**: Cấu hình **RDS Multi-AZ Deployment** (hoặc RDS Multi-AZ DB Cluster). Dữ liệu được đồng bộ ở cấp độ lưu trữ (synchronous physical replication), tự động chuyển CNAME DNS sang Standby instance khi gặp sự cố.
+
+#### 🪤 Bẫy 10: Tải Bất Định Và Có Đợt Ngắt Quãng Về Không Dùng Aurora Serverless v2 — (TD-Set8 Q14)
+- **Tình huống đề thi**: *"Thay thế cơ sở dữ liệu on-premises MySQL có mức tiêu thụ bộ nhớ từ 2 đến 16 GiB, với mẫu lưu lượng thất thường có nhiều đợt tăng vọt và có những khoảng thời gian hoàn toàn không có tải bằng dịch vụ serverless tự co giãn."*
+- **Giải pháp ĐÚNG**: Cấu hình **Amazon Aurora Serverless v2** với năng lực tối thiểu **1 ACU** và tối đa **8 ACUs** ($1 \text{ ACU} \approx 2 \text{ GiB RAM}$). Aurora tự động scale mượt mà từng phân đoạn nhỏ trong mili-giây mà không làm gián đoạn kết nối.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Cơ Sở Dữ Liệu Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Multi-Region DR, RPO < 1s, RTO < 1m (Relational)** | **Amazon Aurora Global Database** | RDS Cross-Region Replica (lag > 1s) |
-| **Phân tích báo cáo nặng làm chậm DB chính** | **RDS / Aurora Read Replicas** | Multi-AZ Standby (chỉ để dự phòng, không đọc được) |
-| **Tự động xoay mật khẩu database định kỳ 30 ngày** | **AWS Secrets Manager** (Automatic Rotation) | Systems Manager Parameter Store (không có built-in rotation) |
-| **Tăng tốc độ đọc DynamoDB lên 10x, zero-code** | **Amazon DynamoDB Accelerator (DAX)** | ElastiCache Redis (phải sửa mã nguồn ứng dụng) |
-| **Nâng cấp Major Engine Version không gián đoạn** | **RDS Blue/Green Deployments** | Nâng cấp trực tiếp trên Multi-AZ (bị downtime) |
-| **High Availability tự động failover cho SQL Server** | **Amazon RDS for SQL Server Multi-AZ** | Tự dựng cluster trên EC2 (quá nhiều overhead) |
-| **Tối ưu chi phí truyền dữ liệu sao chép giữa các AZ** | **Sử dụng Private IP Address** | Dùng Public IP / EIP (bị tính cước Internet) |
-| **Mở rộng dung lượng ổ đĩa tự động không downtime** | **RDS Storage Auto Scaling** | Tăng thủ công (nguy cơ sập khi cạn disk đột ngột) |
-| **Môi trường Dev/Test không chạy 24/7 tải gián đoạn** | **Amazon Aurora Serverless v2** | Provisioned Instances (lãng phí khi nhàn rỗi) |
-| **Lưu lượng truy cập NoSQL không thể dự đoán trước** | **DynamoDB On-Demand Mode** | Provisioned Capacity (dễ bị throttling khi tăng tải) |
-| **Giảm thời gian gián đoạn failover & nghẽn Lambda** | **Amazon RDS Proxy** | Mở kết nối trực tiếp từ Lambda (tràn connection) |
-| **Cải thiện tính sẵn sàng (Availability) khi AZ sập** | **Amazon RDS Multi-AZ Deployment** | Read Replica (không tự động failover đồng bộ) |
-| **Cải thiện hiệu năng đọc (Read Performance) tải cao** | **Amazon RDS Read Replicas** | Multi-AZ Standby (không hỗ trợ câu lệnh đọc) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
+|:---|:---|:---|:---:|
+| **Sao chép dữ liệu đồng bộ (Synchronous Replication) bảo vệ AZ sập** | **RDS Multi-AZ Deployment** | RDS Read Replica (sao chép bất đồng bộ, có lag) | TD-Set1 Q01 |
+| **Phân lập tải đọc: Tách truy vấn báo cáo nặng khỏi API người dùng** | **Aurora Custom Endpoints** | Trỏ chung vào Reader Endpoint (làm chậm app chính) | TD-Set1 Q51 |
+| **Phân bổ đều lưu lượng đọc giữa các Aurora Replicas tự động** | **Aurora Built-in Reader Endpoint** | Cấu hình IP từng replica thủ công trong code | TD-Set3 Q58 |
+| **Kết nối RDS MySQL/PostgreSQL không mật khẩu, dùng IAM token** | **IAM Database Authentication** (SSL bắt buộc) | Hardcode password vào config / Secret không xoay | TD-Set1 Q18, TD-Set5 Q52 |
+| **Cơ chế Failover của RDS Multi-AZ khi máy chủ chính gặp sự cố** | **Tự động đổi bản ghi CNAME DNS** sang Standby | Phải đổi IP thủ công hoặc tạo instance mới | TD-Set2 Q15 |
+| **Tải gián đoạn, đột biến bất định có khoảng nghỉ không tải** | **Amazon Aurora Serverless v2** (1–8 ACUs) | Provisioned Instances (lãng phí tiền khi nhàn rỗi) | TD-Set8 Q14 |
+| **Multi-Region DR, RPO < 1s, RTO < 1m (Relational)** | **Amazon Aurora Global Database** | RDS Cross-Region Replica (lag > 1s) | CM-PT1 Q24 |
+| **Tự động xoay mật khẩu database định kỳ 30 ngày** | **AWS Secrets Manager** (Automatic Rotation) | Systems Manager Parameter Store (không có built-in rotation) | CM-PT1 Q13, TD-Set2 Q10 |
+| **Tăng tốc độ đọc DynamoDB lên 10x, microsecond latency** | **Amazon DynamoDB Accelerator (DAX)** | ElastiCache Redis (phải viết lại code gọi SDK mới) | TD-Set2 Q48, TD-Set3 Q04 |
+| **Nâng cấp Major Engine Version không gián đoạn** | **RDS Blue/Green Deployments** | Nâng cấp trực tiếp trên Multi-AZ (bị downtime) | U-PT2 Q65 |
+| **Giảm thời gian gián đoạn failover & chống tràn connection Lambda** | **Amazon RDS Proxy** | Kết nối trực tiếp từ hàng ngàn Lambda (tràn pool) | CM-PT6 Q38, TD-Set2 Q56 |
 
 ---
 

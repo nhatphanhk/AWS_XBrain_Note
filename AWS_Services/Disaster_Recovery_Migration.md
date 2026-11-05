@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Khắc Phục Thảm Họa (Disaster Recovery) & Di Chuyển Lên Đám Mây (Cloud Migration)
+# Tài Liệu Học Tập Chuyên Sâu: Khắc Phục Thảm Họa (Disaster Recovery) & Di Chuyển Lên Đám Mây (Cloud Migration)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -104,16 +104,16 @@ flowchart LR
 
 ### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
 
-#### 1. Di Chuyển Máy Chủ Toàn Diện Bằng AWS Application Migration Service (AWS MGN)
-- **Tình huống thi**: Doanh nghiệp cần di chuyển hàng trăm máy chủ vật lý (Physical Servers) và máy ảo VMware/Hyper-V từ Datacenter On-Premises lên AWS EC2 với thời gian gián đoạn chuyển đổi (Cutover Downtime) tối thiểu dưới vài phút.
+#### 1. Di Chuyển Máy Chủ Toàn Diện Bằng AWS Application Migration Service (AWS MGN) — (TD-Set4 Q65)
+- **Tình huống thi**: Doanh nghiệp sở hữu trung tâm dữ liệu tại bờ Đông Hoa Kỳ vận hành nhiều ứng dụng legacy chạy trên các máy chủ vật lý và máy ảo độc lập thuộc hệ điều hành Linux và Windows. Doanh nghiệp cần kế hoạch di chuyển toàn bộ lên AWS với thời gian gián đoạn chuyển đổi (Cutover Downtime) tối thiểu và có thể kiểm thử trước khi chuyển giao chính thức (`TD-Set4 Q65`).
 - **Giải pháp tối ưu chuẩn AWS**:
   - Triển khai **AWS Application Migration Service (AWS MGN)** (dịch vụ kế nhiệm chính thức của CloudEndure Migration).
-  - Cài đặt AWS Replication Agent lên các máy chủ nguồn.
-  - Dữ liệu ổ đĩa được sao chép liên tục ở cấp độ khối (**Block-level Replication**) lên AWS qua kênh mã hóa an toàn mà không làm gián đoạn ứng dụng đang chạy.
-  - Khi đến ngày chuyển giao, chỉ cần kích hoạt quy trình Cutover: AWS MGN tự động khởi tạo máy ảo EC2 mới từ dữ liệu đã đồng bộ gần nhất trong vài phút.
+  - Cài đặt **AWS Replication Agent** lên từng máy chủ nguồn.
+  - Dữ liệu ổ đĩa được sao chép liên tục ở cấp độ khối (**Block-level continuous replication**) lên AWS Staging Area qua mạng TLS mà không làm gián đoạn ứng dụng đang chạy.
+  - Thực hiện diễn tập chuyển đổi (**Non-disruptive cutover testing**) để xác thực ứng dụng trước khi cutover. Khi đến ngày chuyển giao, kích hoạt Cutover: AWS MGN tự động khởi tạo máy ảo EC2 mới từ dữ liệu đã đồng bộ gần nhất trong vài phút.
 
-#### 2. Di Chuyển Cơ Sở Dữ Liệu Khác Loại Với Bộ Đôi: AWS SCT + AWS DMS
-- **Tình huống thi**: Doanh nghiệp muốn chuyển đổi hệ quản trị cơ sở dữ liệu thương mại tốn kém bản quyền (Oracle hoặc Microsoft SQL Server tại On-Premises) sang cơ sở dữ liệu mã nguồn mở đám mây trên AWS (Amazon Aurora PostgreSQL / MySQL).
+#### 2. Di Chuyển Cơ Sở Dữ Liệu Khác Loại Với Bộ Đôi: AWS SCT + AWS DMS — (TD-Set1 Q09, TD-Set1 Q32, TD-Set5 Q34)
+- **Tình huống thi**: Doanh nghiệp muốn chuyển đổi hệ quản trị cơ sở dữ liệu thương mại tốn kém bản quyền (Oracle hoặc Microsoft SQL Server tại On-Premises) sang cơ sở dữ liệu mã nguồn mở đám mây trên AWS (Amazon Aurora PostgreSQL / MySQL). Hệ thống Forex trading xử lý dữ liệu tài chính mỗi phút không cho phép thời gian downtime kéo dài (`TD-Set1 Q09`, `TD-Set1 Q32`, `TD-Set5 Q34`).
 - **Quy trình 2 bước chuẩn mực**:
   - **Bước 1 (Chuyển đổi Schema)**: Sử dụng **AWS Schema Conversion Tool (AWS SCT)** để tự động phân tích và chuyển đổi cấu trúc bảng, views, stored procedures và triggers từ Oracle/MSSQL sang định dạng tương thích với PostgreSQL/MySQL.
   - **Bước 2 (Chuyển đổi Dữ liệu)**: Sử dụng **AWS Database Migration Service (AWS DMS)**:
@@ -126,6 +126,28 @@ flowchart LR
   - Cài đặt **AWS DataSync Agent** tại trung tâm dữ liệu On-Premises.
   - DataSync tự động tăng tốc truyền dữ liệu gấp **10 lần** so với rsync/scp truyền thống bằng cách sử dụng giao thức truyền thông đa luồng được thiết kế riêng của AWS.
   - Tự động nén dữ liệu, mã hóa trong quá trình truyền (TLS), và kiểm tra tính toàn vẹn dữ liệu (Data Integrity Verification) tự động sau mỗi lần truyền.
+
+#### 4. Chuyển Đổi Microsoft SQL Server Sang Aurora PostgreSQL Giảm Thiểu Code Sửa Đổi Bằng Babelfish — (TD-Set4 Q26)
+- **Tình huống thi**: Doanh nghiệp vận hành hệ thống phần mềm nghiệp vụ viết bằng .NET/C# sử dụng Microsoft SQL Server làm cơ sở dữ liệu backend. Công ty muốn chuyển sang **Amazon Aurora PostgreSQL** để tối ưu chi phí bản quyền, nhưng ngân sách và thời gian không cho phép viết lại toàn bộ mã nguồn ứng dụng đang dùng phương ngữ T-SQL (`TD-Set4 Q26`).
+- **Giải pháp chuẩn AWS**:
+  - Triển khai **Babelfish for Aurora PostgreSQL**.
+  - Babelfish là tính năng mở rộng tích hợp sẵn trên Aurora PostgreSQL cho phép engine hiểu trực tiếp giao thức TDS (Tabular Data Stream) và các câu truy vấn T-SQL của Microsoft SQL Server.
+  - Kết hợp sử dụng **AWS SCT** để chuyển đổi schema và **AWS DMS** để di chuyển dữ liệu, ứng dụng chỉ cần trỏ connection string sang endpoint của Babelfish mà hầu như không cần sửa mã nguồn ứng dụng.
+
+#### 5. Di Chuyển 250 TB Tài Liệu Lưu Trữ Bằng Cụm Thiết Bị AWS Snowball Edge — (TD-Set2 Q52)
+- **Tình huống thi**: Công ty truyền thông sở hữu khoảng 250 TB tài sản video và audio lưu trữ trên các thiết bị lưu trữ di động tại cơ sở on-premises. Băng thông mạng internet hạn chế và công ty cần chuyển toàn bộ vào Amazon S3 để lưu trữ lâu dài với độ bền cao và bảo mật tuyệt đối (`TD-Set2 Q52`).
+- **Giải pháp chuẩn AWS**:
+  - Đặt hàng nhiều thiết bị **AWS Snowball Edge Storage Optimized** (mỗi thiết bị hỗ trợ ~80 TB dung lượng khả dụng).
+  - Kết nối thiết bị Snowball vào mạng cục bộ qua cổng 10G/40G, sao chép dữ liệu cục bộ bằng công cụ S3 Adapter / AWS CLI với mã hóa AES-256 bắt buộc.
+  - Gửi các thiết bị Snowball về AWS qua dịch vụ vận chuyển an toàn có nhãn E-Ink tích hợp; AWS tự động nạp dữ liệu vào Amazon S3 bucket chỉ định.
+
+#### 6. Đồng Bộ Dữ Liệu MySQL On-Premises Lên S3 Dưới Dạng CSV Bằng AWS DMS — (TD-Set2 Q04)
+- **Tình huống thi**: Doanh nghiệp có cơ sở dữ liệu MySQL tại trung tâm dữ liệu on-premises cần sao chép liên tục các bảng dữ liệu lên Amazon S3 dưới dạng file CSV để các hệ thống khác đọc và sau đó tải vào Amazon Aurora Serverless cluster (`TD-Set2 Q04`).
+- **Giải pháp chuẩn AWS**:
+  - Cấu hình một replication instance trong **AWS Database Migration Service (AWS DMS)**.
+  - Thiết lập Source Endpoint là on-premises MySQL database.
+  - Thiết lập Target Endpoint là **Amazon S3 bucket** với định dạng xuất tệp là **CSV**.
+  - DMS tự động trích xuất các bảng dữ liệu thành các file CSV trên S3 và duy trì cập nhật liên tục qua CDC.
 
 ---
 
@@ -193,35 +215,51 @@ Chi Phí Rẻ Nhất / RTO-RPO Lâu Nhất                Chi Phí Đắt Nhất
 - **Giải pháp ĐÚNG**: Sử dụng **Amazon RDS Custom for Oracle**.
   - Cho phép người dùng toàn quyền truy cập mức hệ điều hành (SSH/RDP với quyền root/administrator) và can thiệp file system của database server, trong khi vẫn duy trì các tính năng quản lý sao lưu và vá lỗi tự động của Amazon RDS.
 
-#### 🪤 Bẫy 8: Di Chuyển Máy Chủ Đa Nền Tảng Với Downtime Tối Thiểu: AWS MGN vs VM Import/Export — (U-PT6 Q60)
+#### 🪤 Bẫy 8: Di Chuyển Máy Chủ Đa Nền Tảng Với Downtime Tối Thiểu: AWS MGN vs VM Import/Export — (U-PT6 Q60, TD-Set4 Q65)
 - **Tình huống đề thi**: *"Doanh nghiệp cần di chuyển hàng trăm máy chủ vật lý và máy ảo VMware/Hyper-V chạy nhiều phiên bản hệ điều hành khác nhau lên Amazon EC2. Yêu cầu thời gian gián đoạn chuyển đổi (Cutover downtime) phải dưới vài phút và không làm ảnh hưởng đến hệ thống sản xuất tại chỗ trong suốt quá trình đồng bộ dữ liệu."*
 - **Các phương án bẫy**:
   - ❌ *Dùng VM Import/Export*: Quá trình xuất file OVA/VMDK thủ công rất lâu, bắt buộc phải tắt máy ảo nguồn khi export để tránh lệch dữ liệu (thời gian downtime kéo dài nhiều giờ tới nhiều ngày).
   - ❌ *Dùng AWS DMS*: DMS chỉ hỗ trợ cơ sở dữ liệu quan hệ, không thể di chuyển toàn bộ hệ điều hành, cấu hình mạng và ứng dụng của máy chủ!
-- **Giải pháp ĐÚNG**: Sử dụng **AWS Application Migration Service (AWS MGN)**.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Application Migration Service (AWS MGN)** (`TD-Set4 Q65`).
   - Cài đặt phần mềm **AWS Replication Agent** trực tiếp trên từng máy chủ nguồn.
   - Dữ liệu ổ đĩa được nhân bản liên tục ở cấp độ khối (**Block-level continuous replication**) lên vùng lưu trữ đệm AWS Staging Area qua mạng TLS mà không làm gián đoạn máy chủ đang hoạt động.
   - Hỗ trợ diễn tập chuyển đổi (**Non-disruptive cutover testing**) trước ngày chuyển giao. Khi cutover chính thức, AWS MGN tự động khởi chạy các máy chủ EC2 mới chỉ trong vòng vài phút (RPO tính bằng giây, RTO tính bằng phút).
+
+#### 🪤 Bẫy 9: Babelfish for Aurora PostgreSQL: Giảm Thiểu Sửa Đổi Code T-SQL Khi Chuyển Từ SQL Server — (TD-Set4 Q26)
+- **Tình huống đề thi**: *"Chuyển từ Microsoft SQL Server sang Aurora PostgreSQL mà không muốn tốn nhiều tháng để viết lại các câu truy vấn T-SQL và stored procedures trong ứng dụng."*
+- **Các phương án bẫy**:
+  - ❌ *Chỉ dùng AWS SCT và DMS*: SCT chỉ chuyển đổi schema và SQL code sang PL/pgSQL, nhưng mã nguồn ứng dụng (C#/.NET) gọi stored procedures và syntax T-SQL vẫn phải viết lại thủ công!
+- **Giải pháp ĐÚNG**: Kích hoạt **Babelfish for Aurora PostgreSQL**.
+  - Cho phép Aurora PostgreSQL trực tiếp lắng nghe cổng 1433 của SQL Server và hiểu cú pháp T-SQL, giúp chuyển đổi ứng dụng nhanh chóng với code modification tối thiểu.
+
+#### 🪤 Bẫy 10: AWS DMS Homogeneous vs Heterogeneous: Khi Nào Bắt Buộc Cần AWS SCT — (TD-Set1 Q09, TD-Set5 Q34)
+- **Tình huống đề thi**: *"Phân biệt khi nào chỉ cần AWS DMS và khi nào bắt buộc phải kết hợp AWS Schema Conversion Tool (AWS SCT)."*
+- **Quy tắc bất biến**:
+  - **Homogeneous (Cùng Engine)**: Ví dụ Oracle sang RDS Oracle, MySQL sang Aurora MySQL $\rightarrow$ Chỉ cần **AWS DMS** (hoặc native tools như mysqldump / Oracle Data Pump). DMS tự động tạo bảng và nạp dữ liệu.
+  - **Heterogeneous (Khác Engine)**: Ví dụ Oracle sang Aurora PostgreSQL, SQL Server sang MySQL $\rightarrow$ Bắt buộc dùng **AWS SCT** trước để chuyển đổi schema/DDL, sau đó mới dùng **AWS DMS** để nạp và đồng bộ dữ liệu.
 
 ---
 
 ### 📊 III. Ma Trận Quyết Định Công Cụ Di Chuyển & DR Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Di chuyển máy ảo/vật lý Lift-and-Shift lên EC2 (Downtime thấp)** | **AWS Application Migration Service (MGN)** | VM Import/Export (downtime nhiều giờ do phải tắt máy) |
-| **Di chuyển database quan hệ sang đám mây** | **AWS Database Migration Service (DMS)** | AWS MGN (MGN chuyển đổi toàn bộ máy chủ, không tối ưu cho DB) |
-| **Đổi engine Oracle/MSSQL sang Aurora PostgreSQL** | **AWS SCT (Schema) + AWS DMS (Dữ liệu)** | AWS DataSync (không chuyển đổi schema DB) |
-| **Đổi engine Oracle/MSSQL sang Aurora PostgreSQL** | **AWS SCT (Schema) + AWS DMS (Dữ liệu)** | AWS DataSync (không chuyển đổi schema DB) |
-| **Truyền Terabytes dữ liệu từ NFS/SMB On-Prem lên S3** | **AWS DataSync** | AWS Snowball (chỉ dùng khi mạng quá chậm) |
-| **Tập tin Windows SMB, tích hợp AD, DFS** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ giao thức Linux NFS) |
-| **Đồng bộ FSx Single-AZ sang Multi-AZ** | **Tạo FSx Multi-AZ mới + AWS DataSync** | Sửa in-place trên FSx cũ (AWS không hỗ trợ) |
-| **Ứng dụng On-Premises mount S3 như ổ NFS cục bộ** | **AWS Storage Gateway (S3 File Gateway)** | AWS Direct Connect đơn thuần |
-| **Di chuyển hàng trăm Petabytes không có mạng cáp** | **AWS Snowball Edge / AWS Snowmobile** | Truyền qua Internet / Direct Connect (mất nhiều tháng) |
-| **Truyền nhận file SFTP với bên thứ ba ít overhead** | **AWS Transfer Family (SFTP Connectors)** | Tự dựng EC2 SFTP (tốn công quản trị OS) |
-| **Di chuyển cụm Hadoop HDFS sang Amazon S3** | **AWS DataSync (hỗ trợ native HDFS)** | Copy thủ công qua script (chậm & thiếu verify) |
-| **Đồng bộ file NFS giữa 2 Regions cho kịch bản DR** | **AWS DataSync (NFS-to-NFS Cross-Region)** | rsync / script định kỳ (dễ gián đoạn khi đứt mạng) |
-| **Di chuyển DB Oracle cần can thiệp quyền Root OS** | **Amazon RDS Custom for Oracle** | RDS Standard (AWS cấm truy cập root OS) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
+|:---|:---|:---|:---|
+| **Di chuyển máy ảo/vật lý Lift-and-Shift lên EC2 (Downtime thấp)** | **AWS Application Migration Service (MGN)** | VM Import/Export (downtime nhiều giờ do phải tắt máy) | `TD-Set4 Q65` |
+| **Di chuyển database quan hệ sang đám mây** | **AWS Database Migration Service (DMS)** | AWS MGN (MGN chuyển đổi toàn bộ máy chủ, không tối ưu cho DB) | `TD-Set1 Q09`, `TD-Set1 Q32` |
+| **Đổi engine Oracle/MSSQL sang Aurora PostgreSQL** | **AWS SCT (Schema) + AWS DMS (Dữ liệu)** | AWS DataSync (không chuyển đổi schema DB) | `TD-Set1 Q09`, `TD-Set5 Q34` |
+| **Chuyển SQL Server sang Aurora PostgreSQL ít sửa code nhất** | **Babelfish for Aurora PostgreSQL + SCT + DMS** | Viết lại toàn bộ code ứng dụng sang PostgreSQL | `TD-Set4 Q26` |
+| **Sao chép database MySQL on-premise lên S3 dạng CSV** | **AWS DMS (Target Endpoint = S3 CSV)** | Script export thủ công (không có CDC liên tục) | `TD-Set2 Q04` |
+| **Di chuyển 250 TB dữ liệu lưu trữ ngoại tuyến lên S3** | **Cụm thiết bị AWS Snowball Edge** | Kéo cáp Internet (mất nhiều tháng, chi phí băng thông lớn) | `TD-Set2 Q52` |
+| **Truyền Terabytes dữ liệu từ NFS/SMB On-Prem lên S3** | **AWS DataSync** | AWS Snowball (chỉ dùng khi mạng quá chậm) | `TD-Set2 Q28`, `TD-Set8 Q23` |
+| **Tập tin Windows SMB, tích hợp AD, DFS** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ giao thức Linux NFS) | `TD-Set2 Q28` |
+| **Đồng bộ FSx Single-AZ sang Multi-AZ** | **Tạo FSx Multi-AZ mới + AWS DataSync** | Sửa in-place trên FSx cũ (AWS không hỗ trợ) | `TD-Set1 Q05` |
+| **Ứng dụng On-Premises mount S3 như ổ NFS cục bộ** | **AWS Storage Gateway (S3 File Gateway)** | AWS Direct Connect đơn thuần | `TD-Set1 Q20` |
+| **Truyền nhận file SFTP với bên thứ ba ít overhead** | **AWS Transfer Family (SFTP Connectors)** | Tự dựng EC2 SFTP (tốn công quản trị OS) | `TD-Set2 Q05` |
+| **Di chuyển cụm Hadoop HDFS sang Amazon S3** | **AWS DataSync (hỗ trợ native HDFS)** | Copy thủ công qua script (chậm & thiếu verify) | Chuẩn AWS |
+| **Đồng bộ file NFS giữa 2 Regions cho kịch bản DR** | **AWS DataSync (NFS-to-NFS Cross-Region)** | rsync / script định kỳ (dễ gián đoạn khi đứt mạng) | Chuẩn AWS |
+| **Di chuyển DB Oracle cần can thiệp quyền Root OS** | **Amazon RDS Custom for Oracle** | RDS Standard (AWS cấm truy cập root OS) | Chuẩn AWS |
+| **Di chuyển web app không downtime bằng định tuyến** | **Route 53 Weighted Routing (50/50 cutover)** | Cắt DNS tức thì mà không test tải thực tế | `TD-Set5 Q32` |
+| **DR tối ưu chi phí cho SQL Server On-Premises lên AWS** | **Warm Standby / Pilot Light với AWS DMS** | Multi-Region Active-Active (quá đắt đỏ) | `TD-Set6 Q11` |
 
 ---
 

@@ -59,25 +59,25 @@ mindmap
       Tối ưu hóa vòng đời lưu trữ dữ liệu
 ```
 
-#### Chi Tiết 6 Trụ Cột:
+#### Chi Tiết 6 Trụ Cột Chuẩn AWS (The 6 Well-Architected Pillars):
 1. **Vận hành xuất sắc (Operational Excellence)**:
    - Tập trung vào việc vận hành và giám sát hệ thống để mang lại giá trị kinh doanh, đồng thời liên tục cải tiến quy trình.
-   - *Nguyên tắc thiết kế*: Thực hiện vận hành dưới dạng mã nguồn (**Operations as Code** qua Terraform/CloudFormation), thực hiện các thay đổi nhỏ thường xuyên có thể hoàn nguyên, dự đoán trước các thất bại, tổ chức diễn tập sự cố thực chiến (**Game Days**).
+   - *Nguyên tắc thiết kế*: Thực hiện vận hành dưới dạng mã nguồn (**Operations as Code** qua Terraform/CloudFormation), chuẩn hóa quy trình tạo tài khoản tổ chức qua **AWS Control Tower Account Factory** (`TD-Set2 Q16`), tự động hóa việc phát hiện và khắc phục sai lệch cấu hình drift qua **SSM State Manager / Automation** (`TD-Set5 Q04`), thực hiện các thay đổi nhỏ thường xuyên có thể hoàn nguyên, dự đoán trước các thất bại, tổ chức diễn tập sự cố thực chiến (**Game Days**).
 2. **Bảo mật (Security)**:
    - Bảo vệ thông tin, dữ liệu và tài sản kỹ thuật số thông qua đánh giá rủi ro và các chiến lược giảm thiểu.
-   - *Nguyên tắc thiết kế*: Xây dựng nền tảng định danh vững chắc (IAM Least Privilege & Identity Center), duy trì khả năng truy vết (CloudTrail), bảo vệ nhiều lớp (Defense-in-Depth), mã hóa dữ liệu ở mọi trạng thái (KMS Encryption at Rest & TLS in Transit).
+   - *Nguyên tắc thiết kế*: Xây dựng nền tảng định danh vững chắc với **AWS IAM Identity Center** và AWS Organizations (`TD-Set8 Q08`), duy trì khả năng truy vết và kiểm toán mức đối tượng qua **CloudTrail S3 Data Events** (`TD-Set8 Q12`), bảo vệ nhiều lớp (Defense-in-Depth), mã hóa dữ liệu ở mọi trạng thái bằng **AWS KMS** hoặc mã hóa phía client **CSE-C** khi quy định cấm gửi key lên đám mây (`TD-Set1 Q06`), áp dụng kiểm soát chủ động qua **Control Tower Guardrails / SCPs**.
 3. **Độ tin cậy (Reliability)**:
    - Khả năng hệ thống tự phục hồi sau các gián đoạn hạ tầng, tự động cấp phát tài nguyên để đáp ứng nhu cầu và giảm thiểu sự cố.
-   - *Nguyên tắc thiết kế*: Tự động phục hồi sau lỗi (Self-healing qua Auto Scaling & Health Checks), kiểm tra quy trình phục hồi (Chaos Engineering), mở rộng theo chiều ngang để tăng tính sẵn sàng, ngừng phỏng đoán nhu cầu dung lượng.
+   - *Nguyên tắc thiết kế*: Triệt tiêu hoàn toàn các điểm lỗi đơn lẻ (**Single Point of Failure - SPOF**) như triển khai **NAT Gateway riêng biệt cho từng Availability Zone** (`TD-Set1 Q05`), thiết kế kiến trúc phân tán đa vùng sẵn sàng (**Multi-AZ ECS kết hợp Multi-AZ RDS**) (`TD-Set1 Q25`), tự động phục hồi sau lỗi (Self-healing qua Auto Scaling & Health Checks), ngăn chặn hiện tượng dao động co giãn liên tục (Flapping / Thrashing) bằng cách điều chỉnh **Cooldown Period** hoặc **Step Scaling** (`TD-Set5 Q48`), sẵn sàng kịch bản khôi phục thảm họa Disaster Recovery (Pilot Light / Warm Standby) (`TD-Set6 Q11`).
 4. **Hiệu quả hiệu năng (Performance Efficiency)**:
    - Khả năng sử dụng tài nguyên điện toán hiệu quả để đáp ứng các yêu cầu và duy trì hiệu quả đó khi nhu cầu thay đổi.
-   - *Nguyên tắc thiết kế*: Dân chủ hóa công nghệ tiên tiến (ưu tiên các dịch vụ Serverless và Managed Services), vươn ra toàn cầu trong vài phút (CloudFront / Global Accelerator), đo lường và theo dõi định kỳ qua CloudWatch.
+   - *Nguyên tắc thiết kế*: Dân chủ hóa công nghệ tiên tiến (ưu tiên các dịch vụ Serverless và Managed Services), đưa nội dung ra sát người dùng toàn cầu qua **Amazon CloudFront** với chính sách bộ nhớ đệm TTL tối ưu (`TD-Set2 Q21`, `TD-Set8 Q13`), mở rộng khả năng đọc cơ sở dữ liệu qua **Aurora Auto Scaling Read Replicas** (`TD-Set1 Q47`), tăng tốc độ khởi động máy ảo Auto Scaling bằng **Golden AMI tạo sẵn** thay vì chạy script UserData phức tạp (`TD-Set4 Q35`).
 5. **Tối ưu chi phí (Cost Optimization)**:
    - Khả năng vận hành hệ thống mang lại giá trị kinh doanh cao nhất với chi phí thấp nhất.
-   - *Nguyên tắc thiết kế*: Xây dựng văn hóa FinOps, đo lường hiệu quả tổng thể, ngừng trả tiền cho dung lượng nhàn rỗi (Right-sizing qua Compute Optimizer), gắn thẻ phân bổ chi phí (**Cost Allocation Tags**).
+   - *Nguyên tắc thiết kế*: Xây dựng văn hóa FinOps, đo lường hiệu quả tổng thể, điều chỉnh đúng kích cỡ tài nguyên (**Right-sizing**) và hạ cấp các ổ đĩa thừa IOPS từ **`io2 Block Express` xuống `gp3`** (`TD-Set8 Q03`), tự động hóa chính sách vòng đời tệp tin **EFS Lifecycle Management** sang EFS Infrequent Access/Archive (`TD-Set4 Q39`), chọn đúng lớp lưu trữ S3 Standard cho dữ liệu vòng đời dưới 30 ngày để tránh bị phạt thời gian lưu tối thiểu, thiết lập cảnh báo ngân sách tự động qua **AWS Budgets** (`TD-Set8 Q17`).
 6. **Tính bền vững (Sustainability)**:
    - Giảm thiểu các tác động môi trường của việc vận hành các khối lượng công việc trên đám mây.
-   - *Nguyên tắc thiết kế*: Đo lường lượng phát thải carbon qua **AWS Customer Carbon Footprint Tool**, tối đa hóa tỷ lệ sử dụng máy chủ (Utilization), chuyển đổi sang các dòng chip tiết kiệm điện năng **AWS Graviton (Arm64)** và xóa bỏ dữ liệu rác không cần thiết.
+   - *Nguyên tắc thiết kế*: Đo lường lượng phát thải carbon qua **AWS Customer Carbon Footprint Tool**, tối đa hóa tỷ lệ sử dụng máy chủ (Utilization), chuyển đổi sang các dòng chip tiết kiệm điện năng **AWS Graviton (Arm64: c7g, m7g, r7g)** giúp tăng hiệu năng trên mỗi watt điện tới 60%, xóa bỏ dữ liệu rác không cần thiết, ưu tiên kiến trúc Serverless (Lambda, Fargate) co giãn về 0 khi không có tải.
 
 ---
 
@@ -172,13 +172,13 @@ flowchart TD
   2. Bật tính năng **Discount Sharing từ Management Account** trong AWS Billing Console.
   3. Cấu hình **AWS Budgets Coverage Alerts** để nhận thông báo tự động khi tỷ lệ bao phủ của Savings Plans giảm xuống dưới ngưỡng mong muốn.
 
-#### 🪤 Bẫy 5: Kiểm Soát Tuân Thủ Đa Tài Khoản: Control Tower Proactive Controls vs Detective Controls — (CM-PT4 Q36, CM-PT6 Q25)
-- **Tình huống đề thi**: *"Doanh nghiệp cần NGĂN CHẶN hoàn toàn (PREVENT) việc lập trình viên khởi chạy các EC2 instance có gắn địa chỉ Public IP trong toàn bộ tổ chức, đồng thời phát hiện sai lệch cấu hình (Configuration Drift) với ít công vận hành nhất."*
+#### 🪤 Bẫy 5: Kiểm Soát Tuân Thủ Đa Tài Khoản: Control Tower Proactive Controls vs Detective Controls — (TD-Set2 Q16, CM-PT4 Q36)
+- **Tình huống đề thi**: *"Doanh nghiệp cần NGĂN CHẶN hoàn toàn (PREVENT) việc lập trình viên khởi chạy các EC2 instance có gắn địa chỉ Public IP trong toàn bộ tổ chức, đồng thời chuẩn hóa việc tạo tài khoản mới với các cấu hình bảo mật được phê duyệt sẵn qua Account Factory."*
 - **Nguyên tắc phân biệt Guardrails / Controls trong Control Tower**:
   - **Preventive Controls (Ngăn chặn)**: Thực thi thông qua **Service Control Policies (SCPs)** của AWS Organizations (chặn các API call nguy hiểm).
   - **Proactive Controls (Chủ động chặn trước khi deploy)**: Sử dụng **CloudFormation Guard** để quét mẫu template IaC và chặn deployment ngay tại thời điểm tạo resource nếu vi phạm quy định (ví dụ: cấm `AssociatePublicIpAddress: true`).
   - **Detective Controls (Phát hiện sau khi tạo)**: Thực thi thông qua **AWS Config Managed Rules**, phát hiện tài nguyên vi phạm và ghi nhận sự kiện drift hoặc kích hoạt tự động sửa chữa.
-- **Giải pháp ĐÚNG**: Triển khai **AWS Control Tower Proactive Controls** trong Landing Zone và bật **Drift Notifications**.
+- **Giải pháp ĐÚNG**: Triển khai **AWS Control Tower Account Factory** kết hợp **Proactive Controls** trong Landing Zone (`TD-Set2 Q16`).
 
 #### 🪤 Bẫy 6: Khuyến Nghị Mua Reserved Instances Cho Database Hoạt Động Tải Cao — (CM-PT3 Q31, CM-PT6 Q54)
 - **Tình huống đề thi**: *"Doanh nghiệp vận hành nhiều cơ sở dữ liệu Amazon RDS for Oracle theo mô hình On-Demand với mức độ tải CPU/Memory liên tục vượt 85% trong nhiều tháng. Ban giám đốc yêu cầu đưa ra phương án cắt giảm chi phí ngay lập tức với công cụ tích hợp sẵn của AWS."*
@@ -186,25 +186,52 @@ flowchart TD
   - Trusted Advisor tự động phân tích lịch sử sử dụng thực tế trong 30 ngày và đề xuất chính xác số lượng, loại DB instance cần chuyển đổi sang **Reserved Instances (RI 1 năm hoặc 3 năm)** để tiết kiệm tới 60% chi phí.
   - Bật tính năng **Cost and Usage Reports (CUR)** tại Management Account đẩy log vào S3 để phân tích sâu bằng **Amazon Athena**.
 
+#### 🪤 Bẫy 7: Triệt Tiêu Điểm Lỗi Đơn Lẻ (SPOF) Tầng Mạng: NAT Gateway Riêng Biệt Từng AZ — (TD-Set1 Q05)
+- **Tình huống đề thi**: *"Ứng dụng phân tán chạy trên các EC2 instances trong Private Subnets trải dài trên 3 Availability Zones. Toàn bộ các máy chủ dùng chung một NAT Gateway duy nhất tại AZ-a để tải bản vá từ Internet. Đội ngũ an ninh yêu cầu loại bỏ hoàn toàn điểm lỗi đơn lẻ (SPOF) cho luồng truy cập này để đảm bảo độ tin cậy (Reliability)."*
+- **Các phương án bẫy**:
+  - ❌ *Tạo thêm 1 máy chủ NAT Instance chạy song song trong cùng AZ-a*: Vẫn chết nếu toàn bộ AZ-a gặp sự cố mất điện/mạng!
+  - ❌ *Mở cổng Internet trực tiếp cho các Private Subnets*: Vi phạm an ninh mạng nghiêm trọng.
+- **Giải pháp ĐÚNG**: Triển khai **1 NAT Gateway riêng biệt trong Public Subnet của TỪNG Availability Zone** (`TD-Set1 Q05`).
+  - Cập nhật Route Table của Private Subnet tại mỗi AZ trỏ traffic `0.0.0.0/0` vào chính NAT Gateway nằm trong cùng AZ đó.
+  - Đảm bảo khi một AZ bị sự cố, các AZ còn lại vẫn kết nối Internet hoàn toàn bình thường, loại bỏ 100% Single Point of Failure.
+
+#### 🪤 Bẫy 8: Ngăn Chặn Hiện Tượng Dao Động Co Giãn Liên Tục (ASG Flapping / Thrashing) — (TD-Set5 Q48)
+- **Tình huống đề thi**: *"Khi rà soát nhật ký Auto Scaling, kiến trúc sư nhận thấy một ứng dụng web liên tục scale-up thêm máy chủ rồi lại scale-down tắt máy chủ nhiều lần trong cùng một giờ. Hiện tượng này làm tăng chi phí và gây gián đoạn tải. Cần thay đổi kiến trúc nào để ổn định hệ thống?"*
+- **Nguyên nhân cốt lõi**:
+  - Do thời gian chờ làm nguội (**Cooldown Period**) quá ngắn, hoặc ngưỡng kích hoạt scale-out và scale-in quá sát nhau, khiến số liệu CPU dao động đột biến làm ASG phản ứng liên tục (Flapping / Thrashing).
+- **Giải pháp ĐÚNG**: 
+  - Tăng giá trị **Default Cooldown Period** (ví dụ: từ 60s lên 300s) cho Auto Scaling Group để đảm bảo máy chủ mới có đủ thời gian khởi động và chia sẻ tải ổn định trước khi đưa ra quyết định co giãn tiếp theo (`TD-Set5 Q48`).
+  - Hoặc chuyển đổi sang **Target Tracking Scaling Policy** (để AWS tự động tính toán biên độ an toàn) thay vì dùng Simple Scaling với khoảng cách ngưỡng quá hẹp.
+
+#### 🪤 Bẫy 9: Tối Ưu Tốc Độ Scale-Out Cụm Máy Chủ: Golden AMI vs UserData Script — (TD-Set4 Q35)
+- **Tình huống đề thi**: *"Hệ thống web cũ chạy trên Auto Scaling Group mất từ 15 đến 20 phút mỗi khi scale out thêm máy ảo EC2 mới do kịch bản UserData phải tải và biên dịch hàng loạt gói phần mềm phức tạp khi khởi động, dẫn đến không kịp phục vụ khách và mất yêu cầu (Lost requests). Cần giải pháp gì để tối ưu hiệu quả hiệu năng (Performance Efficiency)?"*
+- **Giải pháp ĐÚNG**: Xây dựng **Custom Golden AMI** tích hợp sẵn toàn bộ ứng dụng và các gói thư viện phụ thuộc bằng **EC2 Image Builder** (`TD-Set4 Q35`).
+  - Khi Auto Scaling kích hoạt, máy ảo EC2 mới khởi chạy từ Golden AMI chỉ mất 1-2 phút là sẵn sàng nhận traffic từ Load Balancer mà không phải tốn thời gian tải hoặc cài đặt phần mềm khi boot.
+
+#### 🪤 Bẫy 10: Tối Ưu Hóa Chi Phí EBS Khi Thừa IOPS: Hạ Cấp Từ io2 Xuống gp3 — (TD-Set8 Q03)
+- **Tình huống đề thi**: *"Báo cáo AWS Cost and Usage Report (CUR) cho thấy nhiều ổ đĩa EBS `io2 Block Express` trong môi trường sản xuất có mức sử dụng IOPS thực tế dưới 10,000 IOPS và thông lượng dưới 300 MB/s. Yêu cầu tối ưu chi phí theo trụ cột Cost Optimization mà không gây thời gian chết."*
+- **Giải pháp ĐÚNG**: Sử dụng **EBS Elastic Volumes** để chuyển đổi trực tiếp loại ổ đĩa từ **`io2` sang `gp3`** (`TD-Set8 Q03`).
+  - Ổ đĩa `gp3` cung cấp tới 16,000 IOPS và 1,000 MB/s thông lượng với chi phí rẻ hơn 75-80% mà không cần detach ổ đĩa hay tắt máy chủ.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Tối Ưu Chi Phí & Trụ Cột Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Linh hoạt nhất: EC2, Fargate, Lambda giảm 66%** | **Compute Savings Plans** | EC2 Instance Savings Plans (bị khóa loại instance) |
-| **Tiết kiệm tối đa 72% cho 1 dòng máy cố định** | **EC2 Instance Savings Plans** | On-Demand / Spot (không phù hợp ứng dụng 24/7) |
-| **Tự động áp dụng policy chặn tạo máy khi quá ngân sách** | **AWS Budgets Actions** | Viết code Lambda tùy chỉnh (overhead cao) |
-| **Phát hiện chi phí tăng vọt thời gian thực bằng ML** | **AWS Cost Anomaly Detection** | CloudWatch Billing Alarm (chỉ báo khi vượt tổng tiền) |
-| **Gợi ý đổi dòng máy EC2 tiết kiệm 40% bằng AI** | **AWS Compute Optimizer** | Tự rà soát thủ công (dễ phán đoán sai) |
-| **Dữ liệu tạm thời vòng đời < 30 ngày** | **Amazon S3 Standard** | S3 Standard-IA (bị phạt tính tiền tối thiểu 30 ngày) |
-| **Giảm chi phí CloudFront cho khách Mỹ & Châu Âu** | **CloudFront Price Class 100** | Price Class All (phải trả phí cho Edge Location đắt đỏ) |
-| **Phân bổ chi phí theo phòng ban/dự án** | **Cost Allocation Tags + Cost Explorer** | Xem hóa đơn tổng (không lọc theo dự án được) |
-| **Chia sẻ chiết khấu Savings Plans đa tài khoản** | **Bật Discount Sharing từ Management Account** | Mua và cấu hình từ Member Account (không áp dụng toàn tổ chức) |
-| **Chặn deploy máy ảo có Public IP toàn tổ chức** | **Control Tower Proactive Controls (CloudFormation Guard)** | Detective Controls (chỉ phát hiện sau khi máy đã chạy) |
-| **Phát hiện cấu hình trôi lệch (Drift) đa tài khoản** | **Control Tower Drift Notifications** | Quét thủ công từng tài khoản (tốn công vận hành) |
-| **Đề xuất mua Reserved Instances cho DB tải cao** | **Trusted Advisor RDS RI Optimization Checks** | Giữ On-Demand chạy 24/7 (lãng phí tới 60% chi phí) |
-| **Báo cáo chi phí chi tiết phân tích bằng Athena** | **AWS Cost and Usage Reports (CUR) ở Management Account** | Xuất báo cáo lẻ tẻ ở từng Member Account |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Tham chiếu đề thi |
+|:---|:---|:---|:---|
+| **Loại bỏ Single Point of Failure tầng mạng cho Private Subnet** | **Mỗi AZ triển khai 1 NAT Gateway riêng biệt trong Public Subnet** | Dùng chung 1 NAT Gateway duy nhất (mất kết nối nếu AZ đó chết) | `TD-Set1 Q05` |
+| **ASG scale up/down liên tục nhiều lần trong giờ (Flapping)** | **Tăng Cooldown Period (300s) / Chuyển sang Target Tracking** | Giảm Cooldown Period (càng làm ASG dao động dữ dội hơn) | `TD-Set5 Q48` |
+| **Máy ảo ASG mất 15-20 phút mới boot xong do chạy UserData** | **Tạo Golden AMI đóng gói sẵn bằng EC2 Image Builder** | Tăng vCPU máy ảo (không giải quyết được tốc độ tải mạng UserData) | `TD-Set4 Q35` |
+| **Workload thừa IOPS trên io2 cần cắt giảm chi phí không downtime** | **EBS Elastic Volumes chuyển từ `io2` sang `gp3`** | Tạo đĩa mới rồi tắt máy copy file (gây downtime lâu) | `TD-Set8 Q03` |
+| **Chuẩn hóa tạo tài khoản mới có sẵn cấu hình bảo mật duyệt trước** | **AWS Control Tower Account Factory** | Tạo tài khoản thủ công qua Console (dễ quên cấu hình bảo mật) | `TD-Set2 Q16` |
+| **Tự động áp dụng policy chặn tạo máy khi quá ngân sách** | **AWS Budgets Actions (áp dụng SCP / IAM Deny)** | Viết code Lambda tùy chỉnh (tốn công duy trì) | `U-PT6 Q62`, `TD-Set8 Q17` |
+| **Linh hoạt nhất: EC2, Fargate, Lambda giảm tới 66%** | **Compute Savings Plans (Discount Sharing từ Management Acct)** | EC2 Instance Savings Plans (bị khóa loại máy, không giảm Lambda) | `CM-PT2 Q55` |
+| **Dữ liệu tạm thời vòng đời ngắn dưới 30 ngày** | **Amazon S3 Standard** | S3 Standard-IA (bị phạt tính tiền lưu trữ tối thiểu 30 ngày) | `CM-PT1 Q55` |
+| **Tự động chuyển tệp EFS ít truy cập sang tầng rẻ sau 30 ngày** | **EFS Lifecycle Management $\rightarrow$ EFS IA / Archive** | Di chuyển thủ công sang S3 (phải sửa đổi code ứng dụng) | `TD-Set4 Q39` |
+| **Giảm chi phí CloudFront cho khách hàng tại Mỹ & Châu Âu** | **CloudFront Price Class 100** | Price Class All (phải trả phí cho các Edge Locations đắt đỏ) | `CM-PT1 Q39`, `TD-Set8 Q13` |
+| **Đề xuất mua Reserved Instances cho DB chạy tải cao 24/7** | **AWS Trusted Advisor RDS RI Optimization Checks** | Giữ On-Demand chạy 24/7 (lãng phí tới 60% chi phí) | `CM-PT3 Q31` |
+| **Chặn triển khai máy ảo có Public IP trên toàn tổ chức** | **Control Tower Proactive Controls (CloudFormation Guard)** | Detective Controls (chỉ phát hiện sau khi máy đã chạy) | `CM-PT4 Q36` |
+| **Phát hiện chi phí tăng vọt bất thường theo thời gian thực** | **AWS Cost Anomaly Detection (Machine Learning)** | CloudWatch Billing Alarm (chỉ báo khi vượt tổng tiền tĩnh) | Chuẩn AWS |
 
 ---
 

@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: AWS Identity and Access Management (IAM) & Quản Trị Định Danh Doanh Nghiệp
+# Tài Liệu Học Tập Chuyên Sâu: AWS Identity and Access Management (IAM) & Quản Trị Định Danh Doanh Nghiệp
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -184,12 +184,55 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
     - Cấu hình OIDC Identity Provider giữa cụm EKS và AWS IAM.
     - Gán IAM Role với chính sách tối thiểu trực tiếp cho Service Account tương ứng qua annotation `eks.amazonaws.com/role-arn`.
 
-#### 3. Quản Trị Đa Tài Khoản Doanh Nghiệp Với AWS Control Tower & Account Factory
-- **Tình huống thi**: Doanh nghiệp có nhiều nhóm phát triển cần các tài khoản AWS riêng biệt. Nhóm bảo mật yêu cầu tự động áp dụng bộ quy tắc kiểm soát chuẩn mực (baseline guardrails) và kiểm toán tập trung cho mọi tài khoản mới ngay tại thời điểm tạo.
+#### 3. Quản Trị Đa Tài Khoản Doanh Nghiệp Với AWS Control Tower & Account Factory — (TD-Set2 Q16, TD-Set4 Q29, TD-Set8 Q22)
+- **Tình huống thi**: Doanh nghiệp có nhiều nhóm phát triển cần các tài khoản AWS riêng biệt. Nhóm bảo mật yêu cầu tự động áp dụng bộ quy tắc kiểm soát chuẩn mực (baseline guardrails) và kiểm toán tập trung cho mọi tài khoản mới ngay tại thời điểm tạo, kèm theo Dashboard hiển thị liên tục trạng thái tuân thủ chính sách (`TD-Set2 Q16`, `TD-Set4 Q29`).
 - **Giải pháp chuẩn**:
   - Kích hoạt **AWS Organizations** và thiết lập **AWS Control Tower Landing Zone**.
   - Bật **CloudTrail Organizational Trail** tại Management Account để tự động thu thập log kiểm toán toàn bộ các tài khoản thành viên.
-  - Tạo tài khoản mới thông qua **Account Factory**: Tự động áp dụng các Preventive Guardrails (bằng Service Control Policies - SCPs) và Detective Guardrails (bằng AWS Config Managed Rules).
+  - Tạo tài khoản mới thông qua **Account Factory**: Tự động áp dụng các:
+    - **Preventive Guardrails**: Sử dụng Service Control Policies (SCPs) để ngăn chặn hành động cấm (ví dụ: cấm tắt CloudTrail, cấm mở cổng SSH ra ngoài Internet, cấm tạo tài nguyên ngoài Region được duyệt).
+    - **Detective Guardrails**: Sử dụng AWS Config Managed Rules để liên tục quét và gắn nhãn tài nguyên vi phạm trên Control Tower Dashboard.
+
+#### 4. Ủy Quyền Tạm Thời Xuyên Tài Khoản (Cross-Account Role Delegation) — (TD-Set2 Q17)
+- **Tình huống thi**: Cơ quan quản lý phát triển ứng dụng trên hai tài khoản AWS độc lập: Development và Production. Kỹ sư cấp dưới (Junior Developer) chỉ sở hữu tài khoản IAM trên Development Account. Để triển khai bản vá khẩn cấp lên Production, kỹ sư cần quyền hạn tạm thời trên Production mà quản trị viên không muốn tạo thêm IAM User tĩnh hay chia sẻ Access Keys lâu dài trên Production (`TD-Set2 Q17`).
+- **Giải pháp chuẩn AWS**:
+  - Tại **Production Account**: Tạo một IAM Role (ví dụ: `CrossAccountDeployRole`) với chính sách tin cậy (**Trust Policy**) chỉ định Principal là ARN của IAM User/Role từ Development Account (`arn:aws:iam::<Dev-Account-ID>:user/junior-dev`).
+  - Tại **Development Account**: Gán quyền cho Junior Developer gọi API `sts:AssumeRole` trỏ tới ARN của `CrossAccountDeployRole`.
+  - Khi cần triển khai, Developer thực hiện **Switch Role** trên AWS Console hoặc gọi AWS STS để nhận bộ thông tin xác thực tạm thời (**Temporary Security Credentials**: AccessKeyId, SecretAccessKey, SessionToken có thời hạn ngắn từ 15 phút đến 12 giờ) để thao tác an toàn trên Production.
+
+#### 5. Tích Hợp Hệ Thống Danh Tính On-Premises Không Hỗ Trợ SAML (LDAP) — (TD-Set4 Q02)
+- **Tình huống thi**: Doanh nghiệp cần tích hợp thư mục định danh Lightweight Directory Access Protocol (LDAP) từ trung tâm dữ liệu On-Premises với AWS IAM để nhân viên đăng nhập vào môi trường đám mây. Tuy nhiên, hệ thống máy chủ LDAP hiện tại của công ty là hệ thống cũ và **hoàn toàn không hỗ trợ giao thức SAML 2.0** (`TD-Set4 Q02`).
+- **Giải pháp chuẩn AWS**:
+  - Xây dựng một ứng dụng đại diện xác thực tùy biến tại On-Premises (**Custom Identity Broker Application**).
+  - Luồng hoạt động:
+    1. Người dùng gửi thông tin đăng nhập tới Identity Broker.
+    2. Identity Broker xác thực username/password với máy chủ LDAP On-Premises.
+    3. Sau khi xác thực thành công, Identity Broker gọi dịch vụ **AWS Security Token Service (AWS STS)** bằng lệnh `sts:AssumeRole` hoặc `sts:GetFederationToken`.
+    4. STS phát hành bộ thông tin xác thực AWS tạm thời ngắn hạn và trả về cho Identity Broker.
+    5. Identity Broker gửi credentials tạm thời về cho ứng dụng của người dùng để truy cập các dịch vụ AWS được phân quyền.
+
+#### 6. Sao Chép Đối Tượng S3 Xuyên Suốt Các Tài Khoản Trong AWS Organizations — (TD-Set3 Q65)
+- **Tình huống thi**: Trong tổ chức AWS Organizations, một tài khoản ứng dụng cần định kỳ sao chép nhiều S3 objects sang một S3 bucket lưu trữ trung tâm thuộc sở hữu của một tài khoản kiểm toán khác (`TD-Set3 Q65`).
+- **Giải pháp chuẩn AWS**:
+  - **Tại tài khoản nguồn**: IAM Policy gán cho người dùng/role cấp quyền đọc `s3:GetObject` trên bucket nguồn.
+  - **Tại tài khoản đích**: Cấu hình **S3 Bucket Policy** cho phép tài khoản nguồn thực hiện các hành động `s3:PutObject` và `s3:PutObjectAcl`.
+  - **Yếu tố sống còn**: Khi thực hiện lệnh sao chép qua AWS CLI/SDK, bắt buộc phải truyền cờ quyền sở hữu:
+    `aws s3 cp s3://source-bucket/file.zip s3://target-bucket/ --acl bucket-owner-full-control`
+    (Nếu thiếu cờ này, object tải lên sẽ thuộc quyền sở hữu của tài khoản nguồn, khiến tài khoản đích dù chứa file nhưng không có quyền đọc hay quản trị file đó).
+
+#### 7. Giám Sát Và Thực Thi Tuân Thủ Password Policy Của IAM Users Bằng AWS Config — (TD-Set4 Q45)
+- **Tình huống thi**: Chính sách bảo mật mới của doanh nghiệp bắt buộc tất cả nhân viên sử dụng tài khoản IAM User phải đặt mật khẩu có độ dài tối thiểu 12 ký tự. Đội ngũ an ninh phát hiện vẫn có nhân viên chưa tuân thủ và yêu cầu một giải pháp tự động liên tục đánh giá và phát hiện các IAM users vi phạm (`TD-Set4 Q45`).
+- **Giải pháp chuẩn AWS**:
+  - Kích hoạt **AWS Config** và triển khai Managed Rule **`iam-password-policy`**.
+  - Thiết lập tham số rule: `MinimumPasswordLength = 12`.
+  - AWS Config liên tục đánh giá tài nguyên IAM. Bất kỳ tài khoản nào vi phạm sẽ bị đánh dấu trạng thái **NON_COMPLIANT**, đồng thời gửi cảnh báo tới Amazon SNS hoặc kích hoạt EventBridge Lambda để tự động vô hiệu hóa mật khẩu không tuân thủ.
+
+#### 8. Bảo Vệ Tài Nguyên Tránh Bị Xóa Sửa Bởi Developer Bằng Service Control Policies (SCP) — (TD-Set3 Q18, TD-Set6 Q45)
+- **Tình huống thi**: Doanh nghiệp cấp cho mỗi lập trình viên một tài khoản AWS độc lập thuộc AWS Organizations. Nhóm an ninh đã thiết lập sẵn các bộ luật AWS Config Rules trong từng tài khoản để giám sát tuân thủ. Cần đảm bảo rằng các developer (dù có quyền Administrator trong tài khoản của họ) **tuyệt đối không thể vô hiệu hóa, sửa đổi hoặc xóa các AWS Config rules** này (`TD-Set3 Q18`, `TD-Set6 Q45`).
+- **Giải pháp chuẩn AWS**:
+  - Tạo một **Service Control Policy (SCP)** ở cấp độ AWS Organizations và gắn vào Organizational Unit (OU) chứa các tài khoản của developer.
+  - Trong SCP, khai báo lệnh `Deny` đối với các hành động: `config:DeleteConfigRule`, `config:DeleteConfigurationRecorder`, `config:StopConfigurationRecorder`, `config:PutConfigRule`.
+  - *Nguyên tắc cốt lõi của SCP*: SCP thiết lập rào cản tối đa (Guardrail) cho toàn bộ tài khoản. **Ngay cả tài khoản Root của tài khoản con (Member Account) hoặc tài khoản Administrator cũng bị SCP chặn đứng và không thể vượt qua**.
 
 ---
 
@@ -294,27 +337,53 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
   - Đây là cụm Active Directory thực sự chạy trên máy chủ Windows Server do AWS quản lý trên 2 Availability Zones.
   - Hỗ trợ đầy đủ các tính năng doanh nghiệp: **Two-Way Forest Trust**, Group Policy (GPO), schema extension, xác thực Kerberos nội bộ tốc độ cao không phụ thuộc vào đường truyền mạng về On-Premises.
 
+#### 🪤 Bẫy 11: Tích Hợp LDAP Không Hỗ Trợ SAML 2.0: Phải Dùng Custom Identity Broker — (TD-Set4 Q02)
+- **Tình huống đề thi**: *"Hệ thống LDAP nội bộ của doanh nghiệp không hỗ trợ SAML 2.0. Đề bài đề xuất cấu hình AWS IAM Identity Center hoặc IAM Role trực tiếp với LDAP."*
+- **Lý do sai**:
+  - AWS IAM Identity Center và IAM SAML Identity Provider bắt buộc hệ thống Identity Provider (IdP) bên ngoài phải hỗ trợ chuẩn **SAML 2.0** hoặc **OIDC (OpenID Connect)**.
+  - Với máy chủ LDAP cũ thuần túy (không có lớp SAML như ADFS hay Okta), AWS không thể kết nối trực tiếp.
+- **Giải pháp ĐÚNG**: Phát triển một **Custom Identity Broker Application** tại On-Premises để làm trung gian xác thực LDAP và gọi **AWS STS (`AssumeRole` hoặc `GetFederationToken`)** lấy temporary credentials.
+
+#### 🪤 Bẫy 12: Sao Chép S3 Xuyên Tài Khoản Bị Lỗi Mất Quyền Đọc (Object Ownership Trap) — (TD-Set3 Q65)
+- **Tình huống đề thi**: *"Tài khoản A sao chép các file nhạy cảm sang S3 bucket của Tài khoản B. Sau khi copy xong, quản trị viên Tài khoản B không thể đọc hoặc xóa được các file này dù đã cấu hình Bucket Policy cấp full quyền cho chính mình!"*
+- **Nguyên nhân**:
+  - Theo cơ chế AWS S3 truyền thống, **tài khoản tải file lên chính là chủ sở hữu đối tượng (Object Owner)**, chứ không phải tài khoản sở hữu bucket! File do Tài khoản A upload thì Tài khoản A sở hữu.
+- **Giải pháp ĐÚNG**:
+  - Khi copy, bắt buộc truyền cờ: `--acl bucket-owner-full-control` để trao quyền sở hữu vĩnh viễn cho Tài khoản B (`TD-Set3 Q65`).
+  - Hoặc kích hoạt tính năng **S3 Object Ownership = Bucket Owner Enforced** trên bucket đích để tự động vô hiệu hóa toàn bộ ACLs và gán quyền sở hữu cho bucket owner.
+
+#### 🪤 Bẫy 13: SCP Không Thể Cấp Quyền (Cannot Grant Permissions), Chỉ Thiết Lập Rào Cản Tối Đa — (TD-Set6 Q45)
+- **Tình huống đề thi**: *"Kỹ sư tạo một Service Control Policy (SCP) với `Effect: Allow, Action: ec2:*` và gắn vào tài khoản con. Kỹ sư kết luận rằng tất cả các IAM Users trong tài khoản con đó mặc nhiên có quyền tạo máy ảo EC2."*
+- **Nguyên nhân sai lầm**:
+  - **SCP không bao giờ trực tiếp cấp quyền cho bất kỳ ai**. SCP chỉ hoạt động như một bộ lọc biên (Guardrail / Permission Filter).
+  - Để một IAM User trong Member Account có thể thực hiện lệnh `ec2:RunInstances`, cần cả hai điều kiện:
+    1. **SCP ở cấp Organizations PHẢI CHO PHÉP (hoặc không chặn)** hành động đó.
+    2. **IAM Policy bên trong tài khoản con BẮT BUỘC PHẢI CÓ LỆNH ALLOW** cấp quyền cho User/Role đó.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Phân Quyền & Danh Tính Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Chặn developer tự cấp quyền Admin cho role mới** | **IAM Permissions Boundary** | SCP không phân biệt được role do ai tạo |
-| **Bắt buộc đính kèm Boundary khi gọi CreateRole** | **Condition `iam:PermissionsBoundary`** | Tự review code thủ công (dễ sót lỗi) |
-| **Cần AD thực sự trong VPC, hỗ trợ Forest Trust** | **AWS Managed Microsoft AD** | AD Connector (chỉ là proxy gateway, không hỗ trợ trust) |
-| **Xác thực On-Prem AD vào AWS không lưu credentials** | **AWS Directory Service AD Connector** | Managed AD (chi phí đắt gấp 8 lần không cần thiết) |
-| **Quản trị truy cập đa tài khoản tập trung cho nhân viên** | **IAM Identity Center + Permission Sets** | Tạo IAM User thủ công tại từng tài khoản con |
-| **Chỉ cho phép tài khoản trong Org truy cập S3** | **S3 Policy + `aws:PrincipalOrgID`** | Liệt kê từng Account ID không thể scale |
-| **Giới hạn Region được phép tạo tài nguyên** | **SCP / Policy + `aws:RequestedRegion`** | `aws:SourceIp` chỉ kiểm tra IP người gọi |
-| **Xoay vòng mật khẩu DB tự động định kỳ** | **AWS Secrets Manager + Lambda** | KMS / Parameter Store (không có auto-rotation) |
-| **Kích hoạt Lambda xuyên tài khoản từ SNS** | **Dual-Policy: SNS Topic Policy + Lambda Resource Policy** | Cấu hình 1 phía sẽ bị lỗi AccessDenied |
-| **Phân quyền Pod EKS đọc S3/DynamoDB độc lập** | **IAM Roles for Service Accounts (IRSA)** | Gán quyền vào Node Instance Profile vi phạm Least Privilege |
-| **Đăng nhập một lần đa tài khoản qua On-Prem AD** | **AD Connector + IAM Identity Center + Permission Sets** | Tự quản trị IAM Role thủ công tốn operational overhead |
-| **Kiểm toán tự động tài nguyên bị lộ ra ngoài Internet** | **AWS IAM Access Analyzer** | AWS CloudTrail chỉ ghi log, không phân tích quyền tự động |
-| **Xử lý xung đột giữa quyền Allow và Deny** | **Explicit Deny luôn thắng (phủ quyết mọi Allow)** | Cho phép thực thi (sai nguyên lý IAM evaluation) |
-| **Áp dụng SCP chỉ cho các tài khoản Nonproduction** | **Tạo OU riêng cho Nonproduction và gắn SCP** | Gắn vào Root OU (làm ảnh hưởng cả Production) |
-| **Chia sẻ AMI mã hóa KMS cho tài khoản con khởi chạy** | **Share AMI Launch Permissions + KMS Key Policy** | Chỉ share AMI (EC2 boot lỗi vì không decrypt được disk) |
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
+|:---|:---|:---|:---|
+| **Chặn developer tự cấp quyền Admin cho role mới** | **IAM Permissions Boundary** | SCP không phân biệt được role do ai tạo | Chuẩn AWS |
+| **Bắt buộc đính kèm Boundary khi gọi CreateRole** | **Condition `iam:PermissionsBoundary`** | Tự review code thủ công (dễ sót lỗi) | Chuẩn AWS |
+| **Cần AD thực sự trong VPC, hỗ trợ Forest Trust** | **AWS Managed Microsoft AD** | AD Connector (chỉ là proxy gateway, không hỗ trợ trust) | `TD-Set8 Q08` |
+| **Xác thực On-Prem AD vào AWS không lưu credentials** | **AWS Directory Service AD Connector** | Managed AD (chi phí đắt gấp 8 lần không cần thiết) | `TD-Set8 Q08` |
+| **Hệ thống LDAP cũ không hỗ trợ SAML 2.0** | **Custom Identity Broker + AWS STS** | IAM Identity Center (bắt buộc chuẩn SAML 2.0) | `TD-Set4 Q02` |
+| **Quản trị truy cập đa tài khoản tập trung cho nhân viên** | **IAM Identity Center + Permission Sets** | Tạo IAM User thủ công tại từng tài khoản con | `TD-Set2 Q12`, `TD-Set8 Q08` |
+| **Tự động hóa Landing Zone & Guardrails cho multi-account** | **AWS Control Tower (Account Factory)** | Dựng tài khoản thủ công (khó kiểm soát baseline) | `TD-Set2 Q16`, `TD-Set4 Q29` |
+| **Chỉ cho phép tài khoản trong Org truy cập S3** | **S3 Policy + `aws:PrincipalOrgID`** | Liệt kê từng Account ID không thể scale | Chuẩn AWS |
+| **Giới hạn Region được phép tạo tài nguyên** | **SCP / Policy + `aws:RequestedRegion`** | `aws:SourceIp` chỉ kiểm tra IP người gọi | Chuẩn AWS |
+| **Ngăn chặn Member Account vô hiệu hóa AWS Config/GuardDuty** | **Service Control Policy (SCP) Deny** | IAM Policy trong Member Account (Admin con có thể gỡ) | `TD-Set3 Q18`, `TD-Set6 Q45` |
+| **Ủy quyền tạm thời deploy từ Dev sang Prod** | **`sts:AssumeRole` (Cross-Account Role)** | Cung cấp Access Key dài hạn của Production | `TD-Set2 Q17` |
+| **Sao chép S3 xuyên tài khoản trao quyền sở hữu** | **Bucket Policy + `--acl bucket-owner-full-control`** | Copy không cờ ACL (tài khoản đích không đọc được file) | `TD-Set3 Q65` |
+| **Đánh giá liên tục tuân thủ IAM Password Policy** | **AWS Config Managed Rule (`iam-password-policy`)** | Quét log CloudTrail thủ công | `TD-Set4 Q45` |
+| **Phân quyền Pod EKS đọc S3/DynamoDB độc lập** | **IAM Roles for Service Accounts (IRSA)** | Gán quyền vào Node Instance Profile vi phạm Least Privilege | `TD-Set1 Q13` |
+| **Kiểm toán tự động tài nguyên bị lộ ra ngoài Internet** | **AWS IAM Access Analyzer** | AWS CloudTrail chỉ ghi log, không phân tích quyền tự động | Chuẩn AWS |
+| **Xử lý xung đột giữa quyền Allow và Deny** | **Explicit Deny luôn thắng (phủ quyết mọi Allow)** | Cho phép thực thi (sai nguyên lý IAM evaluation) | Chuẩn AWS |
+| **Áp dụng SCP chỉ cho các tài khoản Nonproduction** | **Tạo OU riêng cho Nonproduction và gắn SCP** | Gắn vào Root OU (làm ảnh hưởng cả Production) | `TD-Set8 Q22` |
+| **Chia sẻ AMI mã hóa KMS cho tài khoản con khởi chạy** | **Share AMI Launch Permissions + KMS Key Policy** | Chỉ share AMI (EC2 boot lỗi vì không decrypt được disk) | Chuẩn AWS |
 
 ---
 

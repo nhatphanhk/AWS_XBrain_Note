@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon Route 53 (Dịch Vụ Phân Giải Tên Miền & Định Tuyến Toàn Cầu)
+# Tài Liệu Học Tập Chuyên Sâu: Amazon Route 53 (Dịch Vụ Phân Giải Tên Miền & Định Tuyến Toàn Cầu)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -93,7 +93,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     R53_Engine[Bộ Định Tuyến Tuyến Tính Route 53] --> P1[1. Simple Routing: Trả về IP ngẫu nhiên, không Health Check]
-    R53_Engine --> P2[2. Weighted Routing: Chia tỷ lệ % lưu lượng cho Canary/AB Test]
+    R53_Engine --> P2[2. Weighted Routing: Chia tỷ lệ % lưu lượng cho Canary/AB Test / Cutover]
     R53_Engine --> P3[3. Latency-based Routing: Trỏ về AWS Region có độ trễ thấp nhất]
     R53_Engine --> P4[4. Failover Routing: Active-Passive Disaster Recovery]
     R53_Engine --> P5[5. Geolocation Routing: Định tuyến theo quốc gia/châu lục của IP client]
@@ -102,24 +102,30 @@ flowchart TD
     R53_Engine --> P8[8. Multi-Value Answer: Trả về tối đa 8 IP khỏe mạnh kèm Health Check]
 ```
 
-1. **Simple Routing Policy (Định tuyến đơn giản)**: Cung cấp một bản ghi trỏ về 1 hoặc nhiều địa chỉ IP (Route 53 trả về danh sách ngẫu nhiên). Không hỗ trợ gắn kèm Route 53 Health Check.
-2. **Weighted Routing Policy (Định tuyến theo trọng số)**: Phân bổ lưu lượng theo tỷ lệ phần trăm (ví dụ: 90% vào bản ghi A, 10% vào bản ghi B). Lý tưởng cho thử nghiệm **A/B Testing** và phát hành phần mềm Canary.
-3. **Latency-based Routing Policy (Định tuyến theo độ trễ)**: Route 53 liên tục đo đạc độ trễ mạng toàn cầu và tự động chuyển hướng người dùng đến **AWS Region nào có thời gian phản hồi nhanh nhất**.
-4. **Failover Routing Policy (Định tuyến chuyển đổi dự phòng Active-Passive)**:
-   - Gắn liền với **Route 53 Health Check**.
-   - Bình thường 100% traffic trỏ về **Primary Record**. Nếu Primary bị hỏng, Route 53 tự động chuyển hướng toàn bộ traffic sang **Secondary Record** (ví dụ: trang web bảo trì tĩnh trên Amazon S3).
+1. **Simple Routing Policy (Định tuyến đơn giản)**: Cung cấp một bản ghi trỏ về 1 hoặc nhiều địa chỉ IP (Route 53 trả về danh sách ngẫu nhiên theo round-robin). **Không hỗ trợ gắn kèm Route 53 Health Check**. Nếu 1 server chết, client vẫn nhận IP chết đó.
+2. **Weighted Routing Policy (Định tuyến theo trọng số)** — (`TD-Set5 Q25`, `TD-Set5 Q32`): Phân bổ lưu lượng theo tỷ lệ phần trăm (ví dụ: 50% On-Premises, 50% AWS trong quá trình Zero-Downtime Migration; hoặc 90% Blue, 10% Green). Trọng số từ `0` đến `255`. Nếu đặt trọng số bằng `0`, bản ghi đó dừng nhận lưu lượng.
+3. **Latency-based Routing Policy (Định tuyến theo độ trễ)** — (`TD-Set6 Q18`): Route 53 liên tục đo đạc độ trễ mạng toàn cầu giữa người dùng và các AWS Regions, tự động chuyển hướng người dùng đến **AWS Region nào có thời gian phản hồi (Round Trip Time) nhanh nhất**. Kết hợp Route 53 Health Checks để failover sang Region khác nếu Region gần nhất gặp sự cố.
+4. **Failover Routing Policy (Định tuyến chuyển đổi dự phòng Active-Passive)** — (`TD-Set2 Q26`):
+   - Bắt buộc gắn liền với **Route 53 Health Check**.
+   - Bình thường 100% traffic trỏ về **Primary Record**. Nếu Primary bị hỏng (Unhealthy), Route 53 tự động chuyển hướng toàn bộ traffic sang **Secondary Record** (ví dụ: trang web bảo trì tĩnh trên Amazon S3 hoặc server backup).
 5. **Geolocation Routing Policy (Định tuyến theo vị trí địa lý)**:
-   - Định tuyến dựa trên vị trí địa lý của người dùng (theo châu lục, quốc gia, hoặc bang của Mỹ). Thích hợp cho việc bản địa hóa ngôn ngữ website hoặc kiểm soát phân phối nội dung theo bản quyền.
-6. **Geoproximity Routing Policy (Định tuyến theo cự ly địa lý kèm Bias)**:
-   - Định tuyến dựa trên khoảng cách vật lý giữa người dùng và trung tâm dữ liệu AWS. Cho phép cấu hình thông số **Bias** (từ -99 đến +99) để chủ động mở rộng hoặc thu hẹp vùng phủ sóng địa lý của một Region cụ thể.
+   - Định tuyến dựa trên vị trí địa lý nơi bắt nguồn truy vấn DNS của người dùng (theo Châu lục, Quốc gia, hoặc Bang của Hoa Kỳ). Thích hợp cho việc bản địa hóa ngôn ngữ website, tuân thủ quy định pháp lý dữ liệu (GDPR), hoặc kiểm soát phân phối nội dung theo bản quyền. Có thể cấu hình **Default record** để xử lý các truy vấn không khớp vị trí cụ thể nào.
+6. **Geoproximity Routing Policy (Định tuyến theo cự ly địa lý kèm Bias)** — (`TD-Set2 Q59`):
+   - Định tuyến dựa trên cự ly địa lý giữa người dùng và vị trí tài nguyên AWS (hoặc tọa độ vĩ độ/kinh độ của On-Premises data center).
+   - **Cơ chế Routing Bias**: Cho phép mở rộng hoặc thu hẹp vùng phủ sóng địa lý bằng giá trị Bias từ **`-99` đến `+99`**:
+     - **Bias dương (+1 đến +99)**: Mở rộng vùng địa lý mà tài nguyên phục vụ (kéo thêm lưu lượng từ các vùng lân cận về tài nguyên này).
+     - **Bias âm (-1 đến -99)**: Thu hẹp vùng địa lý phục vụ (đẩy bớt lưu lượng sang các tài nguyên ở vùng khác).
+   - *Yêu cầu bắt buộc*: Phải sử dụng **Route 53 Traffic Flow** và biểu diễn dạng sơ đồ trực quan.
 7. **IP-based Routing Policy (Định tuyến dựa trên dải địa chỉ IP)**:
-   - Định tuyến dựa trên danh sách dải địa chỉ mạng CIDR của người dùng (ví dụ: chuyển các dải IP của nhà mạng Viettel/VNPT hoặc mạng văn phòng nội bộ về cụm máy chủ chuyên dụng).
-8. **Multi-Value Answer Routing Policy (Định tuyến đa giá trị)**:
-   - Trả về tối đa **8 bản ghi IP khỏe mạnh (Healthy Records)** cho mỗi truy vấn DNS, có hỗ trợ gắn kèm Health Check. Đóng vai trò như một bộ cân bằng tải sơ cấp phía máy khách.
+   - Định tuyến dựa trên danh sách dải địa chỉ mạng CIDR của client (ví dụ: định tuyến lưu lượng từ các ISP cụ thể hoặc từ mạng VPN nội bộ của văn phòng công ty tới các cụm máy chủ chuyên dụng tối ưu chi phí).
+8. **Multi-Value Answer Routing Policy (Định tuyến đa giá trị)** — (`TD-Set8 Q15`):
+   - Cho phép Route 53 trả về tối đa **8 bản ghi IP khỏe mạnh (Healthy Records)** được chọn ngẫu nhiên từ nhóm tài nguyên cho mỗi truy vấn DNS.
+   - **Hỗ trợ Route 53 Health Check**: Route 53 tự động loại bỏ các IP Unhealthy, chỉ trả về IP của các server đang hoạt động tốt.
+   - Đóng vai trò như một cơ chế **DNS-level Load Balancing & Fault Tolerance** đơn giản, phân tán lưu lượng mà **không cần dựng Elastic Load Balancer xuyên Region**.
 
 ---
 
-### 4. Kiến trúc DNS Mạng Lai: Route 53 Resolver & Route 53 DNS Firewall
+### 4. Kiến trúc DNS Mạng Lai: Route 53 Resolver, DNS Firewall & DNSSEC
 
 ```mermaid
 flowchart LR
@@ -147,8 +153,11 @@ flowchart LR
 
 * **Route 53 Inbound Endpoint**: Cho phép các máy chủ tại trung tâm dữ liệu On-Premises có thể phân giải được các tên miền nội bộ (**Private Hosted Zones**) nằm trong AWS VPC thông qua đường truyền riêng AWS Direct Connect hoặc Site-to-Site VPN.
 * **Route 53 Outbound Endpoint & Resolver Rules**: Cho phép các máy ảo EC2 trong VPC phân giải được các tên miền nội bộ của doanh nghiệp (`corp.local`) bằng cách thiết lập các quy tắc chuyển tiếp có điều kiện (**Conditional Forwarding Rules**) trỏ về địa chỉ IP của DNS Server tại chỗ.
+* **Chia Sẻ Tập Trung Qua AWS RAM (Resource Access Manager)** — (`TD-Set1 Q03`, `TD-Set6 Q54`): Thay vì tạo Inbound/Outbound Endpoints tốn kém tại từng VPC riêng lẻ, doanh nghiệp thiết lập một cặp Inbound/Outbound Endpoints tại Hub Network VPC, sau đó chia sẻ Resolver Rules xuyên suốt các Spoke VPCs và tài khoản AWS khác thông qua **AWS RAM**.
 * **Route 53 DNS Firewall**: Tường lửa DNS hoạt động ở cấp độ VPC, cho phép bạn thiết lập danh sách trắng (Allowlist) và danh sách đen (Denylist) để giám sát và chặn đứng các yêu cầu phân giải DNS tới các tên miền lừa đảo, phát tán mã độc hoặc máy chủ điều khiển botnet (Command and Control - C&C servers).
-* **DNSSEC (Domain Name System Security Extensions)**: Route 53 hỗ trợ kích hoạt DNSSEC cho cả Public và Private Hosted Zones, bảo vệ tính toàn vẹn của gói tin phản hồi DNS và chống lại các cuộc tấn công giả mạo đầu độc bộ nhớ đệm DNS (**DNS Cache Poisoning / Spoofing**).
+* **DNSSEC (Domain Name System Security Extensions)** — (`TD-Set5 Q05`):
+  - Kích hoạt ký số bằng mật mã bất đối xứng trên Hosted Zone (kết hợp với **AWS KMS Asymmetric Customer Managed Key** - KSK Key-Signing Key).
+  - Xác minh tính toàn vẹn và tính xác thực nguồn gốc của các bản ghi DNS từ Route 53 gửi về resolver của client, ngăn chặn triệt để tấn công **DNS Cache Poisoning** và **Man-in-the-Middle Spoofing**.
 
 ---
 
@@ -167,15 +176,46 @@ flowchart LR
   - AWS liên tục đo đạc độ trễ mạng giữa các dải mạng Internet của người dùng trên toàn thế giới tới các data centers của AWS và tự động trả về IP của Region có độ trễ ngắn nhất.
   - Gắn kèm **Route 53 Health Checks** cho từng Region: Nếu Region gần nhất gặp sự cố, Route 53 sẽ tự động chuyển tiếp người dùng sang Region khả dụng kế tiếp.
 
-#### 3. Sử Dụng Alias Record Cho Tên Miền Gốc (Zone Apex / Naked Domain)
+#### 3. Sử Dụng Alias Record Cho Tên Miền Gốc (Zone Apex / Naked Domain) — (TD-Set5 Q31)
 - **Tình huống thi**: Doanh nghiệp sở hữu tên miền gốc `example.com` (không có tiền tố `www`) và muốn trỏ tên miền này tới Application Load Balancer hoặc CloudFront Distribution.
 - **Quy tắc DNS cốt lõi**:
   - Tiêu chuẩn DNS RFC **nghiêm cấm tạo CNAME record** tại cấp độ Apex (`example.com`).
-  - **Giải pháp chuẩn của AWS**: Tạo một **Route 53 Alias Record** kiểu A trỏ tới tên miền của ALB hoặc CloudFront.
+  - **Giải pháp chuẩn của AWS**: Tạo một **Route 53 Alias Record** kiểu A trỏ tới tên miền của ALB hoặc CloudFront (`TD-Set5 Q31`).
   - **Lợi ích**:
     - Hỗ trợ đầy đủ cho Zone Apex.
     - Truy vấn DNS Alias tới tài nguyên AWS hoàn toàn **MIỄN PHÍ cước phí ($0.00)**.
     - Route 53 tự động nhận biết khi IP của ALB thay đổi mà không cần cập nhật thủ công.
+
+#### 4. Cân Bằng Tải DNS Đa Vùng Khả Dụng / Đa Region Không Cần ALB Bằng Multi-Value Answer — (TD-Set8 Q15)
+- **Tình huống thi**: Một startup muốn tăng tính sẵn sàng và khả năng chịu lỗi bằng cách phân phối lưu lượng vào các cụm EC2 Auto Scaling Groups đặt tại hai regions khác nhau (`us-east-1` và `us-west-2`). Hệ thống yêu cầu tự động cô lập và chuyển hướng lưu lượng ra khỏi các máy chủ bị lỗi (Unhealthy instances) bất kể máy chủ đó nằm ở region nào, với chi phí và độ phức tạp quản trị tối thiểu.
+- **Giải pháp tối ưu chuẩn AWS**:
+  - Cấu hình **Route 53 với Multi-Value Answer Routing Policy** kết hợp với **Route 53 Health Checks** (`TD-Set8 Q15`).
+  - Route 53 trả về tối đa **8 địa chỉ IP khỏe mạnh** ngẫu nhiên cho mỗi DNS query của người dùng.
+  - Khi một máy ảo bị hỏng, Health Check phát hiện và Route 53 tự động gỡ IP đó ra khỏi danh sách trả về, đảm bảo người dùng chỉ kết nối tới các instance đang hoạt động tốt.
+  - *Vì sao không dùng ALB xuyên region*: Application Load Balancer chỉ là dịch vụ Regional, Target Group của ALB **không hỗ trợ gán trực tiếp Instance ID của máy ảo ở Region khác** (`TD-Set8 Q15`).
+
+#### 5. Mở Rộng / Thu Hẹp Vùng Phục Vụ Địa Lý Bằng Geoproximity Routing Với Routing Bias — (TD-Set2 Q59)
+- **Tình huống thi**: Ứng dụng chat/tin nhắn vận hành trên 2 regions: `ap-northeast-1` (Tokyo) và `ap-southeast-2` (Sydney). Đội ngũ kiến trúc sư cần thiết lập định tuyến sao cho phần lớn lưu lượng từ Philippines và Bắc Ấn Độ được chuyển về Tokyo thay vì Sydney (`TD-Set2 Q59`).
+- **Giải pháp chuẩn AWS**:
+  - Sử dụng **Route 53 Geoproximity Routing Policy** thông qua **Route 53 Traffic Flow**.
+  - Thiết lập giá trị **Routing Bias**: Đặt giá trị Bias dương hoặc âm phù hợp (ví dụ: Tokyo bias `-40` hoặc điều chỉnh tỷ lệ bias tương đối so với Sydney) để dịch chuyển ranh giới phục vụ địa lý (Geographic Region Boundary), kéo luồng người dùng từ Philippines và Bắc Ấn Độ về tài nguyên Tokyo.
+  - *Điểm mấu chốt*: Geolocation routing thuần túy chỉ ánh xạ cố định theo ranh giới quốc gia, **không có khả năng mở rộng/thu hẹp linh hoạt vùng phủ sóng bằng Bias** như Geoproximity.
+
+#### 6. Di Chuyển Hệ Thống Lên Đám Mây Không Downtime (Zero-Downtime Migration) Bằng Weighted Routing — (TD-Set5 Q32)
+- **Tình huống thi**: Doanh nghiệp di chuyển ứng dụng web từ trung tâm dữ liệu On-Premises lên AWS Cloud. Giám đốc yêu cầu quá trình chuyển đổi không được gây gián đoạn dịch vụ (Zero-Downtime Cutover) và phải cho phép kiểm thử tải thực tế trước khi chuyển toàn bộ (`TD-Set5 Q32`).
+- **Giải pháp chuẩn AWS**:
+  - Triển khai ứng dụng hoàn chỉnh trên môi trường AWS.
+  - Cấu hình **Route 53 Weighted Routing Policy** với hai bản ghi:
+    - Bản ghi A: Trỏ về On-Premises Web Server với Weight ban đầu là `50`.
+    - Bản ghi B: Trỏ về AWS ALB / EC2 với Weight ban đầu là `50`.
+  - Phân chia 50% lưu lượng sang AWS để theo dõi hiệu năng. Sau khi hệ thống ổn định, tăng dần trọng số của AWS lên `100` và giảm On-Premises về `0`.
+
+#### 7. Điều Kiện Tiên Quyết Định Tuyến S3 Static Website Bằng Route 53 Alias Record — (TD-Set2 Q22)
+- **Tình huống thi**: Doanh nghiệp đã đăng ký tên miền qua Route 53 (ví dụ `example.com`) và muốn tích hợp với website tĩnh lưu trên Amazon S3 (`TD-Set2 Q22`).
+- **3 Điều kiện tiên quyết bắt buộc**:
+  1. **Tên S3 Bucket bắt buộc phải trùng khớp 100% với tên miền** (ví dụ: tên bucket phải là `example.com` cho apex domain, hoặc `portal.example.com` cho subdomain).
+  2. S3 Bucket phải được bật tính năng **Static Website Hosting** (chỉ định Index document `index.html`).
+  3. Tạo bản ghi **Route 53 Alias Record (loại A)** trỏ trực tiếp vào S3 Website Endpoint tương ứng của Region.
 
 ---
 
@@ -189,14 +229,14 @@ flowchart LR
   - Cung cấp **2 địa chỉ IP tĩnh Anycast**.
   - Việc điều phối phần trăm lưu lượng (0% đến 100%) diễn ra trực tiếp tại các máy chủ Edge trên mạng trục riêng của AWS, **hoàn toàn bỏ qua bộ đệm DNS của client (Bypasses Client DNS Caching)** -> Thay đổi có hiệu lực ngay lập tức trong vài giây.
 
-#### 🪤 Bẫy 2: Phân Biệt Chiều Định Tuyến Của Route 53 Resolver Endpoints — (CM-PT1 Q41)
+#### 🪤 Bẫy 2: Phân Biệt Chiều Định Tuyến Của Route 53 Resolver Endpoints — (CM-PT1 Q41, TD-Set6 Q54)
 - **Bẫy tráo chiều kinh điển trong đề thi**:
   - Muốn máy chủ On-Premises phân giải được các tên miền nội bộ AWS `*.internal`:
     - 👉 **Cấu hình Route 53 Resolver INBOUND Endpoint** (Lưu lượng truy vấn từ On-Premises đi **VÀO** AWS).
   - Muốn máy chủ EC2 trong VPC phân giải được các tên miền Active Directory nội bộ On-Premises `*.corp.local`:
     - 👉 **Cấu hình Route 53 Resolver OUTBOUND Endpoint** kết hợp với **Forwarding Rule** trỏ về địa chỉ IP của DNS Server On-Premises (Lưu lượng truy vấn từ AWS đi **RA NGOÀI** On-Premises).
 
-#### 🪤 Bẫy 3: Phân Biệt Giữa Geolocation Routing và Geoproximity Routing
+#### 🪤 Bẫy 3: Phân Biệt Giữa Geolocation Routing và Geoproximity Routing — (TD-Set2 Q59)
 - **Geolocation Routing**:
   - Định tuyến dựa trên **vị trí địa lý của người dùng** (Quốc gia, Châu lục, hoặc Bang của Mỹ).
   - Thường dùng để hạn chế phân phối nội dung bản quyền hoặc hiển thị ngôn ngữ bản địa phù hợp.
@@ -205,14 +245,15 @@ flowchart LR
   - Điểm đặc biệt: Cho phép sử dụng tham số **Bias** (giá trị từ `-99` đến `+99`) để chủ động mở rộng hoặc thu hẹp vùng địa lý mà một Region phục vụ (ví dụ: ép người dùng ở Châu Á chuyển hướng sang Region Châu Âu dù họ ở gần Châu Á hơn).
   - Yêu cầu bắt buộc phải sử dụng **Route 53 Traffic Flow**.
 
-#### 🪤 Bẫy 4: Yêu Cầu Kích Hoạt DNS Trên VPC Để Dùng Private Hosted Zone — (U-PT2 Q60)
-- **Tình huống đề thi**: *"Sau khi tạo Route 53 Private Hosted Zone và liên kết với VPC, các ứng dụng chạy trên EC2 vẫn không thể phân giải được tên miền."*
-- **Nguyên nhân**: VPC bị thiếu một trong hai thiết lập mạng cơ sở:
-  - `enableDnsHostnames` phải được đặt thành `true`.
-  - `enableDnsSupport` phải được đặt thành `true`.
-- Nếu thiếu cờ `enableDnsSupport`, máy chủ nội bộ `10.x.x.2` (AmazonProvidedDNS) sẽ không được kích hoạt, dẫn tới Route 53 Resolver không thể phản hồi truy vấn cho Private Hosted Zone.
+#### 🪤 Bẫy 4: Yêu Cầu Kích Hoạt DNS Trên VPC Để Dùng Private Hosted Zone & Nhận DNS Hostname — (U-PT2 Q60, TD-Set4 Q64)
+- **Tình huống đề thi**: *"Sau khi tạo VPC mới hoặc tạo Route 53 Private Hosted Zone, máy ảo EC2 không nhận được Public DNS Hostname hoặc không thể phân giải được tên miền nội bộ."*
+- **Nguyên nhân cốt lõi (`TD-Set4 Q64`)**:
+  - Mặc định trên Default VPC cả 2 thuộc tính đều bật, nhưng **khi tạo VPC tùy biến mới (Custom VPC)**, thuộc tính `enableDnsHostnames` mặc định là **`false`**!
+  - Để máy ảo có Public DNS hostname và phân giải được Private Hosted Zone, bắt buộc:
+    - `enableDnsHostnames = true` (gán DNS hostname cho máy có Public IP).
+    - `enableDnsSupport = true` (kích hoạt DNS Resolver tại IP `10.x.x.2` / `AmazonProvidedDNS`).
 
-#### 🪤 Bẫy 5: Tăng Tốc Giao Thức TCP/UDP Toàn Cầu: Global Accelerator vs CloudFront — (CM-PT1 Q40, CM-PT6 Q48)
+#### 🪤 Bẫy 5: Tăng Tốc Giao Thức TCP/UDP Toàn Cầu: Global Accelerator vs CloudFront — (CM-PT1 Q40, CM-PT6 Q48, TD-Set2 Q02)
 - **Tình huống đề thi**: *"Ứng dụng truyền thông VoIP, máy chủ game trực tuyến hoặc IoT giao tiếp qua giao thức TCP/UDP trên nhiều cổng mạng khác nhau. Khách hàng phân tán trên toàn thế giới và yêu cầu độ trễ thấp nhất, không phụ thuộc vào bộ nhớ đệm IP/DNS trên thiết bị người dùng cuối."*
 - **Các phương án bẫy**:
   - ❌ *Dùng Amazon CloudFront*: CloudFront là mạng phân phối nội dung (CDN) hoạt động ở **Layer 7** chuyên cho các giao thức web (HTTP/HTTPS), hoàn toàn **KHÔNG hỗ trợ giao thức UDP** hay các ứng dụng TCP thô non-HTTP.
@@ -222,28 +263,47 @@ flowchart LR
   - Hỗ trợ đầy đủ cả giao thức **TCP và UDP** trên mọi dải cổng mạng.
   - Đưa lưu lượng gói tin của client vào điểm biên Edge Location gần nhất của AWS, sau đó dẫn truyền toàn bộ qua mạng trục cáp quang riêng tốc độ cao của AWS (AWS Global Network Backbone), giúp giảm tới 60% độ trễ và triệt tiêu hiện tượng jitter/packet loss.
 
-#### 🪤 Bẫy 6: Định Tuyến Đa Vùng Độ Trễ Thấp Nhất Bằng Route 53 Latency Routing — (CM-PT5 Q06, CM-PT5 Q18)
+#### 🪤 Bẫy 6: Định Tuyến Đa Vùng Độ Trễ Thấp Nhất Bằng Route 53 Latency Routing — (CM-PT5 Q06, CM-PT5 Q18, TD-Set6 Q18)
 - **Tình huống đề thi**: *"Doanh nghiệp triển khai ứng dụng web trên hai cụm máy chủ EC2 đặt phía sau Application Load Balancers (ALBs) tại 2 AWS Regions khác nhau. Cần giải pháp định tuyến người dùng tới Region có độ trễ mạng thấp nhất và tự động chuyển hướng khi một Region gặp sự cố."*
 - **Giải pháp ĐÚNG**: Sử dụng **Route 53 Public Hosted Zone** với các bản ghi **Alias Record sử dụng Latency-Based Routing Policy** trỏ vào DNS của từng ALB kèm theo Route 53 Health Checks.
   - Route 53 liên tục đo đạc độ trễ mạng từ các mạng người dùng tới từng Region và trả về địa chỉ của ALB gần nhất về mặt thời gian phản hồi mạng.
+
+#### 🪤 Bẫy 7: Simple Routing vs Multi-Value Answer: Khác Biệt Về Health Check — (TD-Set8 Q15)
+- **Tình huống đề thi**: *"Muốn cấu hình DNS trả về nhiều địa chỉ IP để cân bằng tải và tự động loại bỏ các server chết."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Simple Routing Policy với nhiều IP*: Simple Routing cho phép nhập nhiều IP vào một bản ghi A, Route 53 sẽ trả về tất cả các IP theo thứ tự ngẫu nhiên. **TUY NHIÊN, Simple Routing KHÔNG hỗ trợ Health Check**! Nếu 1 IP bị sập, Route 53 vẫn trả về IP chết đó cho client.
+- **Giải pháp ĐÚNG**: Sử dụng **Multi-Value Answer Routing Policy**.
+  - Mỗi bản ghi liên kết với một IP và một **Route 53 Health Check**.
+  - Route 53 kiểm tra sức khỏe và chỉ trả về tối đa **8 IP khỏe mạnh (Healthy)**.
+
+#### 🪤 Bẫy 8: ALB Không Thể Đính Kèm Target Bằng Instance ID Xuyên Region — (TD-Set8 Q15)
+- **Tình huống đề thi**: *"Cấu hình một ALB ở `us-east-1` để cân bằng tải giữa các EC2 instances ở `us-east-1` và `us-west-2` bằng cách thêm Instance IDs vào Target Group."*
+- **Lý do sai**:
+  - ALB là **Regional Service**. Target Group loại `instance` **chỉ chấp nhận các máy ảo nằm trong cùng VPC / cùng Region** với ALB.
+  - Target Group loại `ip` có thể trỏ tới IP private khác VPC (qua Peering/Transit Gateway), nhưng không thể chuyển tải mượt mà giữa các region mà không có hạ tầng mạng liên kết phức tạp.
+- **Giải pháp ĐÚNG**: Sử dụng **Route 53 Multi-Value Answer Routing** hoặc **AWS Global Accelerator** phía trước 2 ALBs riêng biệt ở 2 Regions.
 
 ---
 
 ### 📊 III. Ma Trận Quyết Định Chính Sách Định Tuyến DNS Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Chính sách Route 53 chuẩn | Giải pháp bị loại & Lý do |
-|:---|:---|:---|
-| **Giới hạn nội dung theo quốc gia/châu lục** | **Geolocation Routing** | Latency-based (không chặn theo quốc gia được) |
-| **Trải nghiệm mạng nhanh nhất cho user toàn cầu** | **Latency-Based Routing** | Weighted Routing (không đo đạc độ trễ mạng) |
-| **Failover chủ động - dự phòng (Active-Passive)** | **Failover Routing** (+ Health Check) | Multi-Value (trả về nhiều IP cùng lúc) |
-| **Phân bổ traffic thử nghiệm (Canary/A-B Testing)** | **Weighted Routing** | Geolocation Routing |
-| **Chuyển đổi lưu lượng tức thì, bypass DNS cache** | **AWS Global Accelerator** | Route 53 Weighted (bị nghẽn bởi DNS cache) |
-| **Điều chỉnh vùng phục vụ bằng tham số Bias** | **Geoproximity Routing** (Traffic Flow) | Geolocation Routing (không có tính năng Bias) |
-| **Tên miền gốc `example.com` trỏ vào ALB/CloudFront** | **Alias Record (A/AAAA)** | CNAME Record (vi phạm tiêu chuẩn RFC DNS Apex) |
-| **On-Premises phân giải tên miền private AWS** | **Route 53 Resolver Inbound Endpoint** | Outbound Endpoint (sai chiều đi của query) |
-| **EC2 trong VPC phân giải tên miền On-Premises** | **Route 53 Resolver Outbound Endpoint** | Inbound Endpoint (sai chiều đi của query) |
-| **Tăng tốc ứng dụng UDP/VoIP/Game toàn cầu** | **AWS Global Accelerator (2 Static Anycast IPs)** | CloudFront (chỉ hỗ trợ Layer 7 HTTP/HTTPS) |
-| **Định tuyến người dùng tới Region có độ trễ thấp nhất** | **Route 53 Latency-Based Routing + Health Check** | Geolocation Routing (không đo độ trễ mạng thực) |
+| Tình huống / Yêu cầu trong đề thi | Chính sách Route 53 chuẩn | Giải pháp bị loại & Lý do | Nguồn thực chứng |
+|:---|:---|:---|:---|
+| **Giới hạn nội dung theo quốc gia/châu lục / GDPR** | **Geolocation Routing** | Latency-based (không chặn theo vị trí địa lý được) | Chuẩn AWS |
+| **Trải nghiệm mạng nhanh nhất cho user toàn cầu** | **Latency-Based Routing** (+ Health Check) | Weighted Routing (không đo đạc độ trễ mạng) | `TD-Set6 Q18` |
+| **Failover chủ động - dự phòng (Active-Passive)** | **Failover Routing** (+ Health Check) | Multi-Value (trả về nhiều IP cùng lúc) | `TD-Set2 Q26` |
+| **Phân bổ traffic thử nghiệm / Zero-downtime cutover** | **Weighted Routing** | Geolocation Routing | `TD-Set5 Q25`, `TD-Set5 Q32` |
+| **Cân bằng tải DNS đa vùng, tự động loại bỏ server lỗi** | **Multi-Value Answer Routing** (+ Health Checks) | Simple Routing (không hỗ trợ Health Check) | `TD-Set8 Q15` |
+| **Chuyển đổi lưu lượng tức thì, bypass DNS cache** | **AWS Global Accelerator (Traffic Dial)** | Route 53 Weighted (bị nghẽn bởi ISP DNS cache) | `TD-Set2 Q02` |
+| **Điều chỉnh mở rộng/thu hẹp vùng phục vụ bằng Bias** | **Geoproximity Routing** (Traffic Flow) | Geolocation Routing (không có tính năng Bias) | `TD-Set2 Q59` |
+| **Tên miền gốc `example.com` trỏ vào ALB/CloudFront** | **Alias Record (A/AAAA)** | CNAME Record (vi phạm tiêu chuẩn RFC DNS Apex) | `TD-Set5 Q31` |
+| **Tên miền Route 53 trỏ vào S3 Static Website** | **Alias Record (A)** (Tên bucket = Tên miền) | CNAME (Apex không hỗ trợ; bucket sai tên sẽ 404) | `TD-Set2 Q22` |
+| **On-Premises phân giải tên miền private AWS** | **Route 53 Resolver Inbound Endpoint** | Outbound Endpoint (sai chiều đi của query) | `TD-Set1 Q03` |
+| **EC2 trong VPC phân giải tên miền On-Premises** | **Route 53 Resolver Outbound Endpoint** (+ Rule) | Inbound Endpoint (sai chiều đi của query) | `TD-Set6 Q54` |
+| **Chia sẻ DNS Resolver Rules cho nhiều VPC/Account** | **AWS Resource Access Manager (RAM)** | Dựng resolver endpoints riêng lẻ ở từng VPC (lãng phí) | `TD-Set1 Q03`, `TD-Set6 Q54` |
+| **Tăng tốc ứng dụng UDP/VoIP/Game toàn cầu** | **AWS Global Accelerator (2 Static Anycast IPs)** | CloudFront (chỉ hỗ trợ Layer 7 HTTP/HTTPS) | `TD-Set2 Q02` |
+| **Chống giả mạo DNS & đầu độc bộ nhớ đệm (Cache Poisoning)** | **Route 53 DNSSEC** (KMS Asymmetric Key) | SSL/TLS thông thường (chỉ mã hóa dữ liệu truyền) | `TD-Set5 Q05` |
+| **Máy ảo EC2 trong VPC mới không có DNS hostname** | Bật `enableDnsHostnames = true` trên VPC | Đổi AMI máy ảo (vấn đề nằm ở thiết lập VPC) | `TD-Set4 Q64` |
 
 ---
 
