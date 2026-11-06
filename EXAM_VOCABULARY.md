@@ -13,7 +13,7 @@
 
 1. [Phần 1: Từ Khóa Định Hướng Quyết Định & Ràng Buộc Tiêu Chí (Exam Decision Qualifiers & Constraints)](#phần-1-từ-khóa-định-hướng-quyết-định--ràng-buộc-tiêu-chí)
 2. [Phần 2: Bẫy Đề Thi & Từ Khóa Cảnh Báo Phương Án Sai (Exam Traps & Distractor Keywords)](#phần-2-bẫy-đề-thi--từ-khóa-cảnh-báo-phương-án-sai)
-3. [Phần 3: Động Từ Hành Động & Cụm Từ Ngữ Cảnh Kỹ Thuật (Technical Action Verbs & Phrasing)](#phần-3-động-từ-hành-động--cụm-từ-ngữ-cảnh-kỹ-thuật)
+3. [Phần 3: Bộ Từ Vựng Tiếng Anh Thông Thường & Cụm Từ Ngữ Cảnh Đề Thi (General Exam Vocabulary & Question-Stem Lexicon)](#phần-3-bộ-từ-vựng-tiếng-anh-thông-thường--cụm-từ-ngữ-cảnh-đề-thi)
 4. [Phần 4: Ma Trận Ánh Xạ Từ Khóa $\rightarrow$ Dịch Vụ & Kiến Trúc Chuẩn (Scenario Trigger $\rightarrow$ Target Architecture Mapping)](#phần-4-ma-trận-ánh-xạ-từ-khóa--kiến-trúc-chuẩn)
 5. [Phần 5: Từ Điển Thuật Ngữ Anh - Việt Chuyên Biệt Cho Đề Thi (A-Z Exam Vocabulary with Exam Scenarios)](#phần-5-từ-điển-thuật-ngữ-anh---việt-chuyên-biệt-cho-đề-thi)
 6. [Phần 6: Chiến Lược Đọc Đề & Kỹ Thuật Loại Trừ 4 Bước (4-Step Question Breakdown & Elimination Strategy)](#phần-6-chiến-lược-đọc-đề--kỹ-thuật-loại-trừ-4-bước)
@@ -125,27 +125,176 @@ flowchart LR
 
 ---
 
-## Phần 3: Động Từ Hành Động & Cụm Từ Ngữ Cảnh Kỹ Thuật
+## Phần 3: Bộ Từ Vựng Tiếng Anh Thông Thường & Cụm Từ Ngữ Cảnh Đề Thi (General Exam Vocabulary & Question-Stem Lexicon)
 
-| Động từ / Cụm từ (Action Phrasing) | Ý nghĩa kỹ thuật | Ngữ cảnh bài thi AWS thường gặp | Dịch vụ giải pháp điển hình |
+Khi làm bài thi AWS SAA-C03 (và các chứng chỉ AWS cấp độ Professional / Specialty), rào cản lớn nhất của nhiều thí sinh không chỉ là tên các dịch vụ AWS mà là **vốn từ vựng tiếng Anh thông thường (General English Vocabulary), động từ hành động, danh từ ngữ cảnh kinh doanh, và các mệnh đề ràng buộc** được dùng để gài bẫy hoặc định hướng lựa chọn đáp án.
+
+Dưới đây là 4 bảng từ vựng thông thường thiết yếu nhất được trích xuất trực tiếp từ văn cảnh của hơn **1,000 câu hỏi thi thực chiến** (Tutorials Dojo, Udemy, Cloud Mentor):
+
+### 3.1. Động Từ Hành Động & Vận Hành Hệ Thống (Action & Operational Verbs)
+
+| Động từ tiếng Anh (Verb) | Nghĩa tiếng Việt chuyên ngành | Ví dụ câu đề thi thực tế (Exam Context) | Định hướng giải pháp / Dấu hiệu nhận biết |
 | :--- | :--- | :--- | :--- |
-| **Ingest** / Ingestion | Tiếp nhận và nạp dữ liệu thô từ hàng ngàn thiết bị hoặc nguồn bên ngoài vào đám mây. | *"Ingest streaming IoT telemetry data from millions of connected cars..."* | Amazon Kinesis Data Streams, Amazon MSK, API Gateway. |
-| **Decouple** / Decoupling | Phân rã, tách rời các tầng kiến trúc để chúng không phụ thuộc trực tiếp vào nhau. | *"Decouple the frontend web tier from the backend order processing tier..."* | Amazon SQS (Message Queue), Amazon SNS, EventBridge. |
-| **Offload** | San sẻ bớt gánh nặng xử lý cho một thành phần chuyên biệt khác để giảm tải cho hệ thống chính. | *"Offload heavy reporting and read-only queries from the primary database..."* | RDS Read Replicas, Amazon ElastiCache, Amazon CloudFront. |
-| **Fan-out** | Phân phối 1 thông điệp duy nhất tới nhiều đối tượng tiêu thụ khác nhau cùng một lúc. | *"Fan out order notification events to fraud detection, shipping, and billing..."* | Amazon SNS Topic đăng ký nhiều SQS Queues hoặc Lambda. |
-| **Throttle** / Throttling | Bóp nghẹt, giới hạn tốc độ xử lý hoặc lượng request để bảo vệ hệ thống backend khỏi bị quá tải. | *"Prevent backend databases from being overwhelmed during flash sales..."* | API Gateway Throttling Limits, SQS Queue buffering. |
-| **Drain** / Deregistration Delay | Cho phép các kết nối mạng hiện tại tiếp tục xử lý nốt trước khi xóa instance khỏi cụm. | *"Ensure existing in-flight HTTP requests complete before terminating instances..."* | Elastic Load Balancing Connection Draining / Deregistration Delay. |
-| **Failover** | Tự động chuyển đổi lưu lượng sang hệ thống dự phòng khi hệ thống chính gặp sự cố. | *"Automatically fail over to the standby instance within 60 seconds of hardware failure..."* | Amazon RDS Multi-AZ Failover, Route 53 Failover Routing. |
-| **Remediate** | Tự động khắc phục, sửa chữa một tài nguyên khi phát hiện nó không tuân thủ chính sách an toàn. | *"Automatically remediate non-compliant S3 buckets that allow public access..."* | AWS Config Rules kết hợp AWS Systems Manager Automation. |
-| **Orchestrate** | Điều phối một chuỗi các bước xử lý phân tán phức tạp có điều kiện rẽ nhánh và thử lại. | *"Orchestrate a multi-step serverless ETL workflow with error handling..."* | AWS Step Functions (State Machines). |
-| **Enforce** | Ép buộc tuân thủ một quy tắc an ninh trên diện rộng mà không ai trong tài khoản con có thể gỡ. | *"Enforce that no member accounts can disable AWS CloudTrail logging..."* | AWS Organizations Service Control Policies (SCPs), Control Tower Guardrails. |
-| **Audit** | Kiểm toán, rà soát lại toàn bộ lịch sử hoạt động, quyền truy cập hoặc bản sao lưu dữ liệu. | *"Audit cross-account S3 bucket access and generate compliance reports..."* | IAM Access Analyzer, AWS CloudTrail, AWS Backup Audit Manager. |
-| **Shard** / Sharding | Phân vùng dữ liệu thành các luồng/phân đoạn nhỏ để tăng băng thông xử lý song song. | *"Scale Kinesis Data Streams ingestion throughput by splitting busy shards..."* | Amazon Kinesis Data Streams Resharding. |
-| **Hibernate** | Đóng băng máy ảo EC2 bằng cách lưu toàn bộ nội dung RAM xuống đĩa cứng EBS gốc đã mã hóa. | *"Speed up EC2 application loading time without incurring on-demand compute cost during idle hours..."* | Amazon EC2 Hibernation (`/dev/xvda`). |
-| **Intercept** | Tạm chặn quy trình khởi tạo hoặc chấm dứt của Auto Scaling Group để chạy script hoặc gom log. | *"Delay EC2 termination to push application logs to CloudWatch before the instance is destroyed..."* | Auto Scaling Group Lifecycle Hooks (`Terminating:Wait`). |
-| **Offload TLS via SNI** | Cho phép bộ cân bằng tải phục vụ nhiều chứng chỉ số SSL/TLS khác nhau trên cùng một IP/cổng mạng. | *"Serve SSL traffic for multiple distinct domains using a single Application Load Balancer..."* | Application Load Balancer Server Name Indication (SNI). |
-| **Pre-warm / Warm Pool** | Duy trì một nhóm máy ảo EC2 đã cài đặt sẵn ở trạng thái dừng (stopped) để sẵn sàng scale-out tức thì. | *"Drastically reduce scale-out latency for heavy Java applications that take 10 minutes to initialize..."* | Auto Scaling Group Warm Pools. |
-| **Bias Routing** | Mở rộng hoặc thu hẹp phạm vi địa lý phục vụ lưu lượng của một tài nguyên mạng. | *"Shift traffic dynamically between two AWS Regions without changing DNS records..."* | Route 53 Geoproximity Routing Policy với Routing Bias (-99 đến +99). |
+| **Alleviate** | Làm dịu bớt, giảm tải áp lực | *"Alleviate high read pressure on the primary RDS database instance..."* | Thêm **Amazon ElastiCache** (in-memory) hoặc **RDS Read Replicas** để gánh tải đọc. |
+| **Mitigate** | Giảm nhẹ rủi ro, phòng ngừa thiệt hại | *"Mitigate the impact of an unexpected Availability Zone outage..."* | Thiết kế kiến trúc **Multi-AZ** (ALB + ASG + Multi-AZ RDS / Aurora). |
+| **Leverage** | Tận dụng triệt để năng lực/tính năng sẵn có | *"Leverage existing corporate Active Directory credentials for AWS login..."* | Sử dụng **AWS IAM Identity Center** hoặc **Active Directory Connector**. |
+| **Circumvent / Bypass** | Vượt qua, tránh né rào cản | *"Bypass client DNS caching to achieve near-instant traffic failover..."* | Dùng **AWS Global Accelerator** (Anycast IPs) thay vì Route 53 DNS. |
+| **Streamline** | Tinh giản, loại bỏ thủ tục rườm rà | *"Streamline account vending with preapproved security baselines..."* | Triển khai **AWS Control Tower Account Factory**. |
+| **Mandate / Be mandated** | Bắt buộc tuân thủ theo quy định/pháp luật | *"Company policy mandates that all data at rest must be encrypted..."* | Bật mã hóa **AWS KMS CMK** hoặc Default Encryption. |
+| **Stipulate / Be stipulated** | Quy định rõ ràng trong hợp đồng/SLA | *"Compliance stipulations require audit logs to remain immutable for 7 years..."* | Sử dụng **Amazon S3 Object Lock ở Compliance Mode**. |
+| **Adhere to / Comply with** | Tuân thủ theo các tiêu chuẩn kỹ thuật/pháp lý | *"Adhere to strict PCI-DSS regulations regarding credit card data..."* | Sử dụng **AWS CloudHSM** hoặc **AWS Config Conformance Packs**. |
+| **Jeopardize** | Gây nguy hiểm, làm tổn hại đến hệ thống | *"Ensure batch jobs do not jeopardize production OLTP performance..."* | Tách biệt traffic bằng **Aurora Custom Endpoints** hoặc Read Replica. |
+| **Withstand** | Chịu đựng, chống chọi được thảm họa | *"Withstand the complete failure of an entire AWS Region with sub-minute RTO..."* | Sử dụng **Aurora Global Database** kết hợp **Route 53 Failover**. |
+| **Hamper / Hinder / Impede** | Cản trở, làm chậm trễ tiến trình | *"Heavy nightly ETL scripts hamper real-time transaction processing..."* | Tách rời tác vụ qua **Amazon SQS** và chạy trên **AWS Fargate / AWS Batch**. |
+| **Deter** | Răn đe, ngăn chặn trước khi xảy ra | *"Deter brute-force login attempts and automated malicious bots..."* | Kích hoạt **AWS WAF Rate-based Rules** và **Amazon GuardDuty**. |
+| **Deplete** | Làm cạn kiệt tài nguyên hệ thống | *"Sudden bursts of Lambda functions deplete database connection pools..."* | Đặt **Amazon RDS Proxy** ở giữa để tái sử dụng connection pool. |
+| **Rectify / Remediate** | Khắc phục, sửa chữa sai lệch cấu hình | *"Automatically remediate non-compliant Security Groups that open port 22..."* | **AWS Config Rules** kết hợp **SSM Automation Runbooks**. |
+| **Troubleshoot / Diagnose** | Điều tra, chẩn đoán nguyên nhân gốc rễ | *"Troubleshoot intermittent HTTP 504 Gateway Timeout errors..."* | Bật **ALB Access Logs** và phân tích độ trễ target qua Athena. |
+| **Triage** | Phân loại và xử lý sự cố theo ưu tiên | *"Triage incoming customer complaint emails based on sentiment score..."* | Sử dụng **Amazon Comprehend** (`DetectSentiment`). |
+| **Pinpoint** | Chỉ ra chính xác điểm lỗi/nút thắt | *"Pinpoint distributed microservices latency bottlenecks across the stack..."* | Kích hoạt phân tích truy vết **AWS X-Ray** (`Tracing: Active`). |
+| **Salvage** | Cứu vớt dữ liệu trước khi bị hủy | *"Salvage application log files before an unhealthy EC2 instance is terminated..."* | Sử dụng **Auto Scaling Lifecycle Hook (`Terminating:Wait`)**. |
+| **Orchestrate** | Điều phối quy trình phân tán nhiều bước | *"Orchestrate a multi-step ETL pipeline with conditional branching and retries..."* | Sử dụng **AWS Step Functions (State Machines)**. |
+| **Curate / Aggregate** | Gom góp, tinh lọc và tổng hợp dữ liệu | *"Curate and aggregate raw IoT telemetry data before loading into data lake..."* | **Amazon Kinesis Data Firehose** với Dynamic Partitioning / AWS Glue. |
+| **Decouple** | Phân rã, tách rời các tầng kiến trúc | *"Decouple the frontend web tier from the backend order processing fleet..."* | Đặt hàng đợi **Amazon SQS** làm vùng đệm giữa 2 tầng. |
+| **Offload** | San sẻ bớt gánh nặng xử lý | *"Offload static web asset requests from backend EC2 compute nodes..."* | Chuyển static content sang **Amazon S3** và phân phối qua **CloudFront**. |
+| **Throttle** | Bóp nghẹt, giới hạn tốc độ lưu lượng | *"Throttle client requests to avoid overwhelming the downstream microservices..."* | **API Gateway Usage Plans & Throttling** (Token Bucket Algorithm). |
+| **Drain / Deregister** | Rút cạn kết nối an toàn trước khi dừng | *"Drain active HTTP connections before terminating backend instances..."* | Cấu hình **ELB Deregistration Delay / Connection Draining**. |
+| **Converge** | Hội tụ, đồng thuận trạng thái nhất quán | *"Ensure that all distributed read replicas converge to the latest state..."* | Cơ chế nhân bản lưu trữ chia sẻ của **Amazon Aurora**. |
+| **Linger** | Tồn đọng kéo dài, vương vấn | *"Ensure that expired user sessions do not linger in memory..."* | Thiết lập **ElastiCache Redis TTL (Time-To-Live)**. |
+| **Forfeit** | Đánh mất, từ bỏ quyền lợi | *"Achieve the lowest possible compute cost without forfeiting high availability..."* | Phối hợp **Spot Instances + On-Demand Instances** trong Auto Scaling Group. |
+| **Enforce** | Ép buộc tuân thủ trên diện rộng | *"Enforce that no member accounts can modify or delete VPC Flow Logs..."* | Gán **Service Control Policy (SCP)** ở cấp Root/OU trong AWS Organizations. |
+| **Provision** | Cấp phát, khởi tạo tài nguyên hạ tầng | *"Provision compute resources automatically as demand increases..."* | Auto Scaling, Fargate, hoặc IaC qua **AWS CloudFormation**. |
+| **Deprecate / Obsolete** | Đánh dấu lỗi thời, ngưng khuyến khích | *"Replace deprecated S3 Select scripts with modern analytical queries..."* | Di chuyển sang **Amazon Athena** hoặc S3 Object Lambda. |
+| **Reconcile** | Đối soát, làm khớp dữ liệu | *"Reconcile payment ledger transactions with daily bank statements..."* | Chạy batch job phân tích phân tán qua **AWS Batch / EMR**. |
+| **Quarantine** | Cách ly phần tử nghi ngờ độc hại | *"Quarantine suspicious files uploaded to S3 that trigger antivirus alerts..."* | Di chuyển file sang **Quarantine S3 Bucket riêng biệt** qua Lambda. |
+| **Redrive** | Đẩy lại tin nhắn lỗi để xử lý lại | *"Redrive failed messages from Dead-Letter Queue back to source queue..."* | Sử dụng tính năng **SQS DLQ Redrive**. |
+| **Disseminate / Broadcast** | Phổ biến, phát tán rộng rãi đồng thời | *"Disseminate urgent price alert notifications to millions of mobile devices..."* | Mô hình **Amazon SNS Fan-Out** tới SQS và mobile push. |
+| **Refactor / Rearchitect** | Tái cấu trúc mã nguồn hoặc kiến trúc | *"Rearchitect a legacy monolithic app into event-driven microservices..."* | Sử dụng **API Gateway + AWS Lambda + EventBridge**. |
+| **Decommission** | Cho ngừng hoạt động vĩnh viễn và tháo dỡ | *"Decommission on-premises tape libraries and move archival data to cloud..."* | **AWS Storage Gateway Tape Gateway** chuyển băng từ lên S3 Glacier. |
+| **Intercept** | Đón chặn luồng sự kiện giữa chừng | *"Intercept incoming packets to perform deep inspection for malicious payloads..."* | **AWS Network Firewall** hoặc **Gateway Load Balancer (GWLB)**. |
+| **Preempt** | Chiếm quyền, ngắt quãng đột ngột | *"Workloads that can tolerate being preempted with a 2-minute warning..."* | **Amazon EC2 Spot Instances**. |
+| **Hibernate** | Cho máy ngủ đông, lưu RAM vào đĩa | *"Hibernate instances to preserve application state and avoid restart latency..."* | Kích hoạt tính năng **EC2 Hibernation** (lưu RAM vào Root EBS). |
+| **Flap / Thrash** | Dao động liên tục bật/tắt bất ổn định | *"Prevent Auto Scaling from flapping up and down during rapid load swings..."* | Tăng **Cooldown Period** hoặc dùng **Target Tracking Scaling**. |
+| **Ingest** | Tiếp nhận và nạp luồng dữ liệu thô | *"Ingest real-time streaming clickstream data at massive scale..."* | **Amazon Kinesis Data Streams** / **Amazon MSK**. |
+| **Propagate** | Lan truyền, nhân bản cập nhật | *"Propagate route updates automatically across peered VPC networks..."* | Cấu hình **Transit Gateway Route Table Propagation**. |
+| **Disperse / Disseminate** | Phân tán rải đều tài nguyên | *"Disperse compute workloads evenly across physical server racks..."* | Cấu hình **Spread Placement Group**. |
+| **Truncate / Expunge** | Cắt bớt / Xóa sạch hoàn toàn không thể phục hồi | *"Ensure old audit records are safely expunged after the 7-year retention mark..."* | Thiết lập **S3 Lifecycle Expiration Rules**. |
+| **Substantiate** | Chứng minh tính xác thực, có căn cứ | *"Substantiate compliance with external auditors using forensic log evidence..."* | **CloudTrail Log File Integrity Validation** (SHA-256 HMAC). |
+
+---
+
+### 3.2. Danh Từ Ngữ Cảnh, Trạng Thái Vận Hành & Khái Niệm Kinh Doanh (Contextual Nouns & Failure Modes)
+
+| Danh từ tiếng Anh (Noun) | Nghĩa tiếng Việt chuyên ngành | Ý nghĩa kiến trúc bài thi & Ví dụ thực tế | Hướng suy luận đáp án |
+| :--- | :--- | :--- | :--- |
+| **Outage** | Sự cố mất điện, sập toàn bộ dịch vụ | *"Survive a total Availability Zone outage without losing data..."* | Yêu cầu kiến trúc **Multi-AZ** hoặc **Multi-Region Disaster Recovery**. |
+| **Bottleneck** | Điểm nghẽn, nút thắt cổ chai | *"Identify the root cause of database I/O bottlenecks during peak traffic..."* | Cần nâng cấp **EBS gp3/io2**, bật **Read Replica**, hoặc thêm **ElastiCache**. |
+| **Backlog** | Khối lượng công việc/tin nhắn tồn đọng | *"A growing SQS message backlog indicates worker processing delays..."* | Auto Scaling theo metric **Backlog per Instance** (SQS + ASG). |
+| **Spike / Surge** | Đợt tăng vọt đột ngột về lưu lượng | *"Traffic surges during marketing flash sales..."* | Cần hệ thống có tính co giãn tức thì: **Aurora Serverless v2**, **DAX**, **ASG**. |
+| **Glitch / Anomaly** | Sự cố nhỏ bất thường, hiện tượng dị thường | *"Detect unexpected billing anomalies across accounts..."* | Kích hoạt **AWS Cost Anomaly Detection** sử dụng Machine Learning. |
+| **Loophole / Vulnerability** | Lỗ hổng bảo mật, kẽ hở quy trình | *"Prevent security loopholes caused by overly permissive IAM policies..."* | Sử dụng **IAM Access Analyzer** và áp dụng **Least Privilege**. |
+| **Caveat** | Lưu ý cảnh báo, điểm hạn chế cần biết | *"A major caveat of S3 Standard-IA is the 30-day minimum billable duration..."* | Không dùng Standard-IA cho file tồn tại < 30 ngày (dùng S3 Standard rẻ hơn). |
+| **Prerequisite** | Điều kiện tiên quyết bắt buộc phải có trước | *"Enabling Versioning is a strict prerequisite for S3 Object Lock..."* | Loại các phương án cố bật Object Lock trên bucket tắt Versioning. |
+| **Constraint** | Ràng buộc khắt khe không được vi phạm | *"Under strict regulatory constraints regarding key ownership..."* | Chọn **KMS Customer Managed Keys** hoặc **CloudHSM** thay vì AWS managed. |
+| **Trade-off** | Sự đánh đổi giữa các tiêu chí | *"The fundamental trade-off between read consistency and low latency..."* | So sánh **Strongly Consistent** (chậm hơn) vs **Eventually Consistent** (nhanh). |
+| **Contingency / Fallback** | Phương án dự phòng khi đường chính đứt | *"Provide a static fallback error page if backend APIs fail..."* | Cấu hình **CloudFront Origin Groups** với failover sang S3. |
+| **Failover** | Quy trình chuyển đổi sang máy dự phòng | *"Automatic failover to the standby replica in under 35 seconds..."* | **Amazon RDS Multi-AZ DB Cluster** (1 Primary + 2 Readable Standbys). |
+| **Cutover** | Thời điểm chuyển giao chính thức sang hệ mới | *"Perform the final DNS cutover during off-peak hours..."* | Dùng **AWS DMS** đồng bộ liên tục rồi đổi DNS qua **Route 53**. |
+| **Rollback** | Hoàn nguyên về trạng thái cũ khi lỗi | *"Automatic rollback of CloudFormation stack when deployment alarms trigger..."* | Sử dụng **CloudFormation Rollback Triggers** hoặc **CodeDeploy Canary**. |
+| **Safeguard / Countermeasure**| Lá chắn an toàn, biện pháp phòng vệ | *"Implement safeguards against accidental bucket deletion..."* | Bật **MFA Delete**, **S3 Object Lock**, hoặc **SCP Deny Bucket Deletion**. |
+| **Cadence** | Nhịp độ, chu kỳ lặp lại định kỳ | *"Batch jobs running on an hourly cadence..."* | Lập lịch bằng **Amazon EventBridge Scheduler** hoặc **AWS Batch**. |
+| **Telemetry** | Dữ liệu đo đạc từ xa (metrics/logs) | *"Ingest real-time vehicle telemetry data..."* | Đẩy vào **Kinesis Data Streams** $\rightarrow$ xử lý qua **Kinesis Data Analytics**. |
+| **Blast Radius** | Bán kính ảnh hưởng / thiệt hại sự cố | *"Limit the blast radius of a security compromise to a single workload..."* | Phân tách môi trường bằng **Multi-Account AWS Organizations**. |
+| **Demarcation Line** | Đường phân định ranh giới trách nhiệm | *"The demarcation line in the AWS Shared Responsibility Model..."* | Khách hàng chịu trách nhiệm *Security IN the Cloud*; AWS chịu *OF the Cloud*. |
+| **Parity** | Tính ngang bằng, tương đương tuyệt đối | *"Ensure data parity between primary and disaster recovery databases..."* | Sử dụng **AWS DMS Data Validation** kiểm tra tính nhất quán. |
+| **Taxonomy** | Hệ thống phân loại cấu trúc chuẩn hóa | *"Establish a uniform tagging taxonomy for cost allocation..."* | Kích hoạt **User-Defined Cost Allocation Tags** trong AWS Billing. |
+| **Stopgap / Workaround** | Giải pháp tình thế tạm thời chống cháy | *"Implement a stopgap caching layer before rebuilding the database..."* | Đặt **ElastiCache Redis** phía trước cơ sở dữ liệu hiện hữu. |
+| **Boilerplate** | Đoạn mã / cấu hình mẫu dùng lặp lại | *"Eliminate repetitive boilerplate infrastructure provisioning..."* | Tạo **CloudFormation StackSets** hoặc **Terraform Modules**. |
+| **Carbon Footprint** | Dấu chân phát thải carbon môi trường | *"Measure and minimize the enterprise cloud carbon footprint..."* | Trụ cột **Sustainability**: Sử dụng **AWS Graviton** và chuyển sang Serverless. |
+| **Allowance / Quota** | Hạn mức cấp phép của dịch vụ | *"Hit the AWS regional account concurrency quota for Lambda..."* | Yêu cầu tăng quota trong **Service Quotas Console** hoặc dùng SQS buffer. |
+| **Poison Pill** | Tin nhắn lỗi làm sập worker liên tục | *"A malformed JSON payload acting as a poison pill in the queue..."* | Cách ly tự động sang **SQS Dead-Letter Queue (DLQ)** qua `maxReceiveCount`. |
+| **Replication Lag** | Độ trễ sao chép dữ liệu phân tán | *"High replication lag on read replicas during heavy write batches..."* | Chuyển sang **Amazon Aurora** (lag < 100ms) hoặc dùng **Multi-AZ DB Cluster**. |
+| **Hot Partition** | Phân vùng bị quá nhiệt do khóa dồn dập | *"I/O throttling caused by a hot partition in a DynamoDB table..."* | Chọn khóa **Partition Key có High Cardinality** hoặc kỹ thuật **Key Salting**. |
+| **Cascading Failure** | Sự cố sụp đổ dây chuyền | *"Prevent downstream service outages from causing cascading failures..."* | Tách rời bằng **SQS Queue buffering** và mô hình **Circuit Breaker**. |
+| **Cold Start** | Khởi động nguội container/hàm | *"Latency penalty incurred during container initialization on first request..."* | Kích hoạt **Lambda Provisioned Concurrency** hoặc **Lambda SnapStart**. |
+| **Configuration Drift** | Hiện tượng sai lệch cấu hình theo thời gian | *"Manual modifications causing configuration drift from IaC templates..."* | Dùng **CloudFormation Drift Detection** hoặc **SSM State Manager**. |
+| **Single Point of Failure (SPOF)**| Điểm lỗi đơn lẻ có thể làm sập cả hệ thống | *"A single EC2 NAT instance deployed in one public subnet represents a SPOF..."* | Thay bằng **NAT Gateway phân bổ trên từng Availability Zone**. |
+| **Audit Trail** | Dấu vết kiểm toán bất biến của các thao tác | *"Maintain an immutable audit trail of all management API calls..."* | **AWS CloudTrail** xuất log về S3 bật **Log File Integrity Validation**. |
+| **Throughput** | Thông lượng truyền tải dữ liệu | *"Workloads requiring sustained high sequential throughput of 500 MB/s..."* | Chọn ổ đĩa **Amazon EBS Throughput Optimized HDD (`st1`)**. |
+| **Payload** | Phần dữ liệu thực tế mang theo trong request| *"The maximum request payload size for synchronous Lambda invocation is 6 MB..."* | Lưu payload lớn vào **S3** và chỉ truyền URL/Object Key qua tin nhắn. |
+| **Quorum** | Số lượng node tối thiểu để biểu quyết | *"Maintain an odd number of nodes to reach consensus quorum..."* | Cụm cluster Multi-AZ (3 nodes trên 3 AZs để tránh split-brain). |
+| **Footprint** | Phạm vi chiếm dụng tài nguyên/chi phí | *"Minimize the operational footprint of legacy Windows applications..."* | Chuyển sang **AWS App Runner** hoặc **Amazon ECS on Fargate**. |
+
+---
+
+### 3.3. Tính Từ Miêu Tả Đặc Tính Kiến Trúc & Ràng Buộc (Architectural Adjectives & Constraint Modifiers)
+
+| Tính từ tiếng Anh (Adjective) | Nghĩa tiếng Việt chuyên ngành | Ý nghĩa kỹ thuật & Ứng dụng trong bài thi | Dấu hiệu chọn đáp án |
+| :--- | :--- | :--- | :--- |
+| **Intermittent / Sporadic** | Ngắt quãng, không đều đặn, lúc có lúc không | *"An application with intermittent usage patterns during weekdays..."* | Ưu tiên giải pháp co giãn tự động về 0: **Aurora Serverless v2**, **Lambda**. |
+| **Transient** | Tạm thời, thoáng qua, có thể tự hết | *"Tolerate transient network glitches with exponential backoff..."* | Dùng cơ chế **Retry with Jitter** trong AWS SDK thay vì báo lỗi ngay. |
+| **Chronic** | Kéo dài kinh niên, liên tục tái diễn | *"Chronic memory exhaustion on EC2 virtual machines..."* | Cài đặt **Unified CloudWatch Agent** để đo RAM và nâng instance type. |
+| **Mission-Critical** | Cực kỳ quan trọng với sự sống còn công ty | *"A mission-critical financial core requiring zero data loss (RPO = 0)..."* | **Multi-Region Active-Active**, **Aurora Global Database**, **Synchronous Multi-AZ**. |
+| **Stringent** | Nghiêm ngặt, khắt khe về mặt quy định | *"Adhere to stringent banking compliance requiring WORM storage..."* | Chọn **S3 Object Lock Compliance Mode** hoặc **CloudHSM**. |
+| **Meticulous** | Tỉ mỉ, chi tiết đến từng dữ liệu nhỏ | *"Meticulous tracking of individual S3 object downloads..."* | Phải bật **CloudTrail S3 Data Events** (`s3:GetObject`). |
+| **Viable / Feasible** | Khả thi về mặt kỹ thuật và chi phí | *"Identify the most economically viable architecture..."* | So sánh chi phí thực tế giữa các phương án đáp ứng được bài toán. |
+| **Cost-Prohibitive** | Đắt đỏ đến mức không thể chấp nhận được | *"Running provisioned instances 24/7 for sporadic testing is cost-prohibitive..."* | Chuyển sang **Spot Instances** hoặc **Serverless**. |
+| **Turnkey / Out-of-the-Box** | Có sẵn dùng ngay, cắm vào là chạy | *"An out-of-the-box solution to detect sensitive PII in text documents..."* | Chọn **Amazon Comprehend** (`DetectPiiEntities`) thay vì tự code ML. |
+| **Bespoke / Customized** | May đo riêng, tự viết script phức tạp | *"Replace bespoke backup scripts with AWS native automation..."* | Dùng **AWS Backup** hoặc **Amazon Data Lifecycle Manager (DLM)**. |
+| **Agnostic** | Bất khả tri, độc lập không phụ thuộc nền tảng | *"A cloud-agnostic container orchestration platform..."* | **Amazon EKS** (Kubernetes chuẩn) thay vì Amazon ECS độc quyền. |
+| **Fine-Grained** | Chi tiết, mịn màng tới cấp trường/cột | *"Fine-grained row and column level access control on data warehouse..."* | Chọn **AWS Lake Formation** hoặc **Amazon Redshift Dynamic Data Masking**. |
+| **Coarse-Grained** | Thô ráp, ở cấp độ tổng thể lớn | *"Coarse-grained bucket-wide access permissions..."* | S3 Bucket Policy thông thường (chỉ cấp theo cả bucket/prefix). |
+| **Resilient** | Kiên cường, tự phục hồi sau sự cố | *"Design a resilient architecture that recovers automatically from node failure..."* | **Auto Scaling + ALB Health Checks + Multi-AZ RDS**. |
+| **Fault-Tolerant** | Chịu lỗi, không ngừng dịch vụ khi hỏng hóc | *"A fault-tolerant web fleet capable of surviving the loss of one entire AZ..."* | ASG phân bổ đều trên 3 AZs với capacity đủ gánh tải khi 1 AZ sập. |
+| **Durable** | Bền vững, bảo toàn dữ liệu không suy hao | *"Amazon S3 is designed for 99.999999999% (11 9's) of data durability..."* | S3, EFS (dữ liệu được nhân bản tự động qua nhiều AZ vật lý). |
+| **Stateless** | Phi trạng thái, không giữ phiên cục bộ | *"Stateless web servers that can be terminated at any time without user impact..."* | Lưu trữ user session trong **ElastiCache** hoặc **DynamoDB**. |
+| **Stateful** | Có trạng thái, phụ thuộc dữ liệu phiên | *"Stateful applications requiring shared POSIX filesystem access across nodes..."* | Sử dụng **Amazon EFS** (NFSv4 chia sẻ cho nhiều máy chủ). |
+| **Immutable** | Bất biến, không thể sửa đổi hay xóa | *"Immutable audit archives that cannot be deleted even by root credentials..."* | **S3 Object Lock** hoặc **AWS Backup Vault Lock** ở Compliance Mode. |
+| **Ephemeral** | Ngắn ngủi, tạm thời, mất khi tắt máy | *"EC2 Instance Store provides high-speed ephemeral block storage..."* | Chỉ dùng cho cache, buffer, swap; không dùng lưu database chính. |
+| **Volatile** | Dễ bay hơi, biến động nhanh | *"Data held in volatile memory is lost upon instance reboot or crash..."* | Dùng **EC2 Hibernation** để flush dữ liệu RAM xuống đĩa EBS mã hóa. |
+| **Burgeoning / Bursty** | Tăng trưởng bùng nổ, đột biến dữ dội | *"Burgeoning data ingest rates from thousands of newly deployed sensors..."* | Mở rộng shard tự động trên **Amazon Kinesis Data Streams**. |
+| **Unmetered** | Miễn cước định mức, không tính theo dung lượng | *"AWS Shield Standard provides unmetered protection against Layer 3/4 attacks..."* | Tích hợp sẵn và miễn phí trên CloudFront, Route 53 và ALB. |
+| **Steady-State** | Trạng thái ổn định, lưu lượng đều đặn | *"A steady-state baseline traffic volume running 24/7 year-round..."* | Mua **Compute Savings Plans** hoặc **Reserved Instances** để giảm tới 72%. |
+| **Tamper-Proof** | Chống giả mạo, không thể bị can thiệp lén | *"Create a tamper-proof log archive for legal proceedings..."* | Bật **CloudTrail Log File Integrity Validation** + **S3 Object Lock**. |
+| **Non-Repudiable** | Chống chối bỏ, có bằng chứng pháp lý rõ ràng | *"Ensure non-repudiation of administrative changes in the production VPC..."* | Ghi nhận danh tính người gọi, IP và thời gian qua **AWS CloudTrail**. |
+| **Idempotent** | Tính lũy thừa: gọi nhiều lần như gọi 1 lần | *"Ensure message consumption is idempotent to prevent duplicate billing..."* | Sử dụng **SQS FIFO** với `MessageDeduplicationId`. |
+| **Preemptible** | Có thể bị thu hồi trước hạn bất cứ lúc nào | *"Fault-tolerant batch rendering on preemptible compute instances..."* | Sử dụng **Amazon EC2 Spot Instances** để tiết kiệm tới 90% chi phí. |
+| **Heterogeneous** | Dị thể, không cùng loại công nghệ | *"Heterogeneous database migration from on-premises Oracle to Aurora MySQL..."* | Bắt buộc kết hợp **AWS SCT (Schema Conversion Tool)** và **AWS DMS**. |
+| **Homogeneous** | Đồng thể, cùng loại công nghệ | *"Homogeneous migration from on-premises PostgreSQL to Amazon RDS PostgreSQL..."* | Dùng **AWS DMS** trực tiếp hoặc công cụ native (`pg_dump`/`pg_restore`). |
+| **Monolithic** | Nguyên khối, cồng kềnh khó mở rộng | *"Break apart a monolithic codebase into decoupled microservices..."* | Phân tách qua **API Gateway**, **Lambda** và **SQS/EventBridge**. |
+| **Synchronous** | Đồng bộ, caller phải chờ kết quả ngay | *"Synchronous microservice calls leading to cascading latency and timeouts..."* | Chuyển sang gọi bất đồng bộ (**Asynchronous**) qua hàng đợi **SQS**. |
+| **Asynchronous** | Bất đồng bộ, phản hồi nhận lệnh ngay | *"Asynchronous event-driven image processing upon user upload..."* | Kích hoạt qua **S3 Event Notifications $\rightarrow$ SQS $\rightarrow$ Lambda/Fargate**. |
+| **Bidirectional** | Hai chiều, thông suốt cả 2 hướng | *"Bidirectional DNS resolution between on-premises DNS and AWS Route 53..."* | Cần tạo cả **Route 53 Resolver Inbound Endpoint** VÀ **Outbound Endpoint**. |
+| **Unidirectional** | Một chiều | *"Unidirectional outbound internet access for IPv6-enabled EC2 instances..."* | Sử dụng **Egress-Only Internet Gateway** (chặn chiều inbound từ Internet). |
+| **Deterministic** | Xác định, kết quả nhất quán theo quy tắc | *"Deterministic hash function distributing rows evenly across physical shards..."* | Cơ chế băm **Partition Key** trong Amazon DynamoDB. |
+| **Seamless** | Mượt mà, liền mạch, người dùng không nhận ra | *"Seamless cutover with zero downtime and uninterrupted user sessions..."* | Chuyển đổi traffic mượt qua **AWS Global Accelerator** hoặc **Route 53**. |
+| **Pervasive** | Lan tỏa sâu rộng, bao quát toàn diện | *"Pervasive encryption enforced across all S3 buckets in all accounts..."* | Áp dụng **AWS Control Tower Guardrails** hoặc **SCP Enforce Encryption**. |
+
+---
+
+### 3.4. Cụm Từ Cố Định, Thành Ngữ Kỹ Thuật & Cấu Trúc Câu Hỏi (Collocations & Question Stems)
+
+Trong đề thi AWS, có những cụm từ cố định đóng vai trò như **tín hiệu chỉ đường (Clue Triggers)**. Khi nhìn thấy các cụm từ này, bạn có thể loại ngay 2-3 phương án sai mà không cần đọc hết câu:
+
+| Cụm từ trong đề thi (Collocation / Question Stem) | Ý nghĩa bản chất | Hướng tư duy kiến trúc & Đáp án mục tiêu |
+| :--- | :--- | :--- |
+| **"With the LEAST operational overhead"**<br>**"With the LEAST administrative effort"** | Tìm giải pháp tốn ít công cài đặt, quản trị, vá lỗi nhất | 🎯 **Ưu tiên số 1**: Serverless (Lambda, Fargate, App Runner).<br>🎯 **Ưu tiên số 2**: Managed Services (RDS, Transfer Family, Lake Formation, DLM).<br>❌ **Loại ngay**: Tự dựng EC2 cài software, tự viết script cron/Lambda. |
+| **"At the LOWEST cost"**<br>**"Which solution is MOST cost-effective?"** | Tối ưu hóa chi phí thực tế hàng tháng | 🎯 **Ưu tiên**: S3 Standard cho dữ liệu <30 ngày, Spot Instances cho batch, Parameter Store Standard ($0), Savings Plans cho 24/7.<br>❌ **Loại ngay**: Provisioned IOPS io2 khi không cần, Secrets Manager cho config tĩnh, S3 Standard-IA cho file ngắn hạn. |
+| **"Without changing application code"**<br>**"No code modifications required"** | Không được phép sửa mã nguồn ứng dụng | 🎯 **Ưu tiên**: Amazon EFS (NFS POSIX), FSx for Windows (SMB), AWS Transfer Family (SFTP endpoint), DocumentDB (MongoDB), Amazon MQ.<br>❌ **Loại ngay**: Đổi sang gọi S3 SDK API (`GetObject`/`PutObject`), đổi sang DynamoDB. |
+| **"Without managing servers / infrastructure"** | Kiến trúc phi máy chủ hoàn toàn | 🎯 **Ưu tiên**: AWS Lambda, AWS Fargate, AWS App Runner, Aurora Serverless v2, DynamoDB, API Gateway.<br>❌ **Loại ngay**: Amazon EC2, EKS với self-managed EC2 worker nodes. |
+| **"Without downtime"**<br>**"With zero downtime"** | Không gây gián đoạn dịch vụ của người dùng | 🎯 **Ưu tiên**: RDS Storage Auto Scaling (online expansion), AWS DataSync đồng bộ nền, Route 53 Weighted DNS cutover, Blue/Green Deployment.<br>❌ **Loại ngay**: Khôi phục DB từ snapshot thủ công rồi đổi endpoint, sửa in-place FSx Single-AZ sang Multi-AZ. |
+| **"Without manual intervention"**<br>**"Automate the remediation process"** | Hoàn toàn tự động, loại bỏ thao tác thủ công | 🎯 **Ưu tiên**: AWS Config Rules + SSM Automation Runbooks, CloudWatch Alarms + EC2 Auto-Recovery, EventBridge + Lambda.<br>❌ **Loại ngay**: Gửi email SNS thông báo cho sysadmin để vào sửa thủ công. |
+| **"Single Point of Failure (SPOF)"** | Hệ thống đang có điểm lỗi đơn lẻ nguy hiểm | 🎯 **Cách khắc phục**: Triển khai Multi-AZ, tạo 1 NAT Gateway riêng cho mỗi AZ, dùng ALB phân phối tới nhiều instances. |
+| **"In-flight requests / Data in-flight"** | Yêu cầu hoặc dữ liệu đang lưu chuyển dở dang | 🎯 **Xử lý**: ELB Deregistration Delay / Connection Draining (chờ request hoàn tất trước khi tắt máy), SQS Visibility Timeout. |
+| **"Data at-rest vs Data in-transit"** | Dữ liệu lưu trên đĩa vs truyền qua mạng | 🎯 **At-rest**: AWS KMS, SSE-S3, CloudHSM.<br>🎯 **In-transit**: SSL/TLS Certificate từ ACM, HTTPS, IPsec VPN. |
+| **"Round-Trip Time (RTT)"** | Thời gian trọn vòng một gói tin mạng | 🎯 **Đo lường & Tối ưu**: CloudWatch Network Monitor (đo RTT Hybrid), AWS Global Accelerator (giảm RTT toàn cầu qua AWS backbone). |
+| **"Cold start penalty"** | Hình phạt độ trễ khi khởi động nguội | 🎯 **Khắc phục**: Lambda Provisioned Concurrency, Lambda SnapStart cho Java. |
+| **"Blast radius containment"** | Thu hẹp tối đa phạm vi ảnh hưởng khi bị hack | 🎯 **Thiết kế**: Mô hình Multi-Account với AWS Organizations, phân vùng qua SCPs, VPC Subnet isolation. |
+| **"Adherence to compliance"** | Tuân thủ tiêu chuẩn pháp lý (HIPAA, PCI-DSS) | 🎯 **Công cụ**: AWS Config Conformance Packs, AWS Audit Manager, AWS Macie (quét PII). |
+| **"High-cardinality partition key"** | Khóa phân vùng có nhiều giá trị biến thiên | 🎯 **Mục đích**: Phân bổ đều dữ liệu và I/O, chống triệt để hiện tượng Hot Partition trong Amazon DynamoDB. |
+| **"Exponential backoff with jitter"** | Thử lại tăng dần thời gian kèm độ ngẫu nhiên | 🎯 **Mục đích**: Xử lý lỗi `ThrottlingException` (HTTP 429) khi gọi AWS API vượt quá hạn mức rate limit. |
+| **"Sub-second RPO and sub-minute RTO"** | Mất dữ liệu < 1s và phục hồi trong < 1 phút | 🎯 **Giải pháp duy nhất**: **Amazon Aurora Global Database** (storage-level cross-region replication). |
+| **"Poison pill message isolation"** | Cô lập tin nhắn lỗi gây crash worker | 🎯 **Giải pháp duy nhất**: **Amazon SQS Dead-Letter Queue (DLQ)** với tham số `maxReceiveCount`. |
 
 ---
 
