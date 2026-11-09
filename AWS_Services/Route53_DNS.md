@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Amazon Route 53 (Dịch Vụ Phân Giải Tên Miền & Định Tuyến Toàn Cầu)
+﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon Route 53 (Dịch Vụ Phân Giải Tên Miền & Định Tuyến Toàn Cầu)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -7,7 +7,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### 1. Định nghĩa chuẩn xác và Phân nhóm dịch vụ
 **Amazon Route 53** là dịch vụ phân giải tên miền (**Domain Name System - DNS**) và định tuyến lưu lượng toàn cầu có khả năng mở rộng cao và độ khả dụng đạt cam kết **100% SLA**. Tên gọi "Route 53" xuất phát từ cổng mạng mặc định **Port 53 (TCP/UDP)** của giao thức DNS truyền thống kết hợp với biểu tượng tuyến đường cao tốc lịch sử Route 66.
@@ -41,7 +41,7 @@ flowchart TD
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Phân loại Hosted Zones: Public vs Private Hosted Zones
 
@@ -311,7 +311,7 @@ flowchart LR
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Sơ đồ luồng định tuyến tự động chịu lỗi thảm họa đa vùng (Multi-Region Active-Passive Failover)
 
@@ -346,7 +346,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức kỹ thuật chính xác) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -358,7 +358,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Toàn Bộ Các Giải Pháp DNS & Phân Giải Tên Miền (Ecosystem Comparison)
+## 5. Bảng So Sánh Toàn Bộ Các Giải Pháp DNS & Phân Giải Tên Miền (Ecosystem Comparison)
 
 | Tiêu chuẩn so sánh | Amazon Route 53 Public | Amazon Route 53 Private | Route 53 Resolver | Amazon CloudFront DNS | CoreDNS trên Amazon EKS |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -371,9 +371,9 @@ sequenceDiagram
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### 6.6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của Amazon Route 53
+### 6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của Amazon Route 53
 
 | Thành phần tính phí | Cơ chế tính phí chi tiết (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
@@ -386,7 +386,7 @@ sequenceDiagram
 
 ---
 
-### 6.6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
+### 6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
 
 #### Kịch bản 1: Tiết Kiệm Chi Phí Truy Vấn Bằng Cách Chuyển CNAME Sang Alias Record
 * **Bối cảnh thực tế**:
@@ -461,7 +461,7 @@ sequenceDiagram
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Vấn đề (Problem) | Nguyên nhân khả dĩ (Possible Causes) | Các bước điều tra (Investigation Steps - Metrics/Logs) | Giải pháp xử lý (Solution) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -476,7 +476,7 @@ sequenceDiagram
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon Route 53 (Golden Rules)
 1. **Luôn ưu tiên sử dụng Alias Record thay cho CNAME**:  

@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: AWS Well-Architected Framework, Well-Architected Tool & AWS Trusted Advisor
+﻿# Tài Liệu Học Tập Chuyên Sâu: AWS Well-Architected Framework, Well-Architected Tool & AWS Trusted Advisor
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -6,7 +6,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### Dịch vụ gì?
 - **AWS Well-Architected Framework**: Bộ khung lý thuyết và tập hợp các nguyên tắc thiết kế tối ưu (Best Practices) được đúc kết từ kinh nghiệm thiết kế hàng triệu hệ thống của các chuyên gia AWS qua nhiều thập kỷ, gồm **6 Trụ Cột** cốt lõi.
@@ -20,7 +20,7 @@
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Sáu Trụ Cột của AWS Well-Architected Framework (The 6 Pillars)
 
@@ -239,7 +239,7 @@ flowchart TD
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Quy Trình Rà Soát Kiến Trúc Định Kỳ & Tự Động Hóa Vá Lỗi
 
@@ -271,7 +271,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức tích hợp) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -283,7 +283,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
+## 5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
 
 ### So sánh các công cụ đánh giá, tối ưu hóa và quản trị kiến trúc
 
@@ -297,9 +297,9 @@ sequenceDiagram
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### 6.6.1. Bảng Cấu Trúc Định Giá Chi Tiết Bộ Công Cụ FinOps
+### 6.1. Bảng Cấu Trúc Định Giá Chi Tiết Bộ Công Cụ FinOps
 
 | Công Cụ Quản Lý Chi Phí | Đơn giá AWS niêm yết | Cơ chế đo lường | Ghi chú tối ưu hóa chi phí FinOps |
 | :--- | :--- | :--- | :--- |
@@ -313,7 +313,7 @@ sequenceDiagram
 
 ---
 
-### 6.6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
+### 6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
 
 #### Kịch bản 1: Tự động hóa kiểm soát ngân sách bằng AWS Budgets Actions (Auto-Stop EC2 Sandbox)
 - **Bối cảnh**: Doanh nghiệp cấp tài khoản Sandbox cho đội ngũ R&D với hạn mức ngân sách tối đa **$600/tháng**. Kỹ sư thường quên tắt các máy ảo GPU `g5.12xlarge` ($5.672/giờ) sau giờ làm việc, khiến hóa đơn tháng tăng vọt lên **$3,500/tháng**.
@@ -366,7 +366,7 @@ sequenceDiagram
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Tình huống sự cố (Problem) | Nguyên nhân cốt lõi (Root Cause) | Các bước điều tra & Chỉ số giám sát (Metrics & Logs) | Giải pháp khắc phục (Remediation) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -380,7 +380,7 @@ sequenceDiagram
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Kiến Trúc AWS Well-Architected (Golden Rules)
 1. **Bám sát 6 Trụ Cột**: Luôn đối chiếu mọi thiết kế kiến trúc với 6 trụ cột (Vận hành, Bảo mật, Tin cậy, Hiệu năng, Chi phí, Bền vững).

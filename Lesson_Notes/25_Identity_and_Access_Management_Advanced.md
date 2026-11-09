@@ -1,12 +1,12 @@
-# Ghi Chú Bài Học: Chương 25 - Quản Trị Định Danh Doanh Nghiệp Nâng Cao (Identity and Access Management Advanced)
+﻿# Ghi Chú Bài Học: Chương 25 - Quản Trị Định Danh Doanh Nghiệp Nâng Cao (Identity and Access Management Advanced)
 
 > **Khóa học**: Ultimate AWS Certified Solutions Architect Associate  
 > **Chương**: 25 - Identity and Access Management (Bài 282 đến Bài 291)  
-> **Tài liệu tham chiếu liên quan**: [AWS Service Document: IAM & Enterprise Identity](file:///n:/AWS_XBrain_Note/AWS_Services/IAM_Identity_and_Access_Management.md)
+> **Tài liệu tham chiếu liên quan**: [AWS Service Document: IAM & Enterprise Identity](../AWS_Services/IAM_Identity_and_Access_Management.md)
 
 ---
 
-## 4.1. Tổng Quan Bài Học (Lesson Overview)
+## 1. Tổng Quan Bài Học (Lesson Overview)
 
 ### Chủ đề chính
 Chương này đi sâu vào các giải pháp quản trị định danh, phân quyền và kiểm soát bảo mật đa tài khoản cho các tổ chức, doanh nghiệp quy mô lớn: **AWS Organizations**, **Service Control Policies (SCPs)**, **Tag Policies**, **Logic đánh giá IAM Policy chuyên sâu**, **Resource-based Policies vs IAM Roles**, **AWS IAM Identity Center (trước đây là AWS SSO)**, **AWS Directory Services**, và **AWS Control Tower**.
@@ -21,7 +21,7 @@ Chương này đi sâu vào các giải pháp quản trị định danh, phân q
 
 ---
 
-## 4.2. Điểm Cốt Lõi Cần Nhớ (Key Takeaways)
+## 2. Điểm Cốt Lõi Cần Nhớ (Key Takeaways)
 
 1. **AWS Organizations**: Quản lý tập trung nhiều tài khoản AWS dưới 1 tài khoản quản trị (Management Account). Cung cấp gộp hóa đơn thanh toán (Consolidated Billing) giúp tích lũy dung lượng sử dụng để giảm giá thành (Volume Discounts) và chia sẻ Savings Plans/Reserved Instances.
 2. **SCPs (Service Control Policies)**: **KHÔNG BAO GIỜ trực tiếp cấp quyền (Does NOT grant permissions)**. SCP chỉ đóng vai trò là một bộ lọc hay "rào chắn tối đa" (Guardrail). Một hành động chỉ được phép thực hiện khi nó VỪA được cho phép bởi SCP, VỪA được cấp bởi IAM Policy ở tài khoản con.
@@ -32,7 +32,7 @@ Chương này đi sâu vào các giải pháp quản trị định danh, phân q
 
 ---
 
-## 4.3. Giải Thích Khái Niệm Chi Tiết (Detailed Concept Explanations)
+## 3. Giải Thích Khái Niệm Chi Tiết (Detailed Concept Explanations)
 
 ### 1. AWS Organizations & Organizational Units (OUs)
 - **Kiến trúc**: 
@@ -104,7 +104,7 @@ Sơ đồ thứ tự đánh giá phân quyền của AWS:
 
 ---
 
-## 4.4. Lệnh và Cấu Hình Thực Tế (Commands & Config)
+## 4. Lệnh và Cấu Hình Thực Tế (Commands & Config)
 
 ### Kiểm tra tài khoản trong AWS Organizations qua CLI:
 ```bash
@@ -122,14 +122,14 @@ aws organizations list-policies-for-target \
 
 ---
 
-## 4.5. Ví Dụ Thực Tiễn (Practical Examples)
+## 5. Ví Dụ Thực Tiễn (Practical Examples)
 
 ### Ví dụ từ bài giảng:
 Giảng viên Stéphane Maarek trình diễn việc tạo một SCP cấm thao tác trên DynamoDB và gắn vào một Member Account. Sau đó đăng nhập vào Member Account với tư cách là `AdministratorAccess` (toàn quyền admin). Khi cố gắng tạo một bảng DynamoDB mới, bảng điều khiển lập tức báo lỗi `User: ... is not authorized to perform: dynamodb:CreateTable with an explicit deny in a service control policy`. Điều này chứng minh sức mạnh của SCP: ngay cả tài khoản Administrator của tài khoản con cũng không thể vượt rào cản của SCP.
 
 ---
 
-## 4.6. Mối Quan Hệ Giữa Các Khái Niệm (Relationships Between Concepts)
+## 6. Mối Quan Hệ Giữa Các Khái Niệm (Relationships Between Concepts)
 
 ```mermaid
 graph TD
@@ -150,7 +150,7 @@ graph TD
 
 ---
 
-## 4.7. Câu Hỏi Ôn Tập và Tự Đánh Giá (Review & Self-Assessment)
+## 7. Câu Hỏi Ôn Tập và Tự Đánh Giá (Review & Self-Assessment)
 
 ### Câu hỏi:
 1. Nếu một Service Control Policy (SCP) có nội dung từ chối hành động `ec2:RunInstances`, thì tài khoản Root của một Member Account (tài khoản con) có thể khởi chạy máy ảo EC2 được không?
@@ -175,14 +175,14 @@ graph TD
 
 ---
 
-## 4.8. Nguồn Tham Chiếu (Source References)
+## 8. Nguồn Tham Chiếu (Source References)
 
 - **Source Transcripts**:
-  - [282 - Organizations - Overview.md](file:///n:/AWS_XBrain_Note/AWS_Resources/25%20-%20Identity%20and%20Access%20Management/282%20-%20Organizations%20-%20Overview.md)
-  - [284 - Organizations - Tag Policies.md](file:///n:/AWS_XBrain_Note/AWS_Resources/25%20-%20Identity%20and%20Access%20Management/284%20-%20Organizations%20-%20Tag%20Policies.md)
-  - [285 - IAM - Advanced Policies.md](file:///n:/AWS_XBrain_Note/AWS_Resources/25%20-%20Identity%20and%20Access%20Management/285%20-%20IAM%20-%20Advanced%20Policies.md)
-  - [286 - IAM - Resource-based Policies vs IAM Roles.md](file:///n:/AWS_XBrain_Note/AWS_Resources/25%20-%20Identity%20and%20Access%20Management/286%20-%20IAM%20-%20Resource-based%20Policies%20vs%20IAM%20Roles.md)
-  - [287 - IAM - Policy Evaluation Logic.md](file:///n:/AWS_XBrain_Note/AWS_Resources/25%20-%20Identity%20and%20Access%20Management/287%20-%20IAM%20-%20Policy%20Evaluation%20Logic.md)
-  - [288 - AWS IAM Identity Center.md](file:///n:/AWS_XBrain_Note/AWS_Resources/25%20-%20Identity%20and%20Access%20Management/288%20-%20AWS%20IAM%20Identity%20Center.md)
-  - [289 - AWS Directory Services.md](file:///n:/AWS_XBrain_Note/AWS_Resources/25%20-%20Identity%20and%20Access%20Management/289%20-%20AWS%20Directory%20Services.md)
-  - [291 - AWS Control Tower.md](file:///n:/AWS_XBrain_Note/AWS_Resources/25%20-%20Identity%20and%20Access%20Management/291%20-%20AWS%20Control%20Tower.md)
+  - [282 - Organizations - Overview.md](../AWS_Resources/25%20-%20Identity%20and%20Access%20Management/282%20-%20Organizations%20-%20Overview.md)
+  - [284 - Organizations - Tag Policies.md](../AWS_Resources/25%20-%20Identity%20and%20Access%20Management/284%20-%20Organizations%20-%20Tag%20Policies.md)
+  - [285 - IAM - Advanced Policies.md](../AWS_Resources/25%20-%20Identity%20and%20Access%20Management/285%20-%20IAM%20-%20Advanced%20Policies.md)
+  - [286 - IAM - Resource-based Policies vs IAM Roles.md](../AWS_Resources/25%20-%20Identity%20and%20Access%20Management/286%20-%20IAM%20-%20Resource-based%20Policies%20vs%20IAM%20Roles.md)
+  - [287 - IAM - Policy Evaluation Logic.md](../AWS_Resources/25%20-%20Identity%20and%20Access%20Management/287%20-%20IAM%20-%20Policy%20Evaluation%20Logic.md)
+  - [288 - AWS IAM Identity Center.md](../AWS_Resources/25%20-%20Identity%20and%20Access%20Management/288%20-%20AWS%20IAM%20Identity%20Center.md)
+  - [289 - AWS Directory Services.md](../AWS_Resources/25%20-%20Identity%20and%20Access%20Management/289%20-%20AWS%20Directory%20Services.md)
+  - [291 - AWS Control Tower.md](../AWS_Resources/25%20-%20Identity%20and%20Access%20Management/291%20-%20AWS%20Control%20Tower.md)

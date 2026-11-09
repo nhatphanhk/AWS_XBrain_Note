@@ -2,109 +2,279 @@
 
 > **Khóa học**: Ultimate AWS Certified Solutions Architect Associate  
 > **Chương**: 12, 13, 14 - Amazon S3 Introduction, Advanced S3 & S3 Security (Bài 128 đến Bài 164)  
-> **Tài liệu tham chiếu liên quan**: [AWS Service Document: Amazon S3 & CloudFront](file:///n:/AWS_XBrain_Note/AWS_Services/S3_and_CloudFront_Storage.md)
+> **Tài liệu tham chiếu liên quan**: [AWS Service Document: Amazon S3 & CloudFront](../AWS_Services/S3_and_CloudFront_Storage.md)
 
 ---
 
-## 4.1. Tổng Quan Bài Học (Lesson Overview)
+## 1. Tổng Quan Bài Học (Lesson Overview)
 
 ### Chủ đề chính
-Cụm 3 chương này bao quát toàn diện dịch vụ lưu trữ đối tượng cốt lõi **Amazon Simple Storage Service (S3)**: từ các khái niệm cơ bản (Buckets, Objects, Keys, Prefix), cấu hình lưu trữ website tĩnh, quản lý phiên bản (**S3 Versioning**), cơ chế sao chép dữ liệu xuyên vùng (**Replication: CRR & SRR**), phân loại các tầng lưu trữ (**Storage Classes** bao gồm cả S3 Express One Zone), quy tắc vòng đời dữ liệu (**Lifecycle Rules**), tối ưu hiệu năng (Prefix-based scaling, Multi-part upload, Transfer Acceleration, Byte-Range fetches), đến toàn bộ các cơ chế an ninh bảo mật: **S3 Bucket Policy**, **Block Public Access**, mã hóa (SSE-S3, SSE-KMS, DSSE-KMS, SSE-C), liên kết tên miền chéo **CORS**, khóa bảo vệ chống xóa **MFA Delete**, đường dẫn truy cập tạm thời **Pre-signed URLs**, khóa bất biến **Object Lock & Glacier Vault Lock (WORM)**, điểm truy cập mạng riêng **S3 Access Points**, và tính năng biến đổi dữ liệu động **S3 Object Lambda**.
+Cụm ba chương này bao quát toàn diện dịch vụ lưu trữ đối tượng cốt lõi **Amazon Simple Storage Service (Amazon S3)**:
+- Cấu trúc cơ bản: **Buckets**, **Objects**, **Keys**, và tiền tố phân cấp ảo **Prefixes**.
+- Quản lý phiên bản dữ liệu **S3 Versioning**, con dấu đánh dấu xóa **Delete Markers**, và cơ chế an toàn cấp cao **MFA Delete**.
+- Sao chép dữ liệu tự động: **Cross-Region Replication (CRR)** và **Same-Region Replication (SRR)**.
+- Phân loại các tầng lưu trữ (**Storage Classes**): Standard, Intelligent-Tiering, Standard-IA, One Zone-IA, Glacier Instant Retrieval, Glacier Flexible Retrieval, Glacier Deep Archive, và **S3 Express One Zone**.
+- Tự động hóa tối ưu chi phí qua quy tắc vòng đời **S3 Lifecycle Rules**.
+- Tối ưu hiệu năng truyền tải: Phân tán tiền tố (Prefix-based scaling), **Multipart Upload**, **S3 Transfer Acceleration**, và **Byte-Range Fetches**.
+- Các cơ chế an ninh, bảo mật và phân quyền: **S3 Bucket Policy**, **Block Public Access (BPA)**, các chuẩn mã hóa dữ liệu (**SSE-S3, SSE-KMS, DSSE-KMS, SSE-C**), liên kết tên miền chéo **CORS**, đường dẫn tạm thời **Pre-signed URLs**, bảo vệ chống ghi đè **S3 Object Lock (WORM: Governance vs Compliance)**, điểm truy cập riêng biệt **S3 Access Points**, và biến đổi dữ liệu động **S3 Object Lambda**.
 
 ### Mục tiêu học tập
-1. Nắm vững cấu trúc và nguyên tắc đặt tên Bucket (toàn cầu duy nhất, chữ thường, không chứa gạch dưới).
-2. Hiểu bản chất của S3 Versioning, cách hoạt động của Delete Marker và bảo vệ bằng MFA Delete.
-3. So sánh chi phí và thời gian truy xuất giữa các tầng lưu trữ (Standard, Intelligent-Tiering, IA, Glacier, Deep Archive).
-4. Thiết lập các quy tắc Lifecycle Rules để tự động hóa việc dọn dẹp và giảm chi phí lưu trữ.
-5. Làm chủ các giải pháp tối ưu hiệu năng: đạt 3,500 PUT/POST và 5,500 GET request/giây trên mỗi Prefix.
-6. Thiết lập các rào chắn bảo mật cấp cao: S3 Bucket Policy chặn non-TLS, mã hóa dữ liệu với KMS, cấu hình CORS, Object Lock Compliance mode.
+1. Hiểu sâu mô hình nhất quán dữ liệu mạnh mẽ (**Strong Read-After-Write Consistency**) trên Amazon S3.
+2. Thiết kế chiến lược lưu trữ dữ liệu tối ưu chi phí kết hợp S3 Lifecycle Rules và Intelligent-Tiering.
+3. Làm chủ kỹ thuật tăng tốc tải dữ liệu với **Multipart Upload** và phân chia Prefix.
+4. Xây dựng rào chắn bảo mật cấp doanh nghiệp: Bucket Policy ép buộc HTTPS TLS 1.2+, ngăn ngừa rò rỉ dữ liệu qua Block Public Access và KMS CMK.
+5. Triển khai cơ chế bất biến dữ liệu tuân thủ pháp lý tài chính với **S3 Object Lock Compliance Mode**.
 
 ---
 
-## 4.2. Điểm Cốt Lõi Cần Nhớ (Key Takeaways)
+## 2. Điểm Cốt Lõi Cần Nhớ (Key Takeaways)
 
-1. **S3 không có thư mục thật**: Các dấu gạch chéo `/` trong đường dẫn chỉ là chuỗi tiền tố (**Prefix**). Mỗi Prefix riêng biệt có khả năng phục vụ độc lập **3,500 PUT/POST/DELETE** và **5,500 GET** request/giây.
-2. **S3 Express One Zone**: Lớp lưu trữ hiệu năng cao mới nhất đặt trong **1 Availability Zone duy nhất**, mang lại độ trễ **single-digit millisecond** (nhanh gấp 10 lần S3 Standard). Chuyên dùng cho huấn luyện AI/ML, phân tích dữ liệu lớn và các ứng dụng tài chính cần hàng triệu transaction/giây.
-3. **Multi-part Upload**: Bắt buộc với tệp tin **> 5 GB** và khuyến nghị mạnh mẽ cho mọi tệp tin **> 100 MB** để tải song song và tăng tốc độ truyền dữ liệu.
-4. **S3 Versioning**: Xóa tệp chỉ tạo Delete Marker; muốn xóa thật phải xóa kèm Version ID cụ thể.
-5. **MFA Delete**: Bắt buộc tài khoản Root và chỉ cấu hình được thông qua **AWS CLI** (không cấu hình được trên Console).
-6. **S3 Replication (CRR/SRR)**: Bắt buộc cả hai Bucket nguồn và đích phải **bật Versioning**.
-7. **S3 Multi-Region Access Points (MRAP)**: Cung cấp một Global Endpoint duy nhất trên nền tảng AWS Global Accelerator để định tuyến lưu lượng thông minh tới bucket gần nhất trên nhiều Region và tự động failover.
-8. **S3 Object Lambda**: Cho phép chèn mã AWS Lambda để tự động biến đổi dữ liệu trực tiếp khi ứng dụng gọi lệnh `GET` (mask PII, nén ảnh, chuyển đổi format) mà không cần sao lưu bản copy thứ hai.
-9. **Mặc định an ninh mới**: Mọi S3 bucket mới đều **mặc định bật SSE-S3** và **Object Ownership = Bucket Owner Enforced** (vô hiệu hóa hoàn toàn S3 ACLs, chỉ quản lý qua Bucket Policy).
-10. **Object Lock (Compliance Mode)**: Khóa dữ liệu bất biến (WORM), ngay cả Root Account cũng không thể xóa trước thời hạn bảo vệ.
-11. **Pre-signed URLs**: Cấp quyền tạm thời cho người dùng tải lên hoặc tải xuống mà không cần cấp quyền IAM.
+1. **Nhất quán dữ liệu mạnh (Strong Read-After-Write Consistency)**: S3 hỗ trợ tính nhất quán mạnh mẽ ngay lập tức cho toàn bộ các thao tác `PUT` và `DELETE` trên mọi Region mà không phải trả thêm phí. Ngay sau khi ghi file thành công, lệnh `GET` tiếp theo được đảm bảo 100% đọc được dữ liệu mới nhất.
+2. **S3 không có thư mục thật**: Các ký tự gạch chéo `/` trong đường dẫn chỉ là chuỗi tiền tố (**Prefix**). Mỗi Prefix riêng biệt có khả năng phục vụ độc lập **3,500 PUT/POST/DELETE** và **5,500 GET** requests/giây. Bạn có thể mở rộng thông lượng gần như vô hạn bằng cách phân bổ nhiều Prefix khác nhau.
+3. **Multipart Upload**: Bắt buộc đối với các tệp tin có kích thước **> 5 GB** và khuyến nghị mạnh mẽ cho mọi tệp tin **> 100 MB** để tải song song các phần (parts) và tự động thử lại phần bị lỗi mà không phải tải lại toàn bộ file.
+4. **S3 Express One Zone**: Tầng lưu trữ mới hiệu năng cực đại đặt trong **1 Availability Zone duy nhất**, mang lại độ trễ **single-digit millisecond** (nhanh gấp 10 lần S3 Standard). Lý tưởng cho training mô hình AI/ML và phân tích dữ liệu lớn thời gian thực.
+5. **S3 Versioning**: Xóa tệp khi đã bật Versioning chỉ tạo ra một bản ghi **Delete Marker**. Muốn xóa vĩnh viễn tệp tin, bắt buộc phải truyền chính xác tham số `versionId`.
+6. **MFA Delete**: Bắt buộc xác thực đa yếu tố bằng tài khoản Root để xóa vĩnh viễn một version hoặc thay đổi trạng thái Versioning của bucket; chỉ có thể kích hoạt thông qua **AWS CLI** (không hỗ trợ trên AWS Console).
+7. **S3 Object Lock (Mô hình WORM - Write Once, Read Many)**:
+   - *Governance Mode*: Người dùng có quyền IAM đặc biệt (`s3:BypassGovernanceRetention`) có thể chỉnh sửa hoặc xóa file trước hạn.
+   - *Compliance Mode*: **TUYỆT ĐỐI BẤT BIẾN**, ngay cả tài khoản Root của AWS cũng không thể xóa hay rút ngắn thời hạn bảo vệ của file trước khi hết hạn lưu giữ.
+8. **Mặc định an ninh hiện đại**: Mọi bucket mới tạo đều **mặc định bật mã hóa SSE-S3** và bật **Bucket Owner Enforced** (vô hiệu hóa hoàn toàn S3 ACLs cũ).
 
 ---
 
-## 4.3. Giải Thích Khái Niệm Chi Tiết (Detailed Concept Explanations)
+## 3. Kiến Trúc & Cơ Chế Hoạt Động Chuyên Sâu (Under-the-Hood Mechanisms & Deep Dive)
 
-### 1. Phân biệt các chế độ mã hóa S3 (Server-Side Encryption)
+### 3.1. Mô Hình Nhất Quán Dữ Liệu Mạnh (Strong Read-After-Write Consistency)
 
-| Chế độ mã hóa | Quản lý khóa | Header yêu cầu khi gọi API | Nhật ký kiểm toán | Phí phát sinh |
-| :--- | :--- | :--- | :--- | :--- |
-| **SSE-S3** | Hoàn toàn bởi AWS (AES-256) | `"x-amz-server-side-encryption": "AES256"` | Không có log khóa riêng | **Miễn phí** (Mặc định cho mọi bucket mới) |
-| **SSE-KMS** | Khách hàng qua AWS KMS | `"x-amz-server-side-encryption": "aws:kms"` | **Có (qua CloudTrail)** | Tính phí gọi KMS API |
-| **DSSE-KMS** | 2 lớp độc lập qua KMS | `"x-amz-server-side-encryption": "aws:kms:dsse"` | Có (Kiểm toán 2 lớp) | Tính phí 2 lần KMS |
-| **SSE-C** | Khách hàng tự quản lý khóa | Gửi kèm key trong HTTPS headers | Khách hàng tự theo dõi | Miễn phí |
+Trước năm 2020, S3 sử dụng mô hình Eventual Consistency cho các thao tác ghi đè hoặc xóa. Hiện nay, kiến trúc phân tán của S3 áp dụng mô hình nhất quán tức thì (**Strong Consistency**):
 
-### 2. S3 Access Points & VPC Endpoints
-- **Vấn đề**: Khi một Data Lake S3 Bucket được chia sẻ cho 20 nhóm dự án khác nhau (Data Science, Finance, HR, Marketing), một Bucket Policy đơn lẻ sẽ trở nên khổng lồ, phức tạp và dễ gặp lỗi cấu hình sai.
-- **Giải pháp**: Tạo ra các **S3 Access Points** riêng biệt cho từng nhóm. Mỗi Access Point sở hữu một DNS endpoint riêng và một Access Point Policy độc lập; có thể giới hạn Access Point đó chỉ truy cập được từ bên trong một VPC cụ thể.
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as Ứng Dụng Client
+    participant S3_Front as S3 API Frontend
+    participant Meta as Distributed Metadata Store (Key-Value)
+    participant Storage as Multi-AZ Storage Nodes (3+ AZs)
 
-### 3. S3 Express One Zone vs S3 Standard
+    Client->>S3_Front: PUT /my-bucket/report.pdf (Dữ liệu mới)
+    par Ghi dữ liệu đồng thời xuống các khối lưu trữ
+        S3_Front->>Storage: Ghi dữ liệu nhị phân xuống các ổ đĩa tại 3 Availability Zones
+    and Ghi chỉ mục siêu dữ liệu
+        S3_Front->>Meta: Ghi Atomic Metadata Commit (Key, VersionId, Checksum, ETag)
+    end
+    
+    Storage-->>S3_Front: Xác nhận hoàn tất lưu trữ đa vùng
+    Meta-->>S3_Front: Xác nhận chỉ mục metadata đã cập nhật
+    S3_Front-->>Client: Trả về mã HTTP 200 OK
+    
+    Note over Client,Storage: BẤT KỲ LỆNH GET NÀO NGAY SAU ĐÓ ĐỀU ĐƯỢC PHỤC VỤ DỮ LIỆU MỚI!
+    Client->>S3_Front: GET /my-bucket/report.pdf
+    S3_Front->>Meta: Tra cứu metadata phiên bản mới nhất
+    S3_Front->>Storage: Đọc dữ liệu từ Storage Nodes
+    S3_Front-->>Client: Trả về đúng nội dung mới nhất (Strong Consistency guaranteed!)
+```
 
-| Tiêu chí so sánh | Amazon S3 Standard | Amazon S3 Express One Zone |
-| :--- | :--- | :--- |
-| **Phạm vi triển khai** | Tối thiểu 3 Availability Zones (Multi-AZ) | **1 Availability Zone duy nhất (Single-AZ)** |
-| **Độ trễ truy xuất (Latency)** | Hàng chục mili-giây (Double-digit ms) | **Độ trễ 1 chữ số mili-giây (Single-digit ms)** |
-| **Tốc độ xử lý** | Chuẩn thông thường | **Nhanh gấp 10 lần** so với Standard |
-| **Cơ chế xác thực** | IAM Signature Version 4 thông thường | Hỗ trợ thêm **Directory Buckets** & Session-based authentication |
-| **Trường hợp sử dụng lý tưởng** | Dữ liệu ứng dụng thông thường, sao lưu, web media | **Huấn luyện mô hình AI/ML, Apache Spark, Real-time bidding** |
+---
 
-### 4. S3 Object Lambda
-- **Nguyên lý hoạt động**: Khi Client gọi `s3:GetObject`, request sẽ đi qua một **S3 Object Lambda Access Point**. Điểm truy cập này sẽ tự động kích hoạt một hàm **AWS Lambda** để xử lý dữ liệu trước khi trả về cho Client.
-- **Lợi ích kiến trúc**:
-  - Không cần duy trì nhiều phiên bản dữ liệu (ví dụ: không cần lưu cả bản ảnh gốc và bản ảnh thumbnail, không cần lưu cả bản dữ liệu thô và bản đã che PII).
-  - Phân quyền động tùy theo danh tính của caller (ví dụ: nhân viên kế toán thấy số tài khoản đầy đủ, nhân viên CSKH chỉ thấy 4 số cuối).
+### 3.2. Cơ Chế Tải Lên Song Song Đa Phần (Multipart Upload Architecture)
 
-## 4.4. Câu Hỏi Ôn Tập và Tự Đánh Giá (Review & Self-Assessment)
+```mermaid
+flowchart TD
+    SourceFile["Tệp Tin Lớn (Ví dụ: Video 50 GB)"] --> Splitter["Chia nhỏ thành các phần Parts\n(5 MB đến 5 GB mỗi Part - Tối đa 10,000 Parts)"]
+    
+    Splitter --> Part1["Part 1 (100 MB)"]
+    Splitter --> Part2["Part 2 (100 MB)"]
+    Splitter --> PartN["Part N (100 MB)"]
+    
+    subgraph ParallelUpload["Truyền Tải Song Song Lên S3"]
+        Part1 ==>|UploadPart API| S3_Storage["Amazon S3 Storage Staging"]
+        Part2 ==>|UploadPart API| S3_Storage
+        PartN ==>|UploadPart API| S3_Storage
+    end
+    
+    Part1 -.->|Thất bại?| Retry["Chỉ cần Upload lại Part bị lỗi\nKhông cần tải lại 50 GB!"]
+    Retry ==> S3_Storage
+    
+    S3_Storage --> Assemble["Gọi lệnh CompleteMultipartUpload\n(Truyền danh sách PartNumbers & ETags)"]
+    Assemble --> FinalObject["Tệp Tin Hoàn Chỉnh Duy Nhất Trong S3 Bucket"]
+```
+
+---
+
+### 3.3. Cơ Chế Biến Đổi Dữ Liệu Trực Tiếp: S3 Object Lambda
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as Ứng Dụng Client (Caller)
+    participant OLAP as S3 Object Lambda Access Point
+    participant Lambda as AWS Lambda Function
+    participant S3 as Amazon S3 Bucket (Dữ liệu gốc)
+
+    App->>OLAP: Gọi s3:GetObject (Ví dụ: customer_data.json)
+    OLAP->>Lambda: Kích hoạt Lambda và truyền thông tin ngữ cảnh người gọi
+    Lambda->>S3: Tải tệp tin gốc customer_data.json từ bucket
+    S3-->>Lambda: Trả về dữ liệu gốc đầy đủ (Gồm cả số thẻ tín dụng, CCCD)
+    
+    Note over Lambda: Phân tích danh tính: Nếu không phải Admin,\nthực hiện che thông tin nhạy cảm (PII Masking)
+    
+    Lambda->>OLAP: Gọi WriteGetObjectResponse với dữ liệu đã che chắn
+    OLAP-->>App: Trả về tệp tin đã biến đổi an toàn cho Client!
+```
+
+---
+
+## 4. Lệnh, Cấu Hình & Mã Nguồn Thực Tế (Commands, Config & Code)
+
+### 4.1. S3 Bucket Policy Ép Buộc Kết Nối An Toàn Qua HTTPS (TLS 1.2+)
+
+```json
+{
+  "Version": "2012-10-17",
+  "Id": "EnforceTLSRequestsOnly",
+  "Statement": [
+    {
+      "Sid": "DenyNonSecureTransport",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::my-secure-enterprise-bucket",
+        "arn:aws:s3:::my-secure-enterprise-bucket/*"
+      ],
+      "Condition": {
+        "Bool": {
+          "aws:SecureTransport": "false"
+        }
+      }
+    }
+  ]
+}
+```
+
+---
+
+### 4.2. Quản Trị S3 Bằng AWS CLI v2
+
+```bash
+# 1. Tao Bucket moi va bat tinh nang khoa toan bo truy cap cong khai (Block Public Access)
+aws s3api create-bucket \
+    --bucket my-secure-enterprise-bucket \
+    --region ap-southeast-1 \
+    --create-bucket-configuration LocationConstraint=ap-southeast-1
+
+aws s3api put-public-access-block \
+    --bucket my-secure-enterprise-bucket \
+    --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+
+# 2. Bat tinh nang Versioning cho Bucket
+aws s3api put-bucket-versioning \
+    --bucket my-secure-enterprise-bucket \
+    --versioning-configuration Status=Enabled
+
+# 3. Tao Pre-signed URL cho phep nguoi dung tai file xuong trong vong 15 phut (900 giay)
+aws s3 presign s3://my-secure-enterprise-bucket/confidential-report.pdf --expires-in 900
+
+# 4. Dong bo thu muc du lieu len S3 voi bang thong da luong
+aws s3 sync ./local-data s3://my-secure-enterprise-bucket/datasets/ --storage-class INTELLIGENT_TIERING
+```
+
+---
+
+## 5. Tình Huống Thực Tiễn & Mẫu Kiến Trúc (Real-World Scenarios & Design Patterns)
+
+### Tình huống 1: Bảo Vệ Dữ Liệu Chống Lại Mã Độc Ransomware (WORM Storage)
+- **Bài toán**: Doanh nghiệp tài chính cần lưu trữ hóa đơn điện tử trong 10 năm. Hệ thống phải đảm bảo dù tài khoản quản trị viên bị lộ thông tin đăng nhập hoặc bị mã độc tấn công mã hóa dữ liệu, các tệp tin hóa đơn không bao giờ có thể bị xóa hay sửa đổi.
+- **Giải pháp**:
+  - Khởi tạo S3 Bucket có bật **S3 Object Lock** ngay từ lúc tạo.
+  - Thiết lập chế độ **Compliance Mode** với thời hạn lưu giữ mặc định là 10 năm (3,650 ngày).
+  - Kết quả: Không một ai (kể cả tài khoản Root của công ty hay đội ngũ hỗ trợ kỹ thuật của AWS) có thể xóa hoặc ghi đè lên các hóa đơn này cho đến khi hết thời hạn 10 năm.
+
+### Tình huống 2: Tối Ưu Hóa Chi Phí Tự Động Cho Dữ Liệu Truy Cập Không Dự Đoán Trước
+- **Bài toán**: Doanh nghiệp truyền thông lưu trữ hàng triệu video do người dùng tải lên. Một số video bỗng nhiên trở nên cực kỳ phổ biến (viral) sau nhiều tháng ngủ yên, trong khi đa số các video khác không bao giờ được xem lại.
+- **Giải pháp**:
+  - Chuyển toàn bộ các tệp tin sang lớp lưu trữ **S3 Intelligent-Tiering**.
+  - S3 Intelligent-Tiering tự động di chuyển tệp tin giữa 3 tầng truy cập (Frequent Access, Infrequent Access sau 30 ngày, Archive Instant Access sau 90 ngày) dựa trên thói quen truy cập thực tế mà **không tính bất kỳ chi phí khôi phục (retrieval fees)** hay chi phí di chuyển tầng nào.
+
+---
+
+## 6. Mối Quan Hệ Giữa Các Khái Niệm / Dịch Vụ (Service Relationships & Ecosystem)
+
+```mermaid
+graph TD
+    Client["Ứng Dụng & Người Dùng"]
+    S3["Amazon Simple Storage Service (S3)"]
+    
+    subgraph Acceleration["Tăng Tốc Toàn Cầu"]
+        CF["Amazon CloudFront (CDN)"] -->|OAC Cache Hit| S3
+        S3TA["S3 Transfer Acceleration"] -->|Anycast Edge| S3
+    end
+
+    subgraph SecurityAccess["Bảo Mật & Điểm Truy Cập"]
+        KMS["AWS KMS (SSE-KMS / DSSE-KMS)"] -->|Mã hóa khóa CMK| S3
+        BPA["S3 Block Public Access"] --> S3
+        AP["S3 Access Points"] --> S3
+        OLAP["S3 Object Lambda Access Point"] --> S3
+    end
+
+    subgraph StorageLifecycle["Tầng Lưu Trữ & Vòng Đời"]
+        Intelligent["S3 Intelligent-Tiering"]
+        Glacier["Amazon S3 Glacier"]
+        Express["S3 Express One Zone (Single-AZ < 10ms)"]
+        S3 --> Intelligent
+        S3 --> Glacier
+        S3 --> Express
+    end
+```
+
+---
+
+## 7. Câu Hỏi Ôn Tập, Bẫy Thi & Tự Đánh Giá (Review, Exam Traps & Self-Assessment)
 
 ### Câu hỏi:
-1. Bạn có một tệp tin video dung lượng 15 GB cần tải lên Amazon S3. Phương thức tải lên nào là bắt buộc phải sử dụng?
-2. Trong một S3 Bucket đã bật tính năng Versioning, một kỹ sư chạy lệnh xóa một tệp tin mà không truyền Version ID. Tệp tin đó có bị xóa vĩnh viễn không? Làm thế nào để khôi phục lại tệp tin?
-3. Bạn muốn đảm bảo rằng các bản sao lưu tài chính của công ty khi lưu vào S3 sẽ không thể bị sửa đổi hoặc xóa bỏ bởi bất kỳ ai (kể cả quản trị viên hệ thống hoặc tài khoản AWS Root) trong vòng 5 năm để tuân thủ quy định pháp luật. Bạn nên cấu hình tính năng nào?
-4. Đâu là yêu cầu bắt buộc trên cả 2 S3 Buckets để có thể thiết lập tính năng Cross-Region Replication (CRR)?
-5. Làm thế nào để một trang web chạy trên domain `www.example.com` có thể tải được các font chữ và ảnh lưu trữ tại một S3 bucket có tên miền `s3.amazonaws.com/my-media-bucket` mà không bị trình duyệt chặn?
+1. Bạn có một tệp tin hình ảnh vệ tinh dung lượng 12 GB cần tải lên Amazon S3. Phương thức tải lên nào là bắt buộc phải sử dụng và nếu tải bằng một lệnh `PUT` duy nhất thì chuyện gì sẽ xảy ra?
+2. Trong một S3 Bucket đã bật tính năng Versioning, một kỹ sư chạy lệnh xóa một tệp tin mà không truyền Version ID. Tệp tin đó có bị xóa vĩnh viễn không? Làm thế nào để khôi phục lại tệp tin về trạng thái ban đầu?
+3. Bạn muốn đảm bảo rằng các hồ sơ y tế bệnh án điện tử khi lưu vào S3 sẽ không thể bị sửa đổi hoặc xóa bỏ bởi bất kỳ ai (kể cả quản trị viên hệ thống hoặc tài khoản AWS Root) trong vòng 7 năm để tuân thủ luật y tế. Bạn nên cấu hình tính năng nào?
+4. Đâu là 2 yêu cầu bắt buộc trên cả 2 S3 Buckets (Bucket nguồn và Bucket đích) để có thể thiết lập tính năng Cross-Region Replication (CRR)?
+5. Làm thế nào để ứng dụng web chạy trên domain `www.myportal.com` có thể tải được các web fonts và icon lưu trữ tại một S3 bucket riêng biệt mà không bị trình duyệt chặn hiển thị?
+6. S3 Express One Zone khác gì so với S3 Standard về mặt độ trễ (latency), phạm vi Availability Zone và trường hợp sử dụng tối ưu?
 
 ---
 
-### Đáp án (Self-Assessment Answers):
+### Đáp án & Giải thích chi tiết:
 
 <details>
-<summary>👉 Nhấp vào đây để xem đáp án</summary>
+<summary>👉 Nhấp vào đây để xem đáp án và phân tích chi tiết</summary>
 
-1. Bắt buộc phải sử dụng **Multi-part Upload** (vì S3 giới hạn một lượt PUT đơn lẻ tối đa chỉ là 5 GB).
-2. Tệp tin **KHÔNG BỊ XÓA VĨNH VIỄN**. S3 chỉ tạo thêm một phiên bản mới có tính chất là **Delete Marker**. Để khôi phục tệp, bạn chỉ cần hiển thị danh sách các phiên bản (Show versions) và **xóa bỏ chính thẻ Delete Marker đó**.
-3. Sử dụng tính năng **S3 Object Lock** ở chế độ **Compliance Mode** với thời gian lưu giữ (Retention Period) là 5 năm.
-4. Cả hai bucket (Bucket nguồn và Bucket đích) bắt buộc phải **bật tính năng S3 Versioning**.
-5. Cấu hình **CORS (Cross-Origin Resource Sharing)** trên S3 bucket chứa ảnh/font, thêm rule cho phép Origin `https://www.example.com` với phương thức `GET`.
+1. Bắt buộc phải sử dụng **S3 Multipart Upload**. Vì Amazon S3 quy định giới hạn kích thước tối đa cho một thao tác tải lên đơn lẻ (`s3:PutObject` API) là **5 GB**. Nếu cố tình tải tệp tin 12 GB bằng một lệnh PUT duy nhất, API của S3 sẽ ngay lập tức từ chối và trả về mã lỗi HTTP 400 Bad Request.
+2. Tệp tin **KHÔNG BỊ XÓA VĨNH VIỄN**. S3 chỉ ghi thêm một bản ghi phiên bản mới có tính chất là **Delete Marker** (đóng vai trò như một tấm biển che tệp tin gốc lại). Để khôi phục tệp, bạn chỉ cần hiển thị danh sách toàn bộ các phiên bản (Show Versions) và **thực hiện xóa chính bản ghi Delete Marker đó**.
+3. Sử dụng tính năng **S3 Object Lock** ở chế độ **Compliance Mode** với thời hạn lưu giữ (Retention Period) là 7 năm. Ở chế độ này, tính bất biến WORM được đảm bảo tuyệt đối, không một tài khoản nào (kể cả AWS Root) có thể xóa file trước hạn.
+4. Hai yêu cầu bắt buộc:
+   - Cả hai S3 Buckets (Nguồn và Đích) bắt buộc phải **bật tính năng S3 Versioning**.
+   - Phải cấu hình một **IAM Role** cấp quyền cho dịch vụ S3 đọc dữ liệu từ Bucket nguồn và sao chép ghi dữ liệu sang Bucket đích.
+5. Cấu hình quy tắc **CORS (Cross-Origin Resource Sharing)** trên S3 bucket chứa fonts, khai báo Origin được phép là `https://www.myportal.com` với phương thức HTTP cho phép là `GET` và `HEAD`.
+6. Sự khác biệt cốt lõi:
+   - **Độ trễ**: S3 Express One Zone mang lại độ trễ chỉ **vài mili-giây (single-digit ms)**, nhanh hơn 10 lần so với S3 Standard.
+   - **Phạm vi triển khai**: Đặt trong **duy nhất 1 Availability Zone**, trong khi S3 Standard phân tán trên tối thiểu 3 Availability Zones.
+   - **Trường hợp sử dụng**: Dành cho các tác vụ tính toán chuyên sâu đòi hỏi tốc độ I/O cực đại như huấn luyện AI/ML, Apache Spark, tài chính thời gian thực.
 </details>
 
 ---
 
-## 4.5. Nguồn Tham Chiếu (Source References)
+## 8. Nguồn Trích Dẫn Bài Giảng & Tài Liệu Liên Quan (Source References)
 
 - **Source Transcripts**:
-  - [128 - S3 Overview.md](file:///n:/AWS_XBrain_Note/AWS_Resources/12%20-%20Amazon%20S3%20Introduction/128%20-%20S3%20Overview.md)
-  - [130 - S3 Security_ Bucket Policy.md](file:///n:/AWS_XBrain_Note/AWS_Resources/12%20-%20Amazon%20S3%20Introduction/130%20-%20S3%20Security_%20Bucket%20Policy.md)
-  - [134 - S3 Versioning.md](file:///n:/AWS_XBrain_Note/AWS_Resources/12%20-%20Amazon%20S3%20Introduction/134%20-%20S3%20Versioning.md)
-  - [136 - S3 Replication.md](file:///n:/AWS_XBrain_Note/AWS_Resources/12%20-%20Amazon%20S3%20Introduction/136%20-%20S3%20Replication.md)
-  - [139 - S3 Storage Classes Overview.md](file:///n:/AWS_XBrain_Note/AWS_Resources/12%20-%20Amazon%20S3%20Introduction/139%20-%20S3%20Storage%20Classes%20Overview.md)
-  - [142 - S3 Lifecycle Rules (with S3 Analytics).md](file:///n:/AWS_XBrain_Note/AWS_Resources/13%20-%20Advanced%20Amazon%20S3/142%20-%20S3%20Lifecycle%20Rules%20(with%20S3%20Analytics).md)
-  - [147 - S3 Performance.md](file:///n:/AWS_XBrain_Note/AWS_Resources/13%20-%20Advanced%20Amazon%20S3/147%20-%20S3%20Performance.md)
-  - [150 - S3 Encryption.md](file:///n:/AWS_XBrain_Note/AWS_Resources/14%20-%20Amazon%20S3%20Security/150%20-%20S3%20Encryption.md)
-  - [156 - S3 MFA Delete.md](file:///n:/AWS_XBrain_Note/AWS_Resources/14%20-%20Amazon%20S3%20Security/156%20-%20S3%20MFA%20Delete.md)
-  - [160 - S3 Pre-signed URLs.md](file:///n:/AWS_XBrain_Note/AWS_Resources/14%20-%20Amazon%20S3%20Security/160%20-%20S3%20Pre-signed%20URLs.md)
-  - [162 - Glacier Vault Lock & S3 Object Lock.md](file:///n:/AWS_XBrain_Note/AWS_Resources/14%20-%20Amazon%20S3%20Security/162%20-%20Glacier%20Vault%20Lock%20&%20S3%20Object%20Lock.md)
-  - [163 - S3 Access Points.md](file:///n:/AWS_XBrain_Note/AWS_Resources/14%20-%20Amazon%20S3%20Security/163%20-%20S3%20Access%20Points.md)
+  - [128 - S3 Overview.md](../AWS_Resources/12%20-%20Amazon%20S3%20Introduction/128%20-%20S3%20Overview.md)
+  - [130 - S3 Security_ Bucket Policy.md](../AWS_Resources/12%20-%20Amazon%20S3%20Introduction/130%20-%20S3%20Security_%20Bucket%20Policy.md)
+  - [134 - S3 Versioning.md](../AWS_Resources/12%20-%20Amazon%20S3%20Introduction/134%20-%20S3%20Versioning.md)
+  - [136 - S3 Replication.md](../AWS_Resources/12%20-%20Amazon%20S3%20Introduction/136%20-%20S3%20Replication.md)
+  - [139 - S3 Storage Classes Overview.md](../AWS_Resources/12%20-%20Amazon%20S3%20Introduction/139%20-%20S3%20Storage%20Classes%20Overview.md)
+  - [142 - S3 Lifecycle Rules (with S3 Analytics).md](../AWS_Resources/13%20-%20Advanced%20Amazon%20S3/142%20-%20S3%20Lifecycle%20Rules%20%28with%20S3%20Analytics%29.md)
+  - [147 - S3 Performance.md](../AWS_Resources/13%20-%20Advanced%20Amazon%20S3/147%20-%20S3%20Performance.md)
+  - [150 - S3 Encryption.md](../AWS_Resources/14%20-%20Amazon%20S3%20Security/150%20-%20S3%20Encryption.md)
+  - [156 - S3 MFA Delete.md](../AWS_Resources/14%20-%20Amazon%20S3%20Security/156%20-%20S3%20MFA%20Delete.md)
+  - [160 - S3 Pre-signed URLs.md](../AWS_Resources/14%20-%20Amazon%20S3%20Security/160%20-%20S3%20Pre-signed%20URLs.md)
+  - [162 - Glacier Vault Lock & S3 Object Lock.md](../AWS_Resources/14%20-%20Amazon%20S3%20Security/162%20-%20Glacier%20Vault%20Lock%20%26%20S3%20Object%20Lock.md)
+  - [163 - S3 Access Points.md](../AWS_Resources/14%20-%20Amazon%20S3%20Security/163%20-%20S3%20Access%20Points.md)
+- **Tài liệu chuyên sâu liên quan**:
+  - [Chuyên đề Master: Amazon S3 & CloudFront](../AWS_Services/S3_and_CloudFront_Storage.md)

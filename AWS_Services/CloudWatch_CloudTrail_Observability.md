@@ -6,7 +6,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### Dịch vụ gì?
 Bộ ba dịch vụ **Amazon CloudWatch**, **AWS CloudTrail**, và **AWS Config** tạo nên trụ cột vững chắc nhất cho khả năng quan sát toàn diện (**Full-stack Observability**), kiểm toán an ninh (**Security Audit**), và quản trị tuân thủ quy chuẩn (**Compliance Governance**) trên toàn bộ hệ thống AWS:
@@ -16,7 +16,7 @@ Bộ ba dịch vụ **Amazon CloudWatch**, **AWS CloudTrail**, và **AWS Config*
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Phân Định Vai Trò: CloudWatch vs CloudTrail vs AWS Config
 
@@ -216,12 +216,43 @@ flowchart TD
 - **Giải pháp ĐÚNG**: Kích hoạt **Application Load Balancer Access Logs** và đẩy log vào Amazon S3 (`TD-Set5 Q23`).
   - ALB Access Logs chứa đầy đủ: client IP, request processing time, target processing time, response processing time, HTTP status code và request URL path. Dùng **Amazon Athena** để chạy SQL phân tích tìm ra request nào bị chậm trễ (`TD-Set5 Q23`).
 
+#### 🪤 Bẫy 13: Giám Sát Hiệu Năng Tần Suất Cao (<= 2 Phút) Ít Công Sức Quản Trị Nhất — (U-PT4 Q01)
+- **Tình huống đề thi**: *"Doanh nghiệp cần theo dõi các chỉ số hiệu năng chuẩn của máy chủ EC2 (CPU, Disk I/O, Network) với tần suất giám sát định kỳ dưới 2 phút (ví dụ 1 phút một lần) để kịp thời phát hiện sự cố hiệu năng, với yêu cầu giải pháp triển khai nhanh nhất và tốn ít công sức quản trị nhất (Least operational effort)."*
+- **Các phương án bẫy**:
+  - ❌ *Cài đặt CloudWatch Agent trên từng máy ảo*: CloudWatch Agent chủ yếu dùng để lấy custom metrics (RAM, Disk space, OS logs); việc cài đặt agent trên hàng loạt máy ảo đòi hỏi bảo trì, cấu hình file JSON và quản trị vòng đời agent phức tạp không cần thiết cho các chỉ số hypervisor cơ bản.
+  - ❌ *Xuất log sang S3 và dùng Athena phân tích định kỳ*: Độ trễ cao, cồng kềnh, không đáp ứng yêu cầu giám sát thời gian thực.
+- **Giải pháp ĐÚNG**: Bật tính năng **EC2 Detailed Monitoring (chu kỳ 1 phút)**.
+  - Mặc định (Basic Monitoring), máy chủ EC2 chỉ gửi số liệu lên CloudWatch mỗi 5 phút một lần.
+  - Bật Detailed Monitoring chỉ bằng 1 cú click chuột hoặc câu lệnh CLI/CloudFormation (`Monitoring: Enabled: true`), cung cấp dữ liệu số liệu gửi lên CloudWatch theo chu kỳ **1 phút** mà không cần cài đặt hay duy trì bất kỳ phần mềm agent nào bên trong hệ điều hành máy ảo.
+
+#### 🪤 Bẫy 14: Tự Động Khởi Động Lại Máy Ảo EC2 Bị Treo Bằng CloudWatch Alarm Reboot Action — (U-PT4 Q18)
+- **Tình huống đề thi**: *"Một máy chủ Amazon EC2 thỉnh thoảng bị treo ứng dụng hoặc quá tải dẫn tới kiểm tra trạng thái máy ảo bị thất bại (`StatusCheckFailed_Instance`). Doanh nghiệp muốn tự động khởi động lại (Reboot) máy ảo này với chi phí thấp nhất và ít công sức quản lý nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Viết hàm AWS Lambda bắt sự kiện EventBridge để gọi API `ec2:RebootInstances`*: Tốn công viết code, bảo trì runtime, phân quyền IAM role và kiểm thử hàm không cần thiết.
+  - ❌ *Dùng Systems Manager Automation document*: Phức tạp hơn và phát sinh chi phí/công sức quản trị cao hơn so với tính năng tích hợp sẵn của CloudWatch Alarm.
+- **Giải pháp ĐÚNG**: Tạo một **CloudWatch Alarm** trên chỉ số `StatusCheckFailed_Instance` và gắn trực tiếp hành động **EC2 Reboot Alarm Action**.
+  - CloudWatch Alarms hỗ trợ hành động tích hợp bản địa trực tiếp với EC2 (EC2 Actions): **Reboot**, **Stop**, **Terminate**, hoặc **Recover**.
+  - Giải pháp này hoàn toàn Serverless, kích hoạt tức thì, không tốn bất kỳ chi phí viết mã hay duy trì hàm ngoài nào.
+
+#### 🪤 Bẫy 15: Thu Thập Và Tập Trung Hóa Nhật Ký Ứng Dụng EC2 Bằng CloudWatch Agent — (U-PT4 Q32)
+- **Tình huống đề thi**: *"Ứng dụng doanh nghiệp chạy trên máy chủ EC2 ghi các tệp nhật ký ứng dụng và lỗi hệ thống vào đường dẫn cục bộ `/var/log/application.log`. Doanh nghiệp muốn tập trung hóa toàn bộ nhật ký này lên Amazon CloudWatch Logs để phân tích và lưu trữ dài hạn."*
+- **Các phương án bẫy**:
+  - ❌ *Viết script Cron job đẩy file log lên S3 mỗi giờ*: Độ trễ cao, tốn công bảo trì script, dễ bị rớt log nếu máy ảo bị terminate đột ngột.
+  - ❌ *Dùng AWS DataSync*: DataSync chuyên dùng cho di chuyển tập tin hệ thống NFS/SMB khối lượng lớn, không thiết kế để stream từng dòng log liên tục lên CloudWatch.
+- **Giải pháp ĐÚNG**: Cài đặt **Unified CloudWatch Agent** trên máy chủ EC2 và cấu hình mục `logs` trong file cấu hình JSON trỏ tới file log ứng dụng.
+  - CloudWatch Agent đọc luồng log theo thời gian thực và đẩy trực tiếp lên CloudWatch Logs Group chỉ định.
+  - Đi kèm với IAM Instance Profile có policy `CloudWatchAgentServerPolicy`.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Giám Sát & Kiểm Toán Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Tham chiếu đề thi |
 |:---|:---|:---|:---|
+| **Giám sát EC2 tần suất <= 2 phút ít tốn công nhất** | **EC2 Detailed Monitoring (chu kỳ 1 phút)** | Cài CloudWatch Agent (quá cồng kềnh cho basic metrics) | `U-PT4 Q01` |
+| **Tự động Reboot EC2 khi lỗi `StatusCheckFailed_Instance`** | **CloudWatch Alarm + EC2 Reboot Action** | Viết Lambda + EventBridge (phức tạp, tốn công) | `U-PT4 Q18` |
+| **Tập trung hóa log ứng dụng từ EC2 lên CloudWatch Logs** | **Unified CloudWatch Agent (khai báo mục logs)** | Viết Cronjob copy lên S3 (độ trễ cao, dễ mất log) | `U-PT4 Q32` |
+| **Giám sát thiếu hụt bộ nhớ RAM & Swap Space của EC2** | **Unified CloudWatch Agent + `mem_used_percent`, `swap_used_percent`** | Detailed Monitoring (chỉ đo CPU/Network/Disk, không đo OS memory) | `TD-Set2 Q61`, `TD-Set6 Q19`, `TD-Set1 Q12` |
 | **Giám sát thiếu hụt bộ nhớ RAM & Swap Space của EC2** | **Unified CloudWatch Agent + `mem_used_percent`, `swap_used_percent`** | Detailed Monitoring (chỉ đo CPU/Network/Disk, không đo OS memory) | `TD-Set2 Q61`, `TD-Set6 Q19`, `TD-Set1 Q12` |
 | **Cấp quyền IAM cho EC2 gửi metrics CloudWatch Agent** | **IAM Role gắn policy `CloudWatchAgentServerPolicy`** | `AdministratorAccess` (thừa quyền), `AmazonEC2RoleforSSM` (sai mục đích) | `TD-Set6 Q19` |
 | **Auto Scaling Group cần phản hồi nhanh trong 1 phút** | **EC2 Detailed Monitoring (chu kỳ 1 phút)** | Basic Monitoring (chu kỳ 5 phút gây trễ phản ứng) | `TD-Set1 Q45` |
@@ -243,7 +274,7 @@ flowchart TD
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Luồng Tự Động Phát Hiện & Khắc Phục Sự Cố An Ninh (EventBridge, CloudTrail vs Config)
 
@@ -274,7 +305,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức tích hợp) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -286,7 +317,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
+## 5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
 
 ### So sánh các giải pháp quan sát, kiểm toán và phân tích log
 
@@ -301,9 +332,9 @@ sequenceDiagram
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### 6.6.1. Bảng Cấu Trúc Định Giá Chi Tiết
+### 6.1. Bảng Cấu Trúc Định Giá Chi Tiết
 
 | Thành phần Dịch Vụ | Đơn giá AWS niêm yết (us-east-1) | Cơ chế đo lường | Ghi chú tối ưu hóa chi phí FinOps |
 | :--- | :--- | :--- | :--- |
@@ -319,7 +350,7 @@ sequenceDiagram
 
 ---
 
-### 6.6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
+### 6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
 
 #### Kịch bản 1: Thiết lập chính sách hết hạn lưu trữ cho CloudWatch Log Groups
 - **Bối cảnh**: Doanh nghiệp vận hành 120 microservices trong 3 năm qua. Theo mặc định của AWS, toàn bộ các Log Group được tạo ra đều có thời gian lưu trữ là **`Never Expire`** (Không bao giờ hết hạn). Tổng dung lượng log tích lũy đã đạt **35 TB (35,000 GB)**.
@@ -389,7 +420,7 @@ sequenceDiagram
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Tình huống sự cố (Problem) | Nguyên nhân cốt lõi (Root Cause) | Các bước điều tra & Chỉ số giám sát (Metrics & Logs) | Giải pháp khắc phục (Remediation) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -403,7 +434,7 @@ sequenceDiagram
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Giám Sát & Kiểm Toán AWS (Golden Rules)
 1. **Cài đặt CloudWatch Agent để lấy RAM**: AWS Hypervisor không tự đo được RAM và Disk bên trong hệ điều hành máy ảo.

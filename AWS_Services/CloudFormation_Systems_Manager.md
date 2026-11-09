@@ -304,12 +304,25 @@ sequenceDiagram
   - Script cài đặt phần mềm trong EC2 bị lỗi khiến lệnh `cfn-signal -e 1` gửi mã lỗi, hoặc script bị treo không gọi tới `cfn-signal`.
   - CloudFormation chờ hết khoảng thời gian `Timeout` quy định trong `CreationPolicy` mà không nhận đủ tín hiệu thành công (`-e 0`) $\rightarrow$ Tự động hủy stack và rollback để tránh tốn chi phí cho tài nguyên lỗi.
 
+#### 🪤 Bẫy 6: Vá Lỗi An Toàn Cho Máy Chủ Phía Sau ALB Bằng SSM Automation `AWSEC2-PatchLoadBalancerInstance` — (U-PT4 Q02)
+- **Tình huống đề thi**: *"Doanh nghiệp vận hành một đội máy chủ EC2 nằm sau Application Load Balancer (ALB). Đội ngũ vận hành cần định kỳ vá lỗi hệ điều hành vào cuối tuần thông qua lịch trình tự động (Maintenance Windows), với yêu cầu bắt buộc: TUYỆT ĐỐI KHÔNG làm rớt kết nối hoặc gây lỗi HTTP 5xx cho người dùng đang truy cập website."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng SSM Patch Manager trực tiếp không qua Automation*: Patch Manager sẽ kích hoạt cài bản vá và reboot máy chủ ngay lập tức. ALB chưa kịp ngắt kết nối sẽ tiếp tục chuyển tiếp traffic người dùng tới máy chủ đang reboot, gây ra hàng loạt lỗi gián đoạn HTTP 502/504!
+  - ❌ *Tự viết script Bash/PowerShell gọi CLI ngắt tải thủ công*: Phức tạp, dễ gặp lỗi race condition khi chờ connection draining và tốn công bảo trì mã nguồn script.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Systems Manager Maintenance Windows** thực thi tác vụ **Systems Manager Automation** với tài liệu chuẩn AWS: **`AWSEC2-PatchLoadBalancerInstance`**.
+  - Quy trình tự động hóa an toàn chuẩn mực 4 bước:
+    1. Tự động gọi API hủy đăng ký (**Deregister**) instance khỏi Target Group của ALB.
+    2. Chờ hết khoảng thời gian chờ ngắt kết nối (**Deregistration Delay / Connection Draining**) để các HTTP requests dở dang xử lý xong hoàn toàn.
+    3. Cài đặt các bản vá lỗi cần thiết và reboot hệ điều hành an toàn.
+    4. Tự động đăng ký lại (**Re-register**) instance vào Target Group và kiểm tra cho đến khi trạng thái Target Health đạt `Healthy` mới tiếp tục chuyển sang máy chủ tiếp theo.
+
 ---
 
 ## 📊 III. Ma Trận Quyết Định Công Nghệ Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
 |:---|:---|:---|:---|
+| **Vá lỗi EC2 sau ALB an toàn không downtime** | **SSM Automation `AWSEC2-PatchLoadBalancerInstance` + Maintenance Windows** | Patch Manager trực tiếp (reboot làm rớt kết nối ALB HTTP 5xx) | `U-PT4 Q02` |
 | **Truy cập shell EC2 trong Private Subnet không mở Port 22, không Bastion** | **SSM Session Manager + Interface VPC Endpoints** | Bastion Host (tốn chi phí, rủi ro an ninh mạng) | Chuẩn AWS |
 | **Quyền IAM tối thiểu chuẩn xác cho EC2 giao tiếp với SSM** | **Policy `AmazonSSMManagedInstanceCore`** | Policy `AmazonEC2RoleforSSM` (đã deprecated) | Chuẩn AWS |
 | **Lưu trữ cấu hình ứng dụng rẻ nhất, mã hóa KMS, không auto-rotate** | **SSM Parameter Store (SecureString)** | AWS Secrets Manager (tốn phí $0.40/secret/tháng) | `TD-Set3 Q33` |
@@ -340,7 +353,7 @@ sequenceDiagram
 ---
 
 ### Liên Kết Nội Bộ và Tài Liệu Tham Khảo (Internal Links)
-- 📖 [Ghi Chú Bài Học Chương 17: AWS CloudFormation](../Lesson_Notes/17_CloudFormation_Deep_Dive.md)
+- 📖 [Ghi Chú Bài Học Chương 17: AWS CloudFormation](../Lesson_Notes/30_Other_Services_CloudFormation_SSM.md)
 - 📖 [Tài Liệu Chuyên Sâu: Bảo Mật & Mã Hóa AWS KMS](./KMS_Security_Encryption.md)
 - 📖 [Tài Liệu Chuyên Sâu: Phân Tích & Giám Sát CloudWatch & CloudTrail](./CloudWatch_CloudTrail_Observability.md)
 - 📖 [Cẩm Nang Từ Vựng Giải Mã Đề Thi](../EXAM_VOCABULARY.md)

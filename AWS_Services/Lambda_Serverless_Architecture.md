@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: AWS Lambda, Amazon API Gateway, DynamoDB & Kiến Trúc Phi Máy Chủ (Serverless Architecture)
+﻿# Tài Liệu Học Tập Chuyên Sâu: AWS Lambda, Amazon API Gateway, DynamoDB & Kiến Trúc Phi Máy Chủ (Serverless Architecture)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -6,7 +6,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### Dịch vụ gì?
 Mô hình điện toán phi máy chủ (**Serverless**) trên AWS cho phép lập trình viên và kiến trúc sư đám mây xây dựng và vận hành các ứng dụng hoàn chỉnh mà không cần cấu hình, bảo trì hay quản lý bất kỳ cụm máy ảo nào. Bộ tứ trụ cột Serverless cốt lõi bao gồm:
@@ -18,7 +18,7 @@ Mô hình điện toán phi máy chủ (**Serverless**) trên AWS cho phép lậ
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Giới Hạn Kỹ Thuật Sống Còn của AWS Lambda (Lambda Limits & Runtime)
 
@@ -281,7 +281,7 @@ flowchart TD
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Kiến trúc Webhook & Xử Lý Đơn Hàng Phi Máy Chủ Bất Đồng Bộ
 
@@ -315,7 +315,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức tích hợp) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -328,7 +328,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
+## 5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
 
 ### So sánh các nền tảng tính toán cho Microservices trên AWS
 
@@ -343,9 +343,9 @@ sequenceDiagram
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### 6.6.1. Bảng Cấu Trúc Định Giá Chi Tiết
+### 6.1. Bảng Cấu Trúc Định Giá Chi Tiết
 
 | Thành phần Dịch Vụ | Đơn giá AWS niêm yết | Cơ chế đo lường | Ghi chú tối ưu hóa chi phí FinOps |
 | :--- | :--- | :--- | :--- |
@@ -358,7 +358,7 @@ sequenceDiagram
 
 ---
 
-### 6.6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
+### 6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
 
 #### Kịch bản 1: Chuyển đổi API Gateway từ REST API sang HTTP API
 - **Bối cảnh**: Hệ thống backend di động tiếp nhận **120 triệu lượt gọi API** mỗi tháng. Kỹ sư khởi tạo cổng API bằng REST API mặc định.
@@ -416,7 +416,7 @@ sequenceDiagram
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Tình huống sự cố (Problem) | Nguyên nhân cốt lõi (Root Cause) | Các bước điều tra & Chỉ số giám sát (Metrics & Logs) | Giải pháp khắc phục (Remediation) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -430,7 +430,7 @@ sequenceDiagram
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Kiến Trúc Serverless AWS (Golden Rules)
 1. **Tuân thủ giới hạn 15 phút**: Lambda chỉ dành cho tác vụ ngắn dưới 900 giây; tác vụ dài hơn bắt buộc chuyển sang ECS Fargate.

@@ -7,7 +7,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### 1. Định nghĩa chuẩn xác và Phân nhóm dịch vụ
 Bộ đôi **Elastic Load Balancing (ELB)** và **Auto Scaling Groups (ASG)** là xương sống kiến trúc nền tảng của mọi hệ thống phân tán có tính sẵn sàng cao (**High Availability - HA**), khả năng chịu lỗi (**Fault Tolerance**) và co giãn đàn hồi (**Elasticity**) trên AWS.
@@ -49,7 +49,7 @@ flowchart TD
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Sơ đồ các mô hình kiến trúc của Application Load Balancer
 
@@ -250,6 +250,38 @@ flowchart TD
 - **Phương án bẫy**: Rất tốn kém chi phí (10 ALBs $\approx \$220\text{/tháng}$ tiền phí duy trì cơ sở chưa tính LCU), phức tạp vận hành và lãng phí tài nguyên.
 - **Giải pháp ĐÚNG**: Chỉ cần sử dụng **1 Application Load Balancer duy nhất**. Bật tính năng **Server Name Indication (SNI)** và gắn toàn bộ 10 chứng chỉ SSL vào chung một HTTPS listener (cổng 443).
 
+#### 🪤 Bẫy 10: Vá Lỗi An Toàn Cho Máy Chủ Nằm Sau ALB Bằng SSM Automation — (U-PT4 Q02)
+- **Tình huống đề thi**: *"Ứng dụng render nội dung chạy trên cụm EC2 đăng ký với Application Load Balancer (ALB). Doanh nghiệp sử dụng AWS Systems Manager để cập nhật bản vá định kỳ. Yêu cầu tuân thủ mới bắt buộc các EC2 instance phải được rút khỏi lưu lượng sản xuất (deregister khỏi ALB) một cách an toàn trong lúc vá lỗi để tránh lỗi 502/timeout cho người dùng, sau đó tự động đăng ký lại khi vá xong."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng CloudWatch Logs theo dõi rồi điều chỉnh target group thủ công*: Dễ sai sót và chậm trễ, không tự động hóa.
+  - ❌ *Đổi Target Group sang IP-based hoặc vô hiệu hóa card mạng qua Lambda*: Gây đứt gãy kết nối in-flight và không kiểm soát được connection draining.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Systems Manager Automation** với document chuẩn **`AWSEC2-PatchLoadBalancerInstance`** kết hợp **SSM Maintenance Windows**.
+  - Document này được AWS thiết kế chuyên dụng: tự động deregister instance khỏi ALB target group, chờ đợi connection draining hoàn tất các request đang xử lý dở, thực hiện cài đặt bản vá, reboot instance nếu cần, kiểm tra health check và tự động re-register instance vào ALB!
+
+#### 🪤 Bẫy 11: Sự Khác Biệt Giữa ASG Health Check và ALB Health Check — (U-PT4 Q35)
+- **Tình huống đề thi**: *"Hệ thống streaming chạy trên EC2 được quản lý bởi Auto Scaling Group đằng sau Application Load Balancer. Khi ứng dụng web bên trong máy chủ bị crash (trả về lỗi HTTP 500/503), ALB phát hiện và chuyển trạng thái target thành Unhealthy. Tuy nhiên, Auto Scaling Group vẫn KHÔNG THỂ thay thế instance lỗi này mà tiếp tục để nó chạy. Nguyên nhân cốt lõi là gì?"*
+- **Bản chất kỹ thuật sống còn**:
+  - Mặc định, Auto Scaling Group chỉ sử dụng **EC2 Health Checks** (chỉ kiểm tra trạng thái phần cứng hypervisor của máy chủ vật lý). Nếu phần cứng vẫn bật, ASG coi máy ảo là "Healthy", bất kể ứng dụng web bên trong đã sập hoàn toàn!
+  - Trong khi đó, **ALB Health Checks** gửi HTTP ping trực tiếp vào ứng dụng web định kỳ (ví dụ `/healthz`).
+- **Giải pháp ĐÚNG**: Bắt buộc phải chuyển cấu hình **Health Check Type của Auto Scaling Group sang `ELB`** (thay vì chỉ để `EC2`). Khi đó, bất cứ khi nào ALB đánh giá target là Unhealthy, ASG sẽ lập tức kích hoạt quy trình terminate instance lỗi và khởi tạo instance mới thay thế!
+
+#### 🪤 Bẫy 12: Co Giãn Tự Động Theo Chiều Dài Hàng Đợi SQS (Backlog-Based Auto Scaling) — (U-PT4 Q04)
+- **Tình huống đề thi**: *"Hệ thống logistics xử lý đơn hàng gồm 2 giai đoạn: tiếp nhận đơn hàng (job intake) và xử lý phân tích đơn hàng (job processing). Lượng đơn hàng biến động rất lớn theo từng giờ. Cần kiến trúc tách rời 2 giai đoạn và tự động co giãn các cụm máy chủ worker độc lập dựa trên khối lượng công việc đang tồn đọng."*
+- **Giải pháp ĐÚNG**: Thiết lập **2 hàng đợi Amazon SQS độc lập** (Queue 1 cho intake, Queue 2 cho processing) và cấu hình **Auto Scaling Group co giãn dựa trên số lượng tin nhắn trong hàng đợi** (`ApproximateNumberOfMessagesVisible`).
+  - Phân tách hoàn toàn sự phụ thuộc giữa tầng tiếp nhận và tầng xử lý.
+  - Cấu hình metric toán học chuẩn: `Backlog Per Instance = SQS Queue Length / Running ASG Capacity` kết hợp Target Tracking Policy để tăng/giảm worker kịp thời khi đơn hàng dồn ứ.
+
+#### 🪤 Bẫy 13: Cấu Hình Minimum Capacity Tránh Sập Toàn Bộ Ứng Dụng Khi Giảm Tải — (U-PT4 Q29)
+- **Tình huống đề thi**: *"Ứng dụng y tế trực tuyến ghi nhận lưu lượng truy cập giảm mạnh vào ban đêm. Khi tính năng Auto Scaling kích hoạt giảm tải (Scale-In), toàn bộ các máy chủ EC2 bị tắt hết khiến các bệnh nhân cấp cứu nửa đêm không thể truy cập hệ thống. Cần cấu hình thông số nào để luôn đảm bảo có sẵn một số lượng máy chủ tối thiểu phục vụ 24/7?"*
+- **Giải pháp ĐÚNG**: Cấu hình thuộc tính **Minimum Capacity (`min-size`)** của Auto Scaling Group lớn hơn hoặc bằng mức năng lực tối thiểu bắt buộc (ví dụ: `Min = 2` trải trên 2 AZs). ASG sẽ không bao giờ giảm số lượng instance xuống dưới ngưỡng này, bất kể lưu lượng CPU hay network xuống thấp đến đâu.
+
+#### 🪤 Bẫy 14: Giới Hạn Phạm Vi Vùng Của Auto Scaling Group (ASG Is Regional) — (U-PT4 Q58)
+- **Tình huống đề thi**: *"Doanh nghiệp SaaS muốn thiết kế kiến trúc có tính sẵn sàng cao cho ứng dụng web. Một kỹ sư đề xuất cấu hình một Auto Scaling Group duy nhất trải dài trên các Availability Zone thuộc hai AWS Regions khác nhau (ví dụ: us-east-1 và us-west-2) và đăng ký vào chung một ALB. Đề xuất này có khả thi không?"*
+- **Nguyên lý bất biến**:
+  - **Auto Scaling Group và Application Load Balancer đều là tài nguyên cấp Vùng (Regional Resource)**.
+  - ASG **KHÔNG THỂ trải dài qua nhiều Regions**; ASG chỉ có thể bao phủ nhiều Availability Zones trong **CÙNG MỘT Region**.
+- **Giải pháp ĐÚNG**: Cấu hình Auto Scaling Group trải trên **nhiều Availability Zones trong 1 Region duy nhất** đằng sau một Application Load Balancer cấp Region. Nếu muốn mở rộng đa Region, phải tạo 2 ASG độc lập ở 2 Region và điều phối bằng **Amazon Route 53** hoặc **AWS Global Accelerator**.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Cân Bằng Tải & Co Giãn Nhanh (Exam Decision Matrix)
@@ -257,6 +289,11 @@ flowchart TD
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
 |:---|:---|:---|:---:|
 | **Phục vụ nhiều domain SSL độc lập chi phí thấp nhất** | **ALB với Server Name Indication (SNI)** | Tạo nhiều ALB riêng biệt (tốn kém chi phí) | TD-Set3 Q20 |
+| **Vá lỗi EC2 sau ALB an toàn không gây downtime** | **SSM Automation (`AWSEC2-PatchLoadBalancerInstance`)** | Đổi target group sang IP hoặc gỡ thủ công | U-PT4 Q02 |
+| **Ứng dụng web sập (HTTP 5xx) nhưng ASG không thay thế** | **Chuyển ASG Health Check Type sang `ELB`** | Giữ mặc định `EC2` (chỉ check hypervisor) | U-PT4 Q35 |
+| **Co giãn máy chủ theo khối lượng đơn hàng tồn đọng** | **ASG Target Tracking theo SQS Backlog** | Co giãn theo CPU (CPU thấp dù queue đang ứ) | U-PT4 Q04 |
+| **Đảm bảo luôn có máy chủ 24/7 kể cả lúc vắng khách** | **Cấu hình ASG Minimum Capacity $\ge 2$** | Để `Min = 0` (hệ thống bị scale-in về 0 máy) | U-PT4 Q29 |
+| **Phạm vi triển khai của Auto Scaling Group** | **Đa AZ trong CÙNG 1 Region** | Trải dài xuyên nhiều AWS Regions (ASG bị cấm) | U-PT4 Q58 |
 | **Thu thập log trước khi instance lỗi bị terminate** | **ASG Lifecycle Hook (`Terminating:Wait`)** | Không cấu hình hook (instance bị terminate mất log) | TD-Set5 Q45 |
 | **Phân phối request đồng đều cho targets ở mọi AZ** | **Cross-Zone Load Balancing** | Disabled Cross-zone (gây lệch tải giữa các AZ) | TD-Set6 Q28 |
 | **Tải công việc tăng giảm định kỳ theo giờ mỗi ngày** | **ASG Scheduled Scaling Actions** | Dynamic Scaling (bị trễ khi lưu lượng ùa vào) | TD-Set1 Q04 |
@@ -276,7 +313,7 @@ flowchart TD
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### 1. Sơ đồ kiến trúc Web Tier chịu lỗi cao kết hợp ALB, ASG và cơ chế Self-Healing
 
@@ -342,7 +379,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức kỹ thuật chính xác) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -355,7 +392,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Toàn Bộ Các Giải Pháp Cân Bằng Tải AWS (Ecosystem Comparison)
+## 5. Bảng So Sánh Toàn Bộ Các Giải Pháp Cân Bằng Tải AWS (Ecosystem Comparison)
 
 | Tiêu chuẩn so sánh | Application Load Balancer (ALB) | Network Load Balancer (NLB) | Gateway Load Balancer (GWLB) | Classic Load Balancer (CLB) `[Deprecated]` |
 | :--- | :--- | :--- | :--- | :--- |
@@ -370,9 +407,9 @@ sequenceDiagram
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### 6.6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của ELB & ASG
+### 6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của ELB & ASG
 
 | Thành phần tính phí | Cơ chế tính phí chi tiết (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
@@ -383,7 +420,7 @@ sequenceDiagram
 
 ---
 
-### 6.6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
+### 6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
 
 #### Kịch bản 1: Hợp Nhất 10 Microservices Vào Một ALB Duy Nhất (Listener Rules Consolidation)
 * **Bối cảnh thực tế**:
@@ -451,7 +488,7 @@ sequenceDiagram
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Vấn đề (Problem) | Nguyên nhân khả dĩ (Possible Causes) | Các bước điều tra (Investigation Steps - Metrics/Logs) | Giải pháp xử lý (Solution) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -466,7 +503,7 @@ sequenceDiagram
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của ELB & ASG (Golden Rules)
 1. **Lựa chọn đúng loại Load Balancer**:  

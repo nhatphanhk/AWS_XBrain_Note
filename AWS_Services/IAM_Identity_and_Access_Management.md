@@ -6,7 +6,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### Dịch vụ gì?
 **AWS Identity and Access Management (IAM)** là dịch vụ nền tảng cung cấp khả năng kiểm soát truy cập an toàn, chi tiết tới toàn bộ tài nguyên trên đám mây AWS. IAM cho phép bạn quản lý **Ai** (Authentication - Xác thực) có quyền làm **Điều gì** trên **Tài nguyên nào** (Authorization - Phân quyền) và dưới **Điều kiện nào** (Context & Conditions).
@@ -24,7 +24,7 @@
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Phân loại thực thể định danh (Identities)
 
@@ -360,12 +360,33 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
     1. **SCP ở cấp Organizations PHẢI CHO PHÉP (hoặc không chặn)** hành động đó.
     2. **IAM Policy bên trong tài khoản con BẮT BUỘC PHẢI CÓ LỆNH ALLOW** cấp quyền cho User/Role đó.
 
+#### 🪤 Bẫy 14: Bắt Buộc Gắn Tag Tuân Thủ Bằng AWS Organizations Tag Policies và SCP Deny — (U-PT4 Q28)
+- **Tình huống đề thi**: *"Doanh nghiệp quản lý hàng chục tài khoản AWS thông qua AWS Organizations. Doanh nghiệp muốn bắt buộc tất cả máy chủ Amazon EC2 được tạo mới phải được gắn thẻ (tags) phân loại dữ liệu (ví dụ: `DataClassification` với giá trị hợp lệ `confidential` hoặc `public`), đồng thời nghiêm cấm người dùng xóa thẻ này sau khi máy chủ đã khởi tạo."*
+- **Các phương án bẫy**:
+  - ❌ *Chỉ dùng IAM Policy cục bộ hoặc script kiểm tra*: Không thể chuẩn hóa giá trị thẻ trên toàn bộ các tài khoản con, người dùng có quyền admin con có thể sửa policy hoặc quên gắn tag.
+  - ❌ *Dùng AWS Config để tự động terminate instance không có tag*: Tốn thời gian phát hiện trễ, instance đã boot lên và tiêu tốn chi phí, có thể gây gián đoạn ngoài ý muốn thay vì chặn ngay từ cửa ngõ API.
+- **Giải pháp ĐÚNG**: Kết hợp **AWS Organizations Tag Policies** và **Service Control Policies (SCPs)**:
+  1. Dùng **Tag Policies** trong AWS Organizations để chuẩn hóa quy tắc đặt tên key (case-sensitive) và danh sách giá trị hợp lệ (`confidential`, `public`).
+  2. Gắn một **SCP** lên cấp OU hoặc Member Account với hiệu lực `Deny` hành động `ec2:RunInstances` nếu request không chứa tag bắt buộc (dùng condition `aws:RequestTag/...`), đồng thời `Deny` hành động `ec2:DeleteTags` đối với thẻ phân loại đó.
+
+#### 🪤 Bẫy 15: Kiểm Toán Tài Nguyên Chia Sẻ Công Khai Hoặc Ra Ngoài Tổ Chức Bằng IAM Access Analyzer — (U-PT4 Q08)
+- **Tình huống đề thi**: *"Bộ phận an ninh thông tin muốn liên tục giám sát và tự động cảnh báo nếu có bất kỳ tài nguyên nào (S3 buckets, IAM roles, KMS keys, SQS queues, Lambda functions) bị cấu hình chia sẻ quyền truy cập cho thực thể bên ngoài tổ chức (External entity) hoặc vô tình mở công khai ra Internet."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng AWS CloudTrail phân tích thủ công*: CloudTrail chỉ ghi log nhật ký API call đã diễn ra, không tự động phân tích ma trận logic phân quyền resource policy để tìm lỗ hổng cấp quyền bên ngoài.
+  - ❌ *Dùng Amazon GuardDuty*: GuardDuty chuyên phát hiện hành vi xâm nhập, đào tiền ảo, kết nối IP độc hại, không chuyên về kiểm toán tĩnh logic chính sách truy cập tài nguyên.
+  - ❌ *Dùng AWS Inspector*: Inspector quét lỗ hổng phần mềm CVE và lỗ hổng mạng trên EC2/ECR/Lambda code, không quét resource-based policy của S3, KMS hay SQS.
+- **Giải pháp ĐÚNG**: Kích hoạt **AWS IAM Access Analyzer**.
+  - Access Analyzer sử dụng chứng minh toán học (Automated Reasoning) để phân tích các Resource-based Policies (S3, KMS, SQS, Secrets Manager, Lambda, IAM Role Trust Policies) trong toàn bộ Organization.
+  - Tự động tạo finding cảnh báo ngay lập tức nếu một tài nguyên cho phép truy cập từ một AWS account nằm ngoài "Zone of Trust" (vùng tin cậy) hoặc cho phép truy cập công khai (`*`).
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Phân Quyền & Danh Tính Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
 |:---|:---|:---|:---|
+| **Chuẩn hóa tag và cấm tạo EC2 nếu thiếu tag** | **Organizations Tag Policies + SCP Deny `RunInstances` & `DeleteTags`** | AWS Config (chỉ phát hiện trễ sau khi đã tạo xong) | `U-PT4 Q28` |
+| **Kiểm toán tự động tài nguyên chia sẻ ra ngoài Organization** | **AWS IAM Access Analyzer (Zone of Trust)** | CloudTrail (chỉ ghi log, không phân tích toán học logic policy) | `U-PT4 Q08` |
 | **Chặn developer tự cấp quyền Admin cho role mới** | **IAM Permissions Boundary** | SCP không phân biệt được role do ai tạo | Chuẩn AWS |
 | **Bắt buộc đính kèm Boundary khi gọi CreateRole** | **Condition `iam:PermissionsBoundary`** | Tự review code thủ công (dễ sót lỗi) | Chuẩn AWS |
 | **Cần AD thực sự trong VPC, hỗ trợ Forest Trust** | **AWS Managed Microsoft AD** | AD Connector (chỉ là proxy gateway, không hỗ trợ trust) | `TD-Set8 Q08` |
@@ -391,7 +412,7 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### 1. Luồng Xác Thực Tạm Thời EC2 Instance Profile qua IMDSv2
 
@@ -438,7 +459,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức tích hợp) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -451,7 +472,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
+## 5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
 
 ### So sánh các giải pháp quản lý định danh và truy cập trong AWS
 
@@ -466,9 +487,9 @@ sequenceDiagram
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### 6.6.1. Bảng Cấu Trúc Định Giá Chi Tiết
+### 6.1. Bảng Cấu Trúc Định Giá Chi Tiết
 
 | Thành phần Dịch Vụ | Đơn giá AWS niêm yết | Cơ chế đo lường | Ghi chú tối ưu hóa chi phí FinOps |
 | :--- | :--- | :--- | :--- |
@@ -482,7 +503,7 @@ sequenceDiagram
 
 ---
 
-### 6.6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
+### 6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
 
 #### Kịch bản 1: Kích hoạt Consolidated Billing trong AWS Organizations để hưởng Volume Tier Discounts
 - **Bối cảnh**: Doanh nghiệp mở rộng quy mô, vận hành 20 tài khoản AWS độc lập với 20 thẻ tín dụng riêng lẻ. Mỗi tài khoản lưu trữ trung bình 40 TB trên Amazon S3 Standard.
@@ -540,7 +561,7 @@ sequenceDiagram
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Tình huống sự cố (Problem) | Nguyên nhân cốt lõi (Root Cause) | Các bước điều tra & Chỉ số giám sát (Metrics & Logs) | Giải pháp khắc phục (Remediation) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -554,7 +575,7 @@ sequenceDiagram
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Quản Trị Định Danh AWS (Golden Rules)
 1. **Khóa chặt tài khoản Root**: Luôn bảo vệ bằng Hardware MFA (FIDO2) và không tạo Access Key cho Root.

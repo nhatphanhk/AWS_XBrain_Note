@@ -6,7 +6,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### Dịch vụ gì?
 Khắc phục thảm họa (**Disaster Recovery - DR**) và di chuyển hạ tầng lên đám mây (**Cloud Migration**) là các bài toán kiến trúc sống còn đối với sự tồn vong và tính liên tục trong hoạt động kinh doanh (Business Continuity) của doanh nghiệp. AWS cung cấp bộ giải pháp toàn diện:
@@ -18,7 +18,7 @@ Khắc phục thảm họa (**Disaster Recovery - DR**) và di chuyển hạ t�
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Hai Chỉ Số Sống Còn Của Disaster Recovery: RPO & RTO
 
@@ -238,12 +238,44 @@ Chi Phí Rẻ Nhất / RTO-RPO Lâu Nhất                Chi Phí Đắt Nhất
   - **Homogeneous (Cùng Engine)**: Ví dụ Oracle sang RDS Oracle, MySQL sang Aurora MySQL $\rightarrow$ Chỉ cần **AWS DMS** (hoặc native tools như mysqldump / Oracle Data Pump). DMS tự động tạo bảng và nạp dữ liệu.
   - **Heterogeneous (Khác Engine)**: Ví dụ Oracle sang Aurora PostgreSQL, SQL Server sang MySQL $\rightarrow$ Bắt buộc dùng **AWS SCT** trước để chuyển đổi schema/DDL, sau đó mới dùng **AWS DMS** để nạp và đồng bộ dữ liệu.
 
+#### 🪤 Bẫy 11: Di Chuyển 100 TB Dữ Liệu Ngoại Tuyến Lên S3 Glacier Bằng AWS Snowball Edge — (U-PT4 Q20)
+- **Tình huống đề thi**: *"Doanh nghiệp có 100 TB dữ liệu lưu trữ tại trung tâm dữ liệu On-Premises cần chuyển lên Amazon S3 Glacier để lưu kho dài hạn với chi phí thấp nhất và thời gian ngắn nhất. Đường truyền Internet của doanh nghiệp có băng thông khả dụng là 100 Mbps."*
+- **Phân tích bẫy tính toán thời gian**:
+  - Truyền 100 TB qua đường truyền 100 Mbps:
+    $$\text{Thời gian} = \frac{100 \times 10^{12} \times 8 \text{ bits}}{100 \times 10^6 \text{ bps}} = 8{,}000{,}000 \text{ giây} \approx 92.6 \text{ ngày (hơn 3 tháng!)}$$
+  - Việc truyền trực tiếp qua Internet làm nghẽn đường truyền doanh nghiệp và mất quá nhiều thời gian. Kéo đường truyền AWS Direct Connect chỉ để chuyển 1 lần là cực kỳ lãng phí chi phí thiết lập ban đầu.
+- **Giải pháp ĐÚNG**: Yêu cầu thiết bị phần cứng **AWS Snowball Edge Storage Optimized (80 TB hoặc 210 TB)**.
+  - Sao chép dữ liệu cục bộ qua mạng LAN nội bộ lên thiết bị Snowball Edge chỉ trong vòng 1-2 ngày, sau đó gửi trả thiết bị về AWS qua đường bưu điện.
+  - AWS nạp dữ liệu vào Amazon S3, sau đó áp dụng **S3 Lifecycle Rule** để chuyển đổi đối tượng sang **Amazon S3 Glacier Flexible / Deep Archive** nhằm tối ưu chi phí lưu kho dài hạn.
+
+#### 🪤 Bẫy 12: Chuyển Đổi Dự Phòng Active-Passive Sang Website Tĩnh S3 Bằng Route 53 — (U-PT4 Q48)
+- **Tình huống đề thi**: *"Doanh nghiệp vận hành một website thương mại điện tử chính chạy trên cụm EC2 nằm sau Application Load Balancer. Khi xảy ra sự cố ngừng hoạt động (outage), doanh nghiệp muốn người dùng tự động được chuyển hướng sang một trang web tĩnh hiển thị thông báo bảo trì lưu trữ trên Amazon S3 với chi phí rẻ nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Dựng cụm EC2 Warm Standby tại Region khác*: Quá tốn kém chi phí máy chủ chạy chờ sẵn chỉ để phục vụ một trang thông báo tĩnh.
+  - ❌ *Dùng Route 53 Weighted Routing*: Weighted routing chia tỉ lệ phần trăm traffic ngẫu nhiên giữa 2 endpoint, không có cơ chế tự động chuyển hướng 100% khi hệ thống chính hỏng hóc.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon Route 53 Failover Routing Policy kết hợp Route 53 Health Checks**.
+  - Cấu hình bản ghi chính (**Primary Record**) trỏ tới Application Load Balancer kèm theo Route 53 Health Check giám sát endpoint chính.
+  - Cấu hình bản ghi dự phòng (**Secondary Record**) trỏ tới **Amazon S3 Bucket configured as a static website** (hoặc CloudFront distribution).
+  - Khi Health Check của Primary thất bại, Route 53 sẽ tự động chuyển đổi 100% truy vấn DNS sang Secondary (S3 static website) trong vòng vài giây.
+
+#### 🪤 Bẫy 13: Đồng Bộ Hóa Cơ Sở Dữ Liệu Tự Động Không Cần Quản Trị Server Bằng AWS DMS Serverless — (U-PT4 Q55)
+- **Tình huống đề thi**: *"Doanh nghiệp cần di chuyển dữ liệu ban đầu (Full Load) và sao chép liên tục các thay đổi (Change Data Capture - CDC) theo thời gian thực từ cơ sở dữ liệu Oracle tại chỗ lên Amazon RDS for Oracle. Doanh nghiệp muốn giải pháp hoàn toàn tự động mở rộng theo lưu lượng, không phải tự quản trị, cấu hình dung lượng máy chủ hay lo lắng về việc cấp phát tài nguyên replication instance."*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng AWS Glue*: AWS Glue là công cụ ETL serverless theo lô (batch-oriented), không chuyên dùng cho việc đồng bộ CDC thời gian thực từng transaction của cơ sở dữ liệu OLTP.
+  - ❌ *Tự cấu hình cụm AWS DMS Replication Instance truyền thống*: Đòi hỏi kỹ sư phải tự ước tính dung lượng CPU/RAM, chọn loại instance (`dms.c5` hay `dms.t3`) và tự giám sát điều chỉnh tài nguyên khi tải thay đổi.
+- **Giải pháp ĐÚNG**: Triển khai **AWS DMS Serverless**.
+  - AWS DMS Serverless tự động cấp phát, giám sát và co giãn dung lượng máy chủ nhân bản (tính bằng đơn vị DMS Capacity Units - DCU) dựa trên khối lượng dữ liệu thực tế di chuyển.
+  - Hỗ trợ đầy đủ cả 2 giai đoạn: Full Load và Ongoing Replication (CDC) mà không yêu cầu người dùng phải quản lý bất kỳ hạ tầng máy chủ nào.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Công Cụ Di Chuyển & DR Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
 |:---|:---|:---|:---|
+| **Di chuyển 100 TB dữ liệu offline lên S3 Glacier** | **AWS Snowball Edge + S3 Lifecycle to Glacier** | Truyền qua Internet 100 Mbps (mất > 92 ngày gây nghẽn) | `U-PT4 Q20` |
+| **Failover Active-Passive sang web thông báo bảo trì** | **Route 53 Failover Routing + S3 Static Website** | Weighted Routing (chỉ chia tỉ lệ tải, không tự động failover) | `U-PT4 Q48` |
+| **Đồng bộ CDC DB liên tục không cần quản trị máy chủ** | **AWS DMS Serverless (Auto-scaling DCUs)** | AWS Glue (chuyên ETL theo batch, không hỗ trợ CDC OLTP) | `U-PT4 Q55` |
 | **Di chuyển máy ảo/vật lý Lift-and-Shift lên EC2 (Downtime thấp)** | **AWS Application Migration Service (MGN)** | VM Import/Export (downtime nhiều giờ do phải tắt máy) | `TD-Set4 Q65` |
 | **Di chuyển database quan hệ sang đám mây** | **AWS Database Migration Service (DMS)** | AWS MGN (MGN chuyển đổi toàn bộ máy chủ, không tối ưu cho DB) | `TD-Set1 Q09`, `TD-Set1 Q32` |
 | **Đổi engine Oracle/MSSQL sang Aurora PostgreSQL** | **AWS SCT (Schema) + AWS DMS (Dữ liệu)** | AWS DataSync (không chuyển đổi schema DB) | `TD-Set1 Q09`, `TD-Set5 Q34` |
@@ -267,7 +299,7 @@ Chi Phí Rẻ Nhất / RTO-RPO Lâu Nhất                Chi Phí Đắt Nhất
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Quy Trình Tự Động Chuyển Đổi Dự Phòng Đa Vùng (Cross-Region DR Failover) với Route 53 & RDS
 
@@ -299,7 +331,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức tích hợp) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -311,7 +343,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
+## 5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
 
 ### So sánh các giải pháp Khắc phục Thảm họa và Di chuyển Dữ liệu
 
@@ -326,9 +358,9 @@ sequenceDiagram
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### 6.6.1. Bảng Cấu Trúc Định Giá Chi Tiết
+### 6.1. Bảng Cấu Trúc Định Giá Chi Tiết
 
 | Thành phần Dịch Vụ | Đơn giá AWS niêm yết (us-east-1) | Cơ chế đo lường | Ghi chú tối ưu hóa chi phí FinOps |
 | :--- | :--- | :--- | :--- |
@@ -342,7 +374,7 @@ sequenceDiagram
 
 ---
 
-### 6.6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
+### 6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
 
 #### Kịch bản 1: Tối ưu chi phí DR bằng AWS Elastic Disaster Recovery (AWS DRS vs Warm Standby)
 - **Bối cảnh**: Doanh nghiệp có 25 máy chủ ứng dụng (mỗi máy `m5.large` = $0.096/giờ). Kỹ sư duy trì 25 máy ảo này chạy không tải 24/7 ở Region dự phòng theo chiến lược Warm Standby.
@@ -405,7 +437,7 @@ sequenceDiagram
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Tình huống sự cố (Problem) | Nguyên nhân cốt lõi (Root Cause) | Các bước điều tra & Chỉ số giám sát (Metrics & Logs) | Giải pháp khắc phục (Remediation) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -419,7 +451,7 @@ sequenceDiagram
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Khắc Phục Thảm Họa & Di Chuyển AWS (Golden Rules)
 1. **RPO & RTO là kim chỉ nam**: Mọi quyết định kiến trúc DR đều là sự đánh đổi trực tiếp giữa ngân sách tài chính và tốc độ phục hồi.

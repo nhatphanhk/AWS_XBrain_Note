@@ -7,7 +7,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### 1. Định nghĩa chuẩn xác và Phân nhóm dịch vụ
 **Amazon Virtual Private Cloud (Amazon VPC)** là nền tảng mạng riêng ảo cô lập về mặt logic dành riêng cho tài khoản AWS của bạn. VPC trao toàn quyền kiểm soát môi trường mạng ảo, bao gồm việc lựa chọn dải địa chỉ IP (CIDR), phân chia các mạng con (Subnets), cấu hình bảng định tuyến (Route Tables), cổng kết nối mạng (Network Gateways), và các lớp tường lửa bảo mật đa tầng (Security Groups & Network ACLs).
@@ -45,7 +45,7 @@ flowchart TD
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Dải địa chỉ IP & Quy tắc 5 Địa chỉ IP Dành Riêng (The 5 Reserved IPs per Subnet)
 
@@ -357,6 +357,46 @@ flowchart TD
   - Mỗi chi nhánh thiết lập một kết nối Site-to-Site VPN tới VGW.
   - Bật giao thức định tuyến động **BGP (Border Gateway Protocol)**; VGW tự động định tuyến lưu lượng giữa các chi nhánh qua lại với nhau mà không cần đầu tư thêm phần cứng mạng phức tạp hay tạo kết nối VPN chéo tốn kém!
 
+#### 🪤 Bẫy 12: Network ACL (NACL) Là Tường Lửa Không Trạng Thái (Stateless) — (U-PT4 Q22)
+- **Tình huống đề thi**: *"Kỹ sư mạng cấu hình một Network ACL mới cho Subnet chứa máy chủ Web. Kỹ sư đã thêm một luật Inbound Rule cho phép cổng 80/443 từ Internet (`0.0.0.0/0`). Tuy nhiên, người dùng bên ngoài Internet vẫn không thể tải được trang web và kết nối bị đứng im rồi báo timeout. Nguyên nhân cốt lõi là gì?"*
+- **Nguyên lý bất biến giữa Security Group và Network ACL**:
+  - **Security Group là Stateful (Có trạng thái)**: Khi mở Inbound cổng 80, luồng phản hồi Outbound tự động được thông suốt mà không cần luật chiều ra.
+  - **Network ACL là Stateless (Không có trạng thái)**: Kiểm tra độc lập từng gói tin ở cả hai chiều. Nếu bạn mở Inbound cổng 80/443, gói tin phản hồi của máy chủ trả về cho client sẽ sử dụng các **cổng tạm thời (Ephemeral Ports: `1024 - 65535`)**.
+- **Giải pháp ĐÚNG**: Trên Network ACL của Subnet, **BẮT BUỘC PHẢI TẠO THÊM LUẬT OUTBOUND RULE** cho phép cổng TCP từ **`1024 đến 65535`** tới đích `0.0.0.0/0` để các gói tin phản hồi có thể thoát ra ngoài!
+
+#### 🪤 Bẫy 13: Kết Nối Riêng Tư Tới Dịch Vụ SaaS Bên Thứ Ba Bằng AWS PrivateLink — (U-PT4 Q50)
+- **Tình huống đề thi**: *"Doanh nghiệp công nghệ chạy ứng dụng trên EC2 trong VPC nội bộ cần tích hợp và gọi API bảo mật sang một dịch vụ SaaS của nhà cung cấp bên thứ ba (cũng chạy trên AWS). Yêu cầu luồng dữ liệu TUYỆT ĐỐI KHÔNG ĐƯỢC ĐI QUA INTERNET CÔNG CỘNG, không được dùng VPN và không được can thiệp sửa đổi hay gây xung đột bảng định tuyến mạng của nhau."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng AWS Site-to-Site VPN*: Quá phức tạp, tốn kém chi phí phần cứng/tunnel và tốc độ phụ thuộc Internet công cộng.
+  - ❌ *Dùng VPC Peering*: Dễ bị từ chối nếu hai bên bị trùng dải IP CIDR (Overlapping CIDRs) và tạo ra rủi ro lộ toàn bộ dải mạng VPC cho đối tác.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS PrivateLink (Interface VPC Endpoint)**.
+  - Nhà cung cấp SaaS tạo một **Endpoint Service** đứng sau Network Load Balancer (NLB).
+  - Doanh nghiệp tạo một **Interface VPC Endpoint** trong VPC của mình. Giao thức PrivateLink ánh xạ dịch vụ SaaS thành một địa chỉ IP riêng (Private IP ENI) bên trong Subnet của doanh nghiệp. Toàn bộ lưu lượng đi qua mạng backbone riêng của AWS an toàn tuyệt đối!
+
+#### 🪤 Bẫy 14: Tăng Tốc Toàn Cầu Cả HTTP Lẫn TCP/UDP Bằng Anycast Static IPs — (U-PT4 Q17, Q57, Q63)
+- **Tình huống đề thi**: *"Ứng dụng logistics và nền tảng dịch vụ toàn cầu có các endpoint máy chủ đặt tại us-west-2. Người dùng và thiết bị kết nối từ Châu Âu và Châu Á gặp độ trễ cao và suy giảm tốc độ mạng khi đi qua nhiều nhà mạng Internet công cộng. Một số hệ thống sử dụng giao thức độc quyền TCP/UDP không phải HTTP. Cần giải pháp tăng tốc đường truyền toàn cầu với địa chỉ IP tĩnh cố định."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Amazon CloudFront*: CloudFront chỉ hỗ trợ HTTP/HTTPS/WebSocket, hoàn toàn không hỗ trợ các giao thức TCP thô hay UDP độc quyền và không cung cấp 2 địa chỉ IP tĩnh cố định để cấu hình firewall doanh nghiệp.
+- **Giải pháp ĐÚNG**: Cấu hình **AWS Global Accelerator**.
+  - Cung cấp **2 địa chỉ Static Anycast IPv4** làm cổng vào cố định duy nhất trên toàn cầu.
+  - Lưu lượng từ người dùng ở Châu Âu/Châu Á đi vào mạng cáp quang backbone tốc độ cao của AWS ngay tại Edge Location gần họ nhất (Anycast Ingress), sau đó được định tuyến nội bộ với độ trễ tối thiểu và độ ổn định cao nhất tới endpoint tại us-west-2!
+  - Hỗ trợ hoàn hảo cả giao thức HTTP, HTTPS, TCP thô lẫn UDP!
+
+#### 🪤 Bẫy 15: Cập Nhật Route Table Khi Cấu Hình Gateway VPC Endpoint Cho Amazon S3 — (U-PT4 Q06)
+- **Tình huống đề thi**: *"Kỹ sư tạo một Gateway VPC Endpoint cho Amazon S3 để các máy ảo EC2 trong Private Subnet tải dữ liệu mà không cần NAT Gateway. Sau khi tạo xong Endpoint, máy ảo EC2 vẫn báo lỗi kết nối S3 timeout. Đội ngũ đã quên bước cấu hình nào?"*
+- **Nguyên lý cấu hình bắt buộc của Gateway Endpoint**:
+  - Gateway Endpoint (chỉ dành cho S3 và DynamoDB) hoạt động bằng cách chèn một bản ghi định tuyến tiền tố (**Prefix List**, ví dụ `pl-63a5400a`) vào **Route Table của Subnet** trỏ tới `vpce-xxxx`.
+  - Nếu khi tạo Gateway Endpoint mà bạn không chọn (tick) liên kết với Route Table của Subnet chứa máy ảo EC2, traffic gọi sang S3 vẫn sẽ cố tìm đường `0.0.0.0/0` (vốn không có trong private subnet) và bị timeout!
+- **Giải pháp ĐÚNG**: Đảm bảo **Route Table của Subnet chứa EC2 được cập nhật bản ghi định tuyến trỏ S3 Prefix List tới Gateway VPC Endpoint ID**, đồng thời xác nhận Endpoint Policy và IAM Role cho phép quyền truy cập.
+
+#### 🪤 Bẫy 16: Tối Ưu Chi Phí Truyền Dữ Liệu Ra (DTO) Khi Truy Cập Data Warehouse — (U-PT4 Q52)
+- **Tình huống đề thi**: *"Doanh nghiệp bán lẻ có đường truyền AWS Direct Connect từ trung tâm dữ liệu và đã di chuyển Data Warehouse lên AWS. Nhóm phân tích cần triển khai một công cụ trực quan hóa dữ liệu (Visualization Tool) để truy vấn khối lượng lớn dữ liệu từ Data Warehouse. Cần triển khai công cụ này ở đâu và kết nối như thế nào để chi phí truyền dữ liệu ra (Data Transfer Out - DTO) là thấp nhất?"*
+- **Bản chất tính phí Data Transfer của AWS**:
+  - Truyền dữ liệu từ AWS ra ngoài Internet công cộng có mức phí cao nhất (~$0.09/GB).
+  - Truyền dữ liệu qua Direct Connect nội vùng (Private VIF trong cùng Region) có chi phí rẻ hơn nhiều (~$0.02/GB).
+  - Truyền dữ liệu giữa các dịch vụ trong **CÙNG MỘT REGION** có chi phí thấp nhất (thậm chí $0.00 nếu cùng AZ).
+- **Giải pháp ĐÚNG**: **Triển khai Visualization Tool trong CÙNG AWS Region với Data Warehouse** và truy cập công cụ trực quan hóa này từ mạng On-Premises thông qua kết nối **AWS Direct Connect** trong cùng Region.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Kết Nối Mạng Nhanh (Exam Decision Matrix)
@@ -364,6 +404,11 @@ flowchart TD
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
 |:---|:---|:---|:---:|
 | **2 VPC trùng IP CIDR cần giao tiếp an toàn** | **AWS PrivateLink** (NLB + Interface Endpoint) | Loại VPC Peering / TGW (lỗi xung đột route) | CM-PT1 Q02, TD-Set5 Q03 |
+| **Kết nối riêng tư tới dịch vụ SaaS bên thứ 3** | **AWS PrivateLink (Interface Endpoint)** | Site-to-Site VPN (phức tạp), VPC Peering (lỗi CIDR) | U-PT4 Q50 |
+| **Tăng tốc toàn cầu với 2 IP tĩnh cho HTTP & TCP/UDP** | **AWS Global Accelerator (Anycast IPs)** | CloudFront (chỉ hỗ trợ HTTP/HTTPS, không hỗ trợ TCP) | U-PT4 Q17, Q57, Q63 |
+| **Mở cổng vào Web trên NACL nhưng người dùng bị timeout** | **Mở thêm Outbound Ephemeral Ports (1024-65535)** | NACL là stateless, gói tin phản hồi bị chặn lại | U-PT4 Q22 |
+| **EC2 Private gọi S3 qua Gateway Endpoint bị timeout** | **Gán S3 Prefix List vào Subnet Route Table** | Chưa cập nhật Route Table trỏ tới `vpce-xxxx` | U-PT4 Q06 |
+| **Tối ưu chi phí Data Transfer Out truy vấn Data Warehouse** | **Đặt tool trong cùng Region + Direct Connect nội vùng** | Xuất dữ liệu qua Internet công cộng (phí cực đắt) | U-PT4 Q52 |
 | **Chia sẻ Subnets & Transit Gateway đa tài khoản** | **AWS Resource Access Manager (RAM)** | Tạo duplicate tài nguyên ở từng account (lãng phí tiền) | TD-Set1 Q03 |
 | **Kiểm tra gói tin sâu L3-L7 và chặn FQDN độc hại** | **AWS Network Firewall** | Security Groups / NACL (chỉ lọc L4, không lọc URL/FQDN) | TD-Set1 Q57, TD-Set2 Q60 |
 | **Chuyển dự phòng luồng mạng tức thì khi máy sập** | **Secondary ENI / Secondary Private IPv4** | Sửa bản ghi DNS (bị trễ do TTL của client cache) | TD-Set2 Q38 |
@@ -386,7 +431,7 @@ flowchart TD
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Sơ đồ kiến trúc VPC chuẩn Enterprise Multi-AZ 3-Tier kết hợp Transit Gateway và Direct Connect
 
@@ -439,7 +484,7 @@ flowchart TD
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức kỹ thuật chính xác) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -451,7 +496,7 @@ flowchart TD
 
 ---
 
-## 6.5. Bảng So Sánh Các Giải Pháp Kết Nối Mạng Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
+## 5. Bảng So Sánh Các Giải Pháp Kết Nối Mạng Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
 
 | Giải pháp kết nối | Băng thông hỗ trợ | Độ trễ mạng | Hỗ trợ Transitive Routing | Xung đột dải IP (Overlapping CIDR) | Chi phí kết nối | Kịch bản sử dụng chuẩn mực |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -463,9 +508,9 @@ flowchart TD
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### 6.6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của Mạng VPC
+### 6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của Mạng VPC
 
 | Thành phần tính phí | Cơ chế tính phí chi tiết (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
@@ -479,7 +524,7 @@ flowchart TD
 
 ---
 
-### 6.6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
+### 6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
 
 #### Kịch bản 1: Tiêu Diệt Chi Phí NAT Gateway Bằng S3 Gateway Endpoint
 * **Bối cảnh thực tế**:
@@ -560,7 +605,7 @@ flowchart TD
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Vấn đề (Problem) | Nguyên nhân khả dĩ (Possible Causes) | Các bước điều tra (Investigation Steps - Metrics/Logs) | Giải pháp xử lý (Solution) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -575,7 +620,7 @@ flowchart TD
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon VPC (Golden Rules)
 1. **Luôn trừ 5 địa chỉ IP dành riêng**:  

@@ -7,7 +7,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### 1. Định nghĩa chuẩn xác và Phân nhóm dịch vụ
 **Amazon DynamoDB** là dịch vụ cơ sở dữ liệu phi quan hệ (**NoSQL Database**) dạng Khóa-Giá trị (**Key-Value**) và Tài liệu (**Document**) được quản lý hoàn toàn phi máy chủ (**Serverless**), cung cấp hiệu năng dưới 10 mili-giây (**Single-digit millisecond latency**) ở bất kỳ quy mô dữ liệu nào (từ vài Gigabytes đến hàng trăm Terabytes).
@@ -46,7 +46,7 @@ flowchart TD
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts & Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts & Operations)
 
 ### 1. Khóa Chính (Primary Keys): Partition Key vs Composite Primary Key
 
@@ -112,7 +112,7 @@ classDiagram
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Cụm Caching Tốc Độ Microsecond Với DynamoDB Accelerator (DAX)
 
@@ -144,7 +144,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Dịch vụ liên kết | Phương thức tích hợp | Mục đích kỹ thuật & Kịch bản thực tế |
 | :--- | :--- | :--- |
@@ -156,7 +156,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Các Dịch Vụ Caching: DAX vs ElastiCache vs MemoryDB
+## 5. Bảng So Sánh Các Dịch Vụ Caching: DAX vs ElastiCache vs MemoryDB
 
 | Tiêu chí | DynamoDB Accelerator (DAX) | Amazon ElastiCache for Redis | Amazon MemoryDB for Redis |
 | :--- | :--- | :--- | :--- |
@@ -167,7 +167,7 @@ sequenceDiagram
 
 ---
 
-## 6.6. FinOps & Chiến Lược Tối Ưu Chi Phí (Cost Optimization)
+## 6. FinOps & Chiến Lược Tối Ưu Chi Phí (Cost Optimization)
 
 ### 1. Phép tính so sánh: On-Demand vs Provisioned với Auto Scaling
 * **Tình huống thực tế**:
@@ -183,7 +183,7 @@ sequenceDiagram
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Vấn đề (Problem) | Nguyên nhân khả dĩ (Possible Causes) | Các bước điều tra (Investigation Steps) | Giải pháp xử lý (Solution) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -269,6 +269,16 @@ sequenceDiagram
   - Giải pháp 3: Đặt một hàng đợi **Amazon SQS** phía trước DynamoDB để lưu trữ các yêu cầu ghi và san phẳng đỉnh tải (**Load Leveling**).
   - Giải pháp 4: Phía client áp dụng thuật toán **Exponential Backoff with Jitter** khi retry.
 
+#### 🪤 Bẫy 5: Kiến Trúc Đa Vùng Active-Active Ghi/Đọc Cục Bộ Toàn Cầu — (U-PT4 Q38, U-PT4 Q53)
+- **Tình huống đề thi**: *"Hệ thống thương mại điện tử hoặc cổng game phục vụ người dùng tại cả Bắc Mỹ (us-east-1) và Châu Âu (eu-west-1). Hệ thống yêu cầu người dùng ở mỗi khu vực đều có thể ghi và đọc dữ liệu tại chỗ với độ trễ tối thiểu (sub-second / single-digit millisecond latency), đồng thời đảm bảo cơ chế Active-Active chịu lỗi cao nếu một Region sụp đổ hoàn toàn."*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng Amazon Aurora Global Database*: Aurora Global Database có 1 Primary DB cluster duy nhất nhận lệnh Ghi (Writes), các Region phụ chỉ nhận lệnh Đọc (Read Replicas). Người dùng tại Châu Âu khi ghi đơn hàng bắt buộc phải gọi xuyên đại dương về Region Mỹ $\rightarrow$ Tăng độ trễ mạng và vi phạm kiến trúc multi-active.
+  - ❌ *Tự xây dựng pipeline sao chép qua SQS/Lambda*: Phức tạp, dễ xung đột phiên bản dữ liệu (data divergence), độ trễ cao và tốn công vận hành.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon DynamoDB Global Tables**.
+  - DynamoDB Global Tables cho phép cấu hình Multi-Region, Multi-Active replication hoàn toàn tự động dựa trên DynamoDB Streams.
+  - Người dùng tại Mỹ ghi vào bảng tại `us-east-1`, người dùng tại Châu Âu ghi vào bảng tại `eu-west-1`. Dữ liệu được đồng bộ hóa hai chiều (bi-directional replication) giữa các vùng ngầm định với độ trễ dưới 1 giây.
+  - Nếu xảy ra xung đột cập nhật đồng thời cùng 1 item, DynamoDB áp dụng quy tắc "Last-writer-wins" dựa trên timestamp.
+
 ---
 
 ## 📊 III. Ma Trận Quyết Định Công Nghệ NoSQL Nhanh (Exam Decision Matrix)
@@ -280,7 +290,7 @@ sequenceDiagram
 | **EC2 Private truy cập DynamoDB an toàn miễn phí** | **Gateway VPC Endpoint cho DynamoDB** | NAT Gateway (tốn phí data processing đắt đỏ) | `TD-Set1 Q33` |
 | **Chống xóa nhầm bảng Production kể cả Admin** | **Bật Deletion Protection** | IAM Policy (Admin vẫn có quyền sửa policy xóa) | Chuẩn AWS |
 | **Bắt mọi thay đổi dữ liệu thời gian thực để gọi Lambda** | **DynamoDB Streams** | Viết cronjob chạy lệnh Scan (ngốn RCU, độ trễ cao) | `TD-Set1 Q65` |
-| **Đồng bộ dữ liệu đa vùng Active-Active, RPO < 1s** | **DynamoDB Global Tables** | Tự viết script sao chép dữ liệu cross-region | `TD-Set1 Q28`, `TD-Set5 Q39` |
+| **Đồng bộ dữ liệu đa vùng Active-Active, RPO < 1s** | **DynamoDB Global Tables** | Aurora Global Database (chỉ hỗ trợ ghi ở 1 Region chính) | `TD-Set1 Q28`, `U-PT4 Q38`, `U-PT4 Q53` |
 | **Tự động xóa các session đăng nhập sau 7 ngày** | **DynamoDB Time to Live (TTL)** | Viết Lambda cron quét và xóa (tốn WCU đắt đỏ) | Chuẩn AWS |
 | **Phục hồi dữ liệu về bất kỳ giây nào trong 35 ngày** | **Point-in-Time Recovery (PITR)** | Chỉ chụp snapshot thủ công định kỳ | Chuẩn AWS |
 | **Xử lý lỗi Throttling khi traffic bùng nổ đột biến** | **Auto Scaling / DAX / SQS Buffer** | Tăng thủ công RCU/WCU (chậm trễ, không phản ứng kịp) | `TD-Set4 Q15` |
@@ -289,7 +299,7 @@ sequenceDiagram
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon DynamoDB
 1. **Thiết kế Partition Key đồng đều**: Luôn chọn thuộc tính có tính phân tán cao (High Cardinality - như UserID, DeviceID) làm Partition Key để tránh hiện tượng **Hot Partition**.

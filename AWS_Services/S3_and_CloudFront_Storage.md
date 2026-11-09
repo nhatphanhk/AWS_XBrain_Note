@@ -7,7 +7,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### 1. Định nghĩa chuẩn xác và Phân nhóm dịch vụ
 Hệ sinh thái lưu trữ đối tượng và phân phối nội dung đám mây của AWS bao gồm 3 trụ cột kiến trúc cốt lõi:
@@ -47,7 +47,7 @@ flowchart TD
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Cấu trúc đối tượng & Định dạng truy cập (S3 Object Anatomy)
 
@@ -309,6 +309,54 @@ flowchart TD
   - ❌ *Chỉ bật S3 Versioning*: User có quyền `s3:DeleteObjectVersion` vẫn có thể xóa vĩnh viễn các version cũ.
 - **Giải pháp ĐÚNG**: Kích hoạt **S3 Object Lock** và thiết lập chế độ **Legal Hold**. Legal Hold không có ngày hết hạn; chỉ bị hủy bỏ khi người có quyền hạn chủ động gỡ cờ.
 
+#### 🪤 Bẫy 12: Giới Hạn Cứng 30 Ngày Tối Thiểu Khi Chuyển Sang S3 Standard-IA Bằng Lifecycle — (U-PT4 Q24)
+- **Tình huống đề thi**: *"Bộ phận xuất bản nội dung số lưu trữ hàng triệu tệp tin âm thanh/hình ảnh trên Amazon S3 Standard. Đội ngũ muốn thiết lập một S3 Lifecycle Rule để chuyển tệp sang S3 Standard-IA ngay sau khi tạo 10 ngày nhằm cắt giảm chi phí, sau đó xóa tệp sau 5 năm. Quy tắc này có hợp lệ không?"*
+- **Quy tắc chuyển tầng lưu trữ bất biến của AWS**:
+  - AWS quy định ràng buộc cứng: Một đối tượng **BẮT BUỘC phải được lưu trữ tối thiểu 30 ngày trong S3 Standard** trước khi đủ điều kiện chuyển đổi sang **S3 Standard-IA** hoặc **S3 One Zone-IA**!
+  - Nếu cố gắng cấu hình số ngày chuyển đổi nhỏ hơn 30 ngày (ví dụ 10 ngày hay 15 ngày), AWS Console / API sẽ từ chối cấu hình hoặc vẫn tính phí lưu trữ đủ 30 ngày cơ sở.
+- **Giải pháp ĐÚNG**: Cấu hình chuyển tệp từ S3 Standard sang S3 Standard-IA sau **30 ngày** kể từ ngày khởi tạo, và cấu hình hành động Expiration xóa tệp sau 5 năm (1,825 ngày).
+
+#### 🪤 Bẫy 13: Cắt Giảm Tới 99% Chi Phí Gọi API KMS Khi Mã Hóa S3 Bằng S3 Bucket Keys — (U-PT4 Q65)
+- **Tình huống đề thi**: *"Nền tảng xuất bản kỹ thuật số lưu trữ hàng chục triệu tệp tin truyền thông trong S3 Bucket được mã hóa bằng SSE-KMS. Mặc dù chi phí lưu trữ S3 rất thấp, doanh nghiệp choáng váng khi thấy hóa đơn AWS phát sinh hàng ngàn USD chi phí gọi API KMS (`kms:GenerateDataKey` và `kms:Decrypt`) cho mỗi lần upload/download tệp. Làm thế nào để giảm thiểu tối đa chi phí mã hóa này mà không làm giảm mức độ bảo mật KMS?"*
+- **Các phương án bẫy**:
+  - ❌ *Chuyển sang mã hóa SSE-S3*: Tiết kiệm chi phí KMS nhưng mất quyền kiểm soát khóa, không đáp ứng được yêu cầu kiểm toán tuân thủ của doanh nghiệp đối với Customer Managed Key (CMK).
+- **Giải pháp ĐÚNG**: Kích hoạt tính năng **S3 Bucket Keys cho SSE-KMS** trên bucket.
+  - Bình thường, mỗi một object trong S3 tạo ra một lệnh gọi API trực tiếp tới AWS KMS để sinh Data Key riêng lẻ.
+  - Khi bật **S3 Bucket Keys**, AWS KMS chỉ sinh một khóa cấp bucket (bucket-level key) ngắn hạn. S3 sẽ sử dụng khóa này để mã hóa cục bộ cho hàng ngàn object mới trong cùng bucket.
+  - **Kết quả**: Cắt giảm số lượng request gọi sang KMS và giảm tới **99% chi phí KMS** trên hóa đơn hàng tháng!
+
+#### 🪤 Bẫy 14: Chứng Chỉ SSL/TLS Công Khai Cho CloudFront Bắt Buộc Tạo Tại Region `us-east-1` — (U-PT4 Q10)
+- **Tình huống đề thi**: *"Một công ty truyền thông tại London (eu-west-2) vận hành ứng dụng tải ảnh qua CloudFront với tên miền riêng (ví dụ `cdn.mycompany.com`). Kỹ sư yêu cầu chứng chỉ SSL/TLS công khai miễn phí từ AWS Certificate Manager (ACM) tại Region eu-west-2 nhưng không thể gắn chứng chỉ này vào CloudFront distribution. Nguyên nhân là gì?"*
+- **Quy tắc cốt lõi của AWS Certificate Manager và CloudFront**:
+  - Amazon CloudFront là dịch vụ biên toàn cầu (Global Edge Network).
+  - Mọi chứng chỉ SSL/TLS tùy chỉnh dùng cho CloudFront **BẮT BUỘC PHẢI ĐƯỢC YÊU CẦU HOẶC IMPORT TẠI REGION `us-east-1` (US East - N. Virginia)**!
+  - Chứng chỉ cấp tại bất kỳ Region nào khác (kể cả eu-west-2, ap-southeast-1) đều hoàn toàn vô hình đối với CloudFront Console.
+  - Đồng thời, để bảo mật tầng origin S3, phải kích hoạt **Origin Access Control (OAC)** để chỉ CloudFront mới được phép đọc/ghi dữ liệu vào S3 bucket.
+
+#### 🪤 Bẫy 15: Khóa Bất Biến Kho Lưu Trữ Dài Hạn Y Tế Bằng S3 Glacier Vault Lock Policy — (U-PT4 Q03)
+- **Tình huống đề thi**: *"Startup y tế tại thung lũng Silicon lưu trữ hồ sơ bệnh án nhạy cảm của bệnh nhân trên AWS Cloud để tuân thủ quy định HIPAA và luật lưu trữ 10 năm. Yêu cầu hồ sơ sau khi lưu trữ KHÔNG ĐƯỢC PHÉP CHỈNH SỬA HOẶC XÓA DƯỚI BẤT KỲ HÌNH THỨC NÀO trong 10 năm, kể cả khi kẻ tấn công chiếm được quyền tài khoản AWS cao nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Amazon S3 Access Control List (ACL)*: ACL chỉ là cơ chế phân quyền truy cập thô sơ (Read/Write), hoàn toàn không thể khóa dữ liệu chống xóa hoặc thực thi chính sách WORM.
+  - ❌ *Dùng S3 Bucket Policy*: Quản trị viên cấp cao hoặc Root User vẫn có thể xóa hoặc sửa Bucket Policy để xóa file.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon S3 Glacier Vault** và áp dụng chính sách **Vault Lock Policy**.
+  - Sau khi kiểm thử trong 24 giờ, quản trị viên thực hiện thao tác **Lock** (khóa vĩnh viễn chính sách).
+  - Khi đã khóa, Vault Lock Policy trở thành **bất biến (Immutable)**: Không một ai (kể cả chính tài khoản Root của AWS) có thể sửa đổi hoặc xóa bỏ chính sách này cho đến khi hết thời hạn quy định!
+
+#### 🪤 Bẫy 16: Kết Hợp AWS WAF Geo Match Với IP Set Statement Để Mở Đường Ngoại Lệ — (U-PT4 Q15)
+- **Tình huống đề thi**: *"Công ty game trực tuyến muốn chặn toàn bộ quyền truy cập vào ứng dụng từ một số quốc gia cụ thể để phòng chống gian lận. Tuy nhiên, công ty có một nhóm các đối tác kiểm thử (beta testers) đang sinh sống tại các quốc gia bị chặn này và bắt buộc phải được cấp quyền truy cập qua các địa chỉ IP cố định của họ."*
+- **Giải pháp ĐÚNG**: Sử dụng **AWS WAF** kết hợp 2 câu lệnh quy tắc (Rule Statements):
+  - Quy tắc 1: Sử dụng **AWS WAF IP Set Statement** liệt kê các địa chỉ IP của beta testers với Action là **ALLOW** và độ ưu tiên (Priority) cao hơn.
+  - Quy tắc 2: Sử dụng **AWS WAF Geo Match Statement** liệt kê danh sách các quốc gia cần chặn với Action là **BLOCK**.
+  - WAF sẽ đánh giá từ trên xuống dưới: IP của đối tác sẽ khớp với IP Set và được Allow ngay lập tức; toàn bộ traffic còn lại từ các quốc gia trong danh sách sẽ bị chặn bởi Geo match rule!
+
+#### 🪤 Bẫy 17: Tối Ưu Chi Phí Lưu Trữ Dự Án Lưu Kho Không Dự Đoán Trước — (U-PT4 Q62)
+- **Tình huống đề thi**: *"Công ty thiết kế đồ họa chuyển nền tảng lưu kho dự án cũ lên AWS. Các nhà thiết kế thỉnh thoảng mở lại các dự án cũ từ nhiều năm trước nhưng mô hình truy cập hoàn toàn không theo quy luật và không dự đoán trước được. Hiện hệ thống đang mount Amazon EFS gây chi phí lưu trữ hàng tháng rất cao. Đề xuất phương án tối ưu chi phí nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Thay thế EFS bằng Amazon FSx for Lustre*: Lustre dành cho tính toán HPC tốc độ cao, chi phí lưu trữ thậm chí còn đắt hơn EFS và lãng phí cho việc lưu trữ kho tĩnh.
+- **Giải pháp ĐÚNG**: Tạo một **Amazon S3 Bucket kích hoạt S3 Intelligent-Tiering** và cập nhật ứng dụng lưu/đọc tệp qua **Amazon S3 API**.
+  - S3 Intelligent-Tiering tự động di chuyển tệp giữa các tầng (Frequent, Infrequent, Archive Instant) dựa trên tần suất đọc mà không có phụ phí truy xuất (retrieval fees) và không gây độ trễ truy cập.
+  - Chi phí lưu trữ S3 rẻ hơn từ 85% đến 95% so với việc duy trì ổ đĩa chia sẻ tệp EFS/Lustre chạy 24/7.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Lớp Lưu Trữ S3 Nhanh (Exam Decision Matrix)
@@ -317,32 +365,36 @@ flowchart TD
 |:---|:---|:---|:---:|
 | **Dữ liệu đọc/ghi thường xuyên, độ trễ millisecond** | **S3 Standard** | Các lớp IA/Glacier (tốn phí per-request) | CM-PT1 Q55 |
 | **Khắc phục lỗi S3 HTTP 503 Slow Down khi tải cao** | **Phân tán Key trên nhiều Custom Prefixes** | Tăng Service Quota (S3 prefix limit là kiến trúc cố định) | U-PT1 Q15 |
-| **Mẫu truy cập không rõ hoặc biến động liên tục** | **S3 Intelligent-Tiering** | S3 Standard (bỏ lỡ cơ hội tự động giảm giá) | TD-Set1 Q23 |
+| **Mẫu truy cập không rõ hoặc biến động liên tục** | **S3 Intelligent-Tiering** | S3 Standard (bỏ lỡ cơ hội tự động giảm giá) | TD-Set1 Q23, U-PT4 Q26 |
 | **Dữ liệu ít đọc, cần lấy ngay tức thì (< 1s)** | **S3 Glacier Instant Retrieval** | Glacier Flexible (mất từ vài phút đến vài giờ) | CM-PT1 Q46 |
 | **Dữ liệu sao lưu lâu năm, chấp nhận chờ 3-5 giờ** | **S3 Glacier Flexible Retrieval** | Glacier Deep Archive (chờ 12 giờ) | TD-Set1 Q40 |
 | **Lưu trữ tuân thủ 7-10 năm, rẻ nhất thị trường** | **S3 Glacier Deep Archive** | Glacier Flexible (đắt hơn gấp 3 lần) | TD-Set1 Q37, TD-Set2 Q28 |
 | **Dữ liệu phụ tái tạo được, tiết kiệm chi phí** | **S3 One Zone-IA** | Standard-IA (One Zone-IA rẻ hơn 20%) | CM-PT2 Q01 |
+| **Thời gian lưu trữ tối thiểu trước khi sang Standard-IA** | **Bắt buộc tối thiểu 30 ngày trong S3 Standard** | Cấu hình < 30 ngày (bị AWS từ chối/tính phạt) | U-PT4 Q24 |
+| **Cắt giảm tới 99% chi phí gọi API KMS cho S3** | **Kích hoạt S3 Bucket Keys (SSE-KMS)** | Chuyển SSE-S3 (mất kiểm soát audit khóa KMS) | U-PT4 Q65 |
+| **Chứng chỉ ACM dùng cho CloudFront Distribution** | **Bắt buộc tạo tại Region `us-east-1`** | Tạo ở Region khác (CloudFront không thấy được) | U-PT4 Q10 |
+| **Khóa bất biến kho lưu trữ y tế WORM không ai xóa được** | **S3 Glacier Vault Lock Policy** | Dùng S3 ACLs (không hỗ trợ cơ chế khóa WORM) | U-PT4 Q03 |
+| **Chặn theo quốc gia nhưng cho phép IP đối tác ngoại lệ** | **AWS WAF Geo Match + IP Set (Allow)** | Dùng ALB IP Set (ALB không có IP set statement) | U-PT4 Q15 |
+| **Lưu trữ dự án cũ không rõ quy luật truy cập rẻ nhất** | **S3 Intelligent-Tiering qua S3 API** | Duy trì Amazon EFS / FSx (chi phí đắt gấp 10 lần) | U-PT4 Q62 |
 | **Chống ghi đè vô thời hạn phục vụ pháp lý điều tra** | **S3 Object Lock (Legal Hold)** | Retention Period (có ngày hết hạn) | TD-Set1 Q49 |
-| **Bảo vệ bất biến cố định không ai xóa được kể cả root** | **S3 Object Lock (Compliance Mode)** | Governance Mode (admin có thể bypass xóa) | TD-Set1 Q54, TD-Set4 Q19 |
+| **Bảo vệ bất biến cố định không ai xóa được kể cả root** | **S3 Object Lock (Compliance Mode)** | Governance Mode (admin có thể bypass xóa) | TD-Set1 Q54, U-PT4 Q43 |
 | **Ngăn chặn xóa vĩnh viễn version tệp kể cả khi lộ key** | **S3 Versioning + MFA Delete (Root MFA)** | Chỉ bật Versioning (vẫn xóa được version ID) | TD-Set1 Q56 |
 | **Tự động chuyển dự phòng khi Origin lỗi 500/504** | **CloudFront Origin Groups & Origin Failover** | Tự viết script đổi DNS (chậm và gián đoạn) | TD-Set1 Q60 |
 | **Thực hiện thao tác hàng loạt trên hàng trăm triệu file** | **S3 Batch Operations (kèm S3 Inventory)** | Viết script gọi SDK tuần tự (quá chậm, dễ đứt) | TD-Set4 Q48 |
 | **Tăng tốc UDP game online và bảo toàn Client IP** | **AWS Global Accelerator** | Amazon CloudFront (chỉ hỗ trợ HTTP/HTTPS) | TD-Set2 Q02 |
 | **Tải file lớn > 100 MB xuyên lục địa nhanh nhất** | **S3 Transfer Acceleration + Multipart** | Direct Connect / VPN (tốn kém và chậm triển khai) | TD-Set1 Q31 |
-| **Bảo vệ nội dung S3 chỉ phát qua CloudFront** | **CloudFront Origin Access Control (OAC)** | CNAME / S3 Public Website Endpoint | TD-Set2 Q39 |
+| **Bảo vệ nội dung S3 chỉ phát qua CloudFront** | **CloudFront Origin Access Control (OAC)** | CNAME / S3 Public Website Endpoint | TD-Set2 Q39, U-PT4 Q10 |
 | **Hàng triệu user upload ảnh sự kiện không sập web tier** | **Amazon S3 Presigned URLs** | Scale EC2 hàng trăm máy (tốn kém & nghẽn I/O) | CM-PT6 Q33 |
 | **Ngăn chặn chi phí ẩn do upload file lớn đứt quãng** | **S3 Lifecycle (Abort Incomplete Multipart Uploads)** | Quét script thủ công (dễ bỏ sót parts dở dang) | CM-PT5 Q27 |
-| **Bảo vệ bất biến cố định 1 năm không ai xóa được** | **S3 Object Lock (Compliance Mode + Retention Period)** | Governance Mode (admin có thể bypass xóa) |
-| **Hàng triệu user upload ảnh sự kiện không sập web tier** | **Amazon S3 Presigned URLs** | Scale EC2 hàng trăm máy (tốn kém & nghẽn I/O) |
-| **Ngăn chặn chi phí ẩn do upload file lớn đứt quãng** | **S3 Lifecycle (Abort Incomplete Multipart Uploads)** | Quét script thủ công (dễ bỏ sót parts dở dang) |
-| **Tải file vệ tinh/video hàng chục GB lên S3 tối ưu** | **S3 Multipart Upload + Parallel Byte-Ranges** | Tải đơn luồng (dễ rớt mạng, chậm chạp) |
-| **Chỉ cho phép tài khoản trong cùng Organization đọc S3** | **S3 Bucket Policy điều kiện `aws:PrincipalOrgID`** | Cấp quyền theo từng IAM Role lẻ tẻ |
+| **Xử lý ảnh tự động khi người dùng vừa upload** | **S3 Event Notifications kích hoạt AWS Lambda** | EC2 cron job quét S3 định kỳ (trễ và tốn compute) | U-PT4 Q49 |
+| **Tải file vệ tinh/video hàng chục GB lên S3 tối ưu** | **S3 Multipart Upload + Parallel Byte-Ranges** | Tải đơn luồng (dễ rớt mạng, chậm chạp) | Chuẩn AWS |
+| **Chỉ cho phép tài khoản trong cùng Organization đọc S3** | **S3 Bucket Policy điều kiện `aws:PrincipalOrgID`** | Cấp quyền theo từng IAM Role lẻ tẻ | Chuẩn AWS |
 
 ---
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### 1. Sơ đồ bảo vệ S3 Origin an toàn tuyệt đối với CloudFront Origin Access Control (OAC)
 
@@ -389,7 +441,7 @@ flowchart TD
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức kỹ thuật chính xác) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -402,7 +454,7 @@ flowchart TD
 
 ---
 
-## 6.5. Bảng So Sánh Toàn Bộ Các Giải Pháp Lưu Trữ Đối Tượng & Tăng Tốc (Ecosystem Comparison)
+## 5. Bảng So Sánh Toàn Bộ Các Giải Pháp Lưu Trữ Đối Tượng & Tăng Tốc (Ecosystem Comparison)
 
 | Dịch vụ AWS | Loại hình kiến trúc | Phạm vi địa lý | Độ trễ truy vấn | Khả năng Caching | Kịch bản sử dụng chuẩn mực |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -415,9 +467,9 @@ flowchart TD
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### 6.6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của Amazon S3 & CloudFront
+### 6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của Amazon S3 & CloudFront
 
 | Thành phần tính phí | Cơ chế tính phí (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
@@ -431,7 +483,7 @@ flowchart TD
 
 ---
 
-### 6.6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
+### 6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
 
 #### Kịch bản 1: Tiêu Hủy Dữ Liệu Phân Đoạn Dở Dang Bằng S3 Lifecycle Rule
 * **Bối cảnh thực tế**:
@@ -519,7 +571,7 @@ flowchart TD
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Vấn đề (Problem) | Nguyên nhân khả dĩ (Possible Causes) | Các bước điều tra (Investigation Steps - Metrics/Logs) | Giải pháp xử lý (Solution) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -534,7 +586,7 @@ flowchart TD
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon S3 & CloudFront (Golden Rules)
 1. **Bảo mật Origin bằng CloudFront OAC**:  

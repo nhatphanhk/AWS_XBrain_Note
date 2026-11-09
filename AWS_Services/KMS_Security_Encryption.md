@@ -6,7 +6,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### Dịch vụ gì?
 Bảo vệ dữ liệu và an toàn thông tin là trụ cột hàng đầu (Security Pillar) trong mô hình Well-Architected của AWS. Hệ sinh thái mã hóa và an ninh của AWS cung cấp một kiến trúc phòng thủ chiều sâu (Defense-in-Depth) toàn diện:
@@ -19,7 +19,7 @@ Bảo vệ dữ liệu và an toàn thông tin là trụ cột hàng đầu (Sec
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Phân loại Khóa mã hóa trong AWS KMS (4 Chiều Độc Lập)
 
@@ -262,7 +262,7 @@ flowchart LR
     5. Amazon Cognito User Pools
     6. AWS App Runner
 
-#### 🪤 Bẫy 3: Yêu Cầu KMS Multi-Region Key Khi Dùng S3 Cross-Region Replication (CRR) — (U-PT2 Q46)
+#### 🪤 Bẫy 3: Yêu Cầu KMS Multi-Region Key Khi Dùng S3 Cross-Region Replication (CRR) — (U-PT2 Q46, U-PT4 Q16)
 - **Tình huống đề thi**: *"Dữ liệu trong S3 bucket tại Region A được mã hóa bằng SSE-KMS. Doanh nghiệp cấu hình S3 Cross-Region Replication để tự động sao chép sang S3 bucket tại Region B. Quá trình sao chép bị lỗi không thể giải mã dữ liệu tại Region B."*
 - **Nguyên nhân & Khắc phục**:
   - Khóa KMS thông thường là **tài nguyên cục bộ trong 1 Region (Regional Resource)**. Khóa tạo ở Region A hoàn toàn không tồn tại và không thể dùng để giải mã ở Region B.
@@ -308,6 +308,26 @@ flowchart LR
   - Lệnh xóa khóa bắt buộc phải lên lịch chờ (**ScheduleKeyDeletion**) với khoảng thời gian chờ an toàn (**Waiting Period**) từ **7 đến 30 ngày** (mặc định 30 ngày).
   - Trong thời gian chờ này, khóa ở trạng thái `PendingDeletion` (không thể encrypt/decrypt nhưng có thể gọi `CancelKeyDeletion` để khôi phục an toàn).
 
+#### 🪤 Bẫy 10: Giảm 99% Chi Phí Gọi API KMS Cho S3 Bucket Bằng S3 Bucket Keys — (U-PT4 Q65)
+- **Tình huống đề thi**: *"Hệ thống phân tích Big Data lưu trữ hàng triệu đối tượng trên Amazon S3 được mã hóa bằng AWS KMS (SSE-KMS). Khi các ứng dụng hoặc công cụ truy vấn (Athena, EMR) đọc/ghi dữ liệu ở tần suất cao, hóa đơn KMS tăng vọt vì mỗi object tạo một yêu cầu API `kms:GenerateDataKey` hoặc `kms:Decrypt`, đồng thời gây nguy cơ lỗi HTTP 429 KMS Request Throttling."*
+- **Các phương án bẫy**:
+  - ❌ *Chuyển sang SSE-S3*: Mất khả năng kiểm soát khóa riêng, không thể áp dụng kiểm toán độc lập bằng KMS Key Policy và CloudTrail.
+  - ❌ *Gửi ticket xin tăng hạn mức KMS Request Quota*: Không giải quyết được gốc rễ chi phí phát sinh hàng ngàn USD tiền cước gọi API KMS.
+- **Giải pháp ĐÚNG**: Kích hoạt **Amazon S3 Bucket Keys**.
+  - S3 Bucket Key tạo ra một khóa ngắn hạn cấp bucket từ KMS. S3 sử dụng khóa trung gian này để sinh ra các Data Keys mã hóa đối tượng cục bộ trong hạ tầng S3.
+  - Giảm đến **99% số cuộc gọi API lên KMS**, hạ chi phí gọi API từ hàng trăm USD xuống chỉ còn vài xu, đồng thời ngăn chặn triệt để hiện tượng nghẽn throughput KMS.
+
+#### 🪤 Bẫy 11: Phạm Vi Bảo Vệ Toàn Diện Của EBS Encryption Kết Hợp KMS — (U-PT4 Q09)
+- **Tình huống đề thi**: *"Đề bài kiểm tra hiểu biết về phạm vi bảo vệ của tính năng Amazon EBS Encryption khi tích hợp với khóa AWS KMS. Dữ liệu nào thực sự được mã hóa?"*
+- **Các phương án bẫy**:
+  - ❌ *Chỉ mã hóa dữ liệu tĩnh (Data-at-rest) trên ổ cứng*: Bẫy phổ biến cho rằng dữ liệu truyền giữa EC2 và EBS không được bảo vệ.
+  - ❌ *Snapshot tạo từ ổ EBS mã hóa sẽ không được mã hóa trừ khi cấu hình thêm*: Hoàn toàn sai!
+- **Giải pháp ĐÚNG**: Tính năng **EBS Encryption** bảo vệ tự động 4 phạm vi:
+  1. **Data at rest** bên trong ổ volume.
+  2. **Tất cả các bản Snapshots** được tạo từ volume đã mã hóa đều tự động được mã hóa cùng khóa KMS.
+  3. **Mọi Volume mới** tạo từ các snapshot mã hóa đó đều tự động được mã hóa.
+  4. **Data in transit**: Toàn bộ luồng dữ liệu di chuyển giữa máy chủ ảo EC2 và ổ cứng EBS đính kèm đều được mã hóa tự động trên đường truyền mạng nội bộ bởi hypervisor mà không ảnh hưởng tới hiệu năng I/O!
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định An Ninh & Mã Hóa Nhanh (Exam Decision Matrix)
@@ -323,11 +343,13 @@ flowchart LR
 | **Lưu trữ bí mật/mật khẩu rẻ nhất (không cần auto-rotate)** | **SSM Parameter Store (SecureString)** | AWS Secrets Manager ($0.40/secret/tháng đắt đỏ) | `TD-Set3 Q33` |
 | **Tự động xoay vòng mật khẩu DB không gián đoạn** | **AWS Secrets Manager** (kết hợp Lambda) | SSM Parameter Store (không tích hợp xoay vòng tự động) | `TD-Set2 Q10` |
 | **Giấu biến môi trường Lambda khỏi Console Plaintext** | **KMS Encryption Helpers (Customer Managed Key)** | Mã hóa mặc định Lambda (vẫn xem được Plaintext console) | `TD-Set1 Q58` |
-| **Mã hóa S3 CRR xuyên nhiều AWS Regions** | **AWS KMS Multi-Region Key** | Single-Region KMS Key (không giải mã được ở Region khác) | Chuẩn AWS |
+| **Mã hóa S3 CRR xuyên nhiều AWS Regions** | **AWS KMS Multi-Region Key** | Single-Region KMS Key (không giải mã được ở Region khác) | `U-PT4 Q16` |
 | **Khôi phục snapshot chưa mã hóa thành volume mã hóa** | Bật **EBS Encryption by Default** ở cấp Region | Khôi phục trực tiếp (volume sinh ra vẫn unencrypted) | `TD-Set6 Q04` |
 | **Ngăn chặn xóa nhầm khóa mã hóa KMS** | **ScheduleKeyDeletion (Chờ 7-30 ngày)** | Lệnh xóa tức thì (KMS không cho phép xóa ngay) | `TD-Set8 Q05` |
 | **Master Key & Plaintext không bao giờ chạm tới AWS** | **Client-Side Encryption with Customer Key (CSE-C)** | SSE-KMS / SSE-S3 (dữ liệu rõ vẫn gửi lên AWS) | `TD-Set1 Q06` |
 | **Cấp chứng chỉ SSL/TLS cho CloudFront Distribution** | **ACM tại Region `us-east-1` (bắt buộc)** | ACM tại các Region khác (CloudFront không nhận) | `TD-Set1 Q19` |
+| **Cắt giảm 99% chi phí API KMS cho S3 SSE-KMS** | **S3 Bucket Keys** | Chuyển sang SSE-S3 (mất quyền kiểm toán CMK) | `U-PT4 Q65` |
+| **Mã hóa toàn diện EBS (at-rest, in-transit, snapshot)** | **Amazon EBS KMS Encryption** | Giải pháp mã hóa ứng dụng tầng OS (phức tạp, chậm) | `U-PT4 Q09` |
 
 ---
 
@@ -335,7 +357,7 @@ flowchart LR
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Quy trình tự động xoay vòng mật khẩu RDS bằng Secrets Manager & Lambda
 
@@ -362,7 +384,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức tích hợp) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -375,7 +397,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
+## 5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
 
 ### So sánh các giải pháp bảo vệ dữ liệu và quản lý mật mã
 
@@ -390,9 +412,9 @@ sequenceDiagram
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### 6.6.1. Bảng Cấu Trúc Định Giá Chi Tiết
+### 6.1. Bảng Cấu Trúc Định Giá Chi Tiết
 
 | Thành phần Dịch Vụ | Đơn giá AWS niêm yết | Cơ chế đo lường | Ghi chú tối ưu hóa chi phí FinOps |
 | :--- | :--- | :--- | :--- |
@@ -406,7 +428,7 @@ sequenceDiagram
 
 ---
 
-### 6.6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
+### 6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
 
 #### Kịch bản 1: Kích hoạt S3 Bucket Keys cho kho lưu trữ Big Data Lake (SSE-KMS)
 - **Bối cảnh**: Kho dữ liệu Big Data trên Amazon S3 chứa 80 triệu tệp tin Parquet mã hóa bằng Customer Managed Key (`SSE-KMS`). Các tác vụ Amazon Athena và AWS EMR định kỳ phân tích dữ liệu, phát sinh **150 triệu lượt truy xuất đối tượng mỗi tháng**.
@@ -469,7 +491,7 @@ sequenceDiagram
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Tình huống sự cố (Problem) | Nguyên nhân cốt lõi (Root Cause) | Các bước điều tra & Chỉ số giám sát (Metrics & Logs) | Giải pháp khắc phục (Remediation) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -483,7 +505,7 @@ sequenceDiagram
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Bảo Mật & Mã Hóa AWS (Golden Rules)
 1. **KMS Key Policy là tối thượng**: IAM Policy chỉ có hiệu lực khi được KMS Key Policy cho phép; mất khóa KMS là mất dữ liệu vĩnh viễn.

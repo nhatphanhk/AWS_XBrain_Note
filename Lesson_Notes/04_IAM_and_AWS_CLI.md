@@ -1,12 +1,12 @@
-# Ghi Chú Bài Học: Chương 04 - Quản Lý Định Danh IAM & Giao Diện Dòng Lệnh AWS CLI (IAM & AWS CLI)
+﻿# Ghi Chú Bài Học: Chương 04 - Quản Lý Định Danh IAM & Giao Diện Dòng Lệnh AWS CLI (IAM & AWS CLI)
 
 > **Khóa học**: Ultimate AWS Certified Solutions Architect Associate  
 > **Chương**: 04 - IAM & AWS CLI (Bài 11 đến Bài 30)  
-> **Tài liệu tham chiếu liên quan**: [AWS Service Document: IAM & Enterprise Identity](file:///n:/AWS_XBrain_Note/AWS_Services/IAM_Identity_and_Access_Management.md)
+> **Tài liệu tham chiếu liên quan**: [AWS Service Document: IAM & Enterprise Identity](../AWS_Services/IAM_Identity_and_Access_Management.md)
 
 ---
 
-## 4.1. Tổng Quan Bài Học (Lesson Overview)
+## 1. Tổng Quan Bài Học (Lesson Overview)
 
 ### Chủ đề chính
 Chương này trang bị nền tảng an toàn thông tin đầu tiên và quan trọng nhất trên AWS: **Identity and Access Management (IAM)** và các phương thức giao tiếp với AWS qua giao diện dòng lệnh (**AWS CLI**), bộ công cụ lập trình (**AWS SDK**), và môi trường dòng lệnh trên trình duyệt (**AWS CloudShell**).
@@ -21,7 +21,7 @@ Chương này trang bị nền tảng an toàn thông tin đầu tiên và quan 
 
 ---
 
-## 4.2. Điểm Cốt Lõi Cần Nhớ (Key Takeaways)
+## 2. Điểm Cốt Lõi Cần Nhớ (Key Takeaways)
 
 1. **IAM là dịch vụ Toàn cầu (Global Service)**: Không cần chọn Region khi thao tác với IAM.
 2. **Khóa Root Account ngay khi tạo**: Bật MFA, không tạo Access Keys cho Root, không chia sẻ mật khẩu Root.
@@ -32,7 +32,7 @@ Chương này trang bị nền tảng an toàn thông tin đầu tiên và quan 
 
 ---
 
-## 4.3. Giải Thích Khái Niệm Chi Tiết (Detailed Concept Explanations)
+## 3. Giải Thích Khái Niệm Chi Tiết (Detailed Concept Explanations)
 
 ### 1. IAM Users, Groups & Policies
 - **IAM User**: Đại diện cho 1 người thực tế (1 người = 1 tài khoản). Mỗi user có mật khẩu đăng nhập Console và tối đa 2 bộ Access Keys cho CLI.
@@ -67,7 +67,7 @@ Chương này trang bị nền tảng an toàn thông tin đầu tiên và quan 
 
 ---
 
-## 4.4. Lệnh và Cấu Hình Thực Tế (Commands & CLI Examples)
+## 4. Lệnh và Cấu Hình Thực Tế (Commands & CLI Examples)
 
 ### Cấu hình AWS CLI lần đầu trên máy tính:
 ```bash
@@ -95,7 +95,7 @@ aws iam get-credential-report --query "Content" --output text | base64 --decode 
 
 ---
 
-## 4.5. Ví Dụ Thực Tiễn (Practical Examples)
+## 5. Ví Dụ Thực Tiễn (Practical Examples)
 
 ### Ví dụ từ bài giảng:
 Giảng viên Stéphane Maarek hướng dẫn tạo một IAM User tên là `stephane` và gán vào nhóm `admin`. Thử đăng nhập đồng thời trên hai trình duyệt riêng biệt (Chrome thường và Chrome ẩn danh / Firefox) để chứng minh khả năng quản trị đa phiên làm việc đồng thời (Simultaneous sign-in) giữa Root Account và IAM User. Sau đó thực hiện bật Virtual MFA bằng điện thoại và xóa bỏ Root Access Key.
@@ -109,7 +109,7 @@ Lệnh này mở trình duyệt để xác thực qua cổng đăng nhập tập
 
 ---
 
-## 4.6. Mối Quan Hệ Giữa Các Khái Niệm (Relationships Between Concepts)
+## 6. Mối Quan Hệ Giữa Các Khái Niệm (Relationships Between Concepts)
 
 ```mermaid
 graph LR
@@ -124,7 +124,7 @@ graph LR
 
 ---
 
-## 4.7. Câu Hỏi Ôn Tập và Tự Đánh Giá (Review & Self-Assessment)
+## 7. Câu Hỏi Ôn Tập và Tự Đánh Giá (Review & Self-Assessment)
 
 ### Câu hỏi:
 1. Bạn có một máy chủ EC2 cần tải tệp tin từ Amazon S3. Đâu là cách cấu hình bảo mật chuẩn nhất theo khuyến nghị của AWS?
@@ -149,14 +149,14 @@ graph LR
 
 ---
 
-## 4.8. Nguồn Tham Chiếu (Source References)
+## 8. Nguồn Tham Chiếu (Source References)
 
 - **Source Transcripts**:
-  - [11 - IAM Introduction_ Users, Groups, Policies.md](file:///n:/AWS_XBrain_Note/AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/11%20-%20IAM%20Introduction_%20Users,%20Groups,%20Policies.md)
-  - [14 - IAM Policies.md](file:///n:/AWS_XBrain_Note/AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/14%20-%20IAM%20Policies.md)
-  - [16 - IAM MFA Overview.md](file:///n:/AWS_XBrain_Note/AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/16%20-%20IAM%20MFA%20Overview.md)
-  - [18 - AWS Access Keys, CLI and SDK.md](file:///n:/AWS_XBrain_Note/AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/18%20-%20AWS%20Access%20Keys,%20CLI%20and%20SDK.md)
-  - [24 - AWS CloudShell.md](file:///n:/AWS_XBrain_Note/AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/24%20-%20AWS%20CloudShell.md)
-  - [25 - IAM Roles for AWS Services.md](file:///n:/AWS_XBrain_Note/AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/25%20-%20IAM%20Roles%20for%20AWS%20Services.md)
-  - [27 - IAM Security Tools.md](file:///n:/AWS_XBrain_Note/AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/27%20-%20IAM%20Security%20Tools.md)
-  - [29 - IAM Best Practices.md](file:///n:/AWS_XBrain_Note/AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/29%20-%20IAM%20Best%20Practices.md)
+  - [11 - IAM Introduction_ Users, Groups, Policies.md](../AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/11%20-%20IAM%20Introduction_%20Users%2C%20Groups%2C%20Policies.md)
+  - [14 - IAM Policies.md](../AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/14%20-%20IAM%20Policies.md)
+  - [16 - IAM MFA Overview.md](../AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/16%20-%20IAM%20MFA%20Overview.md)
+  - [18 - AWS Access Keys, CLI and SDK.md](../AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/18%20-%20AWS%20Access%20Keys%2C%20CLI%20and%20SDK.md)
+  - [24 - AWS CloudShell.md](../AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/24%20-%20AWS%20CloudShell.md)
+  - [25 - IAM Roles for AWS Services.md](../AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/25%20-%20IAM%20Roles%20for%20AWS%20Services.md)
+  - [27 - IAM Security Tools.md](../AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/27%20-%20IAM%20Security%20Tools.md)
+  - [29 - IAM Best Practices.md](../AWS_Resources/04%20-%20IAM%20&%20AWS%20CLI/29%20-%20IAM%20Best%20Practices.md)

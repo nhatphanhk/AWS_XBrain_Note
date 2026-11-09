@@ -1,16 +1,16 @@
-# Ghi Chú Bài Học: Chương 31 - WhitePapers & Kiến Trúc Thực Tế (WhitePapers and Architectures)
+﻿# Ghi Chú Bài Học: Chương 31 - WhitePapers & Kiến Trúc Thực Tế (WhitePapers and Architectures)
 
 > **Khóa học**: Ultimate AWS Certified Solutions Architect Associate  
 > **Chương**: 31 - WhitePapers and Architectures  
 > **Các bài giảng bao gồm**: 
-> - [382 - WhitePaper Section Introduction](file:///n:/AWS_XBrain_Note/AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/382%20-%20WhitePaper%20Section%20Introduction.md)
-> - [383 - AWS Well-Architected Framework & Well-Architected Tool](file:///n:/AWS_XBrain_Note/AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/383%20-%20AWS%20Well-Architected%20Framework%20&%20Well-Architecte.md)
-> - [384 - AWS Trusted Advisor Overview + Hands-On](file:///n:/AWS_XBrain_Note/AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/384%20-%20AWS%20Trusted%20Advisor%20Overview%20+%20Hands-On.md)
-> - [385 - Examples of Architecture - AWS Certified Solutions Architect Associate](file:///n:/AWS_XBrain_Note/AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/385%20-%20Examples%20of%20Architecture%20-%20AWS%20Certified%20Solutio.md)
+> - [382 - WhitePaper Section Introduction](../AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/382%20-%20WhitePaper%20Section%20Introduction.md)
+> - [383 - AWS Well-Architected Framework & Well-Architected Tool](../AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/383%20-%20AWS%20Well-Architected%20Framework%20&%20Well-Architecte.md)
+> - [384 - AWS Trusted Advisor Overview + Hands-On](../AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/384%20-%20AWS%20Trusted%20Advisor%20Overview%20+%20Hands-On.md)
+> - [385 - Examples of Architecture - AWS Certified Solutions Architect Associate](../AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/385%20-%20Examples%20of%20Architecture%20-%20AWS%20Certified%20Solutio.md)
 
 ---
 
-## 4.1. Tổng Quan Bài Học (Lesson Overview)
+## 1. Tổng Quan Bài Học (Lesson Overview)
 
 ### Chủ đề chính
 Chương này tập trung vào các tài liệu kỹ thuật chuẩn mực (Whitepapers), khuôn khổ thiết kế kiến trúc chuẩn AWS (**AWS Well-Architected Framework**), công cụ đánh giá khối lượng công việc (**AWS Well-Architected Tool**), dịch vụ kiểm tra tối ưu tài khoản tự động (**AWS Trusted Advisor**), và các kho tài nguyên kiến trúc tham chiếu thực tế (**AWS Architecture Center** & **AWS Solutions Library**).
@@ -27,7 +27,7 @@ Chương này tập trung vào các tài liệu kỹ thuật chuẩn mực (Whit
 
 ---
 
-## 4.2. Điểm Cốt Lõi Cần Nhớ (Key Takeaways)
+## 2. Điểm Cốt Lõi Cần Nhớ (Key Takeaways)
 
 1. **6 Trụ cột Well-Architected Framework**:
    - **Vận hành xuất sắc (Operational Excellence)**: Tự động hóa quy trình, cải tiến liên tục, học hỏi từ sự cố.
@@ -47,7 +47,7 @@ Chương này tập trung vào các tài liệu kỹ thuật chuẩn mực (Whit
 
 ---
 
-## 4.3. Giải Thích Khái Niệm Chi Tiết (Detailed Concept Explanations)
+## 3. Giải Thích Khái Niệm Chi Tiết (Detailed Concept Explanations)
 
 ### 1. AWS Well-Architected Framework là gì?
 - **Định nghĩa**: Bộ khung các hướng dẫn, nguyên tắc thiết kế và bộ câu hỏi đánh giá chuẩn mực của AWS giúp các kiến trúc sư xây dựng hạ tầng an toàn, hiệu năng cao, linh hoạt và tối ưu chi phí.
@@ -90,7 +90,7 @@ Chương này tập trung vào các tài liệu kỹ thuật chuẩn mực (Whit
 
 ---
 
-## 4.4. Lệnh, Cấu Hình và Mã Nguồn (Commands, Code, and Configuration)
+## 4. Lệnh, Cấu Hình và Mã Nguồn (Commands, Code, and Configuration)
 
 ### 1. Truy vấn Trusted Advisor qua AWS CLI (Yêu cầu Business/Enterprise Support)
 Để tự động hóa việc lấy danh sách các kiểm tra bảo mật có rủi ro cao từ Trusted Advisor:
@@ -140,7 +140,7 @@ resource "aws_wellarchitected_workload" "production_workload" {
 
 ---
 
-## 4.5. Ví Dụ Thực Tiễn (Practical Examples)
+## 5. Ví Dụ Thực Tiễn (Practical Examples)
 
 ### Ví dụ 1 (Từ bài giảng của giảng viên)
 Giảng viên mô tả việc cấu hình một Workload thực tế trong console:
@@ -157,7 +157,7 @@ Trong một dự án xây dựng dịch vụ Streaming Video thời gian thực:
 
 ---
 
-## 4.6. Mối Quan Hệ Giữa Các Khái Niệm (Relationships Between Concepts)
+## 6. Mối Quan Hệ Giữa Các Khái Niệm (Relationships Between Concepts)
 
 ```mermaid
 graph TD
@@ -179,7 +179,7 @@ graph TD
 
 ---
 
-## 4.7. Câu Hỏi Ôn Tập và Tự Đánh Giá (Review and Self-Assessment)
+## 7. Câu Hỏi Ôn Tập và Tự Đánh Giá (Review and Self-Assessment)
 
 ### Câu hỏi
 1. Hãy kể tên đầy đủ 6 Trụ cột (6 Pillars) của AWS Well-Architected Framework?
@@ -214,12 +214,12 @@ graph TD
 
 ---
 
-## 4.8. Nguồn Tham Chiếu (Source References)
+## 8. Nguồn Tham Chiếu (Source References)
 
-- **Source Transcript**: [382 - WhitePaper Section Introduction.md](file:///n:/AWS_XBrain_Note/AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/382%20-%20WhitePaper%20Section%20Introduction.md) [00:00 - 00:53]
-- **Source Transcript**: [383 - AWS Well-Architected Framework & Well-Architecte.md](file:///n:/AWS_XBrain_Note/AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/383%20-%20AWS%20Well-Architected%20Framework%20&%20Well-Architecte.md) [00:00 - 06:07]
-- **Source Transcript**: [384 - AWS Trusted Advisor Overview + Hands-On.md](file:///n:/AWS_XBrain_Note/AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/384%20-%20AWS%20Trusted%20Advisor%20Overview%20+%20Hands-On.md) [00:00 - 03:18]
-- **Source Transcript**: [385 - Examples of Architecture - AWS Certified Solutio.md](file:///n:/AWS_XBrain_Note/AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/385%20-%20Examples%20of%20Architecture%20-%20AWS%20Certified%20Solutio.md) [00:00 - 04:17]
+- **Source Transcript**: [382 - WhitePaper Section Introduction.md](../AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/382%20-%20WhitePaper%20Section%20Introduction.md) [00:00 - 00:53]
+- **Source Transcript**: [383 - AWS Well-Architected Framework & Well-Architecte.md](../AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/383%20-%20AWS%20Well-Architected%20Framework%20&%20Well-Architecte.md) [00:00 - 06:07]
+- **Source Transcript**: [384 - AWS Trusted Advisor Overview + Hands-On.md](../AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/384%20-%20AWS%20Trusted%20Advisor%20Overview%20+%20Hands-On.md) [00:00 - 03:18]
+- **Source Transcript**: [385 - Examples of Architecture - AWS Certified Solutio.md](../AWS_Resources/31%20-%20WhitePapers%20and%20Architectures/385%20-%20Examples%20of%20Architecture%20-%20AWS%20Certified%20Solutio.md) [00:00 - 04:17]
 - **Tài liệu chính thức từ AWS**:
   - [AWS Well-Architected Framework Whitepaper](https://aws.amazon.com/architecture/well-architected/)
   - [AWS Trusted Advisor Best Practices](https://aws.amazon.com/premiumsupport/technology/trusted-advisor/)

@@ -7,7 +7,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### 1. Định nghĩa chuẩn xác và Phân nhóm dịch vụ
 **Amazon Elastic Compute Cloud (Amazon EC2)** là dịch vụ điện toán đám mây nền tảng cốt lõi của AWS (mô hình Infrastructure as a Service - IaaS), cung cấp năng lực tính toán an toàn, có khả năng định cỡ và mở rộng linh hoạt dưới dạng các máy chủ ảo (**EC2 Instances**).
@@ -46,7 +46,7 @@ flowchart TD
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Sơ đồ các thành phần cốt lõi của một EC2 Instance
 
@@ -313,6 +313,39 @@ flowchart TD
   - Cho phép đặt chỗ trước dung lượng máy ảo tại một Availability Zone cụ thể theo lịch trình định kỳ (recurring schedule).
   - Có thể kết hợp với Savings Plans để được hưởng chiết khấu giảm giá.
 
+#### 🪤 Bẫy 15: Giám Sát Tần Suất Cao (<= 2 Phút) Triển Khai Nhanh, Ít Bảo Trì — (U-PT4 Q01)
+- **Tình huống đề thi**: *"Công ty streaming media chuẩn bị phát sóng trực tiếp sự kiện lớn. Đội vận hành cần giám sát hiệu năng máy chủ EC2 với tần suất thu thập dữ liệu không quá 2 phút/lần, yêu cầu giải pháp triển khai nhanh nhất và ít tốn công bảo trì nhất (low-maintenance)."*
+- **Các phương án bẫy**:
+  - ❌ *Cài đặt CloudWatch Agent trên toàn bộ EC2 và stream custom metric về Athena*: Đạt tần suất nhưng đòi hỏi cài đặt, cấu hình agent thủ công trên từng máy và truy vấn qua Athena tạo độ trễ truy vấn cao.
+  - ❌ *Dùng EventBridge bắt state changes EC2 rồi đẩy sang SNS*: EventBridge và SNS phục vụ event-driven và cảnh báo trạng thái, không phải công cụ thu thập liên tục các chỉ số hiệu năng (CPU, Disk, Network).
+- **Giải pháp ĐÚNG**: Kích hoạt **Detailed Monitoring** trên các EC2 instances.
+  - Mặc định (Basic Monitoring) của EC2 gửi metrics lên CloudWatch với chu kỳ **5 phút** (miễn phí).
+  - Bật **Detailed Monitoring** chuyển chu kỳ thu thập về **1 phút** mà không cần cài đặt thêm bất kỳ agent hay phần mềm nào, kích hoạt tức thì qua 1 cú click Console hoặc lệnh CLI `aws ec2 monitor-instances`.
+
+#### 🪤 Bẫy 16: Tự Động Khởi Động Lại (Reboot) Máy Ảo Khi Lỗi Instance Status Check — (U-PT4 Q18)
+- **Tình huống đề thi**: *"Ứng dụng điều phối taxi chạy trên EC2 instance thỉnh thoảng bị treo do lỗi phần mềm bên trong hệ điều hành (Instance Status Check Failed). Doanh nghiệp cần cơ chế tự động khởi động lại instance với chi phí rẻ nhất và ít bước quản trị nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng EventBridge rule kích hoạt AWS Lambda gọi API ec2:RebootInstances*: Hoạt động được nhưng tốn thêm công viết code, duy trì Lambda function và phí thực thi không cần thiết.
+- **Giải pháp ĐÚNG**: Thiết lập **CloudWatch Alarm** theo dõi metric **`StatusCheckFailed_Instance`** và gắn trực tiếp hành động **EC2 Reboot Alarm Action**.
+  - Phân biệt sống còn trong thi cử:
+    - `StatusCheckFailed_System` (lỗi phần cứng máy chủ vật lý AWS) $\rightarrow$ Dùng hành động **EC2 Recover** (chuyển sang host mới).
+    - `StatusCheckFailed_Instance` (lỗi OS, kernel, memory bên trong máy ảo) $\rightarrow$ Dùng hành động **EC2 Reboot**.
+
+#### 🪤 Bẫy 17: Kết Nối SSH An Toàn Không Cần Quản Lý Private Key Tĩnh — (U-PT4 Q41)
+- **Tình huống đề thi**: *"Đội DevOps cần thiết lập quyền truy cập SSH vào các máy ảo EC2 Linux đang chạy trong Public Subnet nhưng yêu cầu không được lưu trữ, chia sẻ hoặc phân phối các file private key `.pem` tĩnh vì lý do rò rỉ bảo mật."*
+- **Các phương án bẫy**:
+  - ❌ *Tạo một cặp key pair tĩnh duy nhất rồi chia sẻ cho toàn bộ kỹ sư*: Vi phạm bảo mật và không thể thu hồi quyền của từng cá nhân.
+- **Giải pháp ĐÚNG**: Sử dụng **EC2 Instance Connect**.
+  - Kỹ sư xác thực danh tính qua IAM permissions (`ec2-instance-connect:SendSSHPublicKey`).
+  - AWS tự động tạo và đẩy một SSH Public Key tạm thời (chỉ có hiệu lực trong **60 giây**) trực tiếp vào instance metadata của máy ảo. Kỹ sư kết nối SSH thành công ngay qua Console trình duyệt hoặc CLI mà không cần giữ private key vĩnh viễn trên máy tính.
+
+#### 🪤 Bẫy 18: Tối Ưu Chi Phí Kết Hợp Tải Nền 24/7 Cố Định và Tải Đỉnh Đột Biến — (U-PT4 Q36)
+- **Tình huống đề thi**: *"Ứng dụng xử lý dữ liệu tài chính có một mức lưu lượng nền (baseline) hoạt động liên tục 24/7 ổn định quanh năm, nhưng vào các dịp cao điểm có các đợt tăng vọt (spikes) lưu lượng đột ngột xử lý thông điệp từ hàng đợi. Workload xử lý tin nhắn có khả năng chịu lỗi và chạy lại được. Đề xuất chiến lược mua sắm EC2 tối ưu chi phí nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Mua 100% Reserved Instances / Savings Plans theo mức tải đỉnh*: Gây lãng phí khổng lồ chi phí cam kết khi lưu lượng trở về mức nền.
+  - ❌ *Chạy 100% On-Demand*: Chi phí quá đắt đỏ cho lượng tài nguyên nền chạy 24/7.
+- **Giải pháp ĐÚNG**: Sử dụng **Reserved Instances (hoặc Savings Plans)** cho mức tải nền baseline cố định (tiết kiệm tới 72%), kết hợp cấu hình **Auto Scaling Group sử dụng EC2 Spot Instances** để tự động co giãn giải quyết các đợt spikes lưu lượng đột biến (tiết kiệm tới 90%).
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định EC2 & Tính Toán Nhanh (Exam Decision Matrix)
@@ -333,11 +366,12 @@ flowchart TD
 | **Phục hồi tự động máy chủ đơn khối (Monolith) + EIP** | **ASG (Min=1, Max=1) + EIP re-attach qua User Data** | Dùng ALB (tốn thêm chi phí duy trì hàng tháng) | U-PT6 Q44 |
 | **Tự động phục hồi máy ảo lỗi phần cứng giữ nguyên IP** | **CloudWatch Alarm (StatusCheckFailed_System) + Auto-Recovery** | Tạo mới máy ảo thủ công (mất thời gian & đổi IP) | CM-PT5 Q03 |
 | **Tải công việc tăng giảm định kỳ theo giờ mỗi ngày** | **EC2 Auto Scaling Scheduled Scaling** | Dynamic Target Tracking (bị chậm trễ vài phút ban đầu) | TD-Set1 Q04 |
-| **Tự động tắt máy chủ Dev ngoài giờ làm việc** | **AWS Instance Scheduler** | Viết script cron thủ công trên EC2 |
-| **Lưu trữ tạm thời tốc độ cực cao, mất khi tắt máy** | **EC2 Instance Store** | Amazon EBS (độ trễ cao hơn Instance Store) |
-| **Cụm EMR chạy Spot tự động chọn AZ có capacity** | **EMR Instance Fleets (đa Subnet/Instance Types)** | Instance Groups (bị khóa vào 1 AZ cố định) |
-| **Tự động phục hồi máy ảo lỗi phần cứng giữ nguyên IP** | **CloudWatch Alarm (StatusCheckFailed_System) + Auto-Recovery** | Tạo mới máy ảo thủ công (mất thời gian & đổi IP) |
-| **Tải công việc tăng giảm định kỳ theo giờ mỗi ngày** | **EC2 Auto Scaling Scheduled Scaling** | Dynamic Target Tracking (bị chậm trễ vài phút ban đầu) |
+| **Giám sát EC2 chu kỳ 1 phút nhanh gọn, ít bảo trì** | **Detailed Monitoring (1-minute intervals)** | Cài đặt CloudWatch Agent + Athena (quá phức tạp) | U-PT4 Q01 |
+| **Tự động Reboot khi lỗi Instance Status Check** | **CloudWatch Alarm Action (EC2 Reboot)** | Dùng EventBridge + Lambda (dư thừa, tốn kém) | U-PT4 Q18 |
+| **SSH an toàn không cần quản lý private key tĩnh** | **EC2 Instance Connect (đẩy public key tạm 60s)** | Chia sẻ file .pem tĩnh (rủi ro bảo mật) | U-PT4 Q41 |
+| **Tải nền 24/7 cố định + Tải đỉnh đột biến** | **RI/Savings Plans (nền) + Spot trong ASG (đỉnh)** | Dùng 100% On-Demand hoặc 100% Spot | U-PT4 Q36 |
+| **Tự động tắt máy chủ Dev ngoài giờ làm việc** | **AWS Instance Scheduler** | Viết script cron thủ công trên EC2 | TD-Set2 Q19 |
+| **Cụm EMR chạy Spot tự động chọn AZ có capacity** | **EMR Instance Fleets (đa Subnet/Instance Types)** | Instance Groups (bị khóa vào 1 AZ cố định) | CM-PT2 Q26 |
 
 ---
 
@@ -345,7 +379,7 @@ flowchart TD
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### 1. Sơ đồ kiến trúc Web Application chịu lỗi cao kết hợp ALB, ASG và Graviton EC2
 
@@ -420,7 +454,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức kỹ thuật chính xác) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -434,7 +468,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
+## 5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
 
 | Tiêu chí | Amazon EC2 | AWS Lambda | Amazon ECS / EKS on Fargate | Amazon Lightsail |
 | :--- | :--- | :--- | :--- | :--- |
@@ -447,13 +481,13 @@ sequenceDiagram
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
 Điện toán đám mây Amazon EC2 thường chiếm từ **40% đến 65% tổng hóa đơn AWS** của doanh nghiệp. Áp dụng chuẩn xác các chiến lược FinOps 2026 sẽ giúp tiết kiệm từ 30% đến 80% chi phí.
 
 ---
 
-### 6.6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của Amazon EC2
+### 6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của Amazon EC2
 
 | Thành phần tính phí | Cơ chế tính phí (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
@@ -465,7 +499,7 @@ sequenceDiagram
 
 ---
 
-### 6.6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
+### 6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
 
 #### Kịch bản 1: Tối Ưu Chi Phí Ứng Dụng Web Kết Hợp Savings Plans và Spot trong ASG
 * **Bối cảnh thực tế**:
@@ -544,7 +578,7 @@ sequenceDiagram
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Vấn đề (Problem) | Nguyên nhân khả dĩ (Possible Causes) | Các bước điều tra (Investigation Steps - Metrics/Logs) | Giải pháp xử lý (Solution) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -559,7 +593,7 @@ sequenceDiagram
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon EC2 (Golden Rules)
 1. **Quản lý địa chỉ IP chuẩn xác**: Public IP của EC2 sẽ thay đổi sau mỗi lần Stop/Start; chỉ sử dụng **Elastic IP** khi thực sự cần IP tĩnh công khai (lưu ý phí $0.005/giờ/IP).

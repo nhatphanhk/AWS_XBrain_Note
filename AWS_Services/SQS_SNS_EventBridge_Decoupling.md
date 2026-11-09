@@ -6,7 +6,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### Dịch vụ gì?
 Trong kiến trúc phần mềm phân tán, việc kết nối trực tiếp đồng bộ (Tight Coupling) giữa các dịch vụ là nguyên nhân hàng đầu dẫn đến sự cố sập đổ dây chuyền (Cascading Failures) và nghẽn cổ chai khi lưu lượng tăng đột biến. AWS cung cấp bộ giải pháp **Tách rời ứng dụng (Application Decoupling)** và **Kiến trúc hướng sự kiện (Event-Driven Architecture)** gồm:
@@ -18,7 +18,7 @@ Trong kiến trúc phần mềm phân tán, việc kết nối trực tiếp đ�
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Phân Tích Chi Tiết Amazon SQS: Standard vs FIFO Queues
 
@@ -266,6 +266,36 @@ flowchart LR
 - **Giải pháp ĐÚNG**: Cấu hình **SNS Subscription Filter Policy** trên các **Message Attributes** của từng subscription (`TD-Set2 Q36`).
   - Publisher chỉ cần đính kèm thuộc tính `quote_type = "car"`. SNS sẽ tự động lọc và chỉ đẩy tin nhắn đó vào `car-insurance-queue`, hoàn toàn không tốn chi phí tính toán trung gian.
 
+#### 🪤 Bẫy 14: Tối Ưu Chi Phí Và Thông Lượng SQS Bằng Message Batching — (U-PT4 Q23)
+- **Tình huống đề thi**: *"Hệ thống thương mại điện tử gửi và nhận hàng triệu tin nhắn mỗi giờ qua Amazon SQS. Chi phí gọi API của SQS bắt đầu tăng cao. Doanh nghiệp muốn tăng thông lượng truyền tải tin nhắn và cắt giảm chi phí gọi API mà không làm thay đổi kiến trúc cơ bản."*
+- **Giải pháp ĐÚNG**: Sử dụng tính năng **Batch Messages (Gửi và nhận theo lô)**:
+  - Sử dụng các API lô: `SendMessageBatch`, `ReceiveMessageBatch`, và `DeleteMessageBatch`.
+  - Mỗi mẻ (batch) cho phép gom tối đa **10 tin nhắn** (tổng dung lượng không quá 256 KB).
+  - AWS tính phí API của 1 batch (10 tin nhắn) tương đương với phí của **1 request đơn lẻ** $\rightarrow$ Giúp giảm tới **10 lần chi phí gọi API SQS** và tăng đáng kể thông lượng I/O cho worker!
+
+#### 🪤 Bẫy 15: Tách Rời Bằng 2 Hàng Đợi SQS Kết Hợp Co Giãn ASG — (U-PT4 Q04)
+- **Tình huống đề thi**: *"Công ty logistics vận hành hệ thống gồm 2 giai đoạn: tiếp nhận đơn hàng (job intake) và xử lý đơn hàng (job processing). Tải công việc ở 2 giai đoạn biến động độc lập và không đồng đều. Cần thiết kế kiến trúc phân tách hoàn toàn 2 tầng và co giãn các máy chủ worker tự động dựa trên số lượng đơn hàng tồn đọng."*
+- **Giải pháp ĐÚNG**: Thiết lập **2 hàng đợi Amazon SQS độc lập** (Queue 1 hứng job intake, Queue 2 chứa các job sẵn sàng xử lý).
+  - Các máy chủ EC2 worker được cấu hình poll từ hàng đợi liên quan.
+  - Cấu hình **Auto Scaling Groups tự động co giãn dựa trên số lượng tin nhắn trong từng hàng đợi** (`ApproximateNumberOfMessagesVisible`).
+
+#### 🪤 Bẫy 16: Làm Sạch Dữ Liệu Nhạy Cảm (PII Masking) Bằng Kinesis + Lambda — (U-PT4 Q30)
+- **Tình huống đề thi**: *"Doanh nghiệp dịch vụ tài chính nhận luồng giao dịch thẻ tín dụng trực tiếp liên tục. Các ứng dụng nội bộ cần đọc luồng dữ liệu thô ban đầu để phân tích gian lận, nhưng các đối tác và dịch vụ bên ngoài chỉ được phép truy cập dữ liệu đã được xóa bỏ các thông tin nhận dạng cá nhân nhạy cảm (PII - Personally Identifiable Information). Cần thiết kế kiến trúc streaming tối ưu."*
+- **Giải pháp ĐÚNG**: Đẩy luồng giao dịch trực tiếp vào **Amazon Kinesis Data Streams**.
+  - Các ứng dụng nội bộ kết nối trực tiếp vào stream để tiêu thụ dữ liệu thô nguyên bản.
+  - Tích hợp một hàm **AWS Lambda** làm consumer để đọc luồng, tự động lọc và xóa (masking) các trường PII nhạy cảm khỏi từng bản ghi giao dịch, sau đó ghi các bản ghi đã làm sạch vào **Amazon DynamoDB** để các đối tác bên ngoài truy vấn!
+
+#### 🪤 Bẫy 17: Băng Thông Đọc Riêng Biệt 2MB/s/Shard Với Kinesis Enhanced Fan-Out — (U-PT4 Q33)
+- **Tình huống đề thi**: *"Một cụm ứng dụng Big Data có 5 ứng dụng phân tích thời gian thực khác nhau cùng đọc dữ liệu đồng thời từ một Amazon Kinesis Data Stream duy nhất. Khi cả 5 ứng dụng cùng poll dữ liệu, hệ thống liên tục gặp lỗi `ProvisionedThroughputExceededException` do cạn kiệt băng thông đọc của shard. Cần giải pháp gì để mỗi ứng dụng có đường truyền đọc riêng biệt mà không phải nhân đôi số lượng shard?"*
+- **Nguyên lý kiến trúc của Kinesis Consumers**:
+  - **Standard Consumer (GetRecords)**: Toàn bộ các consumers phải chia sẻ chung tổng băng thông đọc là **2 MB/giây trên mỗi shard** (thông qua cơ chế kéo HTTP polling). Nếu có 5 consumers cùng đọc 1 shard thì mỗi consumer chỉ còn được chia trung bình 400 KB/s!
+  - **Enhanced Fan-Out (EFO)**: Cung cấp băng thông đọc chuyên dụng **2 MB/giây CHO TỪNG CONSUMER trên mỗi shard** (thông qua cơ chế đẩy HTTP/2 server-push).
+- **Giải pháp ĐÚNG**: Kích hoạt tính năng **Enhanced Fan-Out** cho các ứng dụng đọc; 5 ứng dụng sẽ nhận được $5 \times 2 \text{ MB/s} = 10 \text{ MB/s}$ trên mỗi shard mà không gây nghẽn!
+
+#### 🪤 Bẫy 18: Tự Động Xử Lý Lỗi Tin Nhắn Bằng Dead-Letter Queue (DLQ) — (U-PT4 Q47)
+- **Tình huống đề thi**: *"Ứng dụng thương mại điện tử gặp hiện tượng một số thông điệp mua hàng bị lỗi cú pháp khiến worker xử lý thất bại và crash liên tục. Những thông điệp độc hại này (poison pills) cứ trôi ngược lại hàng đợi và làm tê liệt các worker khác. Cần cơ chế tự động xử lý các tin nhắn lỗi này mà không làm gián đoạn luồng mua hàng bình thường."*
+- **Giải pháp ĐÚNG**: Cấu hình **Amazon SQS Dead-Letter Queue (DLQ)** với ngưỡng **`maxReceiveCount`**. Khi một tin nhắn bị xử lý lỗi và nhận lại quá số lần quy định, SQS sẽ tự động tách tin nhắn đó ra khỏi hàng đợi chính và chuyển sang DLQ để kỹ sư điều tra riêng.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Tách Rời Kiến Trúc Nhanh (Exam Decision Matrix)
@@ -274,8 +304,12 @@ flowchart LR
 |:---|:---|:---|:---|
 | **Đảm bảo thứ tự tuyệt đối & chống trùng lặp theo nhóm đơn** | **SQS FIFO Queue (`.fifo`) + `MessageGroupId` & `MessageDeduplicationId`** | SQS Standard (chỉ đảm bảo Best-effort, At-Least-Once) | `TD-Set1 Q40`, `TD-Set4 Q14` |
 | **Tăng thông lượng SQS FIFO từ 300 lên 3,000 TPS** | **Batching (`SendMessageBatch` 10 msgs) / High Throughput Mode** | Đổi sang SQS Standard (mất thứ tự nghiêm ngặt) | `TD-Set1 Q40`, `U-PT1 Q43` |
+| **Tối ưu chi phí và thông lượng gọi API SQS hàng loạt** | **Message Batching (`SendMessageBatch`, `ReceiveMessageBatch`)** | Gửi/nhận từng message đơn lẻ (tốn gấp 10 lần phí API) | `U-PT4 Q23` |
+| **Phân tách 2 giai đoạn xử lý đơn hàng và scale worker** | **2 Hàng đợi SQS độc lập + ASG co giãn theo SQS Backlog** | Dùng 1 hàng đợi chung (gây nghẽn và lẫn lộn trạng thái) | `U-PT4 Q04` |
+| **Nhiều consumer cùng đọc 1 shard Kinesis không bị nghẽn** | **Kinesis Enhanced Fan-Out (2MB/s chuyên dụng/consumer)** | Standard Consumer (bị giới hạn chia sẻ 2MB/s toàn shard) | `U-PT4 Q33` |
+| **Làm sạch PII từ streaming data trước khi lưu kho** | **Kinesis Data Streams + Lambda Masking + DynamoDB** | Lưu raw vào DB rồi quét batch (đối tác đọc phải PII) | `U-PT4 Q30` |
+| **Xử lý tin nhắn lỗi liên tục làm sập worker (Poison Pill)** | **SQS Dead-Letter Queue (DLQ) + `maxReceiveCount`** | Để tin nhắn lặp lại vô tận trong hàng đợi chính | `TD-Set2 Q47`, `U-PT4 Q47` |
 | **Worker xử lý tác vụ lâu hơn visibility timeout mặc định** | **Gọi API `ChangeMessageVisibility` để gia hạn thời gian ẩn** | Xóa tin nhắn trước khi xử lý (mất dữ liệu nếu worker crash) | `TD-Set3 Q10` |
-| **Tự động cô lập tin nhắn lỗi làm sập worker (Poison Pill)** | **SQS Dead-Letter Queue (DLQ) + `maxReceiveCount`** | Để tin nhắn lặp lại vô tận trong hàng đợi chính | `TD-Set2 Q47` |
 | **Scale ASG worker EC2 theo độ dài hàng đợi SQS** | **Target Tracking / Step Scaling theo Backlog per Instance** | Target Tracking theo CPU (không phản ánh đúng tải I/O hàng đợi) | `TD-Set1 Q04`, `TD-Set6 Q60` |
 | **Kích hoạt batch job container Fargate khi có file S3 mới** | **S3 Event Notification $\rightarrow$ SQS Queue $\rightarrow$ ECS Fargate Auto Scaling** | Polling S3 định kỳ bằng cronjob (chậm, tốn chi phí API S3) | `TD-Set1 Q59`, `TD-Set1 Q15` |
 | **1 sự kiện xuất bản cần đẩy đồng thời tới nhiều dịch vụ độc lập** | **Mô hình Fan-Out: Amazon SNS Topic + Nhiều SQS Queues** | Gửi tuần tự từ ứng dụng (dễ lỗi, chậm trễ, nghẽn mạng) | `TD-Set5 Q64` |
@@ -292,7 +326,7 @@ flowchart LR
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Kiến trúc Tự Động Co Giãn Worker EC2 Dựa Trên Độ Sâu Hàng Đợi SQS (Backlog Per Instance)
 
@@ -321,7 +355,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức tích hợp) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -334,7 +368,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
+## 5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
 
 ### So sánh các dịch vụ Messaging, Event Bus & Data Streaming
 
@@ -349,9 +383,9 @@ sequenceDiagram
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### 6.6.1. Bảng Cấu Trúc Định Giá Chi Tiết
+### 6.1. Bảng Cấu Trúc Định Giá Chi Tiết
 
 | Thành phần Dịch Vụ | Đơn giá AWS niêm yết | Cơ chế đo lường | Ghi chú tối ưu hóa chi phí FinOps |
 | :--- | :--- | :--- | :--- |
@@ -365,7 +399,7 @@ sequenceDiagram
 
 ---
 
-### 6.6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
+### 6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
 
 #### Kịch bản 1: Chuyển đổi Short Polling sang Long Polling trên Amazon SQS
 - **Bối cảnh**: Hệ thống vận hành 8 worker instances chạy vòng lặp liên tục gọi `ReceiveMessage` với thời gian chờ mặc định `WaitTimeSeconds = 0` (Short Polling). Hàng đợi chỉ có đơn hàng vào ban ngày, ban đêm hầu như rỗng.
@@ -433,7 +467,7 @@ sequenceDiagram
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Tình huống sự cố (Problem) | Nguyên nhân cốt lõi (Root Cause) | Các bước điều tra & Chỉ số giám sát (Metrics & Logs) | Giải pháp khắc phục (Remediation) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -447,7 +481,7 @@ sequenceDiagram
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Kiến Trúc Hướng Sự Kiện AWS (Golden Rules)
 1. **Luôn bật Long Polling (20s)**: Thiết lập `ReceiveMessageWaitTimeSeconds = 20` trên SQS để triệt tiêu 99% chi phí API nhận tin rỗng.

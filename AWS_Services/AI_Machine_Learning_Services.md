@@ -246,12 +246,35 @@ flowchart TD
   - Amazon Lex cung cấp công nghệ nhận dạng giọng nói (ASR) và hiểu ngôn ngữ tự nhiên (NLU) - cùng công nghệ với trợ lý ảo Alexa.
   - Khi người dùng cung cấp đủ thông tin (Slots), Lex kích hoạt hàm AWS Lambda để gọi API xử lý nghiệp vụ ngân hàng an toàn (`TD-Set5 Q35`).
 
+#### 🪤 Bẫy 7: Chuỗi Xử Lý Phản Hồi Bất Đồng Bộ Serverless: API GW + SQS + Lambda + Comprehend — (U-PT4 Q59)
+- **Tình huống đề thi**: *"Hệ thống tiếp nhận hàng ngàn ý kiến phản hồi (customer feedback) của khách hàng mỗi phút qua ứng dụng di động. Doanh nghiệp cần xây dựng kiến trúc Serverless có khả năng hấp thụ tải bùng nổ, tự động phân tích cảm xúc (Sentiment Analysis) của phản hồi và lưu trữ kết quả phân loại với chi phí tối ưu và ít công sức quản trị nhất."*
+- **Các phương án bẫy**:
+  - ❌ *API Gateway gọi đồng bộ hàm Lambda và Comprehend*: Dễ bị timeout (giới hạn 29 giây của API Gateway) khi lượng đánh giá dồn về cùng lúc và làm tăng nguy cơ bị lỗi Throttling từ Comprehend API.
+  - ❌ *Tự huấn luyện mô hình NLP trên Amazon SageMaker*: Tốn kém chi phí máy chủ GPU `ml.*` và mất nhiều tuần huấn luyện mô hình trong khi bài toán phân loại cảm xúc văn bản đã được giải quyết hoàn hảo bởi dịch vụ có sẵn.
+- **Giải pháp ĐÚNG**: Kiến trúc Serverless bất đồng bộ qua 5 bước:
+  1. **Amazon API Gateway** tiếp nhận request phản hồi từ client.
+  2. API Gateway tích hợp trực tiếp đẩy tin nhắn vào **Amazon SQS** để làm phẳng đỉnh tải (**Load Leveling**).
+  3. Hàng đợi SQS kích hoạt hàm **AWS Lambda** theo cơ chế Event Source Mapping (xử lý theo lô).
+  4. Lambda gọi **Amazon Comprehend API (`DetectSentiment`)** để phân loại cảm xúc người dùng (`POSITIVE`, `NEGATIVE`, `NEUTRAL`, `MIXED`).
+  5. Kết quả phân tích được Lambda ghi nhận vào **Amazon DynamoDB** để phục vụ báo cáo.
+
+#### 🪤 Bẫy 8: Tự Động Hóa Chuyển Giọng Nói Thành Chữ Và Phân Tích Bằng Transcribe + Athena — (U-PT4 Q61)
+- **Tình huống đề thi**: *"Trung tâm chăm sóc khách hàng lưu trữ các file ghi âm cuộc gọi trên Amazon S3. Doanh nghiệp cần giải pháp tự động chuyển đổi các file âm thanh này thành văn bản và cho phép đội ngũ phân tích chạy các câu truy vấn SQL ad-hoc để tìm kiếm từ khóa và đánh giá khiếu nại với chi phí thấp nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng Amazon Polly*: Amazon Polly là Text-to-Speech (chuyển văn bản thành giọng đọc), hoàn toàn ngược chiều so với yêu cầu bài toán!
+  - ❌ *Nạp kết quả vào Amazon Redshift*: Khởi tạo cụm Redshift tốn kém chi phí node máy chủ chạy 24/7 không cần thiết cho nhu cầu truy vấn ad-hoc thỉnh thoảng của nhà phân tích.
+- **Giải pháp ĐÚNG**: Kết hợp **Amazon Transcribe** và **Amazon Athena**:
+  - Thiết lập tác vụ **Amazon Transcribe** chuyển đổi âm thanh cuộc gọi từ S3 thành các file văn bản JSON lưu trở lại S3.
+  - Sử dụng **Amazon Athena** để chạy trực tiếp các câu lệnh truy vấn chuẩn SQL trên các file văn bản trong S3 mà không cần phải cấp phát hay quản lý bất kỳ cụm cơ sở dữ liệu nào.
+
 ---
 
 ## 📊 III. Ma Trận Quyết Định Dịch Vụ AI/ML Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Dịch vụ chuẩn AWS | Dịch vụ bị loại & Lý do | Tham chiếu đề thi |
 |:---|:---|:---|:---|
+| **Chuỗi xử lý phản hồi & phân tích cảm xúc Serverless** | **API GW + SQS + Lambda + Comprehend + DynamoDB** | Gọi đồng bộ Comprehend từ API GW (dễ timeout, lỗi throttling) | `U-PT4 Q59` |
+| **Chuyển ghi âm cuộc gọi thành chữ và truy vấn bằng SQL** | **Amazon Transcribe (Speech-to-Text) + Athena** | Polly (ngược chiều: Text-to-Speech) / Redshift (quá đắt) | `U-PT4 Q61` |
 | **Kiểm duyệt ảnh khiêu dâm, bạo lực người dùng đăng tải** | **Amazon Rekognition (`DetectModerationLabels`)** | Amazon Textract (chỉ trích xuất văn bản tài liệu) | `TD-Set2 Q49` |
 | **Phát hiện kẻ xâm nhập qua camera giám sát video thời gian thực** | **Amazon Rekognition Video + Kinesis Video Streams** | Amazon SageMaker (phải tự code và train model thị giác từ đầu) | `TD-Set2 Q30` |
 | **Chuyển đổi file ghi âm cuộc gọi thành văn bản và ẩn PII** | **Amazon Transcribe (PII Redaction)** | Amazon Polly (chuyển văn bản thành tiếng nói, ngược chiều) | `TD-Set6 Q56` |
@@ -282,7 +305,7 @@ flowchart TD
 ---
 
 ### Liên Kết Nội Bộ và Tài Liệu Tham Khảo (Internal Links)
-- 📖 [Ghi Chú Bài Học Chương 22: Machine Learning on AWS](../Lesson_Notes/22_Machine_Learning_AWS.md)
+- 📖 [Ghi Chú Bài Học Chương 22: Machine Learning on AWS](../Lesson_Notes/23_Machine_Learning.md)
 - 📖 [Tài Liệu Chuyên Sâu: Phân Tích Dữ Liệu Lớn (Big Data & Glue)](./Analytics_Big_Data_Services.md)
 - 📖 [Cẩm Nang Từ Vựng Giải Mã Đề Thi](../EXAM_VOCABULARY.md)
 - 📖 [Bảng Thuật Ngữ Kỹ Thuật Đám Mây](../GLOSSARY.md)

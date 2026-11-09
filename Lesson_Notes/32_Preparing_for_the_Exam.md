@@ -1,12 +1,12 @@
-# Ghi Chú Bài Học: Chương 32 - Chiến Lược Ôn Thi & Mẹo Thi Chứng Chỉ AWS (Preparing for the Exam)
+﻿# Ghi Chú Bài Học: Chương 32 - Chiến Lược Ôn Thi & Mẹo Thi Chứng Chỉ AWS (Preparing for the Exam)
 
 > **Khóa học**: Ultimate AWS Certified Solutions Architect Associate (SAA-C03)  
 > **Chương**: 32 - Preparing for the Exam + Practice (Bài 386 đến Bài 393)  
-> **Tài liệu tham chiếu liên quan**: [Bảng Thuật Ngữ Kỹ Thuật (GLOSSARY.md)](file:///n:/AWS_XBrain_Note/GLOSSARY.md)
+> **Tài liệu tham chiếu liên quan**: [Bảng Thuật Ngữ Kỹ Thuật (GLOSSARY.md)](../GLOSSARY.md)
 
 ---
 
-## 4.1. Tổng Quan Bài Học (Lesson Overview)
+## 1. Tổng Quan Bài Học (Lesson Overview)
 
 ### Chủ đề chính
 Chương này tổng kết toàn bộ chiến lược chuẩn bị, các mẹo làm bài thi thực chiến, kỹ thuật quản lý thời gian, cách thức đăng ký thi và nhận ưu đãi cho kỳ thi chứng chỉ quốc tế **AWS Certified Solutions Architect - Associate (SAA-C03)**.
@@ -19,7 +19,7 @@ Chương này tổng kết toàn bộ chiến lược chuẩn bị, các mẹo l
 
 ---
 
-## 4.2. Điểm Cốt Lõi Cần Nhớ (Key Takeaways)
+## 2. Điểm Cốt Lõi Cần Nhớ (Key Takeaways)
 
 ### 1. Cấu trúc bài thi AWS Certified Solutions Architect Associate (SAA-C03)
 - **Thời gian làm bài**: 130 phút (hoặc **160 phút** nếu kích hoạt chính sách ESL +30).
@@ -114,7 +114,7 @@ Chương này tổng kết toàn bộ chiến lược chuẩn bị, các mẹo l
 
 ---
 
-## 4.4. Bộ "Trick" & Chiến Lược Thi Thực Chiến Đỉnh Cao (Exam Hacks & Elimination Rules)
+## 3. Bộ "Trick" & Chiến Lược Thi Thực Chiến Đỉnh Cao (Exam Hacks & Elimination Rules)
 
 ### Trick 1: Đọc ngược từ câu hỏi chốt (Constraint vs Requirement)
 * **Thực tế đề thi**: Mỗi câu hỏi SAA-C03 thường là một đoạn văn dài 3–6 dòng mô tả bối cảnh công ty, hệ thống hiện tại, và vấn đề phát sinh.
@@ -243,11 +243,11 @@ Với tổng thời gian **160 phút** (đã bật ESL +30) cho **65 câu hỏi*
 
 ---
 
-## 4.3. Nguồn Tham Chiếu (Source References)
+## 4. Nguồn Tham Chiếu (Source References)
 
 - **Source Transcripts**:
-  - [387 - State of Learning Checkpoint - AWS Certified Sol.md](file:///n:/AWS_XBrain_Note/AWS_Resources/32%20-%20Preparing%20for%20the%20Exam%20+%20Pract/387%20-%20State%20of%20Learning%20Checkpoint%20-%20AWS%20Certified%20Sol.md)
-  - [388 - Exam Tips - AWS Certified Solutions Architect As.md](file:///n:/AWS_XBrain_Note/AWS_Resources/32%20-%20Preparing%20for%20the%20Exam%20+%20Pract/388%20-%20Exam%20Tips%20-%20AWS%20Certified%20Solutions%20Architect%20As.md)
-  - [391 - Save 50% on your AWS Exam Cost!.md](file:///n:/AWS_XBrain_Note/AWS_Resources/32%20-%20Preparing%20for%20the%20Exam%20+%20Pract/391%20-%20Save%2050%25%20on%20your%20AWS%20Exam%20Cost!.md)
-  - [392 - Get an Extra 30 Minutes on your AWS Exam - Non N.md](file:///n:/AWS_XBrain_Note/AWS_Resources/32%20-%20Preparing%20for%20the%20Exam%20+%20Pract/392%20-%20Get%20an%20Extra%2030%20Minutes%20on%20your%20AWS%20Exam%20-%20Non%20N.md)
-  - [393 - How does the exam work_.md](file:///n:/AWS_XBrain_Note/AWS_Resources/32%20-%20Preparing%20for%20the%20Exam%20+%20Pract/393%20-%20How%20does%20the%20exam%20work_.md)
+  - [387 - State of Learning Checkpoint - AWS Certified Sol.md](../AWS_Resources/32%20-%20Preparing%20for%20the%20Exam%20+%20Pract/387%20-%20State%20of%20Learning%20Checkpoint%20-%20AWS%20Certified%20Sol.md)
+  - [388 - Exam Tips - AWS Certified Solutions Architect As.md](../AWS_Resources/32%20-%20Preparing%20for%20the%20Exam%20+%20Pract/388%20-%20Exam%20Tips%20-%20AWS%20Certified%20Solutions%20Architect%20As.md)
+  - [391 - Save 50% on your AWS Exam Cost!.md](../AWS_Resources/32%20-%20Preparing%20for%20the%20Exam%20+%20Pract/391%20-%20Save%2050%25%20on%20your%20AWS%20Exam%20Cost!.md)
+  - [392 - Get an Extra 30 Minutes on your AWS Exam - Non N.md](../AWS_Resources/32%20-%20Preparing%20for%20the%20Exam%20+%20Pract/392%20-%20Get%20an%20Extra%2030%20Minutes%20on%20your%20AWS%20Exam%20-%20Non%20N.md)
+  - [393 - How does the exam work_.md](../AWS_Resources/32%20-%20Preparing%20for%20the%20Exam%20+%20Pract/393%20-%20How%20does%20the%20exam%20work_.md)

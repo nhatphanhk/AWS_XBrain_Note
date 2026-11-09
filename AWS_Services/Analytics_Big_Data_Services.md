@@ -8,7 +8,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### 1. Định nghĩa chuẩn xác và Phân nhóm dịch vụ
 Hệ sinh thái **AWS Analytics & Big Data** cung cấp đầy đủ các khối xây dựng (Building Blocks) từ thu nhận dữ liệu thời gian thực (Ingestion), quản trị Data Lake tập trung đa tài khoản, trích xuất và biến đổi (ETL), lưu trữ kho dữ liệu (Data Warehousing), tìm kiếm phân tích (Search & Observability), đến trực quan hóa thông minh (Business Intelligence).
@@ -77,7 +77,7 @@ flowchart LR
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts & Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts & Operations)
 
 ### 1. AWS Lake Formation: Kiến Trúc Quản Trị Data Lake Tập Trung Đa Tài Khoản
 
@@ -177,7 +177,7 @@ flowchart TD
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Sơ Đồ Quy Trình Data Lake & Serverless Analytics Toàn Diện
 
@@ -213,7 +213,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Dịch vụ liên kết | Phương thức tích hợp | Mục đích kỹ thuật & Kịch bản áp dụng |
 | :--- | :--- | :--- |
@@ -227,7 +227,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Các Dịch Vụ Phân Tích Dữ Liệu (Ecosystem Comparison)
+## 5. Bảng So Sánh Các Dịch Vụ Phân Tích Dữ Liệu (Ecosystem Comparison)
 
 | Dịch vụ | Loại kiến trúc | Khối lượng dữ liệu tối ưu | Tốc độ phản hồi truy vấn | Chi phí & Quản trị |
 | :--- | :--- | :--- | :--- | :--- |
@@ -239,7 +239,7 @@ sequenceDiagram
 
 ---
 
-## 6.6. FinOps & Chiến Lược Tối Ưu Chi Phí (Cost Optimization)
+## 6. FinOps & Chiến Lược Tối Ưu Chi Phí (Cost Optimization)
 
 ### Phép tính so sánh: Truy vấn Athena trên CSV thô vs Parquet
 * **Bối cảnh**: Doanh nghiệp lưu trữ 100 TB dữ liệu log truy cập web thô dạng CSV trên S3. Mỗi ngày đội BI chạy 10 câu lệnh SQL truy vấn tổng hợp 3 cột (`request_time`, `user_id`, `status_code` chiếm khoảng 8% dung lượng file).
@@ -253,7 +253,7 @@ sequenceDiagram
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Vấn đề (Problem) | Nguyên nhân khả dĩ (Possible Causes) | Các bước điều tra (Investigation Steps) | Giải pháp xử lý (Solution) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -318,15 +318,56 @@ sequenceDiagram
 - **Giải pháp ĐÚNG**: Sử dụng **EMR Instance Fleets configuration** (thay vì Instance Groups).
   - Instance Fleets cho phép định nghĩa nhiều subnets đa AZ và tới 30 instance types thay thế, EMR tự động chọn AZ có capacity Spot dồi dào để launch.
 
+#### 🪤 Bẫy 4: Lọc Và Làm Sạch Dữ Liệu Nhạy Cảm (PII Masking) Thời Gian Thực Bằng Kinesis Data Streams Và Lambda — (U-PT4 Q30)
+- **Tình huống đề thi**: *"Ứng dụng tài chính nhận luồng dữ liệu giao dịch thời gian thực chứa thông tin cá nhân nhạy cảm (PII - số thẻ tín dụng, CCCD). Hệ thống cần cho phép các ứng dụng nội bộ phân tích dữ liệu gốc nguyên bản, đồng thời cung cấp một luồng dữ liệu đã được làm sạch/che giấu PII (Masked Data) cho đối tác bên thứ ba lưu trữ vào DynamoDB với độ trễ thấp nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Ghi toàn bộ dữ liệu thô vào S3 rồi dùng AWS Glue ETL xử lý định kỳ*: Độ trễ cao (mất nhiều phút), không đáp ứng yêu cầu xử lý và đẩy dữ liệu thời gian thực cho đối tác.
+  - ❌ *Bắt ứng dụng đối tác tự lọc PII sau khi đọc dữ liệu*: Vi phạm nghiêm trọng tiêu chuẩn bảo mật dữ liệu vì đã truyền dữ liệu PII ra bên ngoài!
+- **Giải pháp ĐÚNG**: Đẩy luồng dữ liệu vào **Amazon Kinesis Data Streams**.
+  - Các ứng dụng nội bộ đọc trực tiếp luồng stream gốc.
+  - Tích hợp một hàm **AWS Lambda** làm consumer thứ hai: Lambda đọc dữ liệu thời gian thực, thực thi logic che giấu thông tin PII (masking/anonymization) và ghi bản ghi đã làm sạch vào **Amazon DynamoDB** cho bên thứ ba truy cập.
+
+#### 🪤 Bẫy 5: Tách Biệt Băng Thông Cho Nhiều Consumer Kinesis Bằng Enhanced Fan-Out (EFO) — (U-PT4 Q33, CM-PT1 Q43)
+- **Tình huống đề thi**: *"Một luồng Amazon Kinesis Data Streams phục vụ đồng thời 5 ứng dụng phân tích khác nhau. Khi lưu lượng bùng nổ, các ứng dụng gặp hiện tượng trễ đọc (Read Throttling / tăng `GetRecords.IteratorAgeMilliseconds`) do cạnh tranh băng thông đọc 2 MB/giây của Shard."*
+- **Các phương án bẫy**:
+  - ❌ *Yêu cầu các consumer tự gọi API `GetRecords` với khoảng thời gian ngắn hơn*: Làm trầm trọng thêm lỗi HTTP 429 Throttling do chạm hạn mức 5 transactions/giây/shard của Standard Consumer.
+  - ❌ *Tăng gấp đôi số lượng Shard thủ công*: Làm tăng chi phí Shard-hour cho toàn bộ hệ thống mà không giải quyết được gốc rễ vấn đề chia sẻ băng thông giữa các consumer.
+- **Giải pháp ĐÚNG**: Đăng ký các ứng dụng làm **Kinesis Enhanced Fan-Out (EFO) Consumers**.
+  - Mỗi consumer EFO nhận được một đường ống băng thông đọc riêng biệt lên tới **2 MB/s trên mỗi Shard** độc lập hoàn toàn với các consumer khác.
+  - Dữ liệu được đẩy chủ động từ Kinesis tới consumer qua giao thức **HTTP/2 Push** (`SubscribeToShard`), giảm độ trễ đọc xuống chỉ còn khoảng **70 mili-giây** (so với 200ms của Standard Consumer polling).
+
+#### 🪤 Bẫy 6: Pipeline Phân Tích Nhật Ký Và Trực Quan Hóa Thời Gian Thực: Kinesis + OpenSearch + QuickSight — (U-PT4 Q56)
+- **Tình huống đề thi**: *"Doanh nghiệp cần xây dựng hệ thống thu thập, phân tích và trực quan hóa hàng triệu bản ghi nhật ký hoạt động của website theo thời gian thực để phát hiện xu hướng và hiển thị báo cáo kinh doanh cho ban giám đốc."*
+- **Các phương án bẫy**:
+  - ❌ *Đẩy log vào S3 và dùng Athena kết hợp QuickSight*: Athena tối ưu cho truy vấn ad-hoc theo đợt, không đáp ứng hiển thị dashboard phân tích log thời gian thực tức thì.
+  - ❌ *Lưu log vào Amazon RDS*: Cơ sở dữ liệu quan hệ RDS sẽ nhanh chóng bị quá tải I/O và cạn kiệt dung lượng khi nạp hàng triệu bản ghi log mỗi phút.
+- **Giải pháp ĐÚNG**: Kiến trúc chuỗi phân tích chuẩn: **Amazon Kinesis Data Streams / Data Firehose $\rightarrow$ Amazon OpenSearch Service $\rightarrow$ Amazon QuickSight**.
+  - Kinesis thu thập luồng log thời gian thực với dung lượng lớn.
+  - Nạp trực tiếp vào **Amazon OpenSearch Service** để lập chỉ mục tìm kiếm toàn văn bản và phân tích nhanh trong mili-giây.
+  - Kết nối **Amazon QuickSight** tới OpenSearch Service để xây dựng các biểu đồ KPI và bảng điều khiển trực quan hóa thời gian thực phục vụ báo cáo.
+
+#### 🪤 Bẫy 7: Truy Vấn SQL Ad-hoc Trên Kho Dữ Liệu S3 Không Cần Server Bằng Amazon Athena — (U-PT4 Q11, U-PT4 Q61)
+- **Tình huống đề thi**: *"Doanh nghiệp lưu trữ hàng triệu tệp dữ liệu giao dịch hoặc bản ghi cuộc gọi (sau khi đã chuyển đổi âm thanh sang văn bản JSON/CSV) trên Amazon S3. Đội ngũ phân tích cần thỉnh thoảng chạy các câu lệnh truy vấn chuẩn SQL để thống kê dữ liệu mà không muốn chi trả chi phí cố định cho máy chủ hay cụm database nhàn rỗi."*
+- **Các phương án bẫy**:
+  - ❌ *Khởi tạo cụm Amazon Redshift hoặc Amazon EMR*: Phải chi trả chi phí hàng giờ cho node máy chủ chạy 24/7 kể cả khi không có ai truy vấn, quá đắt đỏ và tốn công vận hành cho nhu cầu ad-hoc thỉnh thoảng.
+  - ❌ *Nạp dữ liệu vào DynamoDB*: DynamoDB chỉ hỗ trợ truy vấn NoSQL theo Partition Key/Sort Key đơn giản, không hỗ trợ câu lệnh phân tích SQL phức tạp (GROUP BY, JOIN).
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon Athena**.
+  - Athena là công cụ truy vấn SQL Serverless tương thích Presto/Trino, đọc trực tiếp dữ liệu từ Amazon S3.
+  - **Zero Infrastructure Management**: Không cần cấu hình hay quản lý máy chủ.
+  - Chi phí cực kỳ tiết kiệm: Chỉ tính phí dựa trên dung lượng dữ liệu được quét ($5/TB quét).
+
 ---
 
 ## 📊 III. Ma Trận Quyết Định Công Nghệ Phân Tích Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
 |:---|:---|:---|:---:|
-| **Quản trị Data Lake đa tài khoản, phân quyền cột/dòng** | **AWS Lake Formation** | Thiết lập nhiều Data Firehose hoặc viết Lambda copy (tốn công) | TD-Set1 Q02, TD-Set6 Q63 |
-| **Truy vấn SQL ad-hoc trực tiếp trên S3, không quản lý server** | **Amazon Athena** | Amazon Redshift (quá tốn kém cho truy vấn ad-hoc thỉnh thoảng) | CM-PT1 Q34 |
-| **Kho dữ liệu phân tích phức tạp OLAP, PB-scale** | **Amazon Redshift (Serverless)** | Amazon RDS (chỉ tối ưu cho OLTP, nghẽn khi chạy OLAP lớn) | CM-PT1 Q45 |
+| **Truy vấn SQL ad-hoc trực tiếp trên S3, không quản lý server** | **Amazon Athena** | Amazon Redshift (quá tốn kém cho truy vấn ad-hoc thỉnh thoảng) | `CM-PT1 Q34`, `U-PT4 Q11`, `U-PT4 Q61` |
+| **Làm sạch PII thời gian thực cho đối tác từ luồng stream** | **Kinesis Data Streams + Lambda (masking) + DynamoDB** | AWS Glue (độ trễ theo batch hàng phút, không real-time) | `U-PT4 Q30` |
+| **Nhiều ứng dụng đọc độc lập cùng luồng Kinesis không chậm** | **Kinesis Enhanced Fan-Out (EFO - 2MB/s/shard/consumer)** | Standard Consumer (chia sẻ băng thông 2MB/s/shard bị nghẽn) | `CM-PT1 Q43`, `U-PT4 Q33` |
+| **Pipeline log real-time kết hợp dashboard báo cáo BI** | **Kinesis $\rightarrow$ Amazon OpenSearch $\rightarrow$ Amazon QuickSight** | Lưu log vào RDS (RDS bị quá tải I/O khi nạp log lớn) | `U-PT4 Q56` |
+| **Quản trị Data Lake đa tài khoản, phân quyền cột/dòng** | **AWS Lake Formation** | Thiết lập nhiều Data Firehose hoặc viết Lambda copy (tốn công) | `TD-Set1 Q02`, `TD-Set6 Q63` |
+| **Kho dữ liệu phân tích phức tạp OLAP, PB-scale** | **Amazon Redshift (Serverless)** | Amazon RDS (chỉ tối ưu cho OLTP, nghẽn khi chạy OLAP lớn) | `CM-PT1 Q45` |
 | **Nạp dữ liệu hàng loạt cực nhanh từ S3 vào Redshift** | **Lệnh `COPY` của Redshift** | Chạy nhiều câu lệnh `INSERT` đơn lẻ (gây nghẽn đĩa và cực chậm) | TD-Set1 Q28 |
 | **Truy vấn dữ liệu ngoài S3 từ Redshift không tốn đĩa** | **Amazon Redshift Spectrum** | Mở rộng đĩa Redshift rồi nạp toàn bộ file vào (rất đắt đỏ) | TD-Set1 Q36 |
 | **Xử lý luồng thời gian thực < 1s, replay dữ liệu** | **Amazon Kinesis Data Streams** | Amazon Data Firehose (độ trễ đệm tối thiểu 60s) | TD-Set1 Q08 |
@@ -337,7 +378,7 @@ sequenceDiagram
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của AWS Analytics
 1. **AWS Lake Formation cho Data Lake đa tài khoản**: Quản trị tập trung metadata và phân quyền chi tiết (table, column, row) qua Glue Catalog mà không cần duplicate file trên S3.

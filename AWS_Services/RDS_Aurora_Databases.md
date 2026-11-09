@@ -7,7 +7,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### 1. Định nghĩa chuẩn xác và Phân nhóm dịch vụ
 Hệ sinh thái cơ sở dữ liệu quan hệ và bộ nhớ đệm đám mây trên AWS được phân nhóm chuyên biệt dựa trên bản chất kiến trúc:
@@ -68,7 +68,7 @@ flowchart TD
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Sơ đồ các mô hình triển khai cốt lõi
 
@@ -470,6 +470,41 @@ sequenceDiagram
 - **Tình huống đề thi**: *"Thay thế cơ sở dữ liệu on-premises MySQL có mức tiêu thụ bộ nhớ từ 2 đến 16 GiB, với mẫu lưu lượng thất thường có nhiều đợt tăng vọt và có những khoảng thời gian hoàn toàn không có tải bằng dịch vụ serverless tự co giãn."*
 - **Giải pháp ĐÚNG**: Cấu hình **Amazon Aurora Serverless v2** với năng lực tối thiểu **1 ACU** và tối đa **8 ACUs** ($1 \text{ ACU} \approx 2 \text{ GiB RAM}$). Aurora tự động scale mượt mà từng phân đoạn nhỏ trong mili-giây mà không làm gián đoạn kết nối.
 
+#### 🪤 Bẫy 11: Bản Chất Cơ Chế Failover Tự Động Của Amazon RDS Multi-AZ — (U-PT4 Q60)
+- **Tình huống đề thi**: *"Doanh nghiệp kích hoạt tính năng Multi-AZ cho cơ sở dữ liệu Amazon RDS PostgreSQL để đảm bảo tính sẵn sàng cao. Đội ngũ phát triển muốn biết điều gì sẽ xảy ra về mặt mạng khi máy chủ chính (Primary) gặp sự cố phần cứng và quá trình chuyển đổi dự phòng (Failover) diễn ra?"*
+- **Các phương án bẫy**:
+  - ❌ *Chuỗi kết nối (URL / Database Endpoint) của ứng dụng sẽ thay đổi sang URL của Standby database*: Hoàn toàn sai! Nếu URL đổi thì toàn bộ ứng dụng sẽ bị lỗi và phải deploy lại cấu hình!
+  - ❌ *Địa chỉ IP của database giữ nguyên không đổi*: Sai vì Standby instance nằm ở một Subnet/AZ khác nên mang một địa chỉ IP riêng biệt.
+- **Giải pháp ĐÚNG**: **Bản ghi DNS CNAME của Database Endpoint sẽ được AWS tự động cập nhật để trỏ sang địa chỉ IP của Standby instance**.
+  - **Endpoint URL của ứng dụng KHÔNG BAO GIỜ THAY ĐỔI** (ví dụ: `mydb.c7xxxx.us-east-1.rds.amazonaws.com`).
+  - AWS quản lý bản ghi CNAME này với TTL cực ngắn (khoảng 5 giây). Khi failover hoàn tất, ứng dụng chỉ cần thực hiện lại kết nối (reconnect) là sẽ được phân giải tự động sang Primary mới.
+
+#### 🪤 Bẫy 12: Tách Tải Đọc Cho Ứng Dụng Bằng Aurora Cluster Reader Endpoint — (U-PT4 Q19)
+- **Tình huống đề thi**: *"Ứng dụng thương mại điện tử sử dụng Amazon Aurora MySQL gặp hiện tượng nghẽn hiệu năng trên máy chủ chính (Writer instance) do phải gánh đồng thời cả luồng ghi đơn hàng và hàng triệu truy vấn đọc danh mục sản phẩm từ khách hàng. Cần kiến trúc như thế nào để tách rời và cân bằng tải các thao tác đọc với ít thay đổi cấu hình nhất?"*
+- **Giải pháp ĐÚNG**: Cấu hình ứng dụng trỏ toàn bộ các thao tác đọc (Read Operations) tới **Aurora Cluster Reader Endpoint**.
+  - Aurora cung cấp sẵn 2 endpoint mặc định: **Cluster Endpoint (Writer)** luôn trỏ vào node Primary duy nhất để phục vụ ghi; và **Reader Endpoint** tự động cân bằng tải vòng tròn (Round-Robin) cho toàn bộ các Aurora Replicas trong cluster.
+  - Khi bạn thêm hoặc bớt các Read Replicas (kể cả qua Auto Scaling), Reader Endpoint tự động cập nhật danh sách target mà không cần sửa đổi bất kỳ dòng mã nào trên ứng dụng!
+
+#### 🪤 Bẫy 13: Xử Lý Lỗi Kết Nối Database Bằng Security Group Referencing — (U-PT4 Q13)
+- **Tình huống đề thi**: *"Sau khi triển khai một cụm máy chủ ứng dụng EC2 mới và một cơ sở dữ liệu Amazon RDS trong cùng VPC, các máy chủ ứng dụng hoàn toàn không thể kết nối được tới cơ sở dữ liệu và báo lỗi connection timed out. Kỹ sư cần kiểm tra và sửa đổi cấu hình an ninh mạng nào đầu tiên?"*
+- **Các phương án bẫy**:
+  - ❌ *Thêm luật Inbound mở cổng 3306/5432 cho dải `0.0.0.0/0`*: Tạo lỗ hổng an ninh nghiêm trọng làm lộ database ra Internet.
+  - ❌ *Khai báo dải IP CIDR tĩnh của Subnet máy chủ*: Khi ASG sinh thêm máy chủ ở subnet khác thì kết nối lại bị chặn.
+- **Giải pháp ĐÚNG**: Kiểm tra **Inbound Rules của Security Group gắn trên RDS instance** và thêm luật cho phép cổng cơ sở dữ liệu (3306/5432) với Source là **Security Group ID của cụm máy chủ ứng dụng (Security Group Referencing)**.
+  - Bất kỳ máy chủ EC2 nào mang Security Group của App Server đều được phép giao tiếp với DB, bất kể máy ảo đó mang IP nào hay nằm ở Subnet nào!
+
+#### 🪤 Bẫy 14: Quản Lý Phiên Làm Việc Phân Tán Với Amazon ElastiCache — (U-PT4 Q12, Q21)
+- **Tình huống đề thi**: *"Ứng dụng web đa tầng chạy trên cụm EC2 nằm sau Application Load Balancer. Hiện tại session của người dùng được lưu trong bộ nhớ cục bộ của từng máy ảo, dẫn tới việc khi ALB chuyển request sang máy ảo khác, người dùng bị đăng xuất (mất session). Cần giải pháp lưu trữ session tập trung, có thể chia sẻ cho toàn bộ cụm máy chủ với độ trễ phản hồi dưới mili-giây (sub-millisecond latency)."*
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon ElastiCache for Redis (hoặc ElastiCache for Valkey)** làm tầng lưu trữ bộ nhớ đệm phân tán (Distributed In-Memory Session Store).
+  - Tách trạng thái phiên làm việc (Session State) ra khỏi máy chủ EC2, biến tầng Web Tier thành hoàn toàn **Stateless (phi trạng thái)**.
+  - Cung cấp tốc độ đọc ghi microsecond cực nhanh, hỗ trợ cơ chế tự động hết hạn key (TTL) cho session và tự động co giãn không giới hạn.
+
+#### 🪤 Bẫy 15: Mở Rộng Năng Lực Đọc Toàn Cầu Và Phục Hồi Thảm Họa Với Cross-Region Read Replicas — (U-PT4 Q64)
+- **Tình huống đề thi**: *"Hệ thống bán lẻ trực tuyến có trụ sở tại Bắc Mỹ (us-east-1) đang mở rộng thị trường sang Châu Âu và Châu Á. Người dùng quốc tế phàn nàn việc tải dữ liệu báo cáo và lịch sử đơn hàng rất chậm. Đồng thời, ban giám đốc yêu cầu phải có một bản sao lưu dữ liệu có thể thăng cấp thành Primary trong trường hợp toàn bộ Region Bắc Mỹ gặp thảm họa. Giải pháp nào đáp ứng đồng thời cả 2 yêu cầu?"*
+- **Giải pháp ĐÚNG**: Khởi tạo các **RDS Cross-Region Read Replicas** tại các Region Châu Âu (eu-west-1) và Châu Á (ap-southeast-1).
+  - Cho phép người dùng quốc tế kết nối trực tiếp vào Read Replica cục bộ tại khu vực của họ để đọc dữ liệu với độ trễ mạng thấp nhất.
+  - Trong kịch bản Disaster Recovery, Cross-Region Read Replica có thể được **thăng cấp (Promoted)** thành một cơ sở dữ liệu độc lập (Standalone Read-Write Database) chỉ trong vài phút để phục hồi hoạt động kinh doanh!
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Cơ Sở Dữ Liệu Nhanh (Exam Decision Matrix)
@@ -477,10 +512,13 @@ sequenceDiagram
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
 |:---|:---|:---|:---:|
 | **Sao chép dữ liệu đồng bộ (Synchronous Replication) bảo vệ AZ sập** | **RDS Multi-AZ Deployment** | RDS Read Replica (sao chép bất đồng bộ, có lag) | TD-Set1 Q01 |
+| **Bản chất Failover RDS Multi-AZ khi Primary sập** | **Tự động đổi bản ghi CNAME DNS sang IP Standby** | Endpoint URL ứng dụng bị thay đổi (sai hoàn toàn) | U-PT4 Q60 |
+| **Phân bổ đều lưu lượng đọc giữa các Aurora Replicas tự động** | **Aurora Built-in Reader Endpoint** | Cấu hình IP từng replica thủ công trong code | TD-Set3 Q58, U-PT4 Q19 |
+| **Phân quyền kết nối an toàn giữa Web Server và RDS** | **Security Group Referencing (Source = SG của App)** | Mở IP 0.0.0.0/0 hoặc gán IP tĩnh thủ công | U-PT4 Q13 |
+| **Lưu trữ session phân tán, đọc ghi dưới mili-giây cho cụm ASG** | **Amazon ElastiCache for Redis / Valkey** | Lưu cục bộ trên EC2 (lỗi mất session khi scale) | U-PT4 Q12, Q21 |
+| **Giảm độ trễ đọc toàn cầu + Kế hoạch DR liên vùng** | **RDS Cross-Region Read Replicas** | Multi-AZ đơn thuần (Multi-AZ chỉ gói gọn trong 1 Region) | U-PT4 Q64 |
 | **Phân lập tải đọc: Tách truy vấn báo cáo nặng khỏi API người dùng** | **Aurora Custom Endpoints** | Trỏ chung vào Reader Endpoint (làm chậm app chính) | TD-Set1 Q51 |
-| **Phân bổ đều lưu lượng đọc giữa các Aurora Replicas tự động** | **Aurora Built-in Reader Endpoint** | Cấu hình IP từng replica thủ công trong code | TD-Set3 Q58 |
 | **Kết nối RDS MySQL/PostgreSQL không mật khẩu, dùng IAM token** | **IAM Database Authentication** (SSL bắt buộc) | Hardcode password vào config / Secret không xoay | TD-Set1 Q18, TD-Set5 Q52 |
-| **Cơ chế Failover của RDS Multi-AZ khi máy chủ chính gặp sự cố** | **Tự động đổi bản ghi CNAME DNS** sang Standby | Phải đổi IP thủ công hoặc tạo instance mới | TD-Set2 Q15 |
 | **Tải gián đoạn, đột biến bất định có khoảng nghỉ không tải** | **Amazon Aurora Serverless v2** (1–8 ACUs) | Provisioned Instances (lãng phí tiền khi nhàn rỗi) | TD-Set8 Q14 |
 | **Multi-Region DR, RPO < 1s, RTO < 1m (Relational)** | **Amazon Aurora Global Database** | RDS Cross-Region Replica (lag > 1s) | CM-PT1 Q24 |
 | **Tự động xoay mật khẩu database định kỳ 30 ngày** | **AWS Secrets Manager** (Automatic Rotation) | Systems Manager Parameter Store (không có built-in rotation) | CM-PT1 Q13, TD-Set2 Q10 |
@@ -494,7 +532,7 @@ sequenceDiagram
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### 1. Sơ đồ luồng ứng dụng Microservices kết hợp RDS Proxy, Aurora và ElastiCache
 
@@ -575,7 +613,7 @@ sequenceDiagram
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức kỹ thuật chính xác) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -589,7 +627,7 @@ sequenceDiagram
 
 ---
 
-## 6.5. Bảng So Sánh Toàn Bộ Các Dịch Vụ Database Trên AWS (Ecosystem Comparison)
+## 5. Bảng So Sánh Toàn Bộ Các Dịch Vụ Database Trên AWS (Ecosystem Comparison)
 
 | Dịch vụ AWS | Loại hình Database | Mô hình dữ liệu | Cơ chế mở rộng (Scaling Model) | Độ trễ truy vấn | Kịch bản sử dụng chuẩn mực |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -605,13 +643,13 @@ sequenceDiagram
 
 ---
 
-## 6.6. Mô Hình Tính Phí Dịch Vụ & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí Dịch Vụ & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
 Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hóa đơn AWS hàng tháng. Việc hiểu sâu bản chất tính phí và áp dụng các chiến lược FinOps 2026 sẽ giúp doanh nghiệp tiết kiệm hàng chục ngàn USD mỗi năm.
 
 ---
 
-### 6.6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của Amazon RDS & Aurora
+### 6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của Amazon RDS & Aurora
 
 | Thành phần Dịch vụ | Cơ chế tính phí chi tiết (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
@@ -626,7 +664,7 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
 
 ---
 
-### 6.6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
+### 6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
 
 #### Kịch bản 1: Đổi Cấu Hình Giữa Aurora Standard và Aurora I/O-Optimized Cho Hệ Thống Giao Dịch
 * **Bối cảnh thực tế**:
@@ -724,7 +762,7 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Vấn đề (Problem) | Nguyên nhân khả dĩ (Possible Causes) | Các bước điều tra (Investigation Steps - Metrics/Logs) | Giải pháp xử lý (Solution) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -739,7 +777,7 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" (Golden Architectural Rules)
 1. **Phân biệt rạch ròi HA vs Scalability**:  

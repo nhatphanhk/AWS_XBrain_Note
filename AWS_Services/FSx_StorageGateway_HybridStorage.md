@@ -335,12 +335,25 @@ sequenceDiagram
   - ❌ *Vào AWS Console chỉnh sửa cấu hình in-place từ Single-AZ thành Multi-AZ*: AWS không hỗ trợ sửa đổi trực tiếp cấu hình này trên hệ thống tệp FSx đang chạy!
 - **Giải pháp ĐÚNG**: Khởi tạo một file system **FSx for Windows Multi-AZ mới**, sau đó sử dụng **AWS DataSync** để đồng bộ dữ liệu nền từ file system cũ sang file system mới mà không gây downtime.
 
+#### 🪤 Bẫy 6: Cung Cấp Bộ Nhớ Đệm Tệp Cục Bộ Cho Ứng Dụng On-Premises Bằng S3 File Gateway — (U-PT4 Q44, U-PT4 Q07)
+- **Tình huống đề thi**: *"Ứng dụng tại chỗ (On-Premises) cần đọc/ghi dữ liệu tệp tin qua giao thức chuẩn mạng (NFS hoặc SMB) với độ trễ cực thấp cho các tệp truy cập thường xuyên, đồng thời doanh nghiệp muốn toàn bộ dữ liệu được lưu trữ bền vững, tiết kiệm chi phí trên Amazon S3 và có thể áp dụng chính sách vòng đời (S3 Lifecycle)."*
+- **Phương án bẫy**:
+  - ❌ *Mount trực tiếp Amazon EFS hoặc Amazon FSx qua đường truyền VPN*: Độ trễ mạng diện rộng (WAN latency) sẽ làm chậm ứng dụng và không có cơ chế lưu bộ đệm (cache) cục bộ tại trung tâm dữ liệu On-Premises.
+  - ❌ *Viết lại toàn bộ ứng dụng để gọi trực tiếp S3 API (REST)*: Tốn kém nhiều thời gian, công sức và thay đổi kiến trúc mã nguồn ứng dụng kế thừa.
+- **Giải pháp ĐÚNG**: Triển khai **AWS Storage Gateway (Amazon S3 File Gateway)** dưới dạng máy ảo (VMware ESXi, Hyper-V, hoặc KVM) tại trung tâm dữ liệu On-Premises.
+  - S3 File Gateway ánh xạ các thư mục chia sẻ NFS/SMB cục bộ trực tiếp thành các đối tượng (objects 1:1) trong Amazon S3 bucket.
+  - Cung cấp ổ đĩa bộ nhớ đệm cục bộ (**Local Cache**) giúp người dùng và ứng dụng đọc/ghi các tệp dữ liệu nóng với tốc độ mạng LAN (độ trễ dưới mili-giây).
+  - Đối với bài toán di chuyển dữ liệu ban đầu khối lượng lớn kết hợp duy trì truy cập liên tục: Sử dụng **AWS DataSync** để chuyển dữ liệu ban đầu lên S3, sau đó triển khai **S3 File Gateway** để ứng dụng tiếp tục làm việc bình thường (`U-PT4 Q07`).
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Công Nghệ Lưu Trữ Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
 |:---|:---|:---|:---:|
+| **Local Cache NFS/SMB độ trễ thấp cho On-Premises lên S3** | **AWS Storage Gateway - S3 File Gateway** | EFS qua VPN (độ trễ WAN cao, thiếu local cache) | U-PT4 Q44 |
+| **Di chuyển dữ liệu lớn lên S3 và duy trì truy cập hybrid** | **AWS DataSync (nạp data) + S3 File Gateway (truy cập)** | Copy thủ công (chậm, không có local cache) | U-PT4 Q07 |
+| **Chia sẻ tệp cho Windows, giao thức SMB, Microsoft Active Directory** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ Linux NFS) | U-PT1 Q64, TD-Set1 Q52 |
 | **Chia sẻ tệp cho Windows, giao thức SMB, Microsoft Active Directory** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ Linux NFS) | U-PT1 Q64, TD-Set1 Q52 |
 | **Gom nhiều file system Windows thành 1 đường dẫn chia sẻ** | **FSx for Windows với DFS Namespaces** | LVM stripe trên EC2 (khó quản trị, không HA) | TD-Set1 Q55 |
 | **Lưu trữ khối (Block Storage) độ trễ thấp trải rộng Multi-AZ** | **FSx for NetApp ONTAP (iSCSI Protocol)** | Amazon EBS (EBS bị giới hạn trong 1 AZ duy nhất) | TD-Set1 Q10, TD-Set8 Q18 |

@@ -7,7 +7,7 @@
 
 ---
 
-## 6.1. Tổng Quan Dịch Vụ (Service Overview)
+## 1. Tổng Quan Dịch Vụ (Service Overview)
 
 ### 1. Định nghĩa chuẩn xác và Phân nhóm dịch vụ
 Hệ sinh thái lưu trữ đám mây gắn kèm máy chủ của AWS được chia thành 3 nhóm kiến trúc chuyên biệt dựa trên bản chất vật lý và giao thức truy cập:
@@ -60,7 +60,7 @@ flowchart TD
 
 ---
 
-## 6.2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
+## 2. Các Khái Niệm, Kiến Trúc & Vận Hành Cốt Lõi (Core Concepts, Security & Day-2 Operations)
 
 ### 1. Sơ đồ các mô hình lưu trữ gắn kèm máy chủ
 
@@ -293,6 +293,47 @@ sequenceDiagram
 - **Giải pháp ĐÚNG**: Sử dụng tính năng **EBS Elastic Volumes** để chuyển đổi loại ổ đĩa từ **`io2` sang `gp3`** trực tiếp trong thời gian chạy (in-flight modification) (`TD-Set8 Q03`).
   - Ổ đĩa `gp3` đáp ứng tối đa tới 16,000 IOPS và 1,000 MB/s thông lượng với chi phí rẻ hơn tới 75-80% so với `io2 Block Express`. Quá trình chuyển đổi diễn ra hoàn toàn không cần tháo đĩa hay tắt máy chủ (`TD-Set8 Q03`).
 
+#### 🪤 Bẫy 11: Khắc Phục Hiện Tượng Giảm Hiệu Năng Khởi Đầu Bằng EBS Fast Snapshot Restore (FSR) — (U-PT4 Q05)
+- **Tình huống đề thi**: *"Một công ty tài chính vận hành phần mềm mô hình hóa hiệu năng cao trên EC2 kèm EBS. Nhóm cần nhân bản môi trường kiểm thử (test) từ các bản snapshot của volume Production đang chạy. Tuy nhiên, khi các máy chủ test vừa khởi chạy và bắt đầu truy cập volume mới, ứng dụng gặp độ trễ cao bất thường trong thời gian đầu (I/O latency spikes). Cần giải pháp giúp volume test đạt ngay 100% hiệu năng tối đa ngay từ giây đầu tiên mà không làm trễ tiến độ kiểm thử."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng ổ đĩa EBS io2 với Multi-Attach và gắn trực tiếp volume Production vào máy test*: io2 Multi-Attach không cho phép các instance độc lập ghi dữ liệu cùng lúc nếu không có Cluster-aware File System; thao tác test sẽ ghi đè và làm hỏng dữ liệu của Production!
+  - ❌ *Chạy lệnh `dd` hoặc `fio` để pre-warm dữ liệu trên toàn bộ ổ đĩa mới*: Quá trình này mất hàng giờ đồng hồ với ổ đĩa hàng TB, làm chậm tiến độ kiểm thử.
+- **Giải pháp ĐÚNG**: Chụp snapshot từ volume Production, kích hoạt tính năng **EBS Fast Snapshot Restore (FSR)** trên snapshot đó, sau đó tạo volume mới từ snapshot đã bật FSR và gắn vào máy test.
+  - Bình thường, khi tạo volume mới từ Snapshot, dữ liệu nằm trên S3 và chỉ được kéo về khi có yêu cầu đọc khối (Lazy Loading / Re-hydration), gây ra độ trễ I/O ban đầu rất cao.
+  - Bật **FSR** sẽ kích hoạt AWS tự động cấp phát trước toàn bộ các khối dữ liệu vật lý (fully pre-warmed blocks), đảm bảo volume mới tạo đạt ngay trần IOPS và throughput thiết kế mà không có độ trễ lazy-load!
+
+#### 🪤 Bẫy 12: Thùng Rác Phục Hồi Chống Xóa Nhầm Snapshot Bằng AWS Recycle Bin — (U-PT4 Q42)
+- **Tình huống đề thi**: *"Công ty vận hành hệ thống ERP quan trọng và lưu giữ các bản sao lưu EBS snapshot hàng tuần. Doanh nghiệp muốn đảm bảo rằng nếu một quản trị viên vô tình nhấn lệnh xóa snapshot (DeleteSnapshot) hoặc tài khoản bị tấn công ác ý, các snapshot này vẫn có thể khôi phục lại được trong vòng 7 ngày mà không bị mất vĩnh viễn ngay lập tức."*
+- **Các phương án bẫy**:
+  - ❌ *Viết script AWS Lambda backup sang S3*: Tốn thêm chi phí lưu trữ gấp đôi và công sức duy trì mã nguồn.
+  - ❌ *Cấu hình AWS Backup Vault Lock ở chế độ Compliance*: Vault Lock áp dụng cho Recovery Points trong AWS Backup vault, không phải cơ chế thùng rác cứu hộ cho snapshot độc lập trên EC2 console.
+- **Giải pháp ĐÚNG**: Thiết lập quy tắc lưu giữ (retention rule) trong **AWS Recycle Bin (RBin)** cho tài nguyên EBS Snapshot với thời gian lưu giữ là **7 ngày**.
+  - Khi một snapshot bị xóa, nó không bị hủy vĩnh viễn mà được tự động chuyển vào **Recycle Bin**.
+  - Trong thời gian 7 ngày, quản trị viên có thể xem danh sách và nhấn nút **Recover** để phục hồi nguyên vẹn snapshot. Hết 7 ngày, snapshot mới tự động bị xóa sạch.
+
+#### 🪤 Bẫy 13: Toàn Diện Phạm Vi Bảo Vệ Của Amazon EBS Encryption — (U-PT4 Q09)
+- **Tình huống đề thi**: *"Doanh nghiệp dược phẩm tuân thủ tiêu chuẩn bảo mật dữ liệu HIPAA khắt khe. Kiểm toán viên yêu cầu xác nhận cơ chế mã hóa Amazon EBS Encryption bảo vệ những thành phần dữ liệu nào khi được kích hoạt với AWS KMS."*
+- **Bản chất kỹ thuật toàn diện của EBS Encryption**:
+  - **Dữ liệu tĩnh (Data at rest)**: Toàn bộ các khối dữ liệu ghi trên ổ đĩa EBS volume được mã hóa hoàn toàn bằng thuật toán AES-256.
+  - **Dữ liệu truyền tải (Data in-transit)**: Toàn bộ lưu lượng truyền giữa máy chủ EC2 (thẻ mạng Nitro) và máy chủ lưu trữ EBS qua mạng nội bộ của AWS đều được mã hóa tự động.
+  - **Tất cả các bản Snapshot**: Mọi snapshot tạo từ một encrypted volume đều **tự động được mã hóa** bằng cùng một KMS key.
+  - **Các Volume tạo từ Snapshot**: Mọi volume mới tạo từ một encrypted snapshot đều **tự động được mã hóa**.
+
+#### 🪤 Bẫy 14: Lựa Chọn Ổ Đĩa Cho Cơ Sở Dữ Liệu Lớn Yêu Cầu IOPS Bền Vững — (U-PT4 Q46)
+- **Tình huống đề thi**: *"Doanh nghiệp cần tự triển khai và quản lý một cơ sở dữ liệu quan hệ PostgreSQL quy mô khổng lồ trên máy ảo EC2 để toàn quyền kiểm soát hệ điều hành và các plugin tùy chỉnh. Cơ sở dữ liệu này đòi hỏi hiệu năng I/O cực cao, ổn định hàng chục ngàn IOPS và độ trễ dưới mili-giây mà không bao giờ bị ảnh hưởng bởi cơ chế tích lũy tín dụng (credit throttling)."*
+- **Các phương án bẫy**:
+  - ❌ *Chọn General Purpose SSD (gp2)*: gp2 dựa trên cơ chế burst credit và tỷ lệ cứng 3 IOPS/GiB; khi cạn kiệt credit thì hiệu năng sẽ sụt giảm nghiêm trọng làm tê liệt DB lớn.
+  - ❌ *Chọn Throughput Optimized HDD (st1)*: HDD chỉ tối ưu cho các luồng đọc/ghi tuần tự khối lớn (Big Data/Logs), độ trễ truy cập ngẫu nhiên rất cao, hoàn toàn không phù hợp cho database OLTP.
+- **Giải pháp ĐÚNG**: Chọn **Amazon EBS Provisioned IOPS SSD (`io1` hoặc `io2 Block Express`)**.
+  - Cung cấp mức IOPS cam kết độc lập (lên tới 256,000 IOPS trên io2 Block Express) với độ trễ I/O dưới mili-giây ổn định 99.9% thời gian.
+
+#### 🪤 Bẫy 15: Hệ Thống Tệp POSIX Đa Vùng Kết Hợp AWS Transfer Family — (U-PT4 Q40, U-PT4 Q54)
+- **Tình huống đề thi**: *"Các phòng thí nghiệm nghiên cứu sinh học cần tải lên các tệp tin nghiên cứu dung lượng lớn thông qua giao thức SFTP an toàn. Dữ liệu này sau đó phải được chia sẻ đồng thời cho một cụm máy chủ phân tích Linux chạy trên nhiều Availability Zones, đồng thời phải hỗ trợ sao lưu dự phòng định kỳ sang Region khác."*
+- **Giải pháp ĐÚNG**: Cấu hình **AWS Transfer Family (SFTP)** gắn trực tiếp điểm cuối (endpoint) vào **Amazon EFS** (đã bật mã hóa at-rest và in-transit).
+  - Transfer Family hỗ trợ giao diện SFTP không máy chủ, xác thực người dùng và ghi trực tiếp tệp tin vào thư mục chia sẻ EFS.
+  - Amazon EFS cung cấp giao diện chuẩn POSIX cho cụm máy chủ Linux đọc ghi song song xuyên AZ.
+  - Sử dụng **AWS Backup** để tự động lập lịch sao lưu tệp tin EFS định kỳ sang một **AWS Region khác** để đáp ứng kế hoạch Disaster Recovery.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Lưu Trữ Khối & Tệp Nhanh (Exam Decision Matrix)
@@ -307,6 +348,11 @@ sequenceDiagram
 | **Workload thừa IOPS trên io2 cần cắt giảm chi phí không downtime** | **EBS Elastic Volumes chuyển từ `io2` sang `gp3`** | Tạo đĩa mới rồi tắt máy copy file (gây downtime lâu) | `TD-Set8 Q03` |
 | **Cần IOPS cao (12,000 IOPS) nhưng dung lượng nhỏ (200 GB)** | **Amazon EBS `gp3` (cấu hình IOPS độc lập với size)** | `gp2` (bắt buộc phải mua 4TB đĩa để đạt 12,000 IOPS) | `TD-Set5 Q04` |
 | **Bộ nhớ tạm IOPS hàng triệu, độ trễ microsecond, mất khi tắt máy** | **EC2 Instance Store (NVMe SSD cục bộ)** | Amazon EBS (truy cập qua mạng Nitro, độ trễ millisecond) | `TD-Set6 Q57` |
+| **Khắc phục độ trễ Lazy-load khi tạo Volume từ Snapshot** | **EBS Fast Snapshot Restore (FSR)** | Dùng io2 Multi-Attach (nguy cơ corrupt dữ liệu Prod) | `U-PT4 Q05` |
+| **Bảo vệ Snapshot khỏi bị xóa nhầm trong 7 ngày** | **AWS Recycle Bin (Retention Rules)** | Sao chép thủ công sang S3 (tốn kém chi phí gấp đôi) | `U-PT4 Q42` |
+| **Cơ sở dữ liệu tự quản cần IOPS cực lớn bền vững** | **Amazon EBS Provisioned IOPS SSD (`io1`/`io2`)** | `gp2` (bị burst credits giới hạn), `st1` (HDD trễ cao) | `U-PT4 Q46` |
+| **Tải tệp SFTP vào thư mục chia sẻ Linux đa vùng + DR** | **AWS Transfer Family (SFTP) + Amazon EFS + AWS Backup** | Dùng EBS (không chia sẻ được đa AZ) | `U-PT4 Q40`, `Q54` |
+| **Phạm vi bảo vệ của EBS Encryption với KMS** | **Mã hóa Data at-rest, in-transit, snapshot & volume con** | Chỉ mã hóa data at-rest | `U-PT4 Q09` |
 | **Hệ thống tệp Windows SMB, tích hợp Active Directory** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ giao thức Linux NFS) | Chuẩn AWS |
 | **Tính toán HPC, Machine Learning, kết nối trực tiếp S3** | **Amazon FSx for Lustre** | Amazon EFS (thông lượng song song thấp hơn Lustre) | `TD-Set6 Q42` |
 | **Cơ sở dữ liệu Oracle/SAP cực lớn cần > 100,000 IOPS** | **Amazon EBS `io2 Block Express` (lên tới 256,000 IOPS)** | `gp3` (giới hạn tối đa 16,000 IOPS) | `TD-Set8 Q03` |
@@ -317,7 +363,7 @@ sequenceDiagram
 
 ---
 
-## 6.3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Sơ đồ luồng chia sẻ tệp tin đa vùng cho cụm Web Farm Container kết hợp EFS và EBS
 
@@ -361,7 +407,7 @@ flowchart TD
 
 ---
 
-## 6.4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
 | Related AWS Service | Purpose (Mục đích tích hợp) | Integration Method (Phương thức kỹ thuật chính xác) | Practical Example (Ví dụ thực tiễn) |
 | :--- | :--- | :--- | :--- |
@@ -373,7 +419,7 @@ flowchart TD
 
 ---
 
-## 6.5. Bảng So Sánh Toàn Bộ Các Giải Pháp Lưu Trữ Trên AWS (Ecosystem Comparison)
+## 5. Bảng So Sánh Toàn Bộ Các Giải Pháp Lưu Trữ Trên AWS (Ecosystem Comparison)
 
 | Dịch vụ Lưu trữ | Loại hình lưu trữ | Phạm vi địa lý | Giao thức truy cập | Độ trễ truy vấn | Kịch bản sử dụng chuẩn mực |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -387,9 +433,9 @@ flowchart TD
 
 ---
 
-## 6.6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
+## 6. Mô Hình Tính Phí & Chiến Lược Tối Ưu Chi Phí (FinOps & Cost Optimization)
 
-### 6.6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của Amazon EBS & EFS
+### 6.1. Bảng Phân Tích Cơ Chế Tính Phí Chi Tiết Của Amazon EBS & EFS
 
 | Thành phần tính phí | Cơ chế tính phí (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
@@ -405,7 +451,7 @@ flowchart TD
 
 ---
 
-### 6.6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
+### 6.2. Chiến Lược Tối Ưu Hóa Chi Phí Theo 5 Kịch Bản Thực Tế (Use Cases Optimization)
 
 #### Kịch bản 1: Chuyển Đổi Toàn Bộ Ổ Đĩa Từ `gp2` Sang `gp3` (Instant 20% Cost Reduction)
 * **Bối cảnh thực tế**:
@@ -483,7 +529,7 @@ flowchart TD
 
 ---
 
-## 6.7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Vấn đề (Problem) | Nguyên nhân khả dĩ (Possible Causes) | Các bước điều tra (Investigation Steps - Metrics/Logs) | Giải pháp xử lý (Solution) | Biện pháp phòng ngừa (Prevention) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -498,7 +544,7 @@ flowchart TD
 
 ---
 
-## 6.8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Lưu Trữ Đám Mây (Golden Rules)
 1. **Phân biệt ranh giới EBS vs EFS vs Instance Store**:  
