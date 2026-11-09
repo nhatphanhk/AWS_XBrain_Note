@@ -102,6 +102,97 @@ flowchart LR
 
 ---
 
+### 6. Khung Chiến Lược 7Rs Di Chuyển Lên Mây & Bộ Đôi Khảo Sát/Điều Phối (AWS Migration Hub, Application Discovery Service, Migration Evaluator)
+
+#### 6.1. Khung 7 Chiến Lược Di Chuyển Lên Đám Mây (The 7Rs of Cloud Migration)
+
+```mermaid
+flowchart TD
+    App[Ứng dụng Doanh Nghiệp Cần Di Chuyển] --> Decision{Đánh giá Kiến trúc & Nghiệp vụ}
+    Decision -->|Giữ nguyên VM/OS, chuyển nhanh| Rehost["1. Rehost (Lift-and-Shift)\nAWS MGN / DRS"]
+    Decision -->|Tối ưu nhỏ, chuyển DB sang Managed| Replatform["2. Replatform (Lift, Tinker & Shift)\nEC2 -> Elastic Beanstalk / DB -> RDS"]
+    Decision -->|Đập đi xây lại theo Cloud-Native| Refactor["3. Refactor / Re-architect\nMicroservices, Lambda, DynamoDB"]
+    Decision -->|Bỏ app cũ, mua SaaS thương mại| Repurchase["4. Repurchase (Drop-and-Shop)\nSalesforce, Workday, SaaS"]
+    Decision -->|Giữ nguyên On-Premises tạm thời| Retain["5. Retain (Do nothing now)\nLegacy chưa sẵn sàng hoặc tuân thủ"]
+    Decision -->|Ứng dụng hết giá trị, khai tử| Retire["6. Retire (Decommission)\nTắt vĩnh viễn máy chủ để tiết kiệm"]
+    Decision -->|Di chuyển hạ tầng ảo hóa nguyên bản| Relocate["7. Relocate (Hypervisor Lift)\nVMware Cloud on AWS"]
+```
+
+| Chiến lược (7Rs) | Mô tả chi tiết | Công cụ AWS chủ lực | Ưu điểm & Đánh đổi |
+| :--- | :--- | :--- | :--- |
+| **1. Rehost** *(Lift-and-Shift)* | Di chuyển máy chủ nguyên vẹn (OS, apps, storage) mà không thay đổi mã nguồn. | **AWS Application Migration Service (MGN)** | **Nhanh nhất, rủi ro thấp nhất**, nhưng chưa tận dụng được tính co giãn của cloud. |
+| **2. Replatform** *(Lift, Tinker & Shift)* | Tối ưu hóa một vài thành phần cốt lõi (ví dụ chuyển DB tự cài sang RDS, Web sang Beanstalk) mà không đụng chạm kiến trúc chính. | **AWS DMS, Elastic Beanstalk, RDS** | Giảm bớt gánh nặng quản trị OS/DB mà không tốn công viết lại app. |
+| **3. Refactor / Re-architect** | Viết lại toàn bộ kiến trúc theo hướng Cloud-Native, Event-Driven, Microservices và Serverless. | **AWS Lambda, ECS/EKS, DynamoDB, Step Functions** | **Chi phí vận hành tối ưu nhất, độ mở rộng cao nhất**, nhưng tốn thời gian và chi phí đầu tư ban đầu lớn. |
+| **4. Repurchase** *(Drop-and-Shop)* | Khai tử ứng dụng tự phát triển và chuyển sang dùng gói dịch vụ phần mềm đóng gói (SaaS). | **AWS Marketplace (SaaS solutions)** | Tiết kiệm thời gian phát triển, chuyển giao trách nhiệm vận hành cho nhà cung cấp SaaS. |
+| **5. Retain** | Giữ nguyên tại chỗ (On-Premises), hoãn di chuyển vì lý do bảo mật, pháp lý hoặc ứng dụng sắp hết vòng đời. | N/A | Không tốn chi phí phát sinh, nhưng vẫn phải chịu chi phí bảo trì DC cũ. |
+| **6. Retire** | Tắt hoàn toàn và hủy bỏ các máy chủ, ứng dụng nhàn rỗi không còn ai sử dụng trong doanh nghiệp. | N/A | **Tiết kiệm ngay lập tức 10% - 20% chi phí vận hành** danh mục IT. |
+| **7. Relocate** | Di chuyển trực tiếp máy ảo VMware vSphere lên môi trường đám mây AWS mà không cần đổi format ổ đĩa hay cấu hình mạng. | **VMware Cloud on AWS** | Không cần chuyển đổi định dạng máy ảo, giữ nguyên dải IP và chính sách vSphere. |
+
+---
+
+#### 6.2. Bộ Đôi Khảo Sát & Lập Bản Đồ Phụ Thuộc: AWS Application Discovery Service & Migration Evaluator
+
+```mermaid
+flowchart LR
+    subgraph OnPremDatacenter["Trung Tâm Dữ Liệu Doanh Nghiệp (On-Premises)"]
+        direction TB
+        VMware["Môi Trường VMware vCenter\n(Không được phép cài Agent)"] -->|OVA Appliance| Connector["AWS Agentless Discovery Connector\n(Thu thập CPU, RAM, Disk, OS)"]
+        BareMetal["Máy Chủ Vật Lý & Máy Ảo Trọng Yếu\n(Cần lập bản đồ phụ thuộc mạng)"] -->|Cài đặt trực tiếp| Agent["AWS Application Discovery Agent\n(Thu thập Inbound/Outbound Connections, Processes)"]
+    end
+
+    subgraph AWSCloud["Đám Mây AWS"]
+        Connector -->|Dữ liệu cấu hình| ADS["AWS Application Discovery Service"]
+        Agent -->|Dữ liệu network topology & performance| ADS
+        ADS --> Hub["AWS Migration Hub\n(Dashboard Theo Dõi Tiến Độ Tập Trung)"]
+        ADS --> Evaluator["AWS Migration Evaluator (formerly TSO Logic)\n(Phân tích TCO & Ước tính chi phí di chuyển)"]
+    end
+```
+
+* **AWS Application Discovery Service (ADS)**:
+  - **Agentless Discovery (AWS Agentless Discovery Connector)**: Triển khai dưới dạng máy ảo VMware OVA trên vCenter Server. Tự động phát hiện thông tin cấu hình phần cứng (vCPU, RAM, Storage), lịch sử tải và danh sách VM. **Đặc điểm**: Nhanh, không cần cài đặt lên từng OS máy khách; **KHÔNG** xem được các tiến trình (processes) đang chạy và **KHÔNG** lập được bản đồ kết nối mạng (Network Connection Mapping).
+  - **Agent-based Discovery (AWS Application Discovery Agent)**: Cài đặt trực tiếp agent lên từng máy chủ Windows / Linux (cả máy ảo lẫn máy chủ vật lý Bare-Metal). Thu thập chi tiết thông tin hệ thống, CPU/RAM utilization theo thời gian thực, danh sách tiến trình đang thực thi, và **toàn bộ luồng kết nối mạng vào/ra (Inbound/Outbound IP:Port connections)**. Đây là công cụ **BẮT BUỘC** khi bài toán yêu cầu **Lập bản đồ phụ thuộc ứng dụng (Application Dependency Mapping)** để xác định nhóm ứng dụng nào phải di chuyển cùng nhau.
+* **AWS Migration Evaluator (tiền thân là TSO Logic)**:
+  - Công cụ lập kế hoạch kinh doanh và phân tích tổng chi phí sở hữu (**Total Cost of Ownership - TCO**).
+  - Sử dụng dữ liệu thực tế thu thập được để dự báo chính xác chi phí vận hành trên AWS (so sánh chi phí On-Demand vs Savings Plans / Reserved Instances), giúp cấp quản lý ra quyết định phê duyệt dự án di chuyển.
+* **AWS Migration Hub**:
+  - Bảng điều khiển quản trị tập trung duy nhất (**Single Pane of Glass**) cho phép theo dõi toàn bộ tiến độ di chuyển các ứng dụng doanh nghiệp qua nhiều công cụ khác nhau của AWS (AWS MGN, AWS DMS) và các đối tác (Partner tools).
+
+---
+
+### 7. Quản Trị & Bảo Vệ Bản Sao Lưu Tập Trung Doanh Nghiệp: AWS Backup Vault Lock (WORM) & AWS Backup Audit Manager
+
+#### 7.1. AWS Backup Vault Lock — Ngăn Chặn Ransomware Tuyệt Đối với Chuẩn WORM
+
+```mermaid
+flowchart TD
+    Vault[AWS Backup Vault\nLưu trữ snapshot EBS, RDS, DynamoDB, EFS] --> LockChoice{Chọn Cơ Chế Vault Lock}
+    
+    LockChoice -->|Thử nghiệm / Nội bộ quản lý| GovMode["Governance Mode\n- User có quyền IAM đặc biệt có thể xóa bản backup\n- Dễ dàng mở khóa hoặc hủy bỏ khi cần"]
+    
+    LockChoice -->|Quy định Pháp lý & Chống Ransomware| CompMode["Compliance Mode (WORM - Write Once, Read Many)\n- KHÔNG AI có thể xóa hoặc sửa bản backup\n- Kể cả ROOT ACCOUNT và AWS SUPPORT cũng BÓ TAY!"]
+    
+    CompMode --> CoolOff["Thời Gian Ân Hạn (Cooling-off Period: 1 - 72 giờ)\n- Trong giai đoạn này vẫn có thể hủy Lock\n- HẾT THỜI GIAN ÂN HẠN: KHÓA VĨNH VIỄN KHÔNG THỂ ĐẢO NGƯỢC!"]
+```
+
+- **Mục tiêu**: Bảo vệ doanh nghiệp trước các cuộc tấn công mã độc tống tiền (**Ransomware**) và nhân viên nội bộ bất hảo có ý định xóa sạch các bản sao lưu để phá hoại.
+- **Hai Chế Độ Khóa (Lock Modes)**:
+  1. **Governance Mode**: Bảo vệ bản sao lưu trước việc vô tình xóa bỏ từ nhân viên. Tuy nhiên, người quản trị sở hữu quyền hạn IAM đặc biệt (`backup:DeleteBackupVaultAccessPolicy`, `backup:PutBackupVaultLockConfiguration`) vẫn có thể xóa bản sao lưu hoặc gỡ bỏ khóa khi có yêu cầu nghiệp vụ.
+  2. **Compliance Mode (WORM - Write Once, Read Many)**: Chế độ nghiêm ngặt nhất đáp ứng các tiêu chuẩn tài chính và pháp lý (SEC Rule 17a-4, CFTC, FINRA). Khi đã kích hoạt và qua khỏi thời gian ân hạn:
+     - **KHÔNG MỘT AI** (kể cả Root Account, Quản trị viên cao cấp, hay Đội ngũ hỗ trợ kỹ thuật AWS Support) có quyền xóa bản sao lưu trước khi hết thời hạn lưu trữ (Retention Period).
+     - **KHÔNG THỂ giảm thời hạn lưu trữ** (chỉ được phép tăng thêm).
+     - **KHÔNG THỂ xóa Backup Vault** khi bên trong vẫn còn điểm khôi phục (Recovery Points).
+- **Thời Gian Ân Hạn (Cooling-off Period)**: Khi cấu hình Compliance Mode, AWS bắt buộc thiết lập thời gian làm nguội từ **1 đến 72 giờ** (mặc định 72 giờ). Trong thời gian này, quản trị viên có thể kiểm tra và hủy bỏ cấu hình khóa. Khi đồng hồ đếm ngược kết thúc, chính sách khóa trở thành **bất khả biến vĩnh viễn (Permanent and irreversible)**.
+
+#### 7.2. AWS Backup Audit Manager — Tự Động Hóa Kiểm Toán & Tuân Thủ Sao Lưu
+
+* **Vấn đề giải quyết**: Doanh nghiệp lớn sở hữu hàng trăm tài khoản AWS gặp khó khăn khi kiểm toán xem toàn bộ máy chủ EC2, cơ sở dữ liệu RDS, bảng DynamoDB có đang được sao lưu đúng quy định (hàng ngày, giữ 30 ngày, mã hóa KMS, sao chép sang Region thứ 2) hay không.
+* **Cơ chế hoạt động**:
+  - Cung cấp các **Khung kiểm soát dựng sẵn (Pre-built Compliance Frameworks)**.
+  - Tự động theo dõi liên tục tình trạng bảo vệ của tài nguyên dựa trên các tiêu chí tuân thủ (ví dụ: `BACKUP_RESOURCES_PROTECTED_BY_PLAN`, `BACKUP_LAST_RECOVERY_POINT_CREATED`).
+  - Tự động tạo **Báo cáo kiểm toán tuân thủ chi tiết (Audit-ready compliance reports)** định kỳ gửi tới ban kiểm toán và an ninh mạng thông qua Amazon S3.
+
+---
+
 ### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
 
 #### 1. Di Chuyển Máy Chủ Toàn Diện Bằng AWS Application Migration Service (AWS MGN) — (TD-Set4 Q65)
@@ -267,12 +358,45 @@ Chi Phí Rẻ Nhất / RTO-RPO Lâu Nhất                Chi Phí Đắt Nhất
   - AWS DMS Serverless tự động cấp phát, giám sát và co giãn dung lượng máy chủ nhân bản (tính bằng đơn vị DMS Capacity Units - DCU) dựa trên khối lượng dữ liệu thực tế di chuyển.
   - Hỗ trợ đầy đủ cả 2 giai đoạn: Full Load và Ongoing Replication (CDC) mà không yêu cầu người dùng phải quản lý bất kỳ hạ tầng máy chủ nào.
 
+#### 🪤 Bẫy 14: AWS Backup Vault Lock: Phân Biệt Governance Mode vs Compliance Mode & Phòng Chống Ransomware — (CM-PT1 Q58)
+- **Tình huống đề thi**: *"Doanh nghiệp tài chính cần đảm bảo tất cả các bản sao lưu cơ sở dữ liệu và ổ đĩa máy chủ (EBS, RDS) tuân thủ quy chuẩn WORM (Write Once, Read Many). Để ngăn chặn mã độc tống tiền (Ransomware) hoặc tài khoản Root bị xâm phạm xóa các bản sao lưu, chính sách phải đảm bảo rằng KHÔNG AI, kể cả tài khoản AWS Root hay bộ phận hỗ trợ kỹ thuật AWS, có quyền xóa bản sao lưu trước khi hết thời hạn lưu trữ. Giải pháp nào đáp ứng đúng?"*
+- **Các phương án bẫy**:
+  - ❌ *Cấu hình AWS Backup Vault Lock ở chế độ Governance Mode*: Sai vì trong Governance Mode, người dùng có các quyền IAM đặc quyền (`backup:DeleteBackupVaultAccessPolicy`, `backup:PutBackupVaultLockConfiguration`) hoặc tài khoản Root vẫn có thể xóa bản backup.
+  - ❌ *Sử dụng S3 Object Lock cho toàn bộ dữ liệu*: Sai vì S3 Object Lock chỉ bảo vệ các đối tượng lưu trữ trực tiếp trong S3 bucket, không thể trực tiếp khóa và bảo vệ các điểm khôi phục của EBS snapshot, RDS database instances hay DynamoDB tables.
+  - ❌ *Dùng IAM Deny Policy gắn vào tài khoản Root*: Sai vì IAM Policy gắn vào IAM User/Role, không thể ngăn chặn Root account thực hiện quyền tối cao xóa tài nguyên ngoại trừ thông qua Service Control Policies (SCP) hoặc tính năng chuyên dụng như Vault Lock Compliance Mode.
+- **Giải pháp ĐÚNG**: Kích hoạt **AWS Backup Vault Lock ở chế độ Compliance Mode**.
+  - Compliance Mode khóa cứng toàn bộ Backup Vault theo chuẩn WORM.
+  - Sau khi hết thời gian ân hạn (Cooling-off Period từ 1 đến 72 giờ), không một ai (kể cả Root User và AWS Support) có thể xóa điểm khôi phục, giảm thời hạn lưu trữ, hoặc xóa Vault.
+
+#### 🪤 Bẫy 15: Lập Bản Đồ Phụ Thuộc Ứng Dụng (Application Dependency Mapping): Agent-based vs Agentless Discovery — (TD-Set2 Q14)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn lập kế hoạch di chuyển một hệ thống gồm hàng trăm máy chủ vật lý (bare-metal) và máy ảo on-premises lên AWS. Trước khi lên lịch trình di chuyển theo từng đợt (migration waves), nhóm kiến trúc cần xác định chính xác các ứng dụng phụ thuộc vào nhau như thế nào, các tiến trình (processes) đang chạy trên từng OS, và các kết nối mạng cổng TCP vào/ra (inbound/outbound network connections). Giải pháp khảo sát nào là phù hợp nhất?"*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng AWS Agentless Discovery Connector*: Sai vì Agentless Connector chỉ triển khai được trên môi trường VMware vCenter, không thể thu thập thông tin từ máy chủ vật lý bare-metal. Quan trọng hơn, Agentless Connector KHÔNG thể xem được các tiến trình OS nội bộ và KHÔNG thu thập được luồng kết nối mạng (Network Connection Mapping).
+  - ❌ *Sử dụng AWS Systems Manager Inventory*: Sai vì SSM Inventory dùng để quản lý cấu hình phần mềm trên các máy chủ đã cài SSM Agent phục vụ vận hành, không chuyên dụng để lập bản đồ mạng và phân tích làn sóng di chuyển lên mây.
+- **Giải pháp ĐÚNG**: Cài đặt **AWS Application Discovery Agent** trên từng máy chủ nguồn (**Agent-based Discovery**).
+  - Hoạt động trên cả máy chủ vật lý và máy ảo (Windows & Linux).
+  - Thu thập danh sách tiến trình đang chạy, mức sử dụng CPU/RAM/Disk, và **toàn bộ dữ liệu kết nối mạng vào/ra (Inbound/Outbound IP và Port)** để lập bản đồ phụ thuộc ứng dụng chính xác 100%.
+
+#### 🪤 Bẫy 16: Quản Trị và Giám Sát Tập Trung Tiến Độ Nhiều Công Cụ Di Chuyển Bằng AWS Migration Hub — (TD-Set2 Q35)
+- **Tình huống đề thi**: *"Doanh nghiệp đang thực hiện một dự án di chuyển quy mô lớn lên AWS, kết hợp đồng thời nhiều công cụ: AWS Application Migration Service (MGN) cho máy chủ, AWS Database Migration Service (DMS) cho cơ sở dữ liệu, và một số công cụ di chuyển của đối tác bên thứ ba. Giám đốc CNTT cần một bảng điều khiển tập trung duy nhất để giám sát trạng thái và tiến độ di chuyển của toàn bộ các ứng dụng nghiệp vụ mà không cần đăng nhập vào từng dịch vụ riêng rẽ. Dịch vụ nào cung cấp tính năng này?"*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng AWS Control Tower*: Control Tower dùng để thiết lập Landing Zone và quản trị môi trường đa tài khoản AWS (guardrails, SCPs), không phải công cụ theo dõi tiến độ di chuyển ứng dụng.
+  - ❌ *Sử dụng AWS Systems Manager*: SSM là dịch vụ quản lý vận hành máy chủ (patching, run commands), không có giao diện tổng hợp tiến độ di chuyển từ MGN/DMS/Partner.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Migration Hub**.
+  - AWS Migration Hub cung cấp giao diện tập trung (**Single Pane of Glass**) kết nối với AWS MGN, AWS DMS, và Partner Tools.
+  - Cho phép gom nhóm các máy chủ thành ứng dụng nghiệp vụ (Applications) và theo dõi trạng thái di chuyển từng bước xuyên suốt toàn bộ dự án.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Công Cụ Di Chuyển & DR Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
 |:---|:---|:---|:---|
+| **Khóa bản sao lưu chống Ransomware, Root không thể xóa** | **AWS Backup Vault Lock (Compliance Mode)** | Governance Mode (Root hoặc IAM admin vẫn xóa được) | `CM-PT1 Q58` |
+| **Lập bản đồ phụ thuộc mạng (Inbound/Outbound IP:Port)** | **AWS Application Discovery Agent (Agent-based)** | Agentless Connector (không xem được tiến trình & network connections) | `TD-Set2 Q14` |
+| **Khảo sát máy ảo VMware vCenter không cài phần mềm vào OS** | **AWS Agentless Discovery Connector (OVA)** | Agent-based (yêu cầu cài đặt phần mềm lên từng OS) | `TD-Set2 Q14` |
+| **Theo dõi tiến độ di chuyển từ nhiều công cụ (MGN, DMS, Partner)** | **AWS Migration Hub** | AWS Control Tower / AWS Systems Manager | `TD-Set2 Q35` |
+| **Ước tính TCO so sánh chi phí On-Premises vs AWS** | **AWS Migration Evaluator (TSO Logic)** | AWS Cost Explorer (chỉ phân tích chi tiêu tài nguyên AWS đã dùng) | Chuẩn AWS |
 | **Di chuyển 100 TB dữ liệu offline lên S3 Glacier** | **AWS Snowball Edge + S3 Lifecycle to Glacier** | Truyền qua Internet 100 Mbps (mất > 92 ngày gây nghẽn) | `U-PT4 Q20` |
 | **Failover Active-Passive sang web thông báo bảo trì** | **Route 53 Failover Routing + S3 Static Website** | Weighted Routing (chỉ chia tỉ lệ tải, không tự động failover) | `U-PT4 Q48` |
 | **Đồng bộ CDC DB liên tục không cần quản trị máy chủ** | **AWS DMS Serverless (Auto-scaling DCUs)** | AWS Glue (chuyên ETL theo batch, không hỗ trợ CDC OLTP) | `U-PT4 Q55` |

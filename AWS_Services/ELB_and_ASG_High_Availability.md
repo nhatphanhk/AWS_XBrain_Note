@@ -126,17 +126,58 @@ flowchart TD
 ```
 
 1. **Target Tracking Scaling Policy (Chuẩn mực thông dụng nhất)**:
-   - Bạn chỉ cần đặt ra một con số mục tiêu (ví dụ: *"Duy trì mức sử dụng CPU trung bình ở 60%"* hoặc *"Mỗi instance phục vụ 1,500 requests/phút"*). AWS sẽ tự động tính toán số lượng máy chủ cần tăng hoặc giảm để giữ ổn định quanh con số đó.
-2. **Step Scaling Policy**:
+   - Bạn chỉ cần đặt ra một con số mục tiêu (ví dụ: *"Duy trì mức sử dụng CPU trung bình ở 60%"* hoặc *"Mỗi instance phục vụ 1,500 requests/phút"*). AWS sẽ tự động tính toán số lượng máy chủ cần tăng hoặc giảm để giữ ổn định quanh con số đó. Rất phù hợp cho các mô hình tải biến thiên mượt mà và dự đoán được xu hướng.
+2. **Step Scaling Policy (Xử lý bùng nổ tải đột biến không dự đoán trước)**:
    - Phản ứng linh hoạt theo các ngưỡng bậc thang của CloudWatch Alarm (ví dụ: nếu CPU từ 70%–80% thì thêm 1 máy; nếu CPU vượt 85% thì thêm ngay 3 máy để ứng cứu khẩn cấp).
-3. **Predictive Scaling Policy**:
+   - **Ưu điểm vượt trội so với Simple Scaling**: Simple Scaling bắt buộc phải chờ hết thời gian Cooldown (ví dụ 300s) mới được đánh giá tiếp, dễ làm sập hệ thống khi tải tăng vọt. **Step Scaling hoàn toàn không bị trói buộc bởi Cooldown khi các ngưỡng Alarm mới bị kích hoạt**, cho phép scale-out tức thời theo mức độ nghiêm trọng của tải (*CM-PT1 Q30*).
+3. **Scheduled Scaling Policy**:
+   - Tự động thay đổi Min/Desired/Max capacity theo lịch trình định sẵn (ví dụ: tăng máy vào 9h sáng thứ Hai mở bán vé Flash Sale, hạ máy lúc 23h đêm) (*CM-PT2 Q34*).
+4. **Predictive Scaling Policy**:
    - Ứng dụng mô hình Machine Learning phân tích dữ liệu lịch sử tải của các tuần trước đó để tự động khởi chạy máy chủ trước khi đợt tăng tải diễn ra (ví dụ: bật máy lúc 07:30 sáng để đón đợt tăng tải lúc 08:00).
-4. **ASG Warm Pools & Instance Refresh**:
+5. **ASG Warm Pools & Instance Refresh**:
    - **Warm Pools**: Duy trì một cụm máy ảo ở trạng thái dừng (**Stopped**) đã cài đặt sẵn phần mềm. Khi cần scale-out, máy chỉ mất 30 giây để Start thay vì mất 5–10 phút để cài đặt từ đầu qua User Data.
    - **Instance Refresh**: Cho phép triển khai cập nhật phiên bản AMI mới theo cơ chế rolling update từng phần với các chốt kiểm tra sức khỏe (**Checkpointing**) mà không gây gián đoạn hệ thống.
-5. **ASG Lifecycle Hooks (Can thiệp vòng đời máy ảo)** (*TD-Set5 Q45*):
+6. **ASG Lifecycle Hooks (Can thiệp vòng đời máy ảo)** (*TD-Set5 Q45*):
    - Cho phép tạm dừng tiến trình đưa máy ảo vào hoạt động (`Pending:Wait`) hoặc tiến trình chấm dứt máy ảo (`Terminating:Wait`) trong một khoảng thời gian chờ (Heartbeat Timeout - mặc định 3,600 giây).
    - **Ứng dụng sống còn trong đề thi**: Khi máy ảo bị ALB đánh dấu Unhealthy do lỗi ứng dụng, ASG mặc định sẽ terminate máy ngay lập tức làm mất toàn bộ các ephemeral log chẩn đoán cục bộ. Bằng cách thêm **Lifecycle Hook (`Terminating:Wait`)**, ASG giữ máy lại ở trạng thái chờ, phát sự kiện qua Amazon EventBridge kích hoạt Lambda/SSM Run Command đẩy toàn bộ file log lên **CloudWatch Logs**, sau đó mới gọi hàm `CompleteLifecycleAction` để tiếp tục terminate instance an toàn!
+
+---
+
+### 4. AWS Global Accelerator — Tăng Tốc Lưu Lượng Mạng Toàn Cầu & Chuyển Đổi Dự Phòng Tức Thì (Bypass DNS Caching)
+
+```mermaid
+flowchart TD
+    Client[Người dùng toàn cầu: Châu Á, Châu Âu, Mỹ] -->|Kết nối tới 2 Anycast Static IPs cố định| Edge[AWS Global Network Edge Locations]
+    
+    subgraph AWSBackbone["Mạng Cáp Quang Riêng Toàn Cầu của AWS (AWS Private Global Backbone)"]
+        direction TB
+        Edge --> RouteEngine{Định Tuyến & Health Check}
+        RouteEngine -->|Độ trễ thấp nhất| RegionPrimary["Region us-east-1 (Primary Endpoint)\nALB / NLB / EC2"]
+        RouteEngine -.->|Tự động Failover dưới 1 phút khi sự cố| RegionSecondary["Region eu-west-1 (Secondary Endpoint)\nALB / NLB / EC2"]
+    end
+```
+
+* **Cơ chế hoạt động**:
+  - Cung cấp **2 địa chỉ Anycast Static IPv4 cố định** duy nhất đóng vai trò làm điểm tiếp nhận lưu lượng toàn cầu (Global Ingress).
+  - Ngay tại điểm biên (Edge Location) gần người dùng nhất, lưu lượng được đưa ngay vào **Mạng cáp quang riêng toàn cầu của AWS (AWS Global Private Fiber Backbone)**, hoàn toàn tránh khỏi tình trạng nghẽn mạng và packet loss của mạng Internet công cộng.
+* **Hỗ trợ giao thức đa dạng**:
+  - Hỗ trợ cả **TCP và UDP** (trong khi CloudFront chỉ hỗ trợ HTTP/HTTPS/WebSockets). Cực kỳ lý tưởng cho game online nhiều người chơi (Multiplayer Gaming), thoại qua mạng (VoIP), streaming media, và thiết bị IoT (*CM-PT2 Q15, U-PT3 Q10*).
+* **Khả năng chuyển đổi dự phòng tức thì (Bypassing DNS Caching)**:
+  - Khi dùng Route 53 Multi-Region Failover, việc chuyển hướng phụ thuộc vào TTL và DNS cache của client/ISP (có thể mất từ vài phút đến hàng giờ khiến người dùng vẫn truy cập vào server bị lỗi).
+  - Với **AWS Global Accelerator**, địa chỉ IP của client kết nối là **CỐ ĐỊNH**. Khi một Region gặp sự cố, hệ thống định tuyến nội bộ của AWS phát hiện qua health check và **tự động chuyển hướng lưu lượng sang Region lành lặn còn lại trong vòng dưới 1 phút mà hoàn toàn không bị ảnh hưởng bởi DNS caching** (*CM-PT1 Q40, U-PT1 Q58*).
+
+---
+
+#### So Sánh Toàn Diện: AWS Global Accelerator vs Amazon CloudFront
+
+| Tiêu chuẩn so sánh | AWS Global Accelerator | Amazon CloudFront |
+|:---|:---|:---|
+| **Mục đích chính** | Tối ưu hóa định tuyến mạng qua cáp quang AWS cho TCP/UDP | Bộ nhớ đệm biên (Edge Caching) cho website và media |
+| **Cơ chế Caching** | ❌ **KHÔNG CÓ BỘ NHỚ ĐỆM** (Lưu lượng luôn truyền thẳng về backend) | ✅ **CÓ BỘ NHỚ ĐỆM BIÊN** (Lưu trữ HTML, CSS, ảnh, video tại Edge) |
+| **Giao thức hỗ trợ** | **TCP, UDP, HTTP, HTTPS** | **Chỉ HTTP, HTTPS, WebSockets** |
+| **Điểm cuối cung cấp** | **2 Anycast Static IPv4 Addresses** cố định | Tên miền DNS động (ví dụ: `d123.cloudfront.net`) |
+| **Khả năng chống chịu DNS Cache** | ✅ Tuyệt đối (Không phụ thuộc DNS resolver của máy khách) | ❌ Phụ thuộc vào phân giải DNS của trình duyệt và ISP |
+| **Kịch bản chuẩn thi cử** | Game UDP, ứng dụng tài chính TCP, failover đa Region nhanh | Website tĩnh S3, tăng tốc API REST, stream video HLS/DASH |
 
 ---
 
@@ -282,11 +323,33 @@ flowchart TD
   - ASG **KHÔNG THỂ trải dài qua nhiều Regions**; ASG chỉ có thể bao phủ nhiều Availability Zones trong **CÙNG MỘT Region**.
 - **Giải pháp ĐÚNG**: Cấu hình Auto Scaling Group trải trên **nhiều Availability Zones trong 1 Region duy nhất** đằng sau một Application Load Balancer cấp Region. Nếu muốn mở rộng đa Region, phải tạo 2 ASG độc lập ở 2 Region và điều phối bằng **Amazon Route 53** hoặc **AWS Global Accelerator**.
 
+#### 🪤 Bẫy 15: Tăng Tốc Lưu Lượng TCP/UDP & Bỏ Qua Bộ Nhớ Đệm DNS Bằng AWS Global Accelerator — (CM-PT1 Q40, CM-PT2 Q15, U-PT1 Q58, U-PT3 Q10)
+- **Tình huống đề thi**: *"Ứng dụng game online toàn cầu sử dụng giao thức UDP độc quyền yêu cầu độ trễ thấp nhất có thể cho game thủ trên toàn thế giới. Ngoài ra, khi xảy ra sự cố tại Region chính, hệ thống phải tự động chuyển đổi sang Region dự phòng trong vòng dưới 1 phút mà không bị ảnh hưởng bởi việc các nhà mạng (ISP) và trình duyệt người dùng lưu cache bản ghi DNS (bypassing DNS caching). Dịch vụ nào đáp ứng tối ưu?"*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng Amazon CloudFront*: Sai vì CloudFront chỉ hỗ trợ HTTP/HTTPS/WebSocket, hoàn toàn KHÔNG hỗ trợ giao thức UDP của game.
+  - ❌ *Sử dụng Amazon Route 53 Failover Routing*: Route 53 phụ thuộc vào giá trị TTL của bản ghi DNS. Nhiều ISP và ứng dụng máy khách tự ý lưu cache IP hàng chục phút bất chấp TTL ngắn, khiến game thủ vẫn gửi gói tin vào Region bị sập.
+- **Giải pháp ĐÚNG**: Triển khai **AWS Global Accelerator**.
+  - Cung cấp **2 địa chỉ Anycast Static IPv4** cố định không bao giờ thay đổi, giải quyết triệt để vấn đề DNS caching.
+  - Hỗ trợ đầy đủ giao thức **UDP và TCP**.
+  - Tự động phát hiện endpoint hỏng qua health check nội bộ và chuyển hướng lưu lượng sang Region lành lặn trong vòng **vài chục giây** qua mạng cáp quang riêng của AWS.
+
+#### 🪤 Bẫy 16: Phản Ứng Với Đợt Tăng Tải Đột Biến Khó Dự Đoán Bằng Step Scaling — (CM-PT1 Q30, CM-PT2 Q34)
+- **Tình huống đề thi**: *"Trang web thương mại điện tử thỉnh thoảng có các đợt phát sóng quảng cáo truyền hình đột xuất, lượng truy cập tăng vọt gấp 10 lần chỉ trong vài chục giây. Nhóm kỹ sư nhận thấy chính sách Target Tracking và Simple Scaling phản ứng quá chậm chạp do thời gian chờ Cooldown khiến hệ thống bị sập trước khi máy chủ mới kịp khởi động. Cần chọn chính sách co giãn nào?"*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng Simple Scaling*: Bắt buộc phải đợi hết thời gian Cooldown giữa mỗi lần scale, không thể mở rộng nhiều cấp độ cùng lúc khi tải tăng vọt.
+  - ❌ *Sử dụng Scheduled Scaling*: Không khả thi vì các đợt phát sóng truyền hình hoặc tin tức viral diễn ra ngẫu nhiên, không có lịch trình cố định.
+- **Giải pháp ĐÚNG**: Sử dụng **Step Scaling Policy**.
+  - Cho phép định nghĩa các bậc thang co giãn (Step Adjustments) dựa trên độ lệch chỉ số CloudWatch Alarm (ví dụ: CPU tăng 10% -> thêm 2 máy; CPU tăng 30% -> thêm ngay 6 máy).
+  - Hoạt động ngay lập tức mà không bị trì hoãn bởi Cooldown khi các ngưỡng cảnh báo cao hơn bị kích hoạt liên tiếp.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Cân Bằng Tải & Co Giãn Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
+|:---|:---|:---|:---:|
+| **Tăng tốc TCP/UDP game toàn cầu, failover bỏ qua DNS cache** | **AWS Global Accelerator (Anycast Static IPs)** | CloudFront (chỉ HTTP/S) / Route 53 (vướng DNS cache) | CM-PT1 Q40, CM-PT2 Q15 |
+| **Xử lý lưu lượng tăng vọt đột biến không có Cooldown** | **ASG Step Scaling Policy (Step Adjustments)** | Simple Scaling (bị khóa bởi Cooldown giữa các lần) | CM-PT1 Q30 |
 |:---|:---|:---|:---:|
 | **Phục vụ nhiều domain SSL độc lập chi phí thấp nhất** | **ALB với Server Name Indication (SNI)** | Tạo nhiều ALB riêng biệt (tốn kém chi phí) | TD-Set3 Q20 |
 | **Vá lỗi EC2 sau ALB an toàn không gây downtime** | **SSM Automation (`AWSEC2-PatchLoadBalancerInstance`)** | Đổi target group sang IP hoặc gỡ thủ công | U-PT4 Q02 |

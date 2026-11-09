@@ -161,6 +161,26 @@ flowchart TD
 
 ---
 
+### 7. Tối Ưu Hóa Chi Phí Phân Phối CDN Toàn Cầu: CloudFront Price Classes
+
+```mermaid
+flowchart TD
+    CF[Amazon CloudFront Distribution] --> PC{Chọn Price Class để cân bằng Chi Phí & Độ Trễ}
+    
+    PC --> All["PriceClass_All (Mặc định - Đắt nhất)\n- Bao gồm TẤT CẢ các Edge Locations trên toàn cầu\n- Độ trễ tối ưu nhất cho người dùng ở mọi quốc gia\n- Chi phí cao nhất vì bao gồm các vùng đắt đỏ (Nam Mỹ, Úc)"]
+    
+    PC --> PC200["PriceClass_200 (Cân bằng tốt)\n- Bao gồm: Bắc Mỹ, Châu Âu, Châu Á, Trung Đông, Nam Phi\n- LOẠI TRỪ các điểm Edge có chi phí cao nhất: Nam Mỹ & Úc\n- Yêu cầu từ Nam Mỹ/Úc vẫn được phục vụ nhưng định tuyến qua Edge khác"]
+    
+    PC --> PC100["PriceClass_100 (Chi phí thấp nhất)\n- CHỈ bao gồm các Edge Locations tại Bắc Mỹ & Châu Âu\n- Phù hợp khi tệp khách hàng mục tiêu 95% nằm ở Mỹ & EU\n- Tiết kiệm chi phí tối đa cho doanh nghiệp"]
+```
+
+* **Bản chất**: Chi phí truyền tải dữ liệu (Data Out) của CloudFront thay đổi đáng kể tùy theo khu vực địa lý (ví dụ: cước tại Nam Mỹ hay Úc đắt gấp đôi so với Bắc Mỹ và Châu Âu). **CloudFront Price Classes** cho phép doanh nghiệp chủ động lựa chọn phạm vi các điểm Edge tham gia phục vụ nội dung để cắt giảm hóa đơn CDN (*CM-PT1 Q39*).
+* **⚠️ BẪY THI KINH ĐIỂN: Price Classes vs Georestrictions (CM-PT1 Q39)**:
+  - **CloudFront Price Classes**: Dùng để **TỐI ƯU CHI PHÍ**. Nó **KHÔNG CHẶN** người dùng ở các khu vực bị loại trừ. Người dùng tại Úc hay Brazil vẫn xem được trang web, chỉ là gói tin của họ được định tuyến tới một Edge Location ở khu vực rẻ hơn (độ trễ tăng nhẹ).
+  - **CloudFront Geo-restrictions**: Dùng để **TUÂN THỦ BẢN QUYỀN/PHÁP LÝ**. Nó **CHẶN HOÀN TOÀN** người dùng ở các quốc gia không được phép (trả về mã lỗi `HTTP 403 Forbidden`).
+
+---
+
 ### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
 
 #### 1. Tải Lên Tệp Lớn Siêu Tốc Xuyên Lục Địa: S3 Transfer Acceleration + Multipart Uploads
@@ -357,12 +377,37 @@ flowchart TD
   - S3 Intelligent-Tiering tự động di chuyển tệp giữa các tầng (Frequent, Infrequent, Archive Instant) dựa trên tần suất đọc mà không có phụ phí truy xuất (retrieval fees) và không gây độ trễ truy cập.
   - Chi phí lưu trữ S3 rẻ hơn từ 85% đến 95% so với việc duy trì ổ đĩa chia sẻ tệp EFS/Lustre chạy 24/7.
 
+#### 🪤 Bẫy 18: Tối Ưu Chi Phí Phân Phối CDN Bằng CloudFront Price Classes vs Chặn Địa Lý Geo-Restrictions — (CM-PT1 Q39)
+- **Tình huống đề thi**: *"Doanh nghiệp SaaS toàn cầu cung cấp nội dung truyền thông cho người dùng trên toàn thế giới qua Amazon CloudFront. Giám đốc tài chính (CFO) yêu cầu cắt giảm chi phí phân phối nội dung của CloudFront ở mức tối đa mà không được chặn hoặc từ chối truy cập đối với bất kỳ khách hàng nào ở các khu vực ngoài phạm vi ưu tiên. Đâu là giải pháp chuẩn xác?"*
+- **Các phương án bẫy**:
+  - ❌ *Cấu hình CloudFront Geo-restrictions (Geoblocking)*: Sai hoàn toàn vì Geo-restrictions sẽ CHẶN NGĂN người dùng tại các quốc gia bị cấm xem nội dung (trả về lỗi HTTP 403 Forbidden). Đề bài yêu cầu không được chặn người dùng!
+  - ❌ *Tạo nhiều S3 bucket tại từng Region cục bộ*: Gây tốn kém chi phí nhân đôi dữ liệu và vận hành phức tạp.
+- **Giải pháp ĐÚNG**: Điều chỉnh **CloudFront Price Classes** (chuyển từ `PriceClass_All` sang `PriceClass_200` hoặc `PriceClass_100`).
+  - `PriceClass_100` loại bỏ các Edge Locations đắt đỏ nhất (Nam Mỹ, Úc, Châu Á).
+  - Yêu cầu từ người dùng ở các vùng này vẫn được phục vụ bình thường (không bị chặn) thông qua các Edge Locations ở khu vực rẻ hơn gần đó, giúp cắt giảm đáng kể chi phí Data Out của CloudFront.
+
+#### 🪤 Bẫy 19: Lựa Chọn Lớp Lưu Trữ Cho Tệp Tin Tạm Thời Dưới 30 Ngày (S3 Standard vs Standard-IA) — (CM-PT1 Q55)
+- **Tình huống đề thi**: *"Hệ thống xử lý ảnh tạo ra hàng triệu tệp tin tạm thời (temporary staging files) trong quá trình render. Thời gian tồn tại của các tệp tin này biến động thất thường từ vài ngày đến 25 ngày và chắc chắn sẽ bị xóa trước ngày thứ 30. Lớp lưu trữ nào mang lại CHI PHÍ THẤP NHẤT?"*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng S3 Standard-IA hoặc S3 One Zone-IA*: Mặc dù đơn giá lưu trữ/GB/tháng của Standard-IA rẻ hơn S3 Standard (~$0.0125 vs $0.023), nhưng các lớp lưu trữ Infrequent Access áp dụng **Quy tắc thời hạn lưu trữ tối thiểu 30 ngày (30-day minimum storage commitment)**! Nếu bạn xóa tệp ở ngày thứ 10, AWS vẫn tính phí lưu trữ đủ 30 ngày cộng thêm phí truy xuất dữ liệu (Data Retrieval fee).
+- **Giải pháp ĐÚNG**: Giữ nguyên các tệp tin tạm thời trên **Amazon S3 Standard** và thiết lập Lifecycle Rule xóa tệp sau khi hoàn tất.
+  - S3 Standard tính phí chính xác theo từng ngày và từng giờ lưu trữ thực tế mà KHÔNG có hạn mức thời gian lưu trữ tối thiểu và KHÔNG có phí truy xuất. Với tệp có vòng đời $< 30$ ngày, S3 Standard luôn rẻ hơn Standard-IA!
+
+#### 🪤 Bẫy 20: Tăng Tốc Tải Lên Tập Tin Lớn Đa Vùng: S3 Multipart Upload + S3 Transfer Acceleration — (U-PT1 Q10, U-PT1 Q13)
+- **Tình huống đề thi**: *"Người dùng từ khắp nơi trên thế giới cần tải các tập tin video và dữ liệu khoa học có dung lượng từ 50 GB đến hàng Terabytes lên một Amazon S3 bucket đặt tại us-east-1. Đường truyền Internet công cộng thường xuyên bị rớt gói và mất nhiều giờ. Giải pháp kết hợp nào giúp tối đa hóa tốc độ tải lên và đảm bảo độ tin cậy cao nhất?"*
+- **Giải pháp ĐÚNG**: Kết hợp **S3 Multipart Upload** và **Amazon S3 Transfer Acceleration (S3TA)**.
+  - S3TA sử dụng hơn 400+ Edge Locations của CloudFront để đưa dữ liệu vào mạng cáp quang riêng của AWS ngay tại điểm gần client nhất.
+  - Multipart Upload chia nhỏ tệp lớn thành các phần từ 5 MB đến 5 GB, cho phép tải lên song song đồng thời nhiều luồng và tự động tải lại chỉ phần bị lỗi nếu kết nối mạng gặp sự cố.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Lớp Lưu Trữ S3 Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Lớp lưu trữ / Dịch vụ S3 chuẩn | Lớp bị loại & Lý do | Đề thi thực chứng |
 |:---|:---|:---|:---:|
+| **Tối ưu chi phí CDN toàn cầu mà không chặn người dùng** | **CloudFront Price Classes (`PriceClass_100 / 200`)** | Geo-restrictions (chặn hoàn toàn người dùng các nước bị cấm) | `CM-PT1 Q39` |
+| **Tệp tin tạm thời có vòng đời $< 30$ ngày (xóa sau 10-25 ngày)** | **Amazon S3 Standard** | S3 Standard-IA / Glacier (phạt phí lưu trữ tối thiểu 30-90 ngày) | `CM-PT1 Q55` |
+| **Tải tệp lớn $> 50$ GB xuyên lục địa nhanh nhất và tin cậy nhất** | **S3 Multipart Upload + S3 Transfer Acceleration** | Tải đơn luồng qua Internet công cộng thông thường | `U-PT1 Q10`, `U-PT1 Q13` |
 | **Dữ liệu đọc/ghi thường xuyên, độ trễ millisecond** | **S3 Standard** | Các lớp IA/Glacier (tốn phí per-request) | CM-PT1 Q55 |
 | **Khắc phục lỗi S3 HTTP 503 Slow Down khi tải cao** | **Phân tán Key trên nhiều Custom Prefixes** | Tăng Service Quota (S3 prefix limit là kiến trúc cố định) | U-PT1 Q15 |
 | **Mẫu truy cập không rõ hoặc biến động liên tục** | **S3 Intelligent-Tiering** | S3 Standard (bỏ lỡ cơ hội tự động giảm giá) | TD-Set1 Q23, U-PT4 Q26 |

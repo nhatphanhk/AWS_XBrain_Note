@@ -288,6 +288,21 @@ sequenceDiagram
 
 ---
 
+#### C. Tự Động Mở Rộng Dung Lượng Lưu Trữ Không Gián Đoạn (Amazon RDS Storage Auto Scaling)
+
+* **Vấn đề giải quyết**: Khi cơ sở dữ liệu quan hệ (RDS MySQL, PostgreSQL, MariaDB, SQL Server, Oracle) cạn kiệt dung lượng ổ đĩa, database sẽ lập tức chuyển sang trạng thái lỗi `STORAGE_FULL`, từ chối mọi lệnh ghi và có thể bị sập hoàn toàn.
+* **Cơ chế kích hoạt tự động (Auto Scaling Threshold)**:
+  - RDS tự động mở rộng dung lượng ổ đĩa khi đồng thời thỏa mãn:
+    1. Dung lượng còn trống **$\le 10\%$** dung lượng được cấp phát hiện tại.
+    2. Tình trạng thiếu bộ nhớ lưu trữ kéo dài **ít nhất 5 phút liên tục**.
+    3. Đã trôi qua ít nhất **6 giờ** kể từ lần sửa đổi dung lượng lưu trữ gần nhất (**Storage Cooldown Period = 6 hours**).
+* **Đặc tính kỹ thuật sống còn trong đề thi (Zero Downtime — CM-PT1 Q49)**:
+  - Quá trình mở rộng ổ đĩa diễn ra **HOÀN TOÀN KHÔNG DOWNTIME (Zero Downtime)**: Không làm gián đoạn các thao tác đọc/ghi đang diễn ra và **KHÔNG CẦN KHỞI ĐỘNG LẠI (No Database Reboot)**!
+  - Người quản trị thiết lập **Maximum Storage Threshold** (ngưỡng trần tối đa, ví dụ: 5,000 GiB) để tránh việc chi phí phình to không kiểm soát.
+  - ⚠️ **Lưu ý bất biến**: RDS chỉ hỗ trợ **tăng dung lượng (Scale-Up)**; tuyệt đối **KHÔNG THỂ giảm dung lượng ổ đĩa (Scale-Down)** sau khi đã mở rộng.
+
+---
+
 ### 5. Bảo mật & Quản trị cấu hình chuyên sâu (Security & Day-2 Operations)
 
 #### A. Quy tắc mã hóa dữ liệu lưu trữ (Encryption at Rest với AWS KMS)
@@ -505,12 +520,42 @@ sequenceDiagram
   - Cho phép người dùng quốc tế kết nối trực tiếp vào Read Replica cục bộ tại khu vực của họ để đọc dữ liệu với độ trễ mạng thấp nhất.
   - Trong kịch bản Disaster Recovery, Cross-Region Read Replica có thể được **thăng cấp (Promoted)** thành một cơ sở dữ liệu độc lập (Standalone Read-Write Database) chỉ trong vài phút để phục hồi hoạt động kinh doanh!
 
+#### 🪤 Bẫy 16: Tự Động Xoay Vòng Mật Khẩu Database Bằng AWS Secrets Manager Không Downtime — (CM-PT1 Q03, CM-PT1 Q12, CM-PT2 Q49)
+- **Tình huống đề thi**: *"Chính sách bảo mật doanh nghiệp yêu cầu định kỳ 30 ngày phải tự động thay đổi mật khẩu quản trị và tài khoản kết nối của cơ sở dữ liệu Amazon RDS. Ứng dụng production phải tiếp tục hoạt động liên tục trong lúc xoay vòng mật khẩu mà không được gây downtime hay lỗi kết nối xác thực thất bại. Đội ngũ muốn loại bỏ hoàn toàn mật khẩu hardcoded trong mã nguồn với chi phí quản trị thấp nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Lưu mật khẩu trong AWS Systems Manager Parameter Store*: Parameter Store có thể lưu chuỗi bảo mật (SecureString), nhưng KHÔNG CÓ tính năng tự động xoay vòng mật khẩu native; kỹ sư phải tự viết code Lambda phức tạp và tự quản lý phiên bản.
+  - ❌ *Lưu mật khẩu vào biến môi trường của EC2/Lambda*: Dễ bị lộ trong console/code repo, không thể tự động xoay vòng mật khẩu mà không redeploy lại toàn bộ ứng dụng.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Secrets Manager kết hợp Automatic Rotation**.
+  - Secrets Manager cung cấp sẵn mẫu hàm Lambda tích hợp chính thức với các database engines (RDS MySQL, PostgreSQL, Oracle, SQL Server).
+  - Quản lý phiên bản mật khẩu kép thông minh: Bí mật duy trì đồng thời nhãn **`AWSCURRENT`** (mật khẩu đang dùng) và **`AWSPENDING`** (mật khẩu mới đang được thiết lập trên database).
+  - Lambda cập nhật mật khẩu mới trên database trước, sau đó đổi nhãn `AWSCURRENT` sang mật khẩu mới. Ứng dụng gọi SDK Secrets Manager lấy mật khẩu mới nhất mà không cần reboot hay sửa đổi mã nguồn.
+
+#### 🪤 Bẫy 17: Mở Rộng Ổ Đĩa Tự Động Không Gián Đoạn Bằng RDS Storage Auto Scaling — (CM-PT1 Q49)
+- **Tình huống đề thi**: *"Cơ sở dữ liệu Amazon RDS for MySQL của ứng dụng thanh toán trực tuyến xử lý khối lượng giao dịch ghi tăng trưởng liên tục. Nhóm vận hành lo ngại ổ đĩa lưu trữ sẽ bị đầy bất thình lình làm sập database. Yêu cầu hệ thống phải tự động bổ sung dung lượng đĩa khi dung lượng trống giảm xuống dưới 10% mà HOÀN TOÀN KHÔNG GÂY DOWNTIME hoặc gián đoạn hoạt động của ứng dụng."*
+- **Các phương án bẫy**:
+  - ❌ *Tạo bản Snapshot, sau đó restore sang một DB instance mới với ổ đĩa lớn hơn*: Phương án này mất hàng chục phút đến hàng giờ và gây downtime gián đoạn hoạt động kinh doanh.
+  - ❌ *Thủ công sửa đổi dung lượng ổ đĩa qua AWS CLI lúc nửa đêm*: Tốn công theo dõi và có thể bị chậm trễ khi dữ liệu phình to đột xuất ban ngày.
+- **Giải pháp ĐÚNG**: Kích hoạt tính năng **Amazon RDS Storage Auto Scaling** và đặt ngưỡng **Maximum Storage Threshold** phù hợp.
+  - Khi dung lượng trống $\le 10\%$ trong 5 phút, RDS tự động phân bổ thêm storage mà không làm gián đoạn I/O hay cần khởi động lại máy chủ.
+
+#### 🪤 Bẫy 18: Amazon DocumentDB Serverless Tự Động Co Giãn Cho Dữ Liệu Dạng Document MongoDB — (CM-PT2 Q18)
+- **Tình huống đề thi**: *"Doanh nghiệp vận hành một ứng dụng danh mục sản phẩm sử dụng mô hình dữ liệu tài liệu JSON (Document Data Model) tương thích với Apache 2.0 open-source MongoDB API. Khối lượng truy cập biến động thất thường, có lúc nhàn rỗi gần như không có tải nhưng thỉnh thoảng tăng đột biến gấp hàng trăm lần. Cần giải pháp cơ sở dữ liệu phi máy chủ (Serverless) tự động co giãn dung lượng tức thì mà không cần quản trị cụm máy chủ hay cấu hình dung lượng thủ công."*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng Amazon DynamoDB*: DynamoDB là cơ sở dữ liệu NoSQL Key-Value, không tương thích nguyên bản với các API và câu lệnh truy vấn MongoDB; ứng dụng phải viết lại mã nguồn.
+  - ❌ *Khởi tạo cụm Amazon DocumentDB với các instance EC2 cố định*: Tốn chi phí duy trì các instance lớn chạy nhàn rỗi khi vắng khách và không kịp scale khi tải bùng nổ.
+- **Giải pháp ĐÚNG**: Triển khai **Amazon DocumentDB Serverless**.
+  - Tương thích hoàn toàn với các công cụ, trình điều khiển (drivers) và ứng dụng MongoDB hiện có.
+  - Tự động đo lường và co giãn năng lực tính toán theo thời gian thực (tính theo DocumentDB Capacity Units - DCU), chỉ tính phí theo dung lượng và tài nguyên thực tế sử dụng.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Cơ Sở Dữ Liệu Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
 |:---|:---|:---|:---:|
+| **Tự động mở rộng ổ đĩa RDS không gián đoạn, no reboot** | **Amazon RDS Storage Auto Scaling (Max Threshold)** | Snapshot restore sang DB mới (gây gián đoạn nhiều giờ) | `CM-PT1 Q49` |
+| **Tự động xoay mật khẩu database định kỳ 30 ngày** | **AWS Secrets Manager (Built-in Lambda Rotation)** | Systems Manager Parameter Store (không có built-in rotation) | `CM-PT1 Q03`, `CM-PT1 Q12`, `CM-PT2 Q49` |
+| **Database Document tương thích MongoDB, Serverless co giãn** | **Amazon DocumentDB Serverless (DCUs)** | DynamoDB (không native MongoDB API) / Provisioned cluster | `CM-PT2 Q18` |
 | **Sao chép dữ liệu đồng bộ (Synchronous Replication) bảo vệ AZ sập** | **RDS Multi-AZ Deployment** | RDS Read Replica (sao chép bất đồng bộ, có lag) | TD-Set1 Q01 |
 | **Bản chất Failover RDS Multi-AZ khi Primary sập** | **Tự động đổi bản ghi CNAME DNS sang IP Standby** | Endpoint URL ứng dụng bị thay đổi (sai hoàn toàn) | U-PT4 Q60 |
 | **Phân bổ đều lưu lượng đọc giữa các Aurora Replicas tự động** | **Aurora Built-in Reader Endpoint** | Cấu hình IP từng replica thủ công trong code | TD-Set3 Q58, U-PT4 Q19 |

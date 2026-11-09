@@ -177,6 +177,70 @@ flowchart TD
 
 ---
 
+### 6. AWS Glue DataBrew: Chuẩn Bị & Làm Sạch Dữ Liệu Thị Giác Không Cần Code (Visual No-Code Data Preparation)
+
+```mermaid
+flowchart LR
+    Sources[Nguồn Dữ Liệu Thô\nS3, Redshift, RDS, Lake Formation] --> Datasets[DataBrew Datasets\nKết nối & nạp schema tự động]
+    Datasets --> Project[DataBrew Interactive Project\nGiao diện trực quan với 250+ phép biến đổi]
+    Project --> Recipe[DataBrew Recipe\nTập hợp các bước làm sạch & chuẩn hóa dữ liệu]
+    Recipe --> Jobs[DataBrew Recipe Jobs / Profile Jobs\nThực thi song song quy mô lớn không cần quản trị server]
+    Jobs --> Destinations[Đích Đến Đã Làm Sạch\nS3 Clean Zone (Parquet) -> Athena / Redshift / SageMaker]
+```
+
+* **Định nghĩa**: **AWS Glue DataBrew** là công cụ chuẩn bị dữ liệu thị giác (**Visual Data Preparation Tool**) hoàn toàn không cần viết mã (No-Code/Low-Code), cung cấp hơn **250 phép biến đổi dựng sẵn** (pre-built transformations) giúp các nhà phân tích dữ liệu (Data Analysts) và kỹ sư học máy (ML Engineers) làm sạch, chuẩn hóa và làm giàu dữ liệu nhanh hơn 80% so với việc viết code thủ công (*U-PT1 Q24, CM-PT1 Q44*).
+* **4 Khái niệm cốt lõi của DataBrew**:
+  1. **Datasets**: Định nghĩa kết nối tới dữ liệu nguồn lưu tại Amazon S3, Amazon Redshift, AWS Lake Formation, Amazon RDS hoặc các kho dữ liệu SaaS bên thứ ba.
+  2. **Recipes**: Danh sách các bước biến đổi dữ liệu được lưu lại thành một "công thức" (ví dụ: lọc bỏ giá trị null, chuẩn hóa định dạng ngày tháng `YYYY-MM-DD`, che giấu thông tin cá nhân PII, mã hóa One-Hot cho mô hình ML). Recipes có thể tái sử dụng cho nhiều datasets khác nhau.
+  3. **Projects**: Môi trường làm việc tương tác thị giác hiển thị bảng dữ liệu mẫu (sample data grid) kèm thanh thống kê hồ sơ dữ liệu (**Data Profile summary**) giúp trực quan hóa phân bổ dữ liệu và phát hiện bất thường ngay trên giao diện.
+  4. **Jobs**:
+     - *Recipe Jobs*: Chạy công thức biến đổi trên toàn bộ tập dữ liệu lớn và xuất kết quả ra Amazon S3 dưới định dạng tối ưu (Parquet, CSV, ORC, JSON, Avro).
+     - *Profile Jobs*: Tự động quét và tạo báo cáo chất lượng dữ liệu với hơn **40 chỉ số thống kê** (tỉ lệ missing values, số lượng duplicate rows, phân bổ min/max/median, outliers).
+
+#### Bảng Phân Biệt: AWS Glue DataBrew vs AWS Glue ETL Jobs vs AWS DMS
+
+| Tiêu chuẩn so sánh | AWS Glue DataBrew | AWS Glue ETL Jobs (Spark/Python) | AWS Database Migration Service (DMS) |
+|:---|:---|:---|:---|
+| **Đối tượng người dùng** | Data Analysts, Business Analysts, Citizen Data Scientists | Data Engineers, Big Data Developers | Database Administrators, Cloud Migration Engineers |
+| **Yêu cầu kỹ năng** | **Không cần viết code (No-Code GUI)** | Thành thạo PySpark, Scala, Python | Hiểu biết về Database Engines & Replication |
+| **Mục đích chính** | Làm sạch, chuẩn hóa, đánh giá chất lượng dữ liệu thị giác | Pipeline ETL phức tạp, xử lý batch quy mô hàng chục PB | Di chuyển cơ sở dữ liệu và đồng bộ CDC thời gian thực |
+| **Mô hình tính toán** | Serverless tương tác theo Node-hours | Serverless tính theo Data Processing Units (DPUs) | Máy chủ replication instance (hoặc DMS Serverless) |
+| **Đích đến tối ưu** | Amazon S3 Data Lake (Parquet/CSV), SageMaker Feature Store | S3 Data Lake, Redshift, OpenSearch, Iceberg | Amazon RDS, Aurora, S3, DynamoDB, OpenSearch |
+
+---
+
+### 7. Các Cơ Sở Dữ Liệu Chuyên Biệt Niche Cho Big Data: Amazon QLDB & Amazon Keyspaces
+
+```mermaid
+flowchart TD
+    NicheDB[Cơ Sở Dữ Liệu Chuyên Biệt Niche Trên AWS] --> QLDB[Amazon QLDB\nQuantum Ledger Database\nSổ cái giao dịch bất biến & Chuỗi băm SHA-256]
+    NicheDB --> Keyspaces[Amazon Keyspaces for Apache Cassandra\nCơ sở dữ liệu Wide-Column Serverless\nTương thích hoàn toàn CQL]
+
+    QLDB --> QLDB_Use[Trọng tâm nghiệp vụ:\n- Sổ cái tài chính ngân hàng\n- Hồ sơ pháp lý, lịch sử đất đai\n- Chuỗi cung ứng bất biến WORM]
+    Keyspaces --> Keyspaces_Use[Trọng tâm nghiệp vụ:\n- Di chuyển Cassandra on-premises\n- Lưu trữ chuỗi thời gian, IoT telemetry\n- Ghi thông lượng lớn phân tán toàn cầu]
+```
+
+#### 7.1. Amazon Quantum Ledger Database (Amazon QLDB)
+* **Bản chất**: Cơ sở dữ liệu sổ cái hoàn toàn được quản lý (**Fully managed ledger database**), cung cấp một nhật ký giao dịch minh bạch, bất biến (**Immutable**) và có thể xác minh bằng mật mã (**Cryptographically verifiable**).
+* **Cơ chế mã hóa bất biến**:
+  - Mọi thay đổi dữ liệu đều được ghi tuần tự vào một **Journal (Nhật ký chỉ ghi - Append-only)**. Dữ liệu trong Journal không bao giờ bị sửa đổi hay xóa bỏ.
+  - Sử dụng hàm băm mật mã mật độ cao **SHA-256** liên kết các khối dữ liệu theo cấu trúc cây Merkle (**Merkle Tree**). Bất kỳ hành vi can thiệp trái phép nào vào dữ liệu lịch sử đều làm sai lệch hash root và bị phát hiện ngay lập tức.
+* **⚠️ BẪY THI KINH ĐIỂN (QLDB vs Blockchain — TD-Set6 Q40)**:
+  - **Amazon QLDB là cơ sở dữ liệu TẬP TRUNG (Centralized Ledger)** do một thực thể quản trị duy nhất sở hữu và điều hành (ví dụ: một ngân hàng, một cơ quan thuế, một bệnh viện).
+  - QLDB **KHÔNG PHẢI là mạng lưới phi tập trung (Decentralized)** và **KHÔNG CÓ cơ chế đồng thuận phân tán (Consensus mechanism như Proof-of-Work hay Proof-of-Stake)**. Nhanh hơn gấp 2–3 lần so với các nền tảng Blockchain truyền thống.
+  - *Nếu đề bài yêu cầu mạng lưới nhiều bên tham gia độc lập không tin tưởng nhau (Multi-party decentralized)*: Bắt buộc chọn **Amazon Managed Blockchain**.
+  - *Nếu đề bài yêu cầu một tổ chức duy nhất cần lưu trữ lịch sử giao dịch bất biến có thể kiểm toán mật mã*: Bắt buộc chọn **Amazon QLDB**.
+
+#### 7.2. Amazon Keyspaces (for Apache Cassandra)
+* **Bản chất**: Dịch vụ cơ sở dữ liệu dạng cột mở rộng (**Wide-column store**) tương thích hoàn toàn với mã nguồn mở **Apache Cassandra**, được cung cấp dưới dạng hoàn toàn phi máy chủ (**Serverless**).
+* **Khả năng tương thích**: Hỗ trợ toàn bộ câu lệnh truy vấn **Cassandra Query Language (CQL)** và các SDK drivers Cassandra hiện có mà không cần sửa đổi mã nguồn ứng dụng.
+* **Đặc tính vận hành**:
+  - Tự động co giãn theo dung lượng đọc/ghi (chế độ On-Demand hoặc Provisioned Capacity).
+  - Tự động sao chép dữ liệu trên 3 Availability Zones để đảm bảo tính sẵn sàng cao 99.999%.
+  - Quản trị viên không bao giờ phải lo lắng về việc cấu hình cụm, vá lỗi OS, phân vùng lại hạt nhân hay bảo trì node Cassandra như khi tự cài trên EC2 (*TD-Set5 Q15*).
+
+---
+
 ## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Sơ Đồ Quy Trình Data Lake & Serverless Analytics Toàn Diện
@@ -356,12 +420,43 @@ sequenceDiagram
   - **Zero Infrastructure Management**: Không cần cấu hình hay quản lý máy chủ.
   - Chi phí cực kỳ tiết kiệm: Chỉ tính phí dựa trên dung lượng dữ liệu được quét ($5/TB quét).
 
+#### 🪤 Bẫy 8: Chuẩn Bị & Làm Sạch Dữ Liệu Thị Giác Không Dùng Code Bằng AWS Glue DataBrew — (U-PT1 Q24, CM-PT1 Q44)
+- **Tình huống đề thi**: *"Đội ngũ chuyên viên phân tích kinh doanh (Business Analysts) và nhà khoa học dữ liệu cần làm sạch, chuẩn hóa các trường dữ liệu và đánh giá chất lượng của tập dữ liệu khách hàng lưu trên Amazon S3 trước khi huấn luyện mô hình Machine Learning. Nhóm không có kỹ năng lập trình Spark/Python và yêu cầu một giao diện trực quan không cần viết mã (visual, no-code tool) có sẵn các phép biến đổi dữ liệu. Dịch vụ nào đáp ứng tối ưu?"*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng AWS Glue ETL Jobs*: Đòi hỏi kỹ sư phải tự viết code PySpark hoặc Scala, không phù hợp cho các nhà phân tích không chuyên về lập trình.
+  - ❌ *Sử dụng Amazon EMR Studio*: Cần cấu hình cụm máy tính toán EMR phức tạp và viết Jupyter Notebooks.
+  - ❌ *Sử dụng AWS DMS*: DMS chỉ dùng để di chuyển và đồng bộ dữ liệu giữa các databases, không phải công cụ phân tích và làm sạch dữ liệu thị giác.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Glue DataBrew**.
+  - Cung cấp giao diện thị giác kéo thả tương tác trực tiếp với hơn 250 phép biến đổi dữ liệu dựng sẵn.
+  - Tự động tạo hồ sơ dữ liệu (Data Profile) và xuất công thức làm sạch (Recipes) thực thi tự động ở quy mô lớn mà không cần viết một dòng mã nào.
+
+#### 🪤 Bẫy 9: Cơ Sở Dữ Liệu Sổ Cái Bất Biến Có Thể Kiểm Toán Mật Mã: Amazon QLDB vs Blockchain — (TD-Set6 Q40)
+- **Tình huống đề thi**: *"Một ngân hàng thương mại cần thiết lập một hệ thống sổ cái lưu trữ lịch sử toàn bộ các giao dịch chuyển tiền của khách hàng. Yêu cầu hệ thống phải đảm bảo tính bất biến tuyệt đối (immutable append-only journal), cho phép kiểm toán độc lập xác minh tính toàn vẹn bằng hàm băm mật mã (cryptographically verifiable), và toàn quyền quản trị tập trung thuộc về ngân hàng. Giải pháp nào đáp ứng?"*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng Amazon Managed Blockchain*: Blockchain dùng cho mạng lưới phi tập trung (Decentralized) gồm nhiều tổ chức độc lập cùng tham gia và cần cơ chế đồng thuận (Consensus). Ở đây chỉ có DUY NHẤT một ngân hàng quản lý, dùng Blockchain sẽ gây lãng phí chi phí và phức tạp không cần thiết.
+  - ❌ *Sử dụng Amazon DynamoDB hoặc Amazon Aurora*: Dữ liệu trong bảng thông thường có thể bị cập nhật đè (`UPDATE`) hoặc xóa (`DELETE`), không có cơ chế chuỗi băm Merkle Tree mật mã bảo vệ lịch sử bất biến.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon QLDB (Quantum Ledger Database)**.
+  - Cung cấp sổ cái tập trung hoàn toàn do một tổ chức quản lý với nhật ký chỉ ghi (Append-only Journal).
+  - Sử dụng hàm băm SHA-256 để tạo chuỗi chứng thực mật mã không thể làm sai lệch hay xóa sửa.
+
+#### 🪤 Bẫy 10: Di Chuyển Ứng Dụng Apache Cassandra Lên Đám Mây Bằng Amazon Keyspaces — (TD-Set5 Q15)
+- **Tình huống đề thi**: *"Doanh nghiệp viễn thông vận hành một hệ thống lưu trữ lịch sử cuộc gọi lớn chạy trên cụm Apache Cassandra on-premises. Chi phí bảo trì phần cứng, vá lỗi node và sao lưu cụm quá tốn kém. Doanh nghiệp muốn di chuyển lên AWS với mục tiêu serverless hoàn toàn, giữ nguyên ngôn ngữ truy vấn CQL và không phải quản lý bất kỳ máy chủ nào. Dịch vụ nào tối ưu?"*
+- **Các phương án bẫy**:
+  - ❌ *Tự cài Apache Cassandra trên các cụm máy ảo Amazon EC2*: Vẫn phải chịu gánh nặng quản trị OS, cấu hình cụm, sao lưu và vá lỗi phần mềm.
+  - ❌ *Chuyển đổi sang Amazon DynamoDB*: Cần phải thiết kế lại toàn bộ lược đồ dữ liệu và viết lại toàn bộ mã nguồn ứng dụng vì DynamoDB không tương thích với Cassandra CQL.
+- **Giải pháp ĐÚNG**: Triển khai **Amazon Keyspaces (for Apache Cassandra)**.
+  - Tương thích 100% với Cassandra Query Language (CQL) và các drivers ứng dụng hiện có.
+  - Kiến trúc Serverless tự động co giãn dung lượng đọc/ghi và sao chép 3 Availability Zones mà không cần quản lý máy chủ.
+
 ---
 
 ## 📊 III. Ma Trận Quyết Định Công Nghệ Phân Tích Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
 |:---|:---|:---|:---:|
+| **Làm sạch, biến đổi dữ liệu thị giác No-Code cho Analyst/ML** | **AWS Glue DataBrew (Datasets + Recipes)** | AWS Glue ETL Job (đòi hỏi kỹ năng code PySpark/Scala) | `U-PT1 Q24`, `CM-PT1 Q44` |
+| **Sổ cái tài chính bất biến tập trung, xác minh mật mã** | **Amazon QLDB (Append-only Journal + SHA-256)** | Managed Blockchain (dùng cho mạng lưới đa bên phi tập trung) | `TD-Set6 Q40` |
+| **Di chuyển Apache Cassandra giữ nguyên CQL, Serverless** | **Amazon Keyspaces (for Apache Cassandra)** | Tự cài Cassandra trên EC2 / DynamoDB (phải viết lại code) | `TD-Set5 Q15` |
 | **Truy vấn SQL ad-hoc trực tiếp trên S3, không quản lý server** | **Amazon Athena** | Amazon Redshift (quá tốn kém cho truy vấn ad-hoc thỉnh thoảng) | `CM-PT1 Q34`, `U-PT4 Q11`, `U-PT4 Q61` |
 | **Làm sạch PII thời gian thực cho đối tác từ luồng stream** | **Kinesis Data Streams + Lambda (masking) + DynamoDB** | AWS Glue (độ trễ theo batch hàng phút, không real-time) | `U-PT4 Q30` |
 | **Nhiều ứng dụng đọc độc lập cùng luồng Kinesis không chậm** | **Kinesis Enhanced Fan-Out (EFO - 2MB/s/shard/consumer)** | Standard Consumer (chia sẻ băng thông 2MB/s/shard bị nghẽn) | `CM-PT1 Q43`, `U-PT4 Q33` |

@@ -352,13 +352,17 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
   - Khi copy, bắt buộc truyền cờ: `--acl bucket-owner-full-control` để trao quyền sở hữu vĩnh viễn cho Tài khoản B (`TD-Set3 Q65`).
   - Hoặc kích hoạt tính năng **S3 Object Ownership = Bucket Owner Enforced** trên bucket đích để tự động vô hiệu hóa toàn bộ ACLs và gán quyền sở hữu cho bucket owner.
 
-#### 🪤 Bẫy 13: SCP Không Thể Cấp Quyền (Cannot Grant Permissions), Chỉ Thiết Lập Rào Cản Tối Đa — (TD-Set6 Q45)
+#### 🪤 Bẫy 13: SCP Không Thể Cấp Quyền & Các Trường Hợp Ngoại Lệ Bất Khả Xâm Phạm Của SCP — (TD-Set6 Q45, U-PT3 Q24)
 - **Tình huống đề thi**: *"Kỹ sư tạo một Service Control Policy (SCP) với `Effect: Allow, Action: ec2:*` và gắn vào tài khoản con. Kỹ sư kết luận rằng tất cả các IAM Users trong tài khoản con đó mặc nhiên có quyền tạo máy ảo EC2."*
 - **Nguyên nhân sai lầm**:
   - **SCP không bao giờ trực tiếp cấp quyền cho bất kỳ ai**. SCP chỉ hoạt động như một bộ lọc biên (Guardrail / Permission Filter).
   - Để một IAM User trong Member Account có thể thực hiện lệnh `ec2:RunInstances`, cần cả hai điều kiện:
     1. **SCP ở cấp Organizations PHẢI CHO PHÉP (hoặc không chặn)** hành động đó.
     2. **IAM Policy bên trong tài khoản con BẮT BUỘC PHẢI CÓ LỆNH ALLOW** cấp quyền cho User/Role đó.
+- **Cạm Bẫy Kỳ Thi: Các Đối Tượng MIỄN NHIỄM Hoàn Toàn Với SCP (U-PT3 Q24)**:
+  - 🛡️ **AWS Service-Linked Roles**: SCP **KHÔNG BAO GIỜ** có hiệu lực lên các Service-Linked Roles (vai trò liên kết dịch vụ do AWS tự động tạo cho Auto Scaling, RDS, DynamoDB,...). Điều này nhằm đảm bảo các tính năng nền tảng của AWS không bị phá vỡ khi quản trị viên áp dụng SCP quá chặt.
+  - 🛡️ **Tài Khoản Quản Trị (Management Account)**: SCP **KHÔNG THỂ áp dụng** lên tài khoản Management Account của tổ chức (kể cả Root User lẫn mọi IAM User/Role trong tài khoản này).
+  - 🛡️ **Các Tác Vụ Root Tài Khoản Con**: Một số tác vụ cấp Root như đổi gói hỗ trợ AWS Support Plan, đóng tài khoản (Account Closure) cũng nằm ngoài phạm vi chặn của SCP.
 
 #### 🪤 Bẫy 14: Bắt Buộc Gắn Tag Tuân Thủ Bằng AWS Organizations Tag Policies và SCP Deny — (U-PT4 Q28)
 - **Tình huống đề thi**: *"Doanh nghiệp quản lý hàng chục tài khoản AWS thông qua AWS Organizations. Doanh nghiệp muốn bắt buộc tất cả máy chủ Amazon EC2 được tạo mới phải được gắn thẻ (tags) phân loại dữ liệu (ví dụ: `DataClassification` với giá trị hợp lệ `confidential` hoặc `public`), đồng thời nghiêm cấm người dùng xóa thẻ này sau khi máy chủ đã khởi tạo."*

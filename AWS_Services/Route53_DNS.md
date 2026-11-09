@@ -1,4 +1,4 @@
-﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon Route 53 (Dịch Vụ Phân Giải Tên Miền & Định Tuyến Toàn Cầu)
+# Tài Liệu Học Tập Chuyên Sâu: Amazon Route 53 (Dịch Vụ Phân Giải Tên Miền & Định Tuyến Toàn Cầu)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -229,12 +229,16 @@ flowchart LR
   - Cung cấp **2 địa chỉ IP tĩnh Anycast**.
   - Việc điều phối phần trăm lưu lượng (0% đến 100%) diễn ra trực tiếp tại các máy chủ Edge trên mạng trục riêng của AWS, **hoàn toàn bỏ qua bộ đệm DNS của client (Bypasses Client DNS Caching)** -> Thay đổi có hiệu lực ngay lập tức trong vài giây.
 
-#### 🪤 Bẫy 2: Phân Biệt Chiều Định Tuyến Của Route 53 Resolver Endpoints — (CM-PT1 Q41, TD-Set6 Q54)
+#### 🪤 Bẫy 2: Phân Biệt Chiều Định Tuyến Của Route 53 Resolver Endpoints & Yêu Cầu Hai Chiều (Bidirectional) — (CM-PT1 Q41, TD-Set6 Q54, U-PT1 Q20)
 - **Bẫy tráo chiều kinh điển trong đề thi**:
   - Muốn máy chủ On-Premises phân giải được các tên miền nội bộ AWS `*.internal`:
-    - 👉 **Cấu hình Route 53 Resolver INBOUND Endpoint** (Lưu lượng truy vấn từ On-Premises đi **VÀO** AWS).
+    - 👉 **Cấu hình Route 53 Resolver INBOUND Endpoint** (Lưu lượng truy vấn từ On-Premises đi **VÀO** AWS qua Private IP ENI).
   - Muốn máy chủ EC2 trong VPC phân giải được các tên miền Active Directory nội bộ On-Premises `*.corp.local`:
-    - 👉 **Cấu hình Route 53 Resolver OUTBOUND Endpoint** kết hợp với **Forwarding Rule** trỏ về địa chỉ IP của DNS Server On-Premises (Lưu lượng truy vấn từ AWS đi **RA NGOÀI** On-Premises).
+    - 👉 **Cấu hình Route 53 Resolver OUTBOUND Endpoint** kết hợp với **Conditional Forwarding Rule** trỏ về địa chỉ IP của DNS Server On-Premises (Lưu lượng truy vấn từ AWS đi **RA NGOÀI** On-Premises).
+- **Cạm bẫy bài toán Phân giải Hai Chiều (Bidirectional Hybrid DNS — CM-PT1 Q41)**:
+  - *Tình huống đề thi*: *"Doanh nghiệp mở rộng trung tâm dữ liệu on-premises lên AWS VPC qua Direct Connect. Ứng dụng on-premises cần gọi các microservices trong AWS Private Hosted Zone, và các ứng dụng trên AWS EC2 cần gọi cơ sở dữ liệu on-premises có tên miền nội bộ công ty. Giải pháp nào đáp ứng đầy đủ với ít overhead nhất?"*
+  - ❌ *Phương án bẫy*: Chỉ chọn Inbound Endpoint HOẶC chỉ chọn Outbound Endpoint; hoặc tự cài BIND DNS server trên EC2.
+  - ✅ *Đáp án ĐÚNG*: Phải triển khai **CẢ HAI: Route 53 Resolver Inbound Endpoint VÀ Outbound Endpoint kèm Forwarding Rules** để thiết lập luồng phân giải DNS 2 chiều hoàn chỉnh, kết hợp chia sẻ Rules qua **AWS RAM** cho các tài khoản khác.
 
 #### 🪤 Bẫy 3: Phân Biệt Giữa Geolocation Routing và Geoproximity Routing — (TD-Set2 Q59)
 - **Geolocation Routing**:

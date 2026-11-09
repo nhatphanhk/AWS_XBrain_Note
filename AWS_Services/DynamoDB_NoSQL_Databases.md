@@ -112,6 +112,51 @@ classDiagram
 
 ---
 
+### 5. DynamoDB Global Tables: Kiến Trúc Đa Vùng Tự Động Nhân Bản Active-Active
+
+```mermaid
+flowchart LR
+    subgraph Region_US["AWS Region 1 (us-east-1)"]
+        Table_US[DynamoDB Table]
+        Streams_US[DynamoDB Streams]
+        Table_US --> Streams_US
+    end
+
+    subgraph Region_EU["AWS Region 2 (eu-west-1)"]
+        Table_EU[DynamoDB Table]
+        Streams_EU[DynamoDB Streams]
+        Table_EU --> Streams_EU
+    end
+
+    Streams_US <-->|Đồng bộ 2 chiều Active-Active\nĐộ trễ < 1 giây| Streams_EU
+```
+
+- **Nguyên lý hoạt động**:
+  - Global Tables cung cấp giải pháp cơ sở dữ liệu phân tán toàn cầu hoàn toàn được quản lý (**Fully Managed Multi-Region, Multi-Active**).
+  - Ứng dụng tại từng Region có thể thực hiện **cả thao tác đọc và ghi cục bộ** (Local Reads & Local Writes) với độ trễ một chữ số mili-giây (**single-digit millisecond latency**).
+  - Bản ghi được tự động nhân bản 2 chiều giữa các replica tables ở các Region khác nhau thông qua **DynamoDB Streams** (độ trễ đồng bộ thường dưới 1 giây).
+- **Yêu cầu kỹ thuật bắt buộc**:
+  - Bảng phải có cùng tên và cùng cấu trúc Primary Key (Partition Key & Sort Key).
+  - Phải kích hoạt **DynamoDB Streams** với cấu hình `NEW_AND_OLD_IMAGES`.
+  - Phiên bản hiện đại (**Global Tables v2019.11.21**): Tự động quản lý số lượng Partitions đồng nhất giữa các Region và không tính thêm chi phí hạ tầng ngoài phí nhân bản dữ liệu (Replicated Write Capacity Units - rWCU).
+- **Cơ chế giải quyết xung đột (Conflict Resolution)**:
+  - Sử dụng quy tắc **"Last-writer-wins"**: Khi hai client ghi đè đồng thời vào cùng một item ở 2 Region khác nhau, DynamoDB sẽ căn cứ vào timestamp phát sinh thao tác ghi gần nhất để xác định bản ghi chiến thắng và nhân bản tới tất cả các Region còn lại.
+
+---
+
+### 6. Sao Lưu & Khôi Phục: Point-in-Time Recovery (PITR) vs On-Demand Backup
+
+| Tiêu chí | Point-in-Time Recovery (PITR) | On-Demand Backup |
+| :--- | :--- | :--- |
+| **Bản chất** | **Bảo vệ dữ liệu liên tục theo từng giây** | Chụp ảnh dữ liệu tĩnh tại một thời điểm (Snapshot) |
+| **Cửa sổ lưu trữ (Retention)** | **35 ngày liên tục** (Rolling 35-day window) | Lưu trữ vĩnh viễn cho đến khi người dùng xóa |
+| **Độ chính xác khôi phục** | Khôi phục về **bất kỳ giây nào** trong 35 ngày qua | Chỉ khôi phục về đúng thời điểm chụp snapshot |
+| **Ảnh hưởng hiệu năng bảng** | **Không ảnh hưởng hiệu năng**, không tiêu tốn RCU/WCU | **Không ảnh hưởng hiệu năng**, không tiêu tốn RCU/WCU |
+| **Quy trình phục hồi** | **Luôn tạo ra một BẢNG MỚI** (Không bao giờ ghi đè trực tiếp lên bảng đang chạy) | **Luôn tạo ra một BẢNG MỚI** |
+| **Kịch bản thi cử** | Phục hồi sau thảm họa thao tác: Kỹ sư chạy lệnh xóa nhầm hoặc code ứng dụng làm hỏng dữ liệu | Lưu trữ dài hạn phục vụ tuân thủ pháp lý (Compliance/Auditing) |
+
+---
+
 ## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
 ### Cụm Caching Tốc Độ Microsecond Với DynamoDB Accelerator (DAX)
@@ -279,20 +324,47 @@ sequenceDiagram
   - Người dùng tại Mỹ ghi vào bảng tại `us-east-1`, người dùng tại Châu Âu ghi vào bảng tại `eu-west-1`. Dữ liệu được đồng bộ hóa hai chiều (bi-directional replication) giữa các vùng ngầm định với độ trễ dưới 1 giây.
   - Nếu xảy ra xung đột cập nhật đồng thời cùng 1 item, DynamoDB áp dụng quy tắc "Last-writer-wins" dựa trên timestamp.
 
+#### 🪤 Bẫy 6: Khôi Phục Dữ Liệu Thời Gian Thực Bằng PITR vs Snapshot Định Kỳ — (TD-Set1 Q25)
+- **Tình huống đề thi**: *"Một lập trình viên sơ ý chạy một script batch update lỗi vào lúc 14:23:15, làm sai lệch dữ liệu của hàng chục nghìn tài khoản khách hàng trên bảng DynamoDB. Doanh nghiệp yêu cầu phải khôi phục bảng về trạng thái hoàn hảo ngay trước khi sự cố xảy ra (lúc 14:23:14) với RPO gần bằng 0 và không làm gián đoạn hiệu năng của bảng hiện tại."*
+- **Các phương án bẫy**:
+  - ❌ *Khôi phục từ On-Demand Backup chụp lúc 00:00 sáng*: Mất toàn bộ giao dịch từ nửa đêm đến chiều (RPO lên tới hơn 14 giờ) $\rightarrow$ Không đáp ứng yêu cầu.
+  - ❌ *Tạo cronjob Lambda export bảng ra S3 mỗi giờ*: Tốn RCU, chi phí S3 đắt đỏ và RPO vẫn bị trễ tối đa 1 giờ.
+- **Giải pháp ĐÚNG**: Kích hoạt **Amazon DynamoDB Point-in-Time Recovery (PITR)**.
+  - PITR duy trì bảo vệ dữ liệu liên tục trong vòng **35 ngày**.
+  - Cho phép người quản trị khôi phục bảng về **bất kỳ giây nào** trong vòng 35 ngày qua với độ trễ tối đa chỉ 1 giây (`RPO = 1s`).
+  - Quá trình khôi phục diễn ra trên hạ tầng sao lưu ngầm của AWS, **không tiêu tốn RCU/WCU** và **luôn tạo ra một bảng mới**, đảm bảo bảng hiện tại vẫn phục vụ lưu lượng production bình thường.
+
+#### 🪤 Bẫy 7: Giải Quyết Xung Đột Ghi Đồng Thời Trong Global Tables: Last-Writer-Wins — (CM-PT2 Q43, U-PT4 Q38, U-PT4 Q53)
+- **Tình huống đề thi**: *"Hai người dùng ở hai khu vực địa lý khác nhau (Mỹ và Châu Âu) cùng truy cập ứng dụng và đồng thời sửa đổi cùng một thuộc tính của một Item trên DynamoDB Global Tables. Cơ chế giải quyết xung đột nào được AWS áp dụng để đảm bảo tính nhất quán cuối cùng (Eventual Consistency) giữa các vùng?"*
+- **Các phương án bẫy**:
+  - ❌ *DynamoDB áp dụng cơ chế Khóa phân tán 2 pha (Two-Phase Commit - 2PC)*: Sai. 2PC sẽ gây độ trễ mạng cực lớn xuyên đại dương và làm giảm tính sẵn sàng.
+  - ❌ *DynamoDB ném ngoại lệ `ConditionalCheckFailedException` cho client thứ hai*: Sai trong trường hợp cập nhật đồng thời xuyên Region.
+- **Giải pháp ĐÚNG**: Áp dụng quy tắc **"Last-writer-wins"**.
+  - DynamoDB Global Tables sử dụng timestamp của thao tác ghi cục bộ. Nếu có xung đột đồng thời, bản ghi có timestamp mới nhất sẽ được chọn làm phiên bản chính xác và tự động nhân bản đè lên các bản sao ở những Region còn lại.
+
+#### 🪤 Bẫy 8: Tối Ưu Tốc Độ Đọc Microsecond Cho DynamoDB: DAX vs ElastiCache — (U-PT1 Q06, TD-Set2 Q48, TD-Set3 Q04)
+- **Tình huống đề thi**: *"Ứng dụng cần tăng tốc độ đọc từ bảng DynamoDB từ mili-giây xuống microsecond cho các truy vấn đọc dữ liệu lặp đi lặp lại (Read-heavy workload), với ràng buộc kiến trúc là không được phép sửa đổi mã nguồn hoặc tái cấu trúc logic truy vấn của ứng dụng."*
+- **Các phương án bẫy**:
+  - ❌ *Triển khai Amazon ElastiCache for Redis*: ElastiCache đòi hỏi đội ngũ phát triển phải viết lại toàn bộ mã nguồn ứng dụng để tự kiểm tra Cache Hit / Cache Miss, tự nạp dữ liệu từ DynamoDB vào Redis và quản lý cơ chế invalidate cache $\rightarrow$ Vi phạm ràng buộc không sửa code.
+- **Giải pháp ĐÚNG**: Triển khai cụm **Amazon DynamoDB Accelerator (DAX)**.
+  - DAX là giải pháp in-memory cache chuyên dụng cho DynamoDB, tương thích 100% với API DynamoDB.
+  - Ứng dụng chỉ cần đổi Endpoint kết nối sang DAX Cluster Endpoint trong SDK client, giữ nguyên 100% logic câu lệnh truy vấn `GetItem`, `BatchGetItem`, `Query`.
+
 ---
 
 ## 📊 III. Ma Trận Quyết Định Công Nghệ NoSQL Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
 |:---|:---|:---|:---|
-| **Độ trễ đọc microsecond, không sửa mã nguồn** | **Amazon DynamoDB Accelerator (DAX)** | ElastiCache Redis (bắt buộc phải sửa code ứng dụng) | `TD-Set2 Q48`, `TD-Set3 Q04` |
+| **Độ trễ đọc microsecond, không sửa mã nguồn** | **Amazon DynamoDB Accelerator (DAX)** | ElastiCache Redis (bắt buộc phải sửa code ứng dụng) | `U-PT1 Q06`, `TD-Set2 Q48`, `TD-Set3 Q04` |
 | **Lưu lượng truy cập không thể dự đoán trước** | **DynamoDB On-Demand Mode** | Provisioned Mode (dễ bị throttling hoặc cấp phát thừa) | `TD-Set5 Q26` |
-| **EC2 Private truy cập DynamoDB an toàn miễn phí** | **Gateway VPC Endpoint cho DynamoDB** | NAT Gateway (tốn phí data processing đắt đỏ) | `TD-Set1 Q33` |
-| **Chống xóa nhầm bảng Production kể cả Admin** | **Bật Deletion Protection** | IAM Policy (Admin vẫn có quyền sửa policy xóa) | Chuẩn AWS |
-| **Bắt mọi thay đổi dữ liệu thời gian thực để gọi Lambda** | **DynamoDB Streams** | Viết cronjob chạy lệnh Scan (ngốn RCU, độ trễ cao) | `TD-Set1 Q65` |
+| **EC2 Private truy cập DynamoDB an toàn miễn phí** | **Gateway VPC Endpoint cho DynamoDB** | NAT Gateway (tốn phí data processing đắt đỏ) | `TD-Set1 Q33`, `CM-PT4 Q50` |
+| **Chống xóa nhầm bảng Production kể cả Admin** | **Bật Deletion Protection** | IAM Policy (Admin vẫn có quyền sửa policy xóa) | `CM-PT5 Q26` |
+| **Bắt mọi thay đổi dữ liệu thời gian thực để gọi Lambda** | **DynamoDB Streams** | Viết cronjob chạy lệnh Scan (ngốn RCU, độ trễ cao) | `TD-Set1 Q65`, `CM-PT3 Q45` |
 | **Đồng bộ dữ liệu đa vùng Active-Active, RPO < 1s** | **DynamoDB Global Tables** | Aurora Global Database (chỉ hỗ trợ ghi ở 1 Region chính) | `TD-Set1 Q28`, `U-PT4 Q38`, `U-PT4 Q53` |
+| **Giải quyết xung đột ghi đồng thời trong Global Tables** | **Quy tắc Last-Writer-Wins (Timestamp)** | Two-Phase Commit / Distributed Locking | `CM-PT2 Q43`, `U-PT4 Q38` |
 | **Tự động xóa các session đăng nhập sau 7 ngày** | **DynamoDB Time to Live (TTL)** | Viết Lambda cron quét và xóa (tốn WCU đắt đỏ) | Chuẩn AWS |
-| **Phục hồi dữ liệu về bất kỳ giây nào trong 35 ngày** | **Point-in-Time Recovery (PITR)** | Chỉ chụp snapshot thủ công định kỳ | Chuẩn AWS |
+| **Phục hồi dữ liệu về bất kỳ giây nào sau khi bị corrupt** | **Point-in-Time Recovery (PITR - 35 ngày)** | Chỉ chụp snapshot thủ công định kỳ (mất dữ liệu giữa 2 snapshot) | `TD-Set1 Q25` |
 | **Xử lý lỗi Throttling khi traffic bùng nổ đột biến** | **Auto Scaling / DAX / SQS Buffer** | Tăng thủ công RCU/WCU (chậm trễ, không phản ứng kịp) | `TD-Set4 Q15` |
 | **Tránh hiện tượng Hot Partition làm nghẽn throughput** | **Partition Key High Cardinality (hoặc Salting)** | Dùng Enum/Status làm partition key (dồn tải 1 partition) | `TD-Set1 Q37` |
 | **Tính toán RCU đọc Eventually Consistent rẻ hơn 50%** | **1 RCU = 2 Reads/giây (item tối đa 4 KB)** | Mặc định tính 1 RCU cho 1 read (tính thừa chi phí) | `TD-Set2 Q14` |
