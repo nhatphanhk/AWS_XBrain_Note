@@ -107,7 +107,7 @@ Danh mục đối chiếu nhanh 40+ dịch vụ cốt lõi và tài liệu chuy�
 | Dịch vụ AWS | Tài Liệu Chứa Kiến Thức Trọng Tâm | Các Chủ Đề Cốt Lõi Được Bao Phủ |
 | :--- | :--- | :--- |
 | **Amazon API Gateway** | [APIGateway_Cognito_StepFunctions.md](./APIGateway_Cognito_StepFunctions.md) | REST vs HTTP vs WebSocket, Usage Plans, API Keys, Throttling, Caching |
-| **Amazon Athena** | [Analytics_Big_Data_Services.md](./Analytics_Big_Data_Services.md) | Serverless SQL trên S3, Partitioning, Parquet/ORC, Phí $5/TB scanned |
+| **Amazon Athena** | [Analytics_Big_Data_Services.md](./Analytics_Big_Data_Services.md) | Serverless SQL trên S3, Partitioning, Parquet/ORC, Phí \$5/TB scanned |
 | **Amazon Aurora** | [RDS_Aurora_Databases.md](./RDS_Aurora_Databases.md) | Aurora Serverless v2, Global Database, Clone, Backtrack, Multi-AZ Cluster |
 | **Amazon CloudFront** | [S3_and_CloudFront_Storage.md](./S3_and_CloudFront_Storage.md) | OAC (Origin Access Control), Price Classes, CloudFront Functions vs Lambda@Edge, Signed URLs/Cookies |
 | **Amazon Cognito** | [APIGateway_Cognito_StepFunctions.md](./APIGateway_Cognito_StepFunctions.md) | User Pools (Authentication) vs Identity Pools (Authorization/Federation) |

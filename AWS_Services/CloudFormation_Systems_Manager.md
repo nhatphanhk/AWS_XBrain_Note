@@ -13,7 +13,7 @@
 
 Trong quản trị đám mây hiện đại, AWS chia tự động hóa thành 2 giai đoạn vòng đời rõ rệt:
 1. **AWS CloudFormation (Giai đoạn Khởi Tạo Hạ Tầng - Day 0 & Day 1)**: Cung cấp hạ tầng dưới dạng mã (**Infrastructure as Code - IaC**). Định nghĩa toàn bộ tài nguyên (VPC, Subnets, EC2, RDS, IAM Policies, S3) dưới dạng tệp văn bản JSON hoặc YAML có cấu trúc. Đảm bảo môi trường được khởi tạo đồng nhất, có thể lặp lại và kiểm soát phiên bản bằng Git.
-2. **AWS Systems Manager - SSM (Giai đoạn Quản Trị Vận Hành Hàng Ngày - Day 2 Operations)**: Quản lý và vận hành toàn diện đội ngũ máy chủ (**Fleet Management**) trên quy mô hàng nghìn máy ảo EC2 và máy chủ vật lý On-Premises. Cung cấp khả năng truy cập shell bảo mật không cần mở port SSH (**Session Manager**), vá lỗi hệ điều hành tự động (**Patch Manager**), quản trị cấu hình (**Parameter Store & State Manager**) và thực thi lệnh từ xa (**Run Command**).
+2. **AWS Systems Manager - SSM (Giai đoạn Quản Trị Vận Hành Hàng Ngày - Day 2 Operations)**: Quản lý và vận hành toàn diện đội ngũ máy chủ (**Fleet Management**) trên quy mô hàng nghìn máy ảo EC2 và máy chủ vật lý On-Premises. Cung cấp khả năng truy cập shell bảo mật không cần mở port SSH (**Session Manager**), vá lỗi hệ điều hành tự động (**Patch Manager**), quản trị cấu hình (**Parameter Store & State Manager**), cấu hình mặc định toàn tài khoản (**Default Host Management Configuration - DHMC**), và thực thi lệnh từ xa (**Run Command**).
 
 ```mermaid
 flowchart TD
@@ -46,178 +46,9 @@ flowchart TD
 
 ---
 
-## 2. Đi Sâu AWS CloudFormation (Infrastructure as Code)
+## 2. Các Kịch Bản Kiến Trúc & Bẫy Thi Thường Gặp (Architecture Scenarios & Exam Traps)
 
-### 2.1. Cấu Trúc Giải Phẫu Của Template CloudFormation (Template Anatomy) — (TD-Set6 Q32)
-
-Một tệp template CloudFormation (YAML) hoàn chỉnh bao gồm các thành phần sau:
-* **`AWSTemplateFormatVersion`**: Phiên bản định dạng (hiện tại luôn là `"2010-09-09"`).
-* **`Description`**: Mô tả mục đích của template.
-* **`Parameters`**: Các tham số đầu vào do người dùng truyền vào khi tạo hoặc cập nhật Stack (ví dụ: Tên môi trường `prod`/`dev`, Instance Type `t3.micro`).
-* **`Mappings`**: Bảng tra cứu giá trị cố định dạng Key-Value (ví dụ: Tra cứu AMI ID tương ứng cho từng Region).
-* **`Conditions`**: Biểu thức logic (`Fn::Equals`, `Fn::If`) để quyết định tài nguyên nào có được tạo hay không (ví dụ: Chỉ tạo Read Replica nếu môi trường là `prod`).
-* **`Resources` (PHẦN BẮT BUỘC DUY NHẤT — `TD-Set6 Q32`)**: Khai báo các tài nguyên AWS thực tế cần khởi tạo (ví dụ: `AWS::EC2::Instance`, `AWS::S3::Bucket`). Một template hợp lệ chỉ cần duy nhất khối `Resources`, tất cả các phần khác đều là tùy chọn (**Optional**).
-* **`Outputs`**: Xuất ra các giá trị sau khi stack tạo thành công (ví dụ: URL của ALB, VPC ID). Có thể dùng `Export: Name` để chia sẻ sang các Stack khác!
-
----
-
-### 2.2. Các Hàm Nội Tại Quan Trọng Nhất Trong Đề Thi (Intrinsic Functions)
-
-| Hàm Intrinsic | Cú pháp rút gọn | Mục đích & Ví dụ thực tế |
-| :--- | :--- | :--- |
-| **`Fn::Ref`** | **`!Ref`** | Tham chiếu đến giá trị của một **Parameter** hoặc lấy Physical ID của một **Resource** (ví dụ: `!Ref MyVPC` trả về `vpc-0123456789abcdef0`). |
-| **`Fn::GetAtt`** | **`!GetAtt`** | Trích xuất thuộc tính chuyên sâu của tài nguyên (ví dụ: `!GetAtt MyALB.DNSName` lấy tên miền DNS của Load Balancer, `!GetAtt MyEC2.PrivateIp`). |
-| **`Fn::Sub`** | **`!Sub`** | Thay thế biến vào chuỗi ký tự (String interpolation) (ví dụ: `!Sub "arn:aws:s3:::my-bucket-${AWS::Region}"`). |
-| **`Fn::FindInMap`** | **`!FindInMap`** | Tra cứu bảng ánh xạ (ví dụ: `!FindInMap [RegionMap, !Ref "AWS::Region", AMI]`). |
-| **`Fn::ImportValue`**| **`!ImportValue`** | Nhập giá trị được xuất (**Cross-Stack Reference**) từ một Stack khác đã chạy trước đó (ví dụ: `!ImportValue SharedVPC-ID`). |
-| **`Fn::Join`** | **`!Join`** | Nối một mảng các chuỗi lại với nhau bằng ký tự phân tách (ví dụ: `!Join [ ":", [ "arn", "aws", "s3" ] ]`). |
-
----
-
-### 2.3. Các Tính Năng Quản Trị Cấp Cao: StackSets, Drift Detection & DeletionPolicy
-
-```mermaid
-flowchart LR
-    AdminAccount[Tài Khoản Quản Trị - Management Account] -->|StackSet: Triển khai 1 lần đồng loạt| Target1[Account Dev - us-east-1]
-    AdminAccount -->|StackSet: Tự động kế thừa khi có OU mới| Target2[Account Prod - us-east-1]
-    AdminAccount -->|StackSet: Đa vùng linh hoạt| Target3[Account Prod - ap-southeast-1]
-```
-
-#### 1. CloudFormation StackSets (Đa Tài Khoản & Đa Vùng)
-- Cho phép tạo, cập nhật hoặc xóa Stacks trên **nhiều AWS Accounts và nhiều AWS Regions** chỉ bằng một thao tác duy nhất.
-- Tích hợp chặt chẽ với **AWS Organizations**: Tự động triển khai hạ tầng cơ sở (Baseline VPC, Guardrails, IAM Roles) ngay khi có một tài khoản con mới được thêm vào Organization Unit (OU).
-
-#### 2. Phát Hiện Sai Lệch Cấu Hình (Drift Detection)
-- Phát hiện các thay đổi tài nguyên được thực hiện **bên ngoài CloudFormation** (ví dụ: Ai đó dùng AWS Console hoặc CLI tự ý sửa Security Group mở port 22, hoặc xóa mất một subnet).
-- Giúp kỹ sư xác định chính xác sự khác biệt giữa trạng thái thực tế và template gốc để tiến hành khắc phục (Remediation).
-
-#### 3. Chính Sách Xóa & Thay Thế Tài Nguyên (DeletionPolicy & UpdateReplacePolicy)
-- Theo mặc định, khi một Stack bị xóa, CloudFormation sẽ **xóa sạch toàn bộ tài nguyên** trong stack đó.
-- Để bảo vệ dữ liệu sản xuất quan trọng (S3 Bucket, RDS Database, DynamoDB Table), cấu hình thuộc tính **`DeletionPolicy`**:
-  - **`Retain`**: Giữ nguyên tài nguyên vật lý, không xóa khi stack bị xóa bỏ.
-  - **`Snapshot`**: Tự động chụp một bản sao lưu (Snapshot) của EBS Volume, RDS DB Instance trước khi tài nguyên bị hủy.
-  - **`Delete` (Mặc định)**: Xóa hoàn toàn tài nguyên.
-
-#### 4. Các Script Hỗ Trợ Khởi Tạo EC2 (Helper Scripts) — (TD-Set3 Q27)
-- **`cfn-init`**: Đọc cấu hình từ metadata `AWS::CloudFormation::Init` trên EC2 để tự động cài đặt packages, tạo files cấu hình, chạy lệnh shell và khởi động service phức tạp (ví dụ: SharePoint, Microsoft SQL Server, Active Directory).
-- **`cfn-signal`**: Gửi tín hiệu mã thoát (Exit code 0 = Success) hoặc thất bại về CloudFormation `CreationPolicy` / `WaitCondition` để báo hiệu instance đã khởi động xong ứng dụng. Nếu CloudFormation không nhận đủ số tín hiệu thành công trong thời gian Timeout cấu hình, stack sẽ tự động rollback.
-- **`cfn-hup`**: Một tiến trình chạy ngầm (Daemon) trên EC2 định kỳ kiểm tra xem metadata của template có thay đổi không để tự động cập nhật phần mềm trên máy chủ mà không cần tạo lại instance mới!
-
----
-
-## 3. Đi Sâu AWS Systems Manager (Fleet Management & Automation)
-
-### 3.1. Truy Cập Shell Riêng Tư Tuyệt Đối Với SSM Session Manager (Zero Bastion Host)
-
-Đây là tính năng xuất hiện trong hầu hết các đề thi kiến trúc và là chuẩn mực bảo mật doanh nghiệp:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor DevOps as Kỹ Sư Vận Hành
-    participant Console as Trình Duyệt / AWS CLI
-    participant SSM as AWS Systems Manager Service
-    participant VPCE as Interface VPC Endpoints (PrivateLink)
-    participant EC2 as EC2 Instance (Private Subnet - No Public IP)
-
-    Note over EC2: Điều kiện tiên quyết:<br>1. SSM Agent đang chạy<br>2. Gắn IAM Role: AmazonSSMManagedInstanceCore
-    DevOps->>Console: Chạy lệnh: aws ssm start-session --target i-01234567
-    Console->>SSM: Gửi yêu cầu mở phiên làm việc qua HTTPS Port 443
-    SSM->>VPCE: Chuyển tiếp tín hiệu điều khiển qua mạng nội bộ VPC
-    VPCE->>EC2: Kết nối thông qua ssmmessages / ssm / ec2messages
-    EC2-->>Console: Mở phiên Terminal Shell tương tác trực tiếp trên giao diện!
-    Note over SSM: Toàn bộ lệnh gõ và kết quả được ghi nhật ký bất biến vào CloudWatch Logs & S3!
-```
-
-* **Yêu cầu bắt buộc để Session Manager hoạt động**:
-  1. Máy chủ EC2 phải có phần mềm **SSM Agent** (đã được cài sẵn mặc định trên hầu hết Amazon Linux 2/2023, Ubuntu, Windows Server AMIs).
-  2. Máy chủ phải được gán một **IAM Instance Profile** chứa AWS Managed Policy: **`AmazonSSMManagedInstanceCore`**.
-  3. Máy chủ phải có đường truyền ra ngoài tới Systems Manager endpoints qua **HTTPS Port 443**:
-     - Nếu ở Public Subnet: Đi qua Internet Gateway.
-     - Nếu ở Private Subnet: Đi qua **Interface VPC Endpoints (AWS PrivateLink)** cho 3 dịch vụ: `ssm`, `ssmmessages`, và `ec2messages` (Hoàn toàn không cần NAT Gateway hay Internet!).
-
----
-
-### 3.2. SSM Parameter Store: Quản Lý Biến Cấu Hình & Secrets
-
-#### 1. So Sánh Hai Hạng Dịch Vụ: Standard Tier vs Advanced Tier
-
-| Tiêu chí | Standard Tier (Hạng Tiêu Chuẩn) | Advanced Tier (Hạng Nâng Cao) |
-| :--- | :--- | :--- |
-| **Chi phí** | **HOÀN TOÀN MIỄN PHÍ ($0)** | Có tính phí ($0.05/parameter/tháng) |
-| **Số lượng Parameter tối đa** | Tối đa **10,000 parameters** trên mỗi Region | Lên tới **100,000 parameters** trên mỗi Region |
-| **Kích thước giá trị tối đa** | Tối đa **4 KB** | Tối đa **8 KB** |
-| **Chính sách Parameter (Policies)**| ❌ Không hỗ trợ |  **Hỗ trợ Expiration (TTL) và Notification** |
-
-#### 2. Phân Biệt Sắc Bén: SSM Parameter Store vs AWS Secrets Manager
-
-| Tiêu chí kỹ thuật | SSM Parameter Store | AWS Secrets Manager |
-| :--- | :--- | :--- |
-| **Mục đích chính** | Lưu trữ cấu hình ứng dụng (URLs, license keys, AMI IDs, cờ tính năng). | Lưu trữ mật khẩu cơ sở dữ liệu, API tokens nhạy cảm. |
-| **Tự động xoay vòng mật khẩu (Automatic Rotation)** | ❌ **Không có cơ chế tự động xoay vòng** (Phải tự viết Lambda thủ công). |  **Tích hợp sẵn tính năng tự xoay vòng (Native Rotation)** cho RDS, Aurora, Redshift, DocumentDB. |
-| **Nhân bản đa vùng (Cross-Region Replication)** | ❌ Không hỗ trợ trực tiếp (phải sync bằng EventBridge/Lambda). |  **Hỗ trợ tự động nhân bản bí mật sang các Region khác**. |
-| **Chi phí** | **Miễn phí** cho Standard Tier. | $0.40 / secret / tháng + $0.05 / 10,000 API calls. |
-
----
-
-### 3.3. Tự Động Hóa Bản Vá Với SSM Patch Manager
-
-- **Patch Baseline**: Định nghĩa quy tắc phê duyệt bản vá tự động (ví dụ: Tự động phê duyệt các bản vá có mức độ nghiêm trọng `Critical` hoặc `Important` sau 7 ngày kể từ khi nhà phát hành tung ra).
-- **Maintenance Windows**: Lên lịch khung thời gian bảo trì (ví dụ: 02:00 sáng Chủ Nhật hàng tuần) để hệ thống tự động tải và cài đặt bản vá.
-- **Hỗ trợ đa nền tảng**: Quản lý đồng nhất trên cả các bản phân phối Linux (Amazon Linux, RHEL, Ubuntu, SUSE) và Windows Server.
-
----
-
-### 3.4. Quản Trị Hàng Loạt Với SSM Run Command & State Manager — (TD-Set5 Q33, TD-Set5 Q04)
-
-- **SSM Run Command** (`TD-Set5 Q33`, `TD-Set4 Q38`):
-  - Cho phép thực thi lệnh shell (bash/PowerShell) hoặc các SSM Documents an toàn từ xa trên hàng nghìn máy ảo EC2 hoặc on-premises servers đồng thời.
-  - **Không yêu cầu mở bất kỳ cổng Inbound nào (Zero Inbound Ports: No SSH/RDP, No Bastion Host)**; giao tiếp hoàn toàn qua outbound HTTPS 443 của SSM Agent.
-  - Tích hợp kiểm soát phân quyền IAM chi tiết, giới hạn tỷ lệ lỗi (**Error Threshold**) và tỷ lệ đồng thời (**Concurrency Rate**), tự động ghi log kết quả thực thi vào Amazon S3 hoặc CloudWatch Logs.
-- **SSM State Manager** (`TD-Set5 Q04`):
-  - Dịch vụ duy trì cấu hình máy chủ theo trạng thái mong muốn (Desired State Configuration).
-  - Tự động kiểm tra và áp dụng cấu hình (ví dụ: đảm bảo phần mềm diệt virus luôn chạy, cổng firewall nội bộ đóng, CloudWatch Agent luôn active) theo lịch định kỳ, tự động chống hiện tượng trôi cấu hình (**Configuration Drift Prevention**).
-
----
-
-## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
-
-| Dịch vụ liên kết | Phương thức tích hợp | Mục đích kỹ thuật & Kịch bản thực tế |
-| :--- | :--- | :--- |
-| **AWS CloudTrail** | Audit Logging | Ghi lại toàn bộ lịch sử các lệnh chạy trong Session Manager và Run Command để phục vụ thanh tra an ninh. |
-| **Amazon CloudWatch Logs / S3** | Session Logging | Lưu trữ toàn bộ nội dung phiên làm việc dòng lệnh của kỹ sư vào S3 Bucket được mã hóa để làm bằng chứng tuân thủ. |
-| **AWS Config** | Config Rules & Compliance Tracking | **(CM-PT6 Q30)**: Giám sát liên tục các thay đổi cấu hình tài nguyên do CloudFormation tạo ra; phát hiện sai lệch tuân thủ thời gian thực. |
-| **AWS Secrets Manager** | Dynamic References trong CloudFormation | Sử dụng cú pháp `{{resolve:secretsmanager:...}}` trong template để chèn mật khẩu DB an toàn mà không bị lộ text thô trong code Git. |
-| **AWS Control Tower** | Proactive Controls | **(CM-PT4 Q36)**: Chặn đứng các template CloudFormation cố tình tạo EC2 gắn Public IP hoặc IAM Policy có quyền `*` ngay trước khi triển khai. |
-
----
-
-## 5. FinOps & Chiến Lược Tối Ưu Chi Phí (Cost Optimization)
-
-### 1. Tiết Kiệm Chi Phí Vận Hành Với Zero-Bastion Architecture
-* **Mô hình truyền thống (Bastion Host + NAT Gateway)**:
-  - 2 máy chủ EC2 Bastion chạy ở 2 AZs (cỡ `t3.small`): $\sim 30\$/\text{tháng}$.
-  - Elastic IPs và dữ liệu SSH truyền qua Internet.
-  - Phải liên tục vá lỗi OS, quản lý SSH key, rủi ro bị brute-force cổng 22.
-* **Mô hình hiện đại (SSM Session Manager + VPC Endpoints)**:
-  - **Chi phí máy chủ Bastion: $0** (Loại bỏ hoàn toàn máy chủ Bastion!).
-  - **Chi phí Session Manager: $0** (Dịch vụ Session Manager hoàn toàn miễn phí).
-  - Chỉ chi trả phí duy trì Interface VPC Endpoints nội bộ trong VPC.
-  - 👉 **Tiết kiệm 100% công sức bảo trì hạ tầng Bastion và triệt tiêu bề mặt tấn công mạng!**
-
----
-
-## 6. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
-
-| Tình huống sự cố | Nguyên nhân khả dĩ | Phương pháp điều tra | Giải pháp xử lý |
-| :--- | :--- | :--- | :--- |
-| **EC2 Instance không hiển thị trong danh sách SSM Managed Instances** | 1. Chưa gắn IAM Role chứa quyền `AmazonSSMManagedInstanceCore`.<br>2. EC2 trong Private Subnet không có đường kết nối mạng tới endpoint SSM qua cổng 443.<br>3. SSM Agent chưa được cài hoặc bị crash. | 1. Kiểm tra IAM Role gắn trên instance.<br>2. Kiểm tra Security Group chiều Outbound có mở port 443 không.<br>3. Xem log file: `/var/log/amazon/ssm/amazon-ssm-agent.log`. | 1. Gắn IAM Instance Profile hợp lệ cho EC2.<br>2. Tạo 3 **Interface VPC Endpoints** (`ssm`, `ssmmessages`, `ec2messages`) trong cùng VPC hoặc cấu hình route ra NAT Gateway.<br>3. Khởi động lại dịch vụ SSM Agent: `sudo systemctl restart amazon-ssm-agent`. |
-| **CloudFormation bị lỗi `UPDATE_ROLLBACK_FAILED`** | Một tài nguyên trong stack bị thay đổi thủ công bên ngoài hoặc bị kẹt trạng thái không thể xóa/khôi phục khi rollback. | Kiểm tra tab **Events** trên CloudFormation Console để xem tài nguyên cụ thể nào gây ra lỗi. | Sử dụng nút **Continue Update Rollback**, chọn bỏ qua tài nguyên bị kẹt (**Skip Resource**) để đưa Stack trở về trạng thái ổn định, sau đó sửa template và cập nhật lại. |
-| **Lỗi `Export cannot be updated or deleted because it is in use by another stack`** | Stack A xuất ra một giá trị (Export) đang được Stack B tham chiếu thông qua hàm `Fn::ImportValue`. | Tìm kiếm các Stack đang sử dụng giá trị xuất bằng lệnh `aws cloudformation list-imports`. | Bắt buộc phải cập nhật hoặc xóa Stack B trước để gỡ bỏ phụ thuộc tham chiếu, sau đó mới được phép cập nhật hoặc xóa Stack A! |
-
----
-
-## 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
 
 #### 1. Quản Trị EC2 Trong Private Subnet An Toàn Không Mở Cổng 22 — (CM-PT1 Q19, CM-PT4 Q59)
 - **Tình huống thi**: Doanh nghiệp có chính sách an ninh mạng nghiêm ngặt: Toàn bộ máy chủ ứng dụng EC2 phải đặt trong Private Subnet, không được cấp Public IP và nghiêm cấm mở cổng SSH (Port 22) hoặc RDP (Port 3389). Kỹ sư vận hành vẫn cần quyền truy cập shell dòng lệnh để khắc phục sự cố khi cần thiết.
@@ -266,96 +97,317 @@ sequenceDiagram
   - Chọn tài liệu SSM Document tương ứng và gán target là các máy ảo EC2 theo Tag.
   - Thiết lập lịch chạy định kỳ (ví dụ: mỗi 30 phút hoặc hàng ngày). State Manager tự động quét và áp dụng cấu hình mong muốn, ngăn chặn triệt để hiện tượng trôi cấu hình (Configuration Drift).
 
+#### 7. Cung Cấp Danh Mục Tài Nguyên CNTT Đã Duyệt Qua AWS Service Catalog Với Launch Role — (CM-PT3 Q39, CM-PT4 Q03)
+- **Tình huống thi**: Doanh nghiệp muốn cho phép các kỹ sư phần mềm tự do khởi tạo các cụm máy chủ thử nghiệm, kho S3 hoặc database RDS đã được chuẩn hóa bảo mật mà **KHÔNG CẦN cấp quyền IAM trực tiếp** cho kỹ sư tạo các tài nguyên đó (`CM-PT3 Q39`, `CM-PT4 Q03`).
+- **Giải pháp chuẩn AWS**:
+  - Quản trị viên đóng gói CloudFormation templates thành các **Sản phẩm (Products)** và gom vào **Danh mục (Portfolios)** trong **AWS Service Catalog**.
+  - Cấu hình một **Launch Role** (IAM Role với quyền tạo hạ tầng cần thiết) gắn vào Portfolio.
+  - Lập trình viên chỉ cần quyền truy cập Service Catalog để tự chọn sản phẩm và bấm "Launch"; Service Catalog tự động đảm nhận Launch Role để khởi tạo hạ tầng mà lập trình viên không có bất kỳ quyền quản trị IAM nào đối với EC2 hay RDS!
+
+#### 8. Quản Lý & Chặn Vi Phạm Bản Quyền Phần Mềm Bằng AWS License Manager — (TD-Set1 Q03, TD-Set4 Q57)
+- **Tình huống thi**: Doanh nghiệp sử dụng phần mềm có bản quyền thương mại (ví dụ Microsoft SQL Server, Oracle) chạy trên EC2 theo số lượng vCPU giới hạn (100 vCPU). Yêu cầu đảm bảo không bao giờ khởi chạy máy chủ vượt quá số lượng bản quyền đã mua để tránh bị phạt pháp lý (`TD-Set1 Q03`, `TD-Set4 Q57`).
+- **Giải pháp chuẩn AWS**:
+  - Tạo một quy tắc cấp phép (**License Configuration**) trong **AWS License Manager** với loại liên kết theo vCPU hoặc Core.
+  - Tích hợp License Manager với **Amazon EC2 Launch Template** và AWS Organizations qua AWS RAM (`TD-Set1 Q03`).
+  - Tích chọn tùy chọn **"Enforce license limit"** (`TD-Set4 Q57`). Khi tổng số vCPU đạt tới 100, License Manager sẽ lập tức **chặn đứng lệnh gọi API `RunInstances`** tiếp theo, ngăn chặn hoàn toàn việc vi phạm bản quyền!
+
+#### 9. Tự Động Quản Lý Vòng Đời Bật/Tắt Máy Chủ Tiết Kiệm Chi Phí Bằng AWS Instance Scheduler — (TD-Set8 Q24, CM-PT1 Q16, CM-PT5 Q57)
+- **Tình huống thi**: Doanh nghiệp vận hành hàng trăm máy chủ EC2 và cơ sở dữ liệu Amazon RDS phục vụ môi trường Development và Testing. Các môi trường này chỉ làm việc trong giờ hành chính từ thứ Hai đến thứ Sáu (8:00 AM - 6:00 PM) và hoàn toàn không có người dùng vào ban đêm hay cuối tuần. Cần giải pháp tự động tắt bật máy chủ để tiết kiệm chi phí (`TD-Set8 Q24`, `CM-PT1 Q16`, `CM-PT5 Q57`).
+- **Giải pháp chuẩn AWS**:
+  - Triển khai giải pháp chuẩn **AWS Instance Scheduler** (sử dụng CloudFormation, DynamoDB và AWS Lambda).
+  - Gắn tag định danh (ví dụ `Schedule = office-hours`) vào các máy chủ EC2 và RDS instances cần quản lý.
+  - Instance Scheduler tự động tắt máy vào 6:00 PM và bật lại vào 8:00 AM các ngày làm việc, giúp **tiết kiệm tới 70% chi phí tính toán** cho các môi trường non-production!
+
 ---
 
-## 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
 
 #### 🪤 Bẫy 1: Tự Động Xoay Vòng Mật Khẩu Database: Parameter Store vs Secrets Manager — (CM-PT3 Q43)
 - **Tình huống đề thi**: *"Ứng dụng sử dụng cơ sở dữ liệu Amazon RDS PostgreSQL. Doanh nghiệp bắt buộc phải áp dụng chính sách tự động xoay vòng mật khẩu định kỳ 30 ngày một lần với nỗ lực vận hành thấp nhất (LEAST operational overhead)."*
 - **Các phương án bẫy**:
   - ❌ *Lưu mật khẩu vào AWS Systems Manager Parameter Store SecureString*: Parameter Store lưu trữ an toàn nhưng **KHÔNG CÓ TÍNH NĂNG TỰ ĐỘNG XOAY VÒNG MẬT KHẨU CÓ SẴN**. Bạn sẽ phải tự viết code Lambda phức tạp và tự cấu hình EventBridge để kích hoạt xoay vòng.
-- **Giải pháp ĐÚNG**: Sử dụng **AWS Secrets Manager**.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Secrets Manager** (`CM-PT3 Q43`).
   - Secrets Manager có sẵn tính năng tích hợp trực tiếp với RDS để tự động tạo hàm Lambda luân chuyển mật khẩu, kiểm tra kết nối và cập nhật mật khẩu mới mà không cần can thiệp thủ công.
 
-#### 🪤 Bẫy 2: Ngăn Chặn Xóa Nhầm Dữ Liệu Khi Xóa CloudFormation Stack — (CM-PT1 Q12, CM-PT4 Q36)
-- **Tình huống đề thi**: *"Kỹ sư vô tình xóa một CloudFormation Stack phục vụ môi trường Production. Hậu quả là toàn bộ cơ sở dữ liệu RDS và dữ liệu trong S3 Bucket bị xóa sạch. Cần thiết lập thuộc tính gì trong template để ngăn chặn thảm họa này trong tương lai?"*
+#### 🪤 Bẫy 2: Ngăn Chặn Xóa Nhầm Dữ Liệu Khi Xóa CloudFormation Stack: `DeletionPolicy: Retain` — (TD-Set1 Q53, CM-PT4 Q64, CM-PT1 Q12, CM-PT4 Q36)
+- **Tình huống đề thi**: *"Kỹ sư vô tình xóa một CloudFormation Stack phục vụ môi trường Production. Hậu quả là toàn bộ cơ sở dữ liệu RDS và dữ liệu trong S3 Bucket bị xóa sạch. Cần thiết lập thuộc tính gì trong template để ngăn chặn thảm họa này trong tương lai?"* (`TD-Set1 Q53`, `CM-PT4 Q64`)
 - **Các phương án bẫy**:
-  - ❌ *Gán IAM Policy cấm xóa stack*: Người có quyền Admin vẫn có thể gỡ policy để xóa.
-  - ❌ *Sử dụng DependsOn*: Chỉ điều chỉnh thứ tự tạo tài nguyên, không ngăn việc xóa.
-- **Giải pháp ĐÚNG**: Thêm thuộc tính **`DeletionPolicy: Retain`** (hoặc `Snapshot` đối với RDS DB Instance/EBS Volume) vào định nghĩa của tài nguyên trong template CloudFormation.
+  - ❌ *Gán IAM Policy cấm xóa stack*: Người có quyền Admin vẫn có thể gỡ policy để xóa stack.
+  - ❌ *Sử dụng DependsOn*: Thuộc tính này chỉ điều chỉnh thứ tự tạo tài nguyên, không ngăn việc xóa.
+- **Giải pháp ĐÚNG**: Thêm thuộc tính **`DeletionPolicy: Retain`** (hoặc `Snapshot` đối với RDS DB Instance/EBS Volume) vào định nghĩa của tài nguyên trong template CloudFormation (`TD-Set1 Q53`, `CM-PT4 Q64`).
   - Khi có thuộc tính `Retain`, kể cả khi Stack bị xóa bỏ hoàn toàn, CloudFormation vẫn để lại tài nguyên vật lý nguyên vẹn trên tài khoản AWS!
 
-#### 🪤 Bẫy 3: Cấp Quyền Cho EC2 Sử Dụng Systems Manager — (CM-PT4 Q59)
+#### 🪤 Bẫy 3: Cấp Quyền Cho EC2 Sử Dụng Systems Manager: `AmazonSSMManagedInstanceCore` — (CM-PT4 Q59)
 - **Tình huống đề thi**: *"Sau khi khởi chạy một máy chủ EC2 mới trong Private Subnet, quản trị viên không thể kết nối tới máy chủ qua Session Manager. Cần cấu hình quyền IAM nào cho máy chủ?"*
 - **Phương án bẫy thường gặp**:
   - ❌ *Gán policy `AdministratorAccess` cho máy chủ*: Quá nhiều quyền thừa thãi và vi phạm nguyên tắc đặc quyền tối thiểu.
   - ❌ *Sử dụng policy cũ `AmazonEC2RoleforSSM`*: Policy này đã bị AWS đánh dấu deprecated (lỗi thời) từ lâu.
-- **Giải pháp ĐÚNG**: Gán AWS Managed Policy chuẩn hiện nay là **`AmazonSSMManagedInstanceCore`** vào IAM Role của máy chủ EC2.
+- **Giải pháp ĐÚNG**: Gán AWS Managed Policy chuẩn hiện nay là **`AmazonSSMManagedInstanceCore`** vào IAM Role của máy chủ EC2 (`CM-PT4 Q59`).
 
 #### 🪤 Bẫy 4: Khối Duy Nhất Bắt Buộc Trong CloudFormation Template: Resources — (TD-Set6 Q32)
 - **Tình huống đề thi**: *"Một kỹ sư DevOps tạo template CloudFormation và tạo Pull Request. Template bao gồm Parameters, Mappings, Conditions, Outputs nhưng không có khối Resources. Template có chạy được không?"*
 - **Quy tắc bất biến**:
   - Template chắc chắn bị lỗi và không thể triển khai!
-  - Trong CloudFormation, **chỉ có duy nhất khối `Resources` là bắt buộc (Mandatory)**; mọi thành phần khác (`Parameters`, `Mappings`, `Outputs`, `Conditions`, `Metadata`) đều là tùy chọn.
+  - Trong CloudFormation, **chỉ có duy nhất khối `Resources` là bắt buộc (Mandatory)** (`TD-Set6 Q32`); mọi thành phần khác (`Parameters`, `Mappings`, `Outputs`, `Conditions`, `Metadata`) đều là tùy chọn.
 
-#### 🪤 Bẫy 5: cfn-signal Bị Timeout Rollback Nếu Không Nhận Đủ Số Tín Hiệu — (TD-Set3 Q27)
+#### 🪤 Bẫy 5: `cfn-signal` Bị Timeout Rollback Nếu Không Nhận Đủ Số Tín Hiệu — (TD-Set3 Q27)
 - **Tình huống đề thi**: *"Khởi tạo EC2 bằng CloudFormation với CreationPolicy nhưng sau 30 phút stack bị lỗi `CREATE_FAILED` và rollback."*
 - **Nguyên nhân**:
   - Script cài đặt phần mềm trong EC2 bị lỗi khiến lệnh `cfn-signal -e 1` gửi mã lỗi, hoặc script bị treo không gọi tới `cfn-signal`.
-  - CloudFormation chờ hết khoảng thời gian `Timeout` quy định trong `CreationPolicy` mà không nhận đủ tín hiệu thành công (`-e 0`) $\rightarrow$ Tự động hủy stack và rollback để tránh tốn chi phí cho tài nguyên lỗi.
+  - CloudFormation chờ hết khoảng thời gian `Timeout` quy định trong `CreationPolicy` mà không nhận đủ tín hiệu thành công (`-e 0`) $\rightarrow$ Tự động hủy stack và rollback để tránh tốn chi phí cho tài nguyên lỗi (`TD-Set3 Q27`).
 
 #### 🪤 Bẫy 6: Vá Lỗi An Toàn Cho Máy Chủ Phía Sau ALB Bằng SSM Automation `AWSEC2-PatchLoadBalancerInstance` — (U-PT4 Q02)
 - **Tình huống đề thi**: *"Doanh nghiệp vận hành một đội máy chủ EC2 nằm sau Application Load Balancer (ALB). Đội ngũ vận hành cần định kỳ vá lỗi hệ điều hành vào cuối tuần thông qua lịch trình tự động (Maintenance Windows), với yêu cầu bắt buộc: TUYỆT ĐỐI KHÔNG làm rớt kết nối hoặc gây lỗi HTTP 5xx cho người dùng đang truy cập website."*
 - **Các phương án bẫy**:
   - ❌ *Dùng SSM Patch Manager trực tiếp không qua Automation*: Patch Manager sẽ kích hoạt cài bản vá và reboot máy chủ ngay lập tức. ALB chưa kịp ngắt kết nối sẽ tiếp tục chuyển tiếp traffic người dùng tới máy chủ đang reboot, gây ra hàng loạt lỗi gián đoạn HTTP 502/504!
-  - ❌ *Tự viết script Bash/PowerShell gọi CLI ngắt tải thủ công*: Phức tạp, dễ gặp lỗi race condition khi chờ connection draining và tốn công bảo trì mã nguồn script.
-- **Giải pháp ĐÚNG**: Sử dụng **AWS Systems Manager Maintenance Windows** thực thi tác vụ **Systems Manager Automation** với tài liệu chuẩn AWS: **`AWSEC2-PatchLoadBalancerInstance`**.
-  - Quy trình tự động hóa an toàn chuẩn mực 4 bước:
-    1. Tự động gọi API hủy đăng ký (**Deregister**) instance khỏi Target Group của ALB.
-    2. Chờ hết khoảng thời gian chờ ngắt kết nối (**Deregistration Delay / Connection Draining**) để các HTTP requests dở dang xử lý xong hoàn toàn.
-    3. Cài đặt các bản vá lỗi cần thiết và reboot hệ điều hành an toàn.
-    4. Tự động đăng ký lại (**Re-register**) instance vào Target Group và kiểm tra cho đến khi trạng thái Target Health đạt `Healthy` mới tiếp tục chuyển sang máy chủ tiếp theo.
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Systems Manager Maintenance Windows** thực thi tác vụ **Systems Manager Automation** với tài liệu chuẩn AWS: **`AWSEC2-PatchLoadBalancerInstance`** (`U-PT4 Q02`).
+  - Quy trình tự động hóa an toàn chuẩn mực:
+    1. Tự động hủy đăng ký (**Deregister**) instance khỏi Target Group của ALB.
+    2. Chờ hết thời gian ngắt kết nối (**Deregistration Delay / Connection Draining**) để các HTTP requests dở dang hoàn tất.
+    3. Cài đặt các bản vá lỗi và reboot hệ điều hành an toàn.
+    4. Tự động đăng ký lại (**Re-register**) instance và kiểm tra Target Health đạt `Healthy` mới chuyển sang máy chủ tiếp theo (`U-PT4 Q02`).
+
+#### 🪤 Bẫy 7: Bắt Buộc Khai Báo `AWS::IAM::InstanceProfile` Trong CloudFormation Template — (CM-PT2 Q46)
+- **Tình huống đề thi**: *"Kỹ sư viết CloudFormation template để tạo một máy chủ EC2. Kỹ sư định nghĩa một `AWS::IAM::Role` rồi gắn trực tiếp tên Role đó vào thuộc tính `IamInstanceProfile` của `AWS::EC2::Instance`. Stack triển khai bị báo lỗi thất bại."*
+- **Nguyên nhân cốt lõi**:
+  - Trên AWS Console, khi bạn gán IAM Role cho EC2, Console tự động tạo ngầm một Instance Profile cùng tên.
+  - Nhưng trong **CloudFormation**, EC2 instance **KHÔNG THỂ nhận trực tiếp một IAM Role**!
+- **Giải pháp ĐÚNG**: Bắt buộc phải khai báo một tài nguyên trung gian là **`AWS::IAM::InstanceProfile`** (`CM-PT2 Q46`):
+  ```yaml
+  MyInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref MyIAMRole
+
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: !Ref MyInstanceProfile
+  ```
+
+#### 🪤 Bẫy 8: Tự Động Hóa Quản Lý Máy Chủ EC2 Không Cần Tạo Role Cục Bộ: SSM Quick Setup DHMC — (U-PT3 Q47)
+- **Tình huống đề thi**: *"Doanh nghiệp có hàng trăm máy chủ EC2 được khởi chạy bởi nhiều nhóm phát triển khác nhau. Rất nhiều máy chủ không thể quản trị được qua Systems Manager vì lập trình viên quên gán IAM Instance Profile chứa `AmazonSSMManagedInstanceCore`. Làm thế nào để tự động quản trị toàn bộ máy chủ EC2 trong toàn bộ Region mà không cần sửa đổi từng instance?"*
+- **Các phương án bẫy**:
+  - ❌ *Viết script Lambda gắn Instance Profile thủ công*: Dễ bị sót máy ảo mới khởi chạy sau đó.
+- **Giải pháp ĐÚNG**: Kích hoạt **Systems Manager Default Host Management Configuration (DHMC)** qua **SSM Quick Setup** (`U-PT3 Q47`).
+  - DHMC cung cấp một cấu hình cấp độ tài khoản/Region. Khi kích hoạt, Systems Manager tự động quản trị toàn bộ máy chủ EC2 mà không đòi hỏi mỗi máy chủ phải có IAM Instance Profile riêng!
+
+#### 🪤 Bẫy 9: Tự Động Mở Rộng Hạ Tầng Khi Thêm Account Vào OU: CloudFormation StackSets Automatic Deployment — (CM-PT2 Q34, U-PT4 Q34, U-PT6 Q04)
+- **Tình huống đề thi**: *"Doanh nghiệp sử dụng AWS Organizations và quản trị hạ tầng cơ sở (Baseline IAM, VPC, CloudWatch) bằng CloudFormation StackSets. Quản trị viên muốn khi bất kỳ một AWS Account mới nào được tạo hoặc di chuyển vào một Organizational Unit (OU), toàn bộ hạ tầng baseline phải được tự động triển khai ngay lập tức."*
+- **Giải pháp ĐÚNG**: Kích hoạt tùy chọn **Automatic Deployment (`AutoDeployment: Enabled: true`)** và chọn **Permission Model là `SERVICE_MANAGED`** trên CloudFormation StackSets (`CM-PT2 Q34`, `U-PT4 Q34`, `U-PT6 Q04`).
+  - StackSets tự động lắng nghe sự kiện từ AWS Organizations và tự động deploy các stack instances vào tài khoản mới mà không cần quản trị viên can thiệp thủ công.
+
+#### 🪤 Bẫy 10: Quản Lý Cờ Tính Năng (Feature Flags) Động Không Cần Khởi Động Lại Ứng Dụng: AWS AppConfig — (CM-PT5 Q17)
+- **Tình huống đề thi**: *"Ứng dụng cần tính năng bật/tắt cờ tính năng (Feature Flags) và cập nhật cấu hình theo thời gian thực (ví dụ: điều chỉnh tỷ lệ chiết khấu flash sale) cho hàng triệu người dùng mà tuyệt đối không phải khởi động lại (restart) máy chủ hoặc container, đồng thời có cơ chế tự động rollback nếu cấu hình gây lỗi."*
+- **Các phương án bẫy**:
+  - ❌ *Cập nhật file cấu hình và nạp lại qua UserData hoặc redeploy container*: Gây gián đoạn dịch vụ và độ trễ cao.
+  - ❌ *Lưu trong DynamoDB*: Không có cơ chế kiểm tra tính hợp lệ (Validators) và không có chiến lược triển khai chậm dần (Deployment Strategies).
+- **Giải pháp ĐÚNG**: Sử dụng **AWS AppConfig** (một năng lực của AWS Systems Manager) (`CM-PT5 Q17`).
+  - Hỗ trợ triển khai cấu hình động theo phần trăm lưu lượng (Linear hoặc Exponential deployment).
+  - Tích hợp **Validators** (kiểm tra schema JSON) và tự động rollback nếu CloudWatch Alarms phát hiện lỗi trong quá trình rollout.
+
+#### 🪤 Bẫy 11: Quản Trị Tập Trung Sự Cố Vận Hành Qua Systems Manager OpsCenter OpsItems — (TD-Set4 Q39)
+- **Tình huống đề thi**: *"Đội ngũ kỹ sư hỗ trợ vận hành (Support Engineers) cần một không gian trung tâm duy nhất để xem, điều tra và khắc phục tất cả các sự cố vận hành (Operational Issues) phát sinh từ CloudWatch Alarms, EventBridge và AWS Config mà không phải chuyển đổi qua lại giữa hàng chục màn hình console."*
+- **Giải pháp ĐÚNG**: Kích hoạt **AWS Systems Manager OpsCenter** và quản lý các sự cố dưới dạng **OpsItems** (`TD-Set4 Q39`).
+  - OpsCenter tự động tổng hợp các sự kiện lỗi thành từng OpsItem, cung cấp ngữ cảnh điều tra chi tiết và gợi ý các tài liệu **Systems Manager Automation Runbooks** để kỹ sư khắc phục sự cố chỉ bằng 1 cú nhấp chuột.
 
 ---
 
-## 📊 III. Ma Trận Quyết Định Công Nghệ Nhanh (Exam Decision Matrix)
+### 📊 III. Ma Trận Quyết Định Công Nghệ Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
 |:---|:---|:---|:---|
 | **Vá lỗi EC2 sau ALB an toàn không downtime** | **SSM Automation `AWSEC2-PatchLoadBalancerInstance` + Maintenance Windows** | Patch Manager trực tiếp (reboot làm rớt kết nối ALB HTTP 5xx) | `U-PT4 Q02` |
 | **Truy cập shell EC2 trong Private Subnet không mở Port 22, không Bastion** | **SSM Session Manager + Interface VPC Endpoints** | Bastion Host (tốn chi phí, rủi ro an ninh mạng) | Chuẩn AWS |
-| **Quyền IAM tối thiểu chuẩn xác cho EC2 giao tiếp với SSM** | **Policy `AmazonSSMManagedInstanceCore`** | Policy `AmazonEC2RoleforSSM` (đã deprecated) | Chuẩn AWS |
-| **Lưu trữ cấu hình ứng dụng rẻ nhất, mã hóa KMS, không auto-rotate** | **SSM Parameter Store (SecureString)** | AWS Secrets Manager (tốn phí $0.40/secret/tháng) | `TD-Set3 Q33` |
-| **Lưu mật khẩu database yêu cầu tự động xoay vòng định kỳ** | **AWS Secrets Manager** | SSM Parameter Store (không hỗ trợ native auto-rotation) | `TD-Set2 Q10` |
+| **Quyền IAM tối thiểu chuẩn xác cho EC2 giao tiếp với SSM** | **Policy `AmazonSSMManagedInstanceCore`** | Policy `AmazonEC2RoleforSSM` (đã deprecated) | `CM-PT4 Q59` |
+| **Tự động quản lý EC2 toàn account không cần gắn role từng máy** | **SSM Default Host Management Configuration (DHMC)** | Viết script gán IAM role thủ công từng máy ảo | `U-PT3 Q47` |
+| **Cung cấp danh mục IT đã duyệt cho Dev không cần quyền IAM** | **AWS Service Catalog + Launch Role** | Cấp quyền IAM trực tiếp cho Developer | `CM-PT3 Q39`, `CM-PT4 Q03` |
+| **Chặn khởi chạy EC2 vượt quá số lượng bản quyền phần mềm** | **AWS License Manager ("Enforce license limit")** | Tự đếm số máy ảo thủ công | `TD-Set1 Q03`, `TD-Set4 Q57` |
+| **Tự động tắt bật máy chủ Dev ngoài giờ tiết kiệm 70%** | **AWS Instance Scheduler (EC2 & RDS Tags)** | Bật máy chủ chạy 24/7 lãng phí ngân sách | `TD-Set8 Q24`, `CM-PT1 Q16` |
+| **Cập nhật Feature Flags động không cần restart ứng dụng** | **AWS AppConfig (Deployments + Validators + Rollback)** | Sửa file cấu hình rồi redeploy container | `CM-PT5 Q17` |
+| **Không gian trung tâm điều tra & xử lý sự cố vận hành** | **AWS Systems Manager OpsCenter (OpsItems)** | Chuyển đổi thủ công giữa hàng chục bảng điều khiển | `TD-Set4 Q39` |
+| **Tự động deploy hạ tầng khi thêm Account mới vào OU** | **CloudFormation StackSets (`AutoDeployment: Enabled`)** | Tạo Stack thủ công trên từng tài khoản mới | `CM-PT2 Q34`, `U-PT4 Q34` |
+| **Khai báo IAM Role cho EC2 trong CloudFormation Template** | **Bắt buộc qua `AWS::IAM::InstanceProfile` trung gian** | Gán trực tiếp Role vào `AWS::EC2::Instance` (bị lỗi cú pháp) | `CM-PT2 Q46` |
+| **Lưu trữ cấu hình ứng dụng rẻ nhất, mã hóa KMS, không auto-rotate** | **SSM Parameter Store (SecureString)** | AWS Secrets Manager (tốn phí \$0.40/secret/tháng) | `TD-Set3 Q33` |
+| **Lưu mật khẩu database yêu cầu tự động xoay vòng định kỳ** | **AWS Secrets Manager** | SSM Parameter Store (không hỗ trợ native auto-rotation) | `TD-Set2 Q10`, `CM-PT3 Q43` |
 | **Vá lỗi hệ điều hành định kỳ cho dàn máy chủ Windows & Linux** | **SSM Patch Manager + Maintenance Windows** | Tự viết script SSH thủ công (khó kiểm soát, dễ lỗi) | `TD-Set5 Q45` |
 | **Chạy script cấu hình trên hàng trăm máy chủ không cần kết nối trực tiếp** | **SSM Run Command** | Mở SSH từng máy để chạy lệnh (tốn công, không audit được) | `TD-Set5 Q33`, `TD-Set4 Q38` |
 | **Duy trì cấu hình máy chủ nhất quán theo thời gian (Anti-Drift)** | **SSM State Manager Association** | Kiểm tra thủ công (dễ bị sót cấu hình) | `TD-Set5 Q04` |
 | **Triển khai hạ tầng IaC đồng loạt trên nhiều AWS Accounts và Regions** | **AWS CloudFormation StackSets** | Viết script gọi CLI từng vùng (dễ sai lệch, khó quản lý) | `TD-Set4 Q29`, `TD-Set8 Q22` |
 | **Cài đặt phần mềm phức tạp và chờ tín hiệu thành công trước khi hoàn tất** | **`cfn-init` + `cfn-signal` + `CreationPolicy`** | UserData thông thường (không đồng bộ hóa trạng thái hoàn tất) | `TD-Set3 Q27` |
 | **Thành phần duy nhất bắt buộc trong CloudFormation Template** | **Khối `Resources`** | Khối Parameters / Outputs (chỉ là tùy chọn) | `TD-Set6 Q32` |
-| **Bảo vệ cơ sở dữ liệu RDS không bị xóa khi CloudFormation Stack bị xóa** | **Thuộc tính `DeletionPolicy: Retain` (hoặc `Snapshot`)** | Để mặc định (mặc định CloudFormation sẽ xóa sạch) | Chuẩn AWS |
+| **Bảo vệ cơ sở dữ liệu RDS không bị xóa khi CloudFormation Stack bị xóa** | **Thuộc tính `DeletionPolicy: Retain` (hoặc `Snapshot`)** | Để mặc định (mặc định CloudFormation sẽ xóa sạch) | `TD-Set1 Q53`, `CM-PT4 Q64` |
 | **Phát hiện ai đó tự ý sửa đổi Security Group bên ngoài CloudFormation** | **CloudFormation Drift Detection** | Đọc CloudWatch Logs thủ công (không tự động so sánh diff) | Chuẩn AWS |
-| **Chặn CloudFormation deploy tài nguyên vi phạm quy chuẩn an toàn** | **AWS Control Tower Proactive Controls** | Reactive remediation (chỉ sửa sau khi đã deploy vi phạm) | Chuẩn AWS |
 
 ---
 
-## 7. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+## 3. Kiến Trúc Sâu & Luồng Hoạt Động (Deep-Dive Architecture & Workflow)
+
+### 3.1. Đi Sâu AWS CloudFormation (Infrastructure as Code)
+
+#### 1. Cấu Trúc Giải Phẫu Của Template CloudFormation (Template Anatomy) — (TD-Set6 Q32)
+Một tệp template CloudFormation (YAML) hoàn chỉnh bao gồm các thành phần sau:
+* **`AWSTemplateFormatVersion`**: Phiên bản định dạng (hiện tại luôn là `"2010-09-09"`).
+* **`Description`**: Mô tả mục đích của template.
+* **`Parameters`**: Các tham số đầu vào do người dùng truyền vào khi tạo hoặc cập nhật Stack (ví dụ: Tên môi trường `prod`/`dev`, Instance Type `t3.micro`).
+* **`Mappings`**: Bảng tra cứu giá trị cố định dạng Key-Value (ví dụ: Tra cứu AMI ID tương ứng cho từng Region).
+* **`Conditions`**: Biểu thức logic (`Fn::Equals`, `Fn::If`) để quyết định tài nguyên nào có được tạo hay không (ví dụ: Chỉ tạo Read Replica nếu môi trường là `prod`).
+* **`Resources` (PHẦN BẮT BUỘC DUY NHẤT — `TD-Set6 Q32`)**: Khai báo các tài nguyên AWS thực tế cần khởi tạo (ví dụ: `AWS::EC2::Instance`, `AWS::S3::Bucket`). Một template hợp lệ chỉ cần duy nhất khối `Resources`, tất cả các phần khác đều là tùy chọn (**Optional**).
+* **`Outputs`**: Xuất ra các giá trị sau khi stack tạo thành công (ví dụ: URL của ALB, VPC ID). Có thể dùng `Export: Name` để chia sẻ sang các Stack khác!
+
+#### 2. Các Hàm Nội Tại Quan Trọng Nhất Trong Đề Thi (Intrinsic Functions)
+| Hàm Intrinsic | Cú pháp rút gọn | Mục đích & Ví dụ thực tế |
+| :--- | :--- | :--- |
+| **`Fn::Ref`** | **`!Ref`** | Tham chiếu đến giá trị của một **Parameter** hoặc lấy Physical ID của một **Resource** (ví dụ: `!Ref MyVPC` trả về `vpc-0123456789abcdef0`). |
+| **`Fn::GetAtt`** | **`!GetAtt`** | Trích xuất thuộc tính chuyên sâu của tài nguyên (ví dụ: `!GetAtt MyALB.DNSName` lấy tên miền DNS của Load Balancer, `!GetAtt MyEC2.PrivateIp`). |
+| **`Fn::Sub`** | **`!Sub`** | Thay thế biến vào chuỗi ký tự (String interpolation) (ví dụ: `!Sub "arn:aws:s3:::my-bucket-${AWS::Region}"`). |
+| **`Fn::FindInMap`** | **`!FindInMap`** | Tra cứu bảng ánh xạ (ví dụ: `!FindInMap [RegionMap, !Ref "AWS::Region", AMI]`). |
+| **`Fn::ImportValue`**| **`!ImportValue`** | Nhập giá trị được xuất (**Cross-Stack Reference**) từ một Stack khác đã chạy trước đó (ví dụ: `!ImportValue SharedVPC-ID`). |
+| **`Fn::Join`** | **`!Join`** | Nối một mảng các chuỗi lại với nhau bằng ký tự phân tách (ví dụ: `!Join [ ":", [ "arn", "aws", "s3" ] ]`). |
+
+#### 3. Các Tính Năng Quản Trị Cấp Cao: StackSets, Drift Detection & DeletionPolicy
+- **CloudFormation StackSets**: Triển khai hạ tầng trên **nhiều AWS Accounts và nhiều Regions**. Bật `AutoDeployment: Enabled` để tự động deploy vào các tài khoản con mới tạo trong AWS Organizations (`CM-PT2 Q34`, `U-PT4 Q34`).
+- **Drift Detection**: Phát hiện sai lệch cấu hình thực tế so với template gốc.
+- **DeletionPolicy**: Bảo vệ tài nguyên chứa dữ liệu quan trọng (`Retain` để giữ lại, `Snapshot` để sao lưu trước khi xóa) (`TD-Set1 Q53`, `CM-PT4 Q64`).
+
+---
+
+### 3.2. Đi Sâu AWS Systems Manager (Fleet Management & Automation)
+
+```mermaid
+flowchart TD
+    subgraph SSM_Core[Hệ Sinh Thái AWS Systems Manager]
+        direction TB
+        NodeMgmt[Node Management:\n- Fleet Manager\n- Session Manager\n- Patch Manager\n- Run Command\n- State Manager\n- Inventory]
+        OpsMgmt[Operations Management:\n- OpsCenter (OpsItems)\n- Incident Manager\n- Explorer]
+        AppMgmt[Application Management:\n- Parameter Store\n- AppConfig\n- Maintenance Windows]
+    end
+```
+
+1. **Session Manager (Truy Cập Shell An Toàn)**:
+   - Thay thế hoàn toàn Bastion Host và SSH Key pair.
+   - Kết nối qua HTTPS Port 443 outbound tới 3 Interface VPC Endpoints: `ssm`, `ssmmessages`, `ec2messages`.
+   - Ghi lại nhật ký phiên làm việc (Session Logs) và đẩy lên **Amazon S3** hoặc **CloudWatch Logs** để kiểm toán an ninh.
+2. **Patch Manager (Vá Lỗi Tự Động)**:
+   - Sử dụng **Patch Baselines** để định nghĩa quy tắc phê duyệt bản vá lỗi (ví dụ: tự động duyệt các bản vá bảo mật nghiêm trọng sau 7 ngày phát hành).
+   - Kết hợp với **Maintenance Windows** để lên lịch vá lỗi không làm gián đoạn sản xuất.
+3. **Run Command (Thực Thi Lệnh Hàng Loạt)**:
+   - Thực thi SSM Documents trên hàng nghìn instances theo Tag mà không cần SSH/RDP.
+4. **Parameter Store (Quản Lý Cấu Hình & Secret)**:
+   - Lưu trữ tham số dạng Key-Value phân cấp (`/production/database/port`). Hỗ trợ kiểu `SecureString` mã hóa KMS.
+5. **State Manager (Duy Trì Trạng Thái Cấu Hình)**:
+   - Định kỳ ép cấu hình máy chủ về trạng thái mong muốn (Anti-Drift).
+6. **Default Host Management Configuration (DHMC)**:
+   - Tự động quản lý mọi máy ảo EC2 trong tài khoản/Region mà không cần gán instance profile thủ công (`U-PT3 Q47`).
+
+---
+
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+
+| Dịch vụ AWS | Dịch vụ tích hợp | Mục đích kỹ thuật & Kịch bản thực tế | Tham chiếu đề thi |
+| :--- | :--- | :--- | :--- |
+| **AWS CloudFormation** | **AWS Organizations** | Triển khai StackSets đồng loạt sang hàng trăm tài khoản con; tự động triển khai hạ tầng an ninh khi có account mới vào OU. | `CM-PT2 Q34`, `U-PT4 Q34` |
+| **AWS CloudFormation** | **AWS IAM** | Bắt buộc khai báo tài nguyên `AWS::IAM::InstanceProfile` để gán IAM Role cho EC2 instance trong template. | `CM-PT2 Q46` |
+| **AWS Systems Manager** | **Amazon S3 & CloudWatch Logs** | Ghi nhận toàn bộ nhật ký phiên truy cập dòng lệnh của Session Manager và kết quả thực thi lệnh của Run Command. | Chuẩn AWS |
+| **AWS Systems Manager** | **Application Load Balancer** | Tự động hóa vá lỗi an toàn không downtime qua SSM Automation `AWSEC2-PatchLoadBalancerInstance`. | `U-PT4 Q02` |
+| **AWS Service Catalog** | **AWS CloudFormation** | Đóng gói template thành sản phẩm tự phục vụ và gán Launch Role cho lập trình viên khởi tạo an toàn. | `CM-PT3 Q39`, `CM-PT4 Q03` |
+| **AWS License Manager** | **Amazon EC2 & AWS RAM** | Kiểm soát số lượng vCPU/Core bản quyền phần mềm và chặn khởi chạy máy ảo nếu vượt hạn mức. | `TD-Set1 Q03`, `TD-Set4 Q57` |
+| **AWS Systems Manager** | **AWS AppConfig** | Triển khai cấu hình động và cờ tính năng Feature Flags theo thời gian thực có validator và tự động rollback. | `CM-PT5 Q17` |
+
+---
+
+## 5. Bảng So Sánh Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
+
+Dưới đây là bảng phân biệt toàn diện giữa các công cụ tự động hóa, quản trị cấu hình và triển khai hạ tầng trên AWS:
+
+| Tiêu chí | AWS CloudFormation | AWS CDK | Terraform on AWS | AWS Systems Manager | AWS Elastic Beanstalk | AWS Service Catalog | AWS OpsWorks |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Bản chất dịch vụ** | Khởi tạo hạ tầng bằng mã (Declarative IaC) | Viết IaC bằng ngôn ngữ lập trình (Imperative) | IaC đa đám mây mã nguồn mở | Quản trị vận hành máy chủ (Fleet Operations) | Nền tảng PaaS triển khai ứng dụng web nhanh | Cổng danh mục sản phẩm CNTT tự phục vụ | Quản trị cấu hình tự động bằng Chef/Puppet |
+| **Định dạng khai báo** | JSON / YAML template tĩnh | TypeScript, Python, Java, C# | HCL (HashiCorp Config Lang) | SSM Documents (JSON/YAML) | Zip source code / Dockerfile | CloudFormation templates | Chef Cookbooks / Puppet manifests |
+| **Giai đoạn vòng đời** | **Day 0 & Day 1 (Provisioning)** | **Day 0 & Day 1 (Provisioning)** | **Day 0 & Day 1 (Provisioning)** | **Day 2 (Operations & Patching)** | Day 1 & Day 2 (App lifecycle) | Day 1 (Self-service provisioning) | Day 1 & Day 2 (Configuration) |
+| **Phạm vi quản lý** | Toàn bộ tài nguyên đám mây AWS | Biên dịch ra CloudFormation template | Đa đám mây (AWS, Azure, GCP) | Hệ điều hành bên trong EC2/On-Prem | Cụm web app (ALB, ASG, EC2, RDS) | Các mẫu CloudFormation được phê duyệt | Cụm máy chủ chuyên dụng (Chef Stacks) |
+| **Truy cập máy chủ** | Không (Chỉ tạo máy) | Không (Chỉ tạo máy) | Không (Chỉ tạo máy) | **Session Manager (Không cần Port 22)** | SSH truyền thống qua key pair | Dựa trên sản phẩm được tạo | SSH / Chef client |
+| **Mô hình tính phí** | **Miễn phí $0.00** (Chỉ trả tiền tài nguyên tạo ra) | Miễn phí (Chỉ trả tiền tài nguyên tạo ra) | Miễn phí tool (trả phí Terraform Cloud) | Đa số tính năng cốt lõi **Miễn phí $0.00** | Miễn phí (Chỉ trả tiền tài nguyên tạo ra) | Miễn phí (Chỉ trả tiền tài nguyên tạo ra) | Không tính phí thêm cho OpsWorks Stacks |
+
+---
+
+## 6. Chiến Lược Tối Ưu Chi Phí & FinOps (Cost Optimization & FinOps)
+
+### 1. Khai Tử Hoàn Toàn Máy Chủ Bastion Host Bằng SSM Session Manager
+* **Mô hình truyền thống (Bastion Host / Jump Box)**:
+  - Phải duy trì ít nhất 2 máy ảo EC2 chạy 24/7 trên 2 AZs để đảm bảo tính sẵn sàng cao.
+  - Tốn chi phí máy chủ EC2, chi phí ổ đĩa EBS, và chi phí Elastic IP.
+  - Phải liên tục vá lỗi OS, quản lý SSH key, và rủi ro bị tấn công Brute-force cổng 22.
+* **Mô hình hiện đại (SSM Session Manager + VPC Endpoints)**:
+  - **Chi phí máy chủ Bastion: \$0** (Loại bỏ hoàn toàn máy chủ Bastion!).
+  - **Chi phí Session Manager: \$0** (Dịch vụ Session Manager hoàn toàn miễn phí).
+  - Chỉ chi trả phí duy trì Interface VPC Endpoints nội bộ trong VPC.
+  - 👉 **Tiết kiệm 100% công sức bảo trì hạ tầng Bastion và triệt tiêu bề mặt tấn công mạng!**
+
+### 2. Tiết Kiệm Tới 70% Chi Phí Non-Production Bằng AWS Instance Scheduler
+* Tự động tắt máy chủ EC2 và cơ sở dữ liệu RDS ngoài giờ làm việc và cuối tuần bằng **AWS Instance Scheduler** (`TD-Set8 Q24`, `CM-PT1 Q16`, `CM-PT5 Q57`).
+* Giờ làm việc tiêu chuẩn: 50 giờ/tuần so với 168 giờ/tuần chạy liên tục 24/7 $\rightarrow$ Tiết kiệm:
+  $$ \text{Tiết kiệm} = \frac{168 - 50}{168} \approx 70.2\% \text{ chi phí tính toán!} $$
+
+### 3. Phân Tầng Bí Mật & Cấu Hình Giữa Parameter Store và Secrets Manager
+* **SSM Parameter Store Standard**: Hoàn toàn **\$0.00 (Miễn phí)** cho tối đa 10,000 tham số/Region (`TD-Set3 Q33`). Thích hợp cho các tham số tĩnh, chuỗi kết nối và token không cần auto-rotate.
+* **AWS Secrets Manager**: Chi phí **\$0.40/secret/tháng** (`CM-PT3 Q43`). Chỉ dùng cho thông tin đăng nhập database cần tính năng tự động xoay vòng định kỳ (Auto-rotation).
+
+---
+
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+
+| Tình huống sự cố | Nguyên nhân khả dĩ | Phương pháp điều tra | Giải pháp xử lý |
+| :--- | :--- | :--- | :--- |
+| **EC2 Instance không hiển thị trong danh sách SSM Managed Instances** | 1. Chưa gắn IAM Role chứa quyền `AmazonSSMManagedInstanceCore`.<br>2. EC2 trong Private Subnet không có đường kết nối mạng tới endpoint SSM qua cổng 443.<br>3. SSM Agent chưa được cài hoặc bị crash. | 1. Kiểm tra IAM Role gắn trên instance.<br>2. Kiểm tra Security Group chiều Outbound có mở port 443 không.<br>3. Xem log file: `/var/log/amazon/ssm/amazon-ssm-agent.log`. | 1. Gắn IAM Instance Profile hợp lệ cho EC2 hoặc bật **DHMC** (`U-PT3 Q47`).<br>2. Tạo 3 **Interface VPC Endpoints** (`ssm`, `ssmmessages`, `ec2messages`) trong cùng VPC hoặc cấu hình route ra NAT Gateway.<br>3. Khởi động lại dịch vụ SSM Agent: `sudo systemctl restart amazon-ssm-agent`. |
+| **CloudFormation bị lỗi `UPDATE_ROLLBACK_FAILED`** | Một tài nguyên trong stack bị thay đổi thủ công bên ngoài hoặc bị kẹt trạng thái không thể xóa/khôi phục khi rollback. | Kiểm tra tab **Events** trên CloudFormation Console để xem tài nguyên cụ thể nào gây ra lỗi. | Sử dụng nút **Continue Update Rollback**, chọn bỏ qua tài nguyên bị kẹt (**Skip Resource**) để đưa Stack trở về trạng thái ổn định, sau đó sửa template và cập nhật lại. |
+| **Lỗi `Export cannot be updated or deleted because it is in use by another stack`** | Stack A xuất ra một giá trị (Export) đang được Stack B tham chiếu thông qua hàm `Fn::ImportValue`. | Tìm kiếm các Stack đang sử dụng giá trị xuất bằng lệnh `aws cloudformation list-imports`. | Bắt buộc phải cập nhật hoặc xóa Stack B trước để gỡ bỏ phụ thuộc tham chiếu, sau đó mới được phép cập nhật hoặc xóa Stack A! |
+| **`cfn-signal` Bị Timeout và Stack Rollback** | Script UserData bị lỗi hoặc không gọi lệnh `cfn-signal -e 0` gửi tín hiệu về CloudFormation trong thời gian `Timeout`. | Đọc log cài đặt phần mềm tại `/var/log/cfn-init.log` và `/var/log/cloud-init-output.log` trên máy chủ EC2. | Sửa lỗi script cài đặt, kiểm tra máy ảo có kết nối Internet/NAT Gateway để tải packages không, và tăng thời gian `Timeout` trong `CreationPolicy` (`TD-Set3 Q27`). |
+| **Lỗi Khai Báo IAM Role Trực Tiếp Cho EC2 Trong CloudFormation** | Gán trực tiếp ARN hoặc tên của `AWS::IAM::Role` vào thuộc tính `IamInstanceProfile` của máy ảo. | Kiểm tra thông báo lỗi validation trên tab Events của Stack. | Khai báo tài nguyên trung gian **`AWS::IAM::InstanceProfile`** và tham chiếu Profile này vào EC2 instance (`CM-PT2 Q46`). |
+
+---
+
+## 8. Tóm Tắt & Danh Mục Tự Kiểm Tra (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của CloudFormation & Systems Manager
+
 1. **IaC là nguồn chân lý duy nhất (Single Source of Truth)**: Luôn quản trị tài nguyên qua CloudFormation template được version control bằng Git; sử dụng **Drift Detection** để bắt mọi hành vi cấu hình lén bên ngoài.
-2. **Luôn đặt `DeletionPolicy: Retain` cho tài nguyên chứa dữ liệu**: Với S3, RDS, DynamoDB trong CloudFormation, luôn khai báo `DeletionPolicy: Retain` để tránh thảm họa mất dữ liệu khi xóa nhầm stack.
+2. **Luôn đặt `DeletionPolicy: Retain` cho tài nguyên chứa dữ liệu**: Với S3, RDS, DynamoDB trong CloudFormation, luôn khai báo `DeletionPolicy: Retain` để tránh thảm họa mất dữ liệu khi xóa nhầm stack (`TD-Set1 Q53`, `CM-PT4 Q64`).
 3. **Khai tử Bastion Host - Thay bằng Session Manager**: Không bao giờ mở cổng SSH 22 ra Internet; luôn truy cập máy chủ bằng Session Manager qua mạng riêng Interface VPC Endpoints.
-4. **Nhớ chính xác tên policy: `AmazonSSMManagedInstanceCore`**: Bất kỳ máy chủ EC2 nào muốn kết nối với Systems Manager đều bắt buộc phải có IAM Role chứa policy này.
+4. **Nhớ chính xác tên policy: `AmazonSSMManagedInstanceCore`**: Bất kỳ máy chủ EC2 nào muốn kết nối với Systems Manager đều bắt buộc phải có IAM Role chứa policy này (`CM-PT4 Q59`), hoặc bật tính năng **DHMC** (`U-PT3 Q47`).
 5. **Secrets Manager để xoay vòng, Parameter Store để lưu cấu hình**: Cần tự động đổi pass DB $\rightarrow$ Secrets Manager. Cần biến môi trường, config app $\rightarrow$ Parameter Store (tiết kiệm chi phí).
 6. **Bộ ba VPC Endpoints cho Private EC2**: Khi EC2 ở private subnet muốn dùng Session Manager mà không có Internet $\rightarrow$ Tạo 3 endpoints: `ssm`, `ssmmessages`, và `ec2messages`.
-7. **StackSets cho tổ chức đa tài khoản**: Khi doanh nghiệp dùng AWS Organizations và muốn triển khai đồng loạt hạ tầng bảo mật sang mọi tài khoản con $\rightarrow$ Chọn CloudFormation StackSets.
+7. **StackSets cho tổ chức đa tài khoản**: Khi doanh nghiệp dùng AWS Organizations và muốn triển khai đồng loạt hạ tầng bảo mật sang mọi tài khoản con $\rightarrow$ Chọn CloudFormation StackSets với `AutoDeployment: Enabled` (`CM-PT2 Q34`, `U-PT4 Q34`).
+
+---
+
+### Danh Mục Kiểm Tra Kiến Thức Trọng Tâm (Learning Checklist)
+
+- [ ] Tôi hiểu rõ sự phân vai giữa CloudFormation (Day 0 & Day 1 IaC) và Systems Manager (Day 2 Fleet Operations).
+- [ ] Tôi nắm vững giải phẫu template CloudFormation và ghi nhớ rằng chỉ duy nhất khối `Resources` là bắt buộc (`TD-Set6 Q32`).
+- [ ] Tôi sử dụng thành thạo các hàm nội tại: `!Ref`, `!GetAtt`, `!Sub`, `!FindInMap`, `!ImportValue`, `!Join`.
+- [ ] Tôi hiểu cách cấu hình `cfn-init`, `cfn-signal` kết hợp `CreationPolicy` để đồng bộ hóa việc cài đặt ứng dụng phức tạp (`TD-Set3 Q27`).
+- [ ] Tôi biết cách dùng thuộc tính `DeletionPolicy: Retain` và `Snapshot` để chống mất dữ liệu khi xóa stack (`TD-Set1 Q53`, `CM-PT4 Q64`).
+- [ ] Tôi nắm vững nguyên lý hoạt động của CloudFormation StackSets và tính năng `AutoDeployment` cho AWS Organizations (`CM-PT2 Q34`, `U-PT4 Q34`).
+- [ ] Tôi hiểu cách khai báo tài nguyên trung gian `AWS::IAM::InstanceProfile` cho EC2 trong CloudFormation (`CM-PT2 Q46`).
+- [ ] Tôi biết cách thiết lập SSM Session Manager với 3 Interface VPC Endpoints (`ssm`, `ssmmessages`, `ec2messages`) để thay thế Bastion Host.
+- [ ] Tôi nắm vững quy trình vá lỗi an toàn không downtime cho máy sau ALB bằng SSM Automation `AWSEC2-PatchLoadBalancerInstance` (`U-PT4 Q02`).
+- [ ] Tôi phân biệt được vai trò của SSM Patch Manager (vá lỗi OS), SSM Run Command (chạy lệnh từ xa), và SSM State Manager (chống trôi cấu hình).
+- [ ] Tôi hiểu cách kích hoạt Systems Manager Default Host Management Configuration (DHMC) để tự động quản lý EC2 không cần tạo role thủ công (`U-PT3 Q47`).
+- [ ] Tôi biết ứng dụng của AWS Service Catalog kết hợp Launch Role để cung cấp danh mục IT tự phục vụ cho Developer (`CM-PT3 Q39`, `CM-PT4 Q03`).
+- [ ] Tôi hiểu cách dùng AWS License Manager với tính năng "Enforce license limit" để ngăn chặn khởi chạy EC2 vi phạm bản quyền (`TD-Set1 Q03`, `TD-Set4 Q57`).
+- [ ] Tôi nắm vững giải pháp AWS Instance Scheduler để tự động bật/tắt EC2/RDS tiết kiệm 70% chi phí ngoài giờ (`TD-Set8 Q24`, `CM-PT1 Q16`).
+- [ ] Tôi hiểu cách dùng AWS AppConfig để quản lý Feature Flags và cập nhật cấu hình động thời gian thực (`CM-PT5 Q17`).
+- [ ] Tôi biết cách sử dụng SSM OpsCenter để quản lý và khắc phục sự cố vận hành tập trung qua OpsItems (`TD-Set4 Q39`).
 
 ---
 
 ### Liên Kết Nội Bộ và Tài Liệu Tham Khảo (Internal Links)
+
 - 📖 [Ghi Chú Bài Học Chương 17: AWS CloudFormation](../Lesson_Notes/30_Other_Services_CloudFormation_SSM.md)
 - 📖 [Tài Liệu Chuyên Sâu: Bảo Mật & Mã Hóa AWS KMS](./KMS_Security_Encryption.md)
 - 📖 [Tài Liệu Chuyên Sâu: Phân Tích & Giám Sát CloudWatch & CloudTrail](./CloudWatch_CloudTrail_Observability.md)
+- 📖 [Tài Liệu Chuyên Sâu: AWS Well-Architected Framework & Quản Lý Chi Phí](./AWS_Well_Architected_Framework.md)
 - 📖 [Cẩm Nang Từ Vựng Giải Mã Đề Thi](../EXAM_VOCABULARY.md)
 - 📖 [Bảng Thuật Ngữ Kỹ Thuật Đám Mây](../GLOSSARY.md)
-

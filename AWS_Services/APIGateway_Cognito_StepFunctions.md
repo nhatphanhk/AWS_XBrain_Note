@@ -159,8 +159,18 @@ classDiagram
 
 ---
 
-
-
+### 2.5. AWS AppSync: Managed Serverless GraphQL & Real-Time Pub/Sub — (TD-Set3 Q16, TD-Set5 Q05, TD-Set5 Q08)
+- **Bản chất dịch vụ**: AWS AppSync là dịch vụ GraphQL phi máy chủ được quản lý hoàn toàn, cho phép gom nhiều nguồn dữ liệu (DynamoDB, Lambda, Aurora, Elasticsearch, HTTP Endpoints) vào một API GraphQL duy nhất.
+- **Ứng dụng di động thời gian thực hàng triệu người dùng (`TD-Set3 Q16`)**:
+  - Hỗ trợ kết nối hai chiều qua WebSocket cho tính năng **GraphQL Subscriptions (Real-time Pub/Sub)**.
+  - Tự động cập nhật bảng xếp hạng bình chọn (leaderboard/voting) hoặc dữ liệu chat cho hàng triệu thiết bị di động mà không cần tự dựng cụm WebSocket servers.
+  - Tích hợp bộ nhớ cache ngoại tuyến (Offline Data Synchronization & Conflict Resolution) trên máy khách qua AWS Amplify SDK.
+- **Tên miền tùy chỉnh và chứng chỉ SSL (`TD-Set5 Q05`)**:
+  - Hỗ trợ cấu hình **Custom Domain Name** gắn với chứng chỉ SSL/TLS từ **AWS Certificate Manager (ACM)** trực tiếp trên AppSync.
+  - Cho phép người dùng kết nối tới tên miền doanh nghiệp như `graphql.example.com` với mã hóa HTTPS/WSS chuẩn.
+- **AppSync Pipeline Resolvers (`TD-Set5 Q08`)**:
+  - Cho phép thực thi một chuỗi các thao tác tuần tự (Functions) trên nhiều nguồn dữ liệu khác nhau trong một truy vấn GraphQL duy nhất.
+  - Ví dụ: Thao tác 1 đọc thông tin từ bảng `Users` DynamoDB $\rightarrow$ Thao tác 2 lấy danh sách bài viết từ bảng `Posts` DynamoDB $\rightarrow$ Thao tác 3 gọi Lambda tính điểm danh tiếng $\rightarrow$ Trả về kết quả tổng hợp trong 1 request duy nhất!
 
 ---
 
@@ -217,22 +227,21 @@ classDiagram
   3. Tạo **API Mapping** liên kết custom domain name với API và Stage tương ứng.
   4. Trong **Amazon Route 53 Hosted Zone**, tạo bản ghi **Alias Record (loại A)** trỏ tên miền `api.mycompany.com` vào địa chỉ **Regional API Gateway Target Domain Name**.
 
-#### 8. Cấp Quyền Tạm Thời Cho Mobile App Truy Cập Trực Tiếp Tài Nguyên Bằng Cognito Identity Pools — (TD-Set8 Q01, TD-Set3 Q16)
-- **Tình huống thi**: Ứng dụng di động bình chọn giọng hát hoặc phân tích web với hàng triệu người dùng toàn cầu. Ứng dụng cần gửi trực tiếp dữ liệu bình chọn hoặc log phân tích vào Amazon Kinesis Data Streams / DynamoDB mà không muốn xây dựng một cụm web server trung gian tốn kém (`TD-Set8 Q01`, `TD-Set3 Q16`).
+#### 8. Cấp Quyền Tạm Thời Cho Mobile App Truy Cập Trực Tiếp Tài Nguyên Bằng Cognito Identity Pools — (TD-Set8 Q01, U-PT6 Q39)
+- **Tình huống thi**: Ứng dụng di động bình chọn giọng hát hoặc phân tích web với hàng triệu người dùng toàn cầu. Ứng dụng cần gửi trực tiếp dữ liệu bình chọn hoặc log phân tích vào Amazon Kinesis Data Streams / DynamoDB mà không muốn xây dựng một cụm web server trung gian tốn kém (`TD-Set8 Q01`, `U-PT6 Q39`).
 - **Giải pháp chuẩn AWS**:
   - Người dùng đăng nhập qua **Cognito User Pools** (hoặc Google/Facebook/Apple/Guest unauthenticated).
   - Ứng dụng gửi JWT ID Token nhận được tới **Amazon Cognito Identity Pools (Federated Identities)**.
   - Identity Pools kiểm tra tính hợp lệ, gọi **AWS STS** để cấp phát bộ **Temporary AWS Credentials** (Access Key, Secret Key, Session Token) gắn với một IAM Role có quyền tối thiểu (`kinesis:PutRecord` hoặc `dynamodb:PutItem`).
   - Mobile App dùng AWS SDK sử dụng credentials tạm thời này để ghi trực tiếp vào Kinesis / DynamoDB, đạt khả năng co giãn không giới hạn với chi phí thấp nhất.
 
-#### 9. Triển Khai Container Web Nhanh Chóng Không Cần Quản Lý Hạ Tầng Bằng AWS App Runner — (TD-Set2 Q55, TD-Set5 Q33)
-- **Tình huống thi**: Doanh nghiệp cần triển khai một ứng dụng web/REST API đóng gói trong container Docker (hoặc từ mã nguồn Python/Node.js trên GitHub). Đội ngũ lập trình viên không có nhiều kinh nghiệm quản trị hạ tầng mạng đám mây, muốn dịch vụ tự động lo việc cân bằng tải, chứng chỉ SSL, tự động scale theo lưu lượng HTTP, mà không cần phải tự cấu hình VPC, subnets, hay quản lý ECS cluster / task definitions phức tạp (`TD-Set2 Q55`, `TD-Set5 Q33`).
-- **Giải pháp chuẩn AWS**:
-  - Triển khai ứng dụng lên **AWS App Runner**.
-  - App Runner là dịch vụ Serverless Container Platform hoàn toàn được quản trị: Tự động trích xuất image từ Amazon ECR, tự động cấp phát Load Balancer, chứng chỉ HTTPS, và co giãn số lượng container instances dựa trên số lượng request đồng thời gửi tới.
-
----
-
+#### 9. Tách Rời Quy Trình Xử Lý Đa Bước Phân Tán: Phân Biệt Step Functions vs Amazon SWF — (TD-Set2 Q13, CM-PT1 Q38, CM-PT3 Q07, CM-PT4 Q59, U-PT6 Q11)
+- **Tình huống thi**: Hệ thống xử lý đơn hàng hoặc quy trình nghiệp vụ kết hợp nhiều bước chạy trên các worker phân tán giữa Cloud (EC2/Lambda) và trung tâm dữ liệu On-Premises. Quy trình có thể kéo dài nhiều tuần và yêu cầu đảm bảo tác vụ chỉ được thực hiện một lần duy nhất. Cần chọn dịch vụ điều phối nào?
+- **Quy tắc phân biệt sống còn**:
+  - **AWS Step Functions**: Giải pháp thế hệ mới (Serverless State Machine), định nghĩa bằng JSON (ASL), trực quan hóa quy trình bằng đồ họa, tự động xử lý timeout và retry. Đây là **lựa chọn mặc định số 1** cho mọi kiến trúc microservices và serverless hiện đại (`CM-PT1 Q38`, `CM-PT4 Q59`, `U-PT6 Q11`).
+  - **Amazon Simple Workflow Service (Amazon SWF)**: Dịch vụ thế hệ cũ (`TD-Set2 Q13`). Chỉ chọn SWF khi đề bài thi đề cập cụ thể:
+    1. Yêu cầu phối hợp các **External Deciders / Activity Workers** phân tán giữa On-Premises và AWS thông qua việc tự viết code decider quản lý luồng điều phối.
+    2. Cùng xuất hiện song song với Amazon SQS trong câu hỏi chọn 2 dịch vụ decoupling cho môi trường Hybrid (`TD-Set2 Q13`).
 
 ---
 
@@ -273,11 +282,20 @@ classDiagram
   - Với **Edge-Optimized API Gateway**: Do lưu lượng được phân phối qua CloudFront toàn cầu, chứng chỉ ACM **BẮT BUỘC PHẢI TẠO TẠI REGION `us-east-1` (N. Virginia)**.
   - Với **Regional API Gateway**: Do endpoint chạy cục bộ trong Region, chứng chỉ ACM **BẮT BUỘC PHẢI TẠO TẠI CÙNG REGION VỚI API GATEWAY** (ví dụ: API ở `us-east-2` thì cert phải ở `us-east-2`). Nếu tạo ở `us-east-1` thì Regional API Gateway sẽ không nhìn thấy chứng chỉ!
 
-#### 🪤 Bẫy 6: AWS App Runner vs ECS/Fargate: Lựa Chọn Đơn Giản Nhất Cho Web Containers — (TD-Set2 Q55, TD-Set5 Q33)
-- **Tình huống đề thi**: *"Doanh nghiệp muốn chạy ứng dụng web container với ít công sức quản trị nhất, không muốn cấu hình VPC, subnets, Load Balancer hay Auto Scaling Group thủ công."*
-- **Phân biệt**:
-  - ❌ *Dùng Amazon ECS với Fargate*: Tuy không cần quản lý EC2, bạn vẫn phải tự thiết kế VPC, Public/Private Subnets, Internet Gateway, Application Load Balancer, Target Groups, ECS Cluster, Task Definitions, và Service Auto Scaling.
-  -  *Dùng AWS App Runner*: AWS tự động quản lý toàn bộ tầng mạng, load balancing, SSL, và auto-scaling từ zero đến hàng trăm instances. Thích hợp nhất cho web apps và REST APIs tiêu chuẩn.
+#### 🪤 Bẫy 6: Xác Thực Tập Trung Cho ALB Bằng Action `authenticate-cognito` — (U-PT2 Q14)
+- **Tình huống đề thi**: *"Doanh nghiệp có cụm microservices chạy sau Application Load Balancer (ALB). Để bảo vệ các API này, công ty muốn người dùng phải đăng nhập bằng tài khoản doanh nghiệp hoặc mạng xã hội trước khi gửi request. Đội ngũ phát triển đề xuất viết thêm module xác thực JWT trong mã nguồn của từng service backend."*
+- **Các phương án bẫy**:
+  - ❌ *Tự viết logic kiểm tra và giải mã JWT trong từng container/EC2 backend*: Tốn công sức lập trình, trùng lặp mã nguồn và tạo ra nguy cơ bảo mật nếu một service cấu hình sai.
+- **Giải pháp ĐÚNG**: Cấu hình **`authenticate-cognito` Action trên ALB Listener Rules** tích hợp trực tiếp với **Amazon Cognito User Pools** (`U-PT2 Q14`).
+  - ALB tự động chuyển hướng người dùng chưa đăng nhập tới Hosted UI của Cognito để đăng nhập.
+  - Sau khi xác thực thành công, ALB nhận JWT token, xác minh chữ ký mã hóa và chuyển tiếp request an toàn tới target group kèm theo các HTTP headers định danh (`x-amzn-oidc-identity`, `x-amzn-oidc-data`).
+  - Giảm tải 100% công sức lập trình và bảo mật xác thực ở tầng ứng dụng backend.
+
+#### 🪤 Bẫy 7: Mô Hình Tính Phí Pay-Per-Call & API Gateway RESTful vs WebSocket — (TD-Set2 Q02, U-PT1 Q17)
+- **Mô hình tính phí Pay-per-call (`TD-Set2 Q02`)**: API Gateway không tính phí duy trì máy chủ hay phí theo giờ. Bạn chỉ trả phí cho đúng số lượng request thực tế gửi tới hệ thống (\$1.00/1M calls cho HTTP API hoặc \$3.50/1M calls cho REST API).
+- **Phân biệt RESTful (Stateless) vs WebSocket (Stateful) (`U-PT1 Q17`)**:
+  - Dùng **REST / HTTP API**: Khi client gửi request và nhận response độc lập (Stateless).
+  - Dùng **WebSocket API**: Khi backend cần chủ động đẩy dữ liệu thời gian thực (Push notification, real-time trading) về client mà không cần client polling liên tục.
 
 ---
 
@@ -288,29 +306,33 @@ classDiagram
 - **Các phương án bẫy**:
   - ❌ *Tạo AWS WAF gắn vào API Gateway*: Hoạt động được nhưng phát sinh thêm chi phí duy trì WebACL và rule evaluation.
   - ❌ *Viết code trong Lambda Authorizer để kiểm tra event.requestContext.identity.sourceIp*: Tốn chi phí thực thi Lambda cho mỗi request bị từ chối và tăng độ trễ.
-- **Giải pháp ĐÚNG**: Cấu hình **API Gateway Resource Policy** (U-PT2 Q24).
-  - Sử dụng điều kiện ws:SourceIp với IpAddress (Allowlist) hoặc NotIpAddress (Denylist) trực tiếp trong Resource Policy của REST API.
+- **Giải pháp ĐÚNG**: Cấu hình **API Gateway Resource Policy** (`U-PT2 Q24`).
+  - Sử dụng điều kiện `aws:SourceIp` với `IpAddress` (Allowlist) hoặc `NotIpAddress` (Denylist) trực tiếp trong Resource Policy của REST API.
   - API Gateway tự động đánh giá và từ chối các request không hợp lệ ngay tại cổng biên mà không tốn chi phí thực thi backend.
 
-#### 🪤 Bẫy 9: Xác Thực Người Dùng Tập Trung Trên Application Load Balancer Với Cognito — (U-PT2 Q14)
-- **Tình huống đề thi**: *"Doanh nghiệp có cụm microservices chạy sau Application Load Balancer (ALB). Để bảo vệ các API này, công ty muốn người dùng phải đăng nhập bằng tài khoản doanh nghiệp hoặc mạng xã hội trước khi gửi request. Đội ngũ phát triển đề xuất viết thêm module xác thực JWT trong mã nguồn của từng service."*
-- **Giải pháp ĐÚNG**: Cấu hình **Authenticate Action trên ALB Listener Rules tích hợp Amazon Cognito User Pools** (U-PT2 Q14).
-  - ALB tự động chuyển hướng người dùng chưa đăng nhập tới Hosted UI của Cognito để xác thực.
-  - Sau khi xác thực thành công, ALB nhận JWT token, xác minh chữ ký và chuyển tiếp request an toàn tới target group kèm theo các HTTP headers chứa thông tin định danh (x-amzn-oidc-identity, x-amzn-oidc-data).
-  - Giảm tải 100% công sức lập trình và bảo mật xác thực ở tầng ứng dụng backend.
-
-#### 🪤 Bẫy 10: Tải Tệp Lên S3 Từ Ứng Dụng Di Động: Cognito Identity Pools vs S3 Presigned URL — (U-PT6 Q39)
+#### 🪤 Bẫy 9: Tải Tệp Lên S3 Từ Ứng Dụng Di Động: Cognito Identity Pools vs S3 Presigned URL — (U-PT6 Q39)
 - **Tình huống đề thi**: *"Ứng dụng di động chia sẻ ảnh có hàng triệu người dùng cần tải ảnh trực tiếp lên Amazon S3. Ứng dụng yêu cầu người dùng phải được phân quyền chi tiết (mỗi người chỉ được ghi vào thư mục riêng của mình s3://bucket/users//*). Giải pháp nào đáp ứng chuẩn bảo mật của AWS?"*
-- **Giải pháp ĐÚNG**: Sử dụng **Amazon Cognito Identity Pools (Federated Identities)** (U-PT6 Q39).
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon Cognito Identity Pools (Federated Identities)** (`U-PT6 Q39`).
   - Sau khi người dùng đăng nhập qua User Pool hoặc mạng xã hội, ứng dụng gửi ID Token tới Identity Pool để nhận **AWS Temporary Security Credentials (IAM STS)**.
-  - IAM Role gán cho authenticated users sử dụng biến thay thế biến ngữ cảnh ${cognito-identity.amazonaws.com:sub} trong Resource ARN.
+  - IAM Role gán cho authenticated users sử dụng biến thay thế biến ngữ cảnh `${cognito-identity.amazonaws.com:sub}` trong Resource ARN.
   - Ứng dụng di động dùng credentials này để gọi trực tiếp AWS SDK tải file lên S3, hoàn toàn không cần server trung gian.
 
-#### 🪤 Bẫy 11: Khi Nào KHÔNG Nên Sử Dụng Amazon Cognito? — (TD-Set1 Q24, TD-Set4 Q02)
+#### 🪤 Bẫy 10: Khi Nào KHÔNG Nên Sử Dụng Amazon Cognito? — (TD-Set1 Q24, TD-Set4 Q02, CM-PT4 Q64)
 - **Các kịch bản đề thi đánh lừa**:
   - ❌ *Giao tiếp Machine-to-Machine nội bộ hoặc giữa các microservices*: Không dùng Cognito User Pools; giải pháp chuẩn là **Mutual TLS (mTLS)** hoặc **AWS IAM Authentication (SigV4)**.
-  - ❌ *Nhân viên nội bộ công ty đã có hệ thống Microsoft Active Directory / Okta*: Không nên tạo mới tài khoản trong Cognito User Pool; giải pháp chuẩn là sử dụng **AWS IAM Identity Center (AWS SSO)** tích hợp qua SAML 2.0 / OIDC.
+  - ❌ *Nhân viên nội bộ công ty đã có hệ thống Microsoft Active Directory / Okta*: Không nên tạo mới tài khoản trong Cognito User Pool; giải pháp chuẩn là sử dụng **AWS IAM Identity Center (AWS SSO)** tích hợp qua SAML 2.0 / OIDC (`TD-Set1 Q24`).
+  - ❌ *Thư mục người dùng On-Premises không hỗ trợ SAML/OIDC*: Sử dụng **Custom Identity Broker + AWS STS (`AssumeRole` hoặc `GetFederationToken`)** để cấp credentials tạm thời (`TD-Set4 Q02`, `CM-PT4 Q64`).
   - ❌ *Ứng dụng chỉ cần bảo vệ API bằng danh sách IP hoặc khóa API đơn giản*: Dùng **API Gateway Resource Policy** hoặc **API Keys / Usage Plans**, không cần dựng cụm Cognito phức tạp.
+
+#### 🪤 Bẫy 11: Giảm Tải Backend Bằng API Gateway Result Caching, Usage Plans & API Keys — (TD-Set1 Q39, TD-Set3 Q04, U-PT3 Q08, U-PT3 Q09)
+- **API Gateway Result Caching (`TD-Set1 Q39`, `TD-Set3 Q04`)**:
+  - Lưu bộ nhớ đệm (Cache) phản hồi của backend theo từng endpoint và phương thức HTTP với TTL tùy chỉnh (mặc định 300s).
+  - Giảm thiểu số lượng cuộc gọi tới Lambda hoặc cơ sở dữ liệu hạ nguồn, tăng tốc độ phản hồi và bảo vệ backend trước các đợt bùng nổ truy cập.
+- **Usage Plans & API Keys (`U-PT3 Q08`)**:
+  - Cho phép phân loại khách hàng B2B theo các gói dịch vụ (Basic, Pro, Enterprise).
+  - Cấu hình hạn mức điều tiết (Throttling: Rate & Burst) và hạn ngạch (Quota: ví dụ 10,000 requests/tháng) gắn riêng cho từng API Key.
+- **HTTP API + Native OIDC/JWT Authorizer (`U-PT3 Q09`)**:
+  - HTTP API xác thực token JWT trực tiếp từ Identity Provider (Auth0, Okta, Cognito) ở cấp độ gateway mà không cần viết Lambda Authorizer tùy chỉnh, tiết kiệm tối đa chi phí và giảm độ trễ.
 
 ---
 
@@ -322,7 +344,7 @@ classDiagram
 | **Xây dựng REST API giá rẻ nhất, chỉ cần xác thực JWT đơn giản** | **API Gateway HTTP API** | REST API (đắt hơn gấp 3 lần, tính năng thừa) | Chuẩn AWS |
 | **Cần bán gói API cho đối tác thứ 3 với giới hạn quota theo khách hàng** | **API Gateway REST API + Usage Plans & API Keys** | HTTP API (không hỗ trợ Usage Plans và API Keys) | Chuẩn AWS |
 | **Bảo vệ REST API khỏi tấn công SQL Injection và XSS** | **AWS WAF gắn vào API Gateway** | AWS Shield (chỉ chống DDoS L3/L4, không chống SQLi/XSS) | TD-Set1 Q16 |
-| **Giới hạn quyền gọi API Gateway theo dải IP công cộng cụ thể** | **API Gateway Resource Policy (ws:SourceIp)** | Dùng AWS WAF (tốn phí) hoặc Lambda Authorizer (tốn compute) | U-PT2 Q24 |
+| **Giới hạn quyền gọi API Gateway theo dải IP công cộng cụ thể** | **API Gateway Resource Policy (aws:SourceIp)** | Dùng AWS WAF (tốn phí) hoặc Lambda Authorizer (tốn compute) | U-PT2 Q24 |
 | **Đăng ký, đăng nhập người dùng, hỗ trợ Adaptive Risk-based MFA** | **Amazon Cognito User Pools** | Cognito Identity Pools (chỉ phân quyền, không lưu user) | TD-Set8 Q01 |
 | **Xác thực người dùng Web/App tại ALB không cần viết code backend** | **ALB Listener Rule Authenticate với Cognito User Pool** | Viết middleware trong backend microservice | U-PT2 Q14 |
 | **Cho phép Mobile App upload file trực tiếp lên S3 không qua server** | **Cognito Identity Pools (Cấp quyền IAM tạm thời)** | Tạo tài khoản IAM cứng trong code app (Lỗ hổng bảo mật nghiêm trọng) | TD-Set8 Q01, TD-Set3 Q16, U-PT6 Q39 |
@@ -378,10 +400,9 @@ sequenceDiagram
     end
 ```
 
----
-
 
 ---
+
 
 
 ## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
@@ -395,10 +416,9 @@ sequenceDiagram
 | **AWS X-Ray** | X-Ray Active Tracing | Phân tích độ trễ xuyên suốt từ API Gateway qua các microservices và hàm Lambda để tìm nút thắt cổ chai (**Bottleneck**). |
 | **Amazon SQS / SNS** | API Gateway Service Direct Integration | Đưa các yêu cầu ghi dữ liệu tải cao vào hàng đợi SQS để san phẳng đỉnh tải (**Load Leveling**) với độ trễ thấp nhất. |
 
----
-
 
 ---
+
 
 
 ## 5. Bảng So Sánh Toàn Diện Các Giải Pháp Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
@@ -450,10 +470,6 @@ sequenceDiagram
 
 ---
 
-
----
-
-
 ## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
 
 | Mã lỗi / Hiện tượng | Nguyên nhân cốt lõi | Các bước điều tra | Giải pháp xử lý triệt để |
@@ -464,10 +480,6 @@ sequenceDiagram
 | **`HTTP 403 Forbidden: Missing Authentication Token`** | 1. Gọi sai URL endpoint hoặc sai phương thức HTTP (ví dụ: route chỉ có POST nhưng client gọi GET).<br>2. API yêu cầu API Key nhưng client không truyền header `x-api-key`. | So sánh chính xác Path và HTTP Method trong URL client gọi với định nghĩa trong API Gateway Console. | 1. Kiểm tra lại routing và URL path.<br>2. Nếu endpoint yêu cầu bảo vệ bằng IAM, client phải ký request bằng SigV4. |
 
 ---
-
-
----
-
 
 ## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
@@ -482,9 +494,22 @@ sequenceDiagram
 
 ---
 
+### Danh Mục Kiểm Tra Nhanh Kiến Thức SAA-C03 (Exam Readiness Checklist)
+- [ ] Phân biệt rõ HTTP APIs (rẻ hơn 71%, siêu trễ thấp, OIDC native) vs REST APIs (API Caching, WAF, Usage Plans, API Keys) vs WebSocket APIs (Stateful 2-way real-time).
+- [ ] Hiểu rõ mô hình tính phí pay-per-call của API Gateway và hard limit 29 giây timeout (`CM-PT1 Q38`).
+- [ ] Nắm vững cách phân quyền truy cập: API Gateway Resource Policy (chặn/mở theo dải IP `aws:SourceIp` - `U-PT2 Q24`) vs Usage Plans + API Keys (`U-PT3 Q08`).
+- [ ] Phân biệt bản chất: Cognito User Pools (quản lý danh bạ, xác thực, cấp phát JWT) vs Cognito Identity Pools (đổi token lấy AWS Temporary Credentials qua STS để truy cập trực tiếp S3/DynamoDB - `U-PT6 Q39`).
+- [ ] Nắm vững tích hợp ALB + Cognito User Pools qua rule action `authenticate-cognito` (`U-PT2 Q14`).
+- [ ] Biết khi nào KHÔNG dùng Cognito: SAML 2.0 / IAM Identity Center cho doanh nghiệp dùng Active Directory (`TD-Set1 Q24`), hoặc Custom Identity Broker + AWS STS khi IdP tại chỗ không hỗ trợ SAML (`TD-Set4 Q02`, `CM-PT4 Q64`).
+- [ ] Hiểu vai trò của AWS AppSync cho ứng dụng di động GraphQL thời gian thực (Subscriptions) kết hợp DynamoDB (`TD-Set3 Q16`, `TD-Set5 Q05`, `TD-Set5 Q08`).
+- [ ] Phân biệt AWS Step Functions (Serverless State Machines, Standard vs Express) vs Amazon SWF (dịch vụ legacy phối hợp worker hybrid - `TD-Set2 Q13`).
+
+---
+
 ### Liên Kết Nội Bộ và Tài Liệu Tham Khảo (Internal Links)
 - 📖 [Ghi Chú Bài Học Chương 19 & 20: Serverless Architecture](../Lesson_Notes/19_20_Serverless_Lambda_APIGW_DynamoDB.md)
 - 📖 [Tài Liệu Chuyên Sâu: AWS Lambda Serverless](./Lambda_Serverless_Architecture.md)
 - 📖 [Tài Liệu Chuyên Sâu: Amazon DynamoDB NoSQL](./DynamoDB_NoSQL_Databases.md)
 - 📖 [Cẩm Nang Từ Vựng Giải Mã Đề Thi](../EXAM_VOCABULARY.md)
 - 📖 [Bảng Thuật Ngữ Kỹ Thuật Đám Mây](../GLOSSARY.md)
+

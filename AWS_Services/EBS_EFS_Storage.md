@@ -273,11 +273,11 @@ flowchart TD
   - Dữ liệu trong Instance Store **KHÔNG được lưu vào AMI**.
   - *Chỉ dùng cho*: Cache, swap, buffer, và dữ liệu tạm thời cần IOPS cực cao và độ trễ cực thấp (`TD-Set6 Q57`).
 
-#### 🪤 Bẫy 4: Quy Trình 4 Bước Bắt Buộc Để Mã Hóa EBS Volume Đang Tồn Tại — (TD-Set6 Q04, U-PT2 Q16)
-- **Quy tắc**: AWS **KHÔNG cho phép bật mã hóa trực tiếp (in-place)** trên một EBS volume đang unencrypted (`TD-Set6 Q04`).
+#### 🪤 Bẫy 4: Quy Trình 4 Bước Bắt Buộc Để Mã Hóa EBS Volume Đang Tồn Tại — (U-PT2 Q16, CM-PT3 Q03)
+- **Quy tắc**: AWS **KHÔNG cho phép bật mã hóa trực tiếp (in-place)** trên một EBS volume đang unencrypted (`U-PT2 Q16`).
 - **Quy trình 4 bước chuẩn xác**:
   1. Chụp **Snapshot** từ volume chưa mã hóa hiện tại.
-  2. **Copy Snapshot** đó và tích hợp bật cờ mã hóa kèm chọn **KMS Key** (`TD-Set6 Q04`).
+  2. **Copy Snapshot** đó và tích chọn bật cờ mã hóa kèm chọn **AWS KMS Key** (`CM-PT3 Q03`).
   3. Tạo **EBS Volume MỚI** từ Encrypted Snapshot vừa copy.
   4. Stop máy chủ EC2 -> Detach volume cũ -> Attach volume mới mã hóa -> Start lại máy chủ.
 
@@ -383,18 +383,77 @@ flowchart TD
   - Tạo chính sách **Snapshot Lifecycle Policy** dựa trên thẻ tài nguyên (**Tag-based Policy**, ví dụ: `Environment = Production`).
   - DLM tự động hóa toàn diện 100%: Lập lịch chụp định kỳ (hàng ngày), áp dụng Retention Rules tự động dọn dẹp sau 30 ngày, kích hoạt Fast Snapshot Restore (FSR), và cấu hình sao chép xuyên Region (Cross-Region Copy) hoàn toàn miễn phí dịch vụ (chỉ trả tiền lưu trữ snapshot EBS).
 
+#### 🪤 Bẫy 18: Bài Toán Chi Phí Lưu Trữ Thực Tế vs Đơn Giá Mỗi GB: S3 Standard vs Amazon EFS vs Amazon EBS — (U-PT1 Q45)
+- **Tình huống đề thi**: *"Blogger công nghệ viết bài đánh giá chi phí lưu trữ trên AWS. Blogger tạo 1 tệp tin thử nghiệm dung lượng 1 GB, sau đó sao chép tệp này vào 3 dịch vụ lưu trữ: (1) S3 Standard; (2) Cấp phát một ổ đĩa Amazon EBS General Purpose SSD dung lượng 100 GB và copy tệp 1 GB vào đó; (3) Amazon EFS Standard Storage filesystem. Cuối tháng, blogger phân tích hóa đơn để so sánh chi phí thực tế phát sinh cho tệp tin này trên cả 3 dịch vụ. Thứ tự chi phí từ thấp đến cao là gì?" (`U-PT1 Q45`)*
+- **Phân tích cạm bẫy kinh điển**:
+  - Nếu xét theo **Đơn giá niêm yết trên mỗi GB lưu trữ (\$/GB/tháng)**:
+    $$\text{S3 Standard } (\sim\$0.023/\text{GB}) < \text{EBS gp3 } (\sim\$0.08/\text{GB}) < \text{EFS Standard } (\sim\$0.30/\text{GB})$$
+  - Nhưng đề bài hỏi **CHI PHÍ THỰC TẾ PHÁT SINH TRÊN HÓA ĐƠN CHO TỆP TIN 1 GB ĐÓ**:
+    - **Amazon S3 Standard**: Tính tiền đúng theo dung lượng thực tế $\rightarrow 1\text{ GB} \times \$0.023 = \mathbf{\$0.023}$.
+    - **Amazon EFS Standard**: Co giãn tự động đàn hồi (Elastic Pay-as-you-go), chỉ tính tiền đúng dung lượng dữ liệu đang lưu $\rightarrow 1\text{ GB} \times \$0.30 = \mathbf{\$0.30}$.
+    - **Amazon EBS**: **Tính tiền trên DUNG LƯỢNG ĐÃ CẤP PHÁT (Provisioned Capacity)** bất kể bạn lưu trữ bao nhiêu dữ liệu bên trong ổ đĩa! Ổ đĩa được cấp phát 100 GB thì hóa đơn sẽ tính đủ 100 GB $\rightarrow 100\text{ GB} \times \$0.08 - \$0.10 = \mathbf{\$8.00 - \$10.00}$!
+- **Giải pháp ĐÚNG (Thứ tự chi phí thực tế trên hóa đơn)**:
+  $$\mathbf{\text{Cost on S3 Standard } (\$0.023) < \text{Cost on Amazon EFS } (\$0.30) < \text{Cost on Amazon EBS } (\$8.00 - \$10.00)}$$
+
+#### 🪤 Bẫy 19: Chế Độ Hiệu Năng & Thông Lượng Của Amazon EFS: Max I/O vs General Purpose & Provisioned vs Bursting — (TD-Set6 Q46, U-PT2 Q09, U-PT3 Q33)
+- **Performance Modes (Chế độ hiệu năng)**:
+  - **`General Purpose` (Mặc định)**: Tối ưu cho độ trễ mỗi thao tác đọc/ghi thấp nhất. Khuyến nghị cho hầu hết các ứng dụng thông thường, web serving, CMS, môi trường phát triển phần mềm.
+  - **`Max I/O`**: Thiết kế cho các hệ thống có hàng trăm hoặc hàng ngàn EC2 instances / containers truy cập đồng thời (Big Data analytics, xử lý genomics, media processing song song). Cung cấp tổng IOPS và thông lượng tổng thể cực lớn, chấp nhận độ trễ tính bằng mili-giây cho mỗi thao tác (`TD-Set6 Q46`, `U-PT2 Q09`).
+- **Throughput Modes (Chế độ thông lượng)**:
+  - **`Bursting Throughput` (Mặc định)**: Thông lượng tỷ lệ thuận với dung lượng dữ liệu lưu trong EFS (50 KB/s trên mỗi GiB lưu trữ). Khi dung lượng lưu trữ nhỏ, thông lượng baseline rất thấp; ứng dụng tải nặng sẽ nhanh chóng cạn kiệt Burst Credits dẫn đến nghẽn thắt cổ chai I/O.
+  - **`Provisioned Throughput`**: Cho phép chỉ định cố định một mức thông lượng đọc/ghi mong muốn (từ 1 MB/s đến vài GB/s) **hoàn toàn độc lập với dung lượng lưu trữ đĩa**. Phù hợp tuyệt đối cho workload có dung lượng file lưu trữ nhỏ (hoặc tệp tin bị xóa ngay sau khi xử lý) nhưng đòi hỏi tốc độ đọc/ghi cực nhanh (`TD-Set6 Q46`, `U-PT3 Q33`).
+
+#### 🪤 Bẫy 20: Bật EBS Encryption by Default Cấp Region & Giám Sát Tuân Thủ Bằng AWS Config `encrypted-volumes` — (TD-Set6 Q04, CM-PT3 Q03, CM-PT6 Q06, CM-PT6 Q13, CM-PT6 Q14)
+- **Tình huống đề thi**: *"Doanh nghiệp có nhiều EBS snapshots chưa mã hóa trong Amazon VPC. Kiến trúc sư giải pháp phải đảm bảo toàn bộ các EBS volume MỚI được tạo hoặc khôi phục từ các unencrypted snapshot này đều TỰ ĐỘNG ĐƯỢC MÃ HÓA trên toàn bộ VPC/Region mà không phụ thuộc vào thao tác thủ công." (`TD-Set6 Q04`)*
+- **Giải pháp ĐÚNG**: Kích hoạt tính năng **EBS Encryption by Default** ở cấp độ **AWS Region**.
+  - Khi đã bật tính năng này, bất kỳ volume mới nào được tạo hoặc khôi phục từ snapshot (kể cả snapshot chưa mã hóa) đều được mã hóa tự động bằng KMS Key mặc định hoặc KMS Key tùy chỉnh của bạn.
+  - **Kiểm toán tuân thủ tự động**: Triển khai AWS Config Managed Rule **`encrypted-volumes`** để liên tục rà soát trạng thái mã hóa của mọi volume trong tài khoản (`CM-PT6 Q06`, `CM-PT6 Q13`, `CM-PT6 Q14`).
+
+#### 🪤 Bẫy 21: Tỷ Lệ Giới Hạn 50:1 IOPS/GiB của `io1`/`io2`, Ổ Đĩa Không Thể Làm Boot Volume (`st1`/`sc1`), và Ổ Từ Tính Cũ — (TD-Set4 Q05, TD-Set4 Q31, U-PT1 Q39, U-PT3 Q14)
+- **Tỷ lệ 50:1 IOPS/GiB trên `io1`/`io2`**:
+  - Trên dòng ổ Provisioned IOPS SSD (`io1`/`io2`), số lượng IOPS cấu hình tối đa bị ràng buộc cứng bởi tỷ lệ **50:1 so với dung lượng GiB** (`TD-Set4 Q05`, `U-PT3 Q14`).
+  - *Ví dụ*: Muốn đạt 20,000 IOPS thì kích thước volume tối thiểu phải là $\frac{20,000}{50} = 400\text{ GiB}$. Bạn không thể cấu hình 20,000 IOPS trên ổ 100 GiB. (Trên `io2 Block Express`, tỷ lệ này được nâng lên tới 1,000:1).
+- **Ràng buộc Boot Volume (Root Volume)**:
+  - Các dòng ổ HDD từ tính **`st1` (Throughput Optimized HDD)** và **`sc1` (Cold HDD)** **HOÀN TOÀN KHÔNG HỖ TRỢ LÀM Ổ BOOT (Root Volume)** cho EC2 (`U-PT1 Q39`).
+  - Chỉ có các dòng SSD (`gp2`, `gp3`, `io1`, `io2`) và dòng ổ Magnetic thế hệ cũ (**`standard`** - `TD-Set4 Q31`) mới có thể được chọn làm Boot Volume.
+
+#### 🪤 Bẫy 22: Khi Nào Ưu Tiên EC2 Instance Store Thay Vì EBS & Vòng Đời Dữ Liệu Khi Reboot vs Stop — (TD-Set3 Q31, TD-Set4 Q25, TD-Set4 Q27, U-PT1 Q26, U-PT4 Q27, U-PT4 Q45)
+- **So sánh kiến trúc phần cứng**:
+  - **Amazon EBS**: Là ổ đĩa ảo hóa kết nối qua mạng nội bộ AWS Nitro Hypervisor.
+  - **EC2 Instance Store**: Là ổ cứng thể rắn **NVMe SSD vật lý gắn trực tiếp vào bo mạch chủ** của máy chủ vật lý đang chạy EC2 instance. Cung cấp hàng triệu IOPS và microsecond latency, hoàn toàn không bị trễ mạng.
+- **Quy tắc bảo toàn dữ liệu sống còn trong đề thi**:
+  - Khi máy ảo EC2 thực hiện **Reboot OS**: Dữ liệu trên EC2 Instance Store **VẪN ĐƯỢC BẢO TOÀN NGUYÊN VẸN** (`TD-Set4 Q27`, `U-PT4 Q45`)!
+  - Khi máy ảo bị **Stop, Terminate, hoặc phần cứng máy chủ vật lý gặp sự cố hư hỏng**: Dữ liệu trên Instance Store **BỊ XÓA VĨNH VIỄN KHÔNG THỂ PHỤC HỒI**.
+- **Trường hợp sử dụng chuẩn**: Dùng làm cache bộ nhớ đệm tạm thời, buffer swap, hoặc lưu trữ cho các cụm CSDL phân tán có sẵn cơ chế tự sao chép dữ liệu giữa các node (như Apache Cassandra, Elasticsearch, Hadoop HDFS, MongoDB replica set) (`TD-Set3 Q31`, `U-PT1 Q26`).
+
+#### 🪤 Bẫy 23: Hoạt Động I/O Trong Lúc Chụp Snapshot, Giữ Ổ Root Bằng `DeleteOnTermination = False`, và AWS Compute Optimizer — (TD-Set5 Q24, TD-Set3 Q62, CM-PT3 Q23)
+- **I/O trong lúc chụp EBS Snapshot**: Khi bạn tạo Snapshot từ một volume đang hoạt động, **ổ đĩa vẫn tiếp tục phục vụ các tác vụ đọc/ghi bình thường mà không bị gián đoạn** (`TD-Set5 Q24`). Snapshot là cơ chế Point-in-time copy-on-write, chỉ chụp các khối dữ liệu tại thời điểm bấm lệnh chụp.
+- **Giữ lại Root Volume khi xóa EC2**: Mặc định, Root Volume sẽ tự động bị xóa khi instance bị terminate (`DeleteOnTermination = true`). Muốn giữ lại Root Volume sau khi xóa instance, phải đặt thuộc tính block device mapping `DeleteOnTermination = false` (`TD-Set3 Q62`).
+- **AWS Compute Optimizer cho EBS**: Tự động phân tích các số liệu CloudWatch metrics (IOPS, Throughput, Volume Size) để đưa ra khuyến nghị tối ưu chi phí (ví dụ đổi từ gp2 sang gp3 hoặc hạ bớt IOPS đã provision thừa) (`CM-PT3 Q23`).
+
+#### 🪤 Bẫy 24: Mount EFS Xuyên Region Qua Inter-Region VPC Peering & EFS File System Policy — (U-PT1 Q25, CM-PT4 Q25)
+- **Mount EFS xuyên Region**: Amazon EFS hỗ trợ kết nối từ các VPC ở Region khác thông qua **Inter-Region VPC Peering** hoặc **AWS Transit Gateway** (`CM-PT4 Q25`). Máy ảo EC2 ở Region B có thể mount EFS ở Region A thông qua DNS name hoặc Mount Target IP.
+- **EFS File System Policy**: Áp dụng chính sách cấp file system policy để quản lý quyền truy cập cấp IAM Principal, kết hợp điều kiện `"aws:SecureTransport": "true"` để bắt buộc mã hóa in-transit (TLS 1.2+).
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Lưu Trữ Khối & Tệp Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Tham chiếu đề thi |
 |:---|:---|:---|:---|
+| **So sánh chi phí thực tế lưu 1 file 1 GB trên S3, EFS, và EBS 100 GB** | **S3 Standard (\$0.023) < Amazon EFS (\$0.30) < Amazon EBS (\$8-\$10)** | S3 < EBS < EFS (sai vì EBS tính tiền cả 100 GB cấp phát) | `U-PT1 Q45` |
 | **Cưỡng chế POSIX UID/GID và thư mục gốc cho Lambda/Fargate EFS** | **Amazon EFS Access Points (+ IAM Client Auth)** | Mount EFS trực tiếp không Access Point (lỗi quyền root-squash) | `U-PT1 Q14`, `U-PT1 Q29` |
 | **Tự động chụp, lưu trữ 30 ngày và xóa snapshot EBS theo Tag** | **Amazon Data Lifecycle Manager (DLM)** | Viết script Lambda định kỳ (tốn công bảo trì code) | `CM-PT1 Q65` |
 | **Cụm EC2 ASG cần chia sẻ tệp tin tải lên xuyên nhiều AZ** | **Amazon EFS (POSIX NFSv4)** | Amazon EBS (EBS bị khóa trong 1 AZ duy nhất) | `TD-Set1 Q07` |
 | **Gắn 1 ổ đĩa block storage vào nhiều EC2 cùng lúc** | **EBS Multi-Attach (`io1`/`io2`, cùng 1 AZ)** | `gp3` (không hỗ trợ Multi-Attach) | `TD-Set1 Q10` |
 | **Tự động chuyển tệp EFS ít truy cập sang lớp lưu trữ rẻ** | **EFS Lifecycle Management $\rightarrow$ EFS IA / Archive** | Di chuyển thủ công qua S3 (phải sửa mã nguồn ứng dụng) | `TD-Set4 Q39` |
-| **Mã hóa ổ đĩa EBS đang tồn tại chưa được mã hóa** | **Snapshot $\rightarrow$ Copy Snapshot với KMS $\rightarrow$ Restore New Volume** | Bật mã hóa trực tiếp (AWS cấm bật mã hóa in-place) | `TD-Set6 Q04` |
+| **Tự động mã hóa mọi EBS volume mới và restore từ snapshot** | **Bật EBS Encryption by Default cấp AWS Region** | Cấu hình mã hóa thủ công từng volume lẻ tẻ | `TD-Set6 Q04` |
+| **Mã hóa ổ đĩa EBS đang tồn tại chưa được mã hóa** | **Snapshot $\rightarrow$ Copy Snapshot với KMS $\rightarrow$ Restore New Volume** | Bật mã hóa trực tiếp (AWS cấm bật mã hóa in-place) | `U-PT2 Q16`, `CM-PT3 Q03` |
+| **Kiểm toán tuân thủ tự động trạng thái mã hóa volume** | **AWS Config Managed Rule `encrypted-volumes`** | Quét CloudWatch metrics thủ công | `CM-PT6 Q06`, `CM-PT6 Q13` |
+| **EFS cần băng thông lớn đọc/ghi dù dung lượng lưu trữ nhỏ** | **EFS Provisioned Throughput (MB/s độc lập với size)** | EFS Bursting Throughput (dung lượng nhỏ băng thông bị nghẽn) | `TD-Set6 Q46`, `U-PT3 Q33` |
+| **EFS cho hàng ngàn container truy cập song song tổng IOPS lớn** | **EFS Performance Mode = Max I/O** | General Purpose (bị giới hạn tổng IOPS cho scale lớn) | `TD-Set6 Q46`, `U-PT2 Q09` |
+| **Dữ liệu Instance Store sau khi thực hiện Reboot OS** | **Dữ liệu vẫn được giữ nguyên vẹn** | Dữ liệu bị xóa mất (sai: chỉ mất khi Stop/Terminate) | `TD-Set4 Q27`, `U-PT4 Q45` |
+| **Các dòng ổ đĩa KHÔNG THỂ dùng làm Boot Volume (Root Volume)** | **Amazon EBS `st1` và `sc1` (HDD từ tính)** | gp2/gp3/io1/io2/standard (đều làm boot volume được) | `U-PT1 Q39` |
 | **Xử lý Big Data / Logs tuần tự cần băng thông 500 MB/s rẻ nhất** | **Amazon EBS `st1` (Throughput Optimized HDD)** | `sc1` (bị giới hạn 250 MB/s), `gp3` (đắt hơn HDD) | `TD-Set2 Q40` |
 | **Workload thừa IOPS trên io2 cần cắt giảm chi phí không downtime** | **EBS Elastic Volumes chuyển từ `io2` sang `gp3`** | Tạo đĩa mới rồi tắt máy copy file (gây downtime lâu) | `TD-Set8 Q03` |
 | **Cần IOPS cao (12,000 IOPS) nhưng dung lượng nhỏ (200 GB)** | **Amazon EBS `gp3` (cấu hình IOPS độc lập với size)** | `gp2` (bắt buộc phải mua 4TB đĩa để đạt 12,000 IOPS) | `TD-Set5 Q04` |
@@ -404,13 +463,11 @@ flowchart TD
 | **Cơ sở dữ liệu tự quản cần IOPS cực lớn bền vững** | **Amazon EBS Provisioned IOPS SSD (`io1`/`io2`)** | `gp2` (bị burst credits giới hạn), `st1` (HDD trễ cao) | `U-PT4 Q46` |
 | **Tải tệp SFTP vào thư mục chia sẻ Linux đa vùng + DR** | **AWS Transfer Family (SFTP) + Amazon EFS + AWS Backup** | Dùng EBS (không chia sẻ được đa AZ) | `U-PT4 Q40`, `Q54` |
 | **Phạm vi bảo vệ của EBS Encryption với KMS** | **Mã hóa Data at-rest, in-transit, snapshot & volume con** | Chỉ mã hóa data at-rest | `U-PT4 Q09` |
-| **Hệ thống tệp Windows SMB, tích hợp Active Directory** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ giao thức Linux NFS) | Chuẩn AWS |
+| **Giữ lại Root Volume sau khi máy ảo EC2 bị Terminate** | **Cấu hình thuộc tính `DeleteOnTermination = false`** | Để mặc định true (máy bị xóa volume mất theo) | `TD-Set3 Q62` |
+| **Mount hệ thống tệp EFS từ VPC ở Region khác** | **Inter-Region VPC Peering + Mount Target IP/DNS** | Không thể mount xuyên Region (sai: EFS hỗ trợ qua peering) | `CM-PT4 Q25` |
 | **Tính toán HPC, Machine Learning, kết nối trực tiếp S3** | **Amazon FSx for Lustre** | Amazon EFS (thông lượng song song thấp hơn Lustre) | `TD-Set6 Q42` |
 | **Cơ sở dữ liệu Oracle/SAP cực lớn cần > 100,000 IOPS** | **Amazon EBS `io2 Block Express` (lên tới 256,000 IOPS)** | `gp3` (giới hạn tối đa 16,000 IOPS) | `TD-Set8 Q03` |
-| **Tự động chụp và dọn dẹp snapshot EBS định kỳ theo lịch** | **Amazon Data Lifecycle Manager (DLM)** | Viết Lambda cron script thủ công (tốn công duy trì) | Chuẩn AWS |
 | **Khóa chống xóa snapshot đáp ứng tuân thủ pháp lý kể cả Root** | **Amazon EBS Snapshot Lock (Compliance Mode)** | IAM Policy Deny (Root vẫn có thể xóa hoặc sửa) | `CM-PT6 Q20` |
-
----
 
 ---
 
@@ -593,8 +650,6 @@ flowchart TD
 
 ---
 
----
-
 ## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Lưu Trữ Đám Mây (Golden Rules)
@@ -614,6 +669,28 @@ flowchart TD
    Luôn kích hoạt chuyển tầng tự động sang **EFS Infrequent Access (IA)** sau 30 ngày để cắt giảm tới 91% chi phí lưu trữ tệp tin.
 7. **Điều kiện của EBS Multi-Attach**:  
    Chỉ hỗ trợ trên dòng **`io1` / `io2 Block Express`** trong cùng 1 AZ và ứng dụng bắt buộc phải dùng **Cluster-aware File System** để điều phối ghi đĩa.
+
+---
+
+### Danh Mục Kiểm Tra Kiến Thức Cốt Lõi (Learning Checklist)
+- [ ] Phân biệt rõ sự khác nhau giữa EBS (Block Storage, 1 AZ), EFS (File Storage, POSIX NFSv4, Multi-AZ), và EC2 Instance Store (Physical NVMe SSD cục bộ, Ephemeral).
+- [ ] Nắm vững bài toán chi phí lưu trữ thực tế (`U-PT1 Q45`): S3 Standard (\$0.023) < EFS (\$0.30) < EBS (\$8-\$10 cho ổ 100 GB đã cấp phát).
+- [ ] Phân biệt các loại ổ EBS SSD: `gp3` (3,000 IOPS / 125 MB/s miễn phí, tách biệt IOPS và dung lượng) vs `gp2` (burst credits) vs `io1`/`io2` (50:1 IOPS/GiB ratio, lên tới 64,000 IOPS) vs `io2 Block Express` (256,000 IOPS).
+- [ ] Phân biệt các loại ổ EBS HDD: `st1` (Throughput Optimized, 500 MB/s, log/big data tuần tự) vs `sc1` (Cold HDD, 250 MB/s, rẻ nhất).
+- [ ] Ghi nhớ quy tắc Boot Volume: `st1` và `sc1` TUYỆT ĐỐI KHÔNG làm được ổ boot cho EC2 (`U-PT1 Q39`).
+- [ ] Nắm vững điều kiện EBS Multi-Attach: Chỉ hỗ trợ trên `io1`/`io2` và bắt buộc các EC2 phải ở CÙNG MỘT Availability Zone (`TD-Set1 Q10`).
+- [ ] Hiểu rõ tính năng EBS Encryption by Default cấp AWS Region (`TD-Set6 Q04`) và giám sát bằng AWS Config rule `encrypted-volumes`.
+- [ ] Nắm vững quy trình 4 bước mã hóa EBS volume chưa mã hóa: Snapshot -> Copy Snapshot với KMS Key -> Create Volume mới -> Attach.
+- [ ] Hiểu cơ chế hoạt động I/O khi chụp snapshot: Ổ đĩa vẫn đọc/ghi bình thường (Point-in-time Copy-on-Write) (`TD-Set5 Q24`).
+- [ ] Nắm vững EBS Fast Snapshot Restore (FSR) để loại bỏ hiện tượng trễ khởi đầu (Lazy-loading penalty) khi khôi phục volume từ snapshot.
+- [ ] Nắm vững AWS Recycle Bin (Retention Rules) để bảo vệ snapshot và AMI chống bị xóa nhầm trong 1 đến 365 ngày.
+- [ ] Hiểu rõ tính năng EBS Snapshot Lock (Compliance Mode vs Governance Mode) bảo vệ bản chụp WORM bất biến.
+- [ ] Nắm vững tự động hóa bản chụp bằng Amazon Data Lifecycle Manager (DLM) theo thẻ tài nguyên (Tags).
+- [ ] Nắm vững 2 chế độ hiệu năng EFS: `General Purpose` (độ trễ thấp) vs `Max I/O` (hàng ngàn client song song, Big Data).
+- [ ] Nắm vững 2 chế độ thông lượng EFS: `Bursting Throughput` (tỷ lệ thuận size) vs `Provisioned Throughput` (MB/s cố định độc lập với size dung lượng lưu trữ).
+- [ ] Hiểu rõ EFS Access Points (cưỡng chế POSIX UID/GID và root directory path cho Lambda/Fargate) và EFS File System Policy.
+- [ ] Nắm vững khả năng mount EFS xuyên Region qua Inter-Region VPC Peering (`CM-PT4 Q25`).
+- [ ] Hiểu rõ vòng đời của Instance Store: Dữ liệu được bảo toàn khi Reboot OS (`TD-Set4 Q27`), nhưng mất sạch khi Stop, Terminate, hoặc hỏng phần cứng máy chủ.
 
 ---
 

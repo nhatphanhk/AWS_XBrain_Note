@@ -32,7 +32,7 @@ flowchart TD
 
     Dim1 --> O1[AWS Owned Keys\nMiễn phí, Ẩn trong console, SSE-S3]
     Dim1 --> O2[AWS Managed Keys\naws/service, Miễn phí, Xoay vòng 1 năm]
-    Dim1 --> O3[Customer Managed Keys - CMK\n$1/tháng, Toàn quyền Key Policy & Xoay vòng 90-2560 ngày]
+    Dim1 --> O3[Customer Managed Keys - CMK\n\$1/tháng, Toàn quyền Key Policy & Xoay vòng 90-2560 ngày]
 
     Dim2 --> C1[Symmetric Keys\nAES-256 GCM, Envelope Encryption]
     Dim2 --> C2[Asymmetric Keys\nRSA & ECC, Cặp Public/Private, Ký số]
@@ -50,8 +50,9 @@ flowchart TD
 #### A. 4 Chiều Phân Loại Chi Tiết
 1. **Theo quyền quản trị**:
    - **AWS Owned Keys**: Thuộc hạ tầng nội bộ của AWS, hoàn toàn ẩn trong KMS Console, không ghi log riêng vào CloudTrail, miễn phí hoàn toàn (ví dụ: mã hóa mặc định SSE-S3).
-   - **AWS Managed Keys**: Do AWS tự tạo trong tài khoản người dùng (`aws/s3`, `aws/ebs`, `aws/rds`). Hiển thị trên console, ghi log CloudTrail, nhưng người dùng **không thể sửa Key Policy, không thể chia sẻ xuyên tài khoản, không thể xóa thủ công**, và chu kỳ xoay vòng khóa cố định mỗi **1 năm (365 ngày)**.
-   - **Customer Managed Keys (CMK)**: Khóa do người dùng tự tạo, toàn quyền kiểm soát qua **KMS Key Policy**, hỗ trợ phân quyền ủy nhiệm tạm thời (**KMS Grants**), chia sẻ xuyên tài khoản (**Cross-Account**), tùy biến tự động xoay vòng linh hoạt (**90 đến 2560 ngày**), bắt buộc thời gian ân hạn xóa an toàn (**Schedule Key Deletion từ 7 đến 30 ngày**). Chi phí: **$1.00/key/tháng**.
+   - **AWS Managed Keys**: Do AWS tự tạo trong tài khoản người dùng (`aws/s3`, `aws/ebs`, `aws/rds`). Hiển thị trên console, ghi log CloudTrail, nhưng người dùng **không thể sửa Key Policy, không thể chia sẻ xuyên tài khoản, không thể xóa thủ công**, và chu kỳ xoay vòng khóa cố định tự động mỗi **1 năm (365 ngày)**.
+   - **Customer Managed Keys (CMK)**: Khóa do người dùng tự tạo, toàn quyền kiểm soát qua **KMS Key Policy**, hỗ trợ phân quyền ủy nhiệm tạm thời (**KMS Grants**), chia sẻ xuyên tài khoản (**Cross-Account**), tùy biến tự động xoay vòng linh hoạt (**90 đến 2560 ngày** - mặc định 365 ngày) hoặc xoay vòng thủ công bằng cách cập nhật **Key Alias** trỏ sang Key ID mới (`CM-PT3 Q65`), bắt buộc thời gian ân hạn xóa an toàn (**Schedule Key Deletion từ 7 đến 30 ngày**). Chi phí: **\$1.00/key/tháng**.
+   - **Imported Key Material (BYOK)**: Khóa nạp từ ngoài vào **KHÔNG hỗ trợ tự động xoay vòng**, bắt buộc người dùng phải tự xoay vòng thủ công bằng Key Alias!
 2. **Theo thuật toán mật mã**:
    - **Symmetric Keys (AES-256 GCM)**: Dùng chung một khóa cho Encrypt và Decrypt. Vật liệu khóa không bao giờ rời khỏi KMS HSM.
    - **Asymmetric Keys (RSA & ECC)**: Cặp Public Key (tải về máy gửi cho client/đối tác bên ngoài không có tài khoản AWS) và Private Key (giữ an toàn trong KMS để giải mã hoặc ký số `kms:Sign`).
@@ -131,10 +132,10 @@ flowchart TD
 ```mermaid
 flowchart TD
     Input[Dữ liệu cấu hình / Thông tin bí mật] --> CheckRotate{Cần tự động xoay vòng mật khẩu\nAuto-rotation cho DB/API?}
-    CheckRotate -- Có --> SM[AWS Secrets Manager\n$0.40/secret/tháng\nTích hợp sẵn Lambda xoay vòng RDS]
+    CheckRotate -- Có --> SM[AWS Secrets Manager\n\$0.40/secret/tháng\nTích hợp sẵn Lambda xoay vòng RDS]
     CheckRotate -- Không --> CheckSize{Dung lượng tham số\nvà chính sách hết hạn?}
-    CheckSize -- <= 4KB, Không cần policy --> SSM_Std[SSM Parameter Store Standard\nHOÀN TOÀN MIỄN PHÍ $0.00\nHỗ trợ SecureString mã hóa KMS]
-    CheckSize -- 4KB - 8KB, Cần báo hết hạn --> SSM_Adv[SSM Parameter Store Advanced\n$0.05/param/tháng\nCó Parameter Expiration Policies]
+    CheckSize -- <= 4KB, Không cần policy --> SSM_Std[SSM Parameter Store Standard\nHOÀN TOÀN MIỄN PHÍ \$0.00\nHỗ trợ SecureString mã hóa KMS]
+    CheckSize -- 4KB - 8KB, Cần báo hết hạn --> SSM_Adv[SSM Parameter Store Advanced\n\$0.05/param/tháng\nCó Parameter Expiration Policies]
 ```
 
 ---
@@ -148,7 +149,7 @@ flowchart TD
     CloudFront --> WAF[AWS WAF\nLọc Layer 7: SQLi, XSS, Rate-Limiting, Bot Control]
     WAF --> Backend[Hạ Tầng Backend: EC2, ECS, Lambda]
 
-    ShieldAdv[AWS Shield Advanced\n$3,000/tháng - Cam kết 1 năm\nHỗ trợ SRT 24/7 & DDoS Cost Protection] -.->|Bảo vệ toàn diện Layer 3/4/7| CloudFront
+    ShieldAdv[AWS Shield Advanced\n\$3,000/tháng - Cam kết 1 năm\nHỗ trợ SRT 24/7 & DDoS Cost Protection] -.->|Bảo vệ toàn diện Layer 3/4/7| CloudFront
 ```
 
 ---
@@ -222,7 +223,7 @@ flowchart LR
 - **Giải pháp chuẩn AWS**:
   - Lưu trữ các biến cấu hình bằng tham số kiểu **`SecureString` trong AWS Systems Manager Parameter Store**, sử dụng **AWS KMS** để mã hóa at-rest.
   - Cập nhật ứng dụng gọi Parameter Store API để lấy cấu hình khi khởi động.
-  - *Phân tích chi phí*: SSM Parameter Store Standard Parameters là **HOÀN TOÀN MIỄN PHÍ ($0.00/tháng)** cho việc lưu trữ tham số (chỉ chịu phí truy vấn KMS rất nhỏ). Trong khi đó, AWS Secrets Manager tính phí **$0.40/secret/tháng** (lưu 100 bí mật tốn $40/tháng), chỉ nên dùng Secrets Manager khi thực sự cần tính năng tự động xoay vòng (Auto-rotation).
+  - *Phân tích chi phí*: SSM Parameter Store Standard Parameters là **HOÀN TOÀN MIỄN PHÍ (\$0.00/tháng)** cho việc lưu trữ tham số (chỉ chịu phí truy vấn KMS rất nhỏ). Trong khi đó, AWS Secrets Manager tính phí **\$0.40/secret/tháng** (lưu 100 bí mật tốn \$40/tháng), chỉ nên dùng Secrets Manager khi thực sự cần tính năng tự động xoay vòng (Auto-rotation).
 
 #### 7. Tự Động Quét Phát Hiện Dữ Liệu Cá Nhân PII Trên S3 Bằng Amazon Macie — (TD-Set1 Q44, TD-Set5 Q44, TD-Set6 Q44)
 - **Tình huống thi**: Đơn vị điều tra dân số hoặc sàn thương mại điện tử tải hàng triệu hồ sơ dữ liệu lên các Amazon S3 buckets. Cần cơ chế tự động liên tục kiểm tra và cảnh báo nếu có dữ liệu định danh cá nhân nhạy cảm (PII: Số CCCD/SSN, số hộ chiếu, số thẻ tín dụng, hồ sơ bệnh án) bị rò rỉ hoặc lưu trữ không an toàn (`TD-Set1 Q44`, `TD-Set5 Q44`, `TD-Set6 Q44`).
@@ -298,7 +299,7 @@ flowchart LR
 #### 🪤 Bẫy 8: AWS KMS vs AWS CloudHSM: Môi Trường Phần Cứng Chuyên Dụng — (TD-Set6 Q47, TD-Set1 Q64)
 - **Tình huống đề thi**: *"Doanh nghiệp xử lý thẻ tín dụng phân vân giữa KMS và CloudHSM. Khi nào bắt buộc phải dùng CloudHSM?"*
 - **Điểm mấu chốt**:
-  - **AWS KMS**: Dịch vụ đa người dùng (**Multi-tenant**), AWS quản lý phần cứng ngầm. Thích hợp cho hầu hết các workload thông thường, chi phí thấp ($1/key/tháng).
+  - **AWS KMS**: Dịch vụ đa người dùng (**Multi-tenant**), AWS quản lý phần cứng ngầm. Thích hợp cho hầu hết các workload thông thường, chi phí thấp (\$1/key/tháng).
   - **AWS CloudHSM**: Thiết bị phần cứng đơn khách hàng (**Single-tenant dedicated hardware appliance**), khách hàng sở hữu độc quyền thông tin đăng nhập HSM (`crypto-user`), tuân thủ chuẩn **FIPS 140-2 Level 3**, hỗ trợ giao thức tiêu chuẩn công nghiệp (PKCS#11, JCE, CNG). Chi phí cao (tính theo giờ phần cứng).
 
 #### 🪤 Bẫy 9: Cơ Chế Chờ Xóa Khóa KMS Để Tránh Mất Mát Dữ Liệu Ngoài Ý Muốn — (TD-Set8 Q05)
@@ -328,6 +329,90 @@ flowchart LR
   3. **Mọi Volume mới** tạo từ các snapshot mã hóa đó đều tự động được mã hóa.
   4. **Data in transit**: Toàn bộ luồng dữ liệu di chuyển giữa máy chủ ảo EC2 và ổ cứng EBS đính kèm đều được mã hóa tự động trên đường truyền mạng nội bộ bởi hypervisor mà không ảnh hưởng tới hiệu năng I/O!
 
+#### 🪤 Bẫy 12: Bẫy Tự Hủy Khóa (Zeroization) Trên AWS CloudHSM — (TD-Set5 Q58)
+- **Tình huống đề thi**: *"Quản trị viên an ninh đăng nhập vào thiết bị phần cứng AWS CloudHSM bằng tài khoản Crypto Officer (CO). Khi nhập sai mật khẩu CO quá số lần quy định, điều gì sẽ xảy ra với thiết bị và vật liệu khóa?"*
+- **Các phương án bẫy**:
+  - ❌ *Khóa tạm thời bị khóa trong 1 giờ và gửi thông báo cảnh báo qua Amazon SNS*: Sai vì HSM vật lý tuân thủ tiêu chuẩn an ninh phần cứng FIPS nghiêm ngặt nhất.
+  - ❌ *AWS Support có thể can thiệp đặt lại mật khẩu master*: CloudHSM là thiết bị Single-tenant, AWS không hề có quyền truy cập root hay mật khẩu của khách hàng.
+- **Giải pháp ĐÚNG**: Cơ chế tự bảo vệ phần cứng **Zeroization (FIPS 140-2 Level 3)** (`TD-Set5 Q58`):
+  - Nếu nhập sai mật khẩu Crypto Officer (CO) **3 lần liên tiếp**, thiết bị CloudHSM sẽ tự động kích hoạt Zeroization: **Xóa sạch vĩnh viễn toàn bộ vật liệu khóa, chứng chỉ và cấu hình trong bộ nhớ HSM** để ngăn chặn tấn công Brute-force!
+  - Do đó, bắt buộc phải có quy trình sao lưu cụm CloudHSM tự động và kiểm soát nghiêm ngặt thông tin đăng nhập CO.
+
+#### 🪤 Bẫy 13: Quy Trình Mã Hóa Cơ Sở Dữ Liệu & Ổ Đĩa Đang Chạy (In-Place Encryption) — (CM-PT2 Q64, U-PT2 Q16)
+- **Tình huống đề thi**: *"Cơ sở dữ liệu Amazon RDS hoặc ổ đĩa EBS volume đang hoạt động ở trạng thái chưa mã hóa (Unencrypted). Ban quản trị yêu cầu kích hoạt mã hóa AWS KMS cho dữ liệu này với thời gian gián đoạn thấp nhất và không làm mất dữ liệu."*
+- **Các phương án bẫy**:
+  - ❌ *Bật tính năng "Enable KMS Encryption" trực tiếp trên RDS console hoặc AWS CLI*: AWS hoàn toàn không hỗ trợ bật mã hóa trực tiếp trên một instance hoặc volume đang ở trạng thái unencrypted!
+- **Giải pháp ĐÚNG**: Quy trình 3 bước chuẩn AWS (`CM-PT2 Q64`, `U-PT2 Q16`):
+  1. Tạo một Snapshot của cơ sở dữ liệu RDS hoặc ổ đĩa EBS chưa mã hóa.
+  2. Sao chép bản Snapshot đó (**Copy Snapshot**), trong quá trình copy tích chọn cờ **Encrypt** và chỉ định khóa **AWS KMS CMK**.
+  3. Khôi phục (**Restore**) cơ sở dữ liệu RDS mới hoặc tạo EBS volume mới từ bản Snapshot đã mã hóa này, sau đó trỏ ứng dụng sang cơ sở dữ liệu mới và xóa tài nguyên cũ.
+
+#### 🪤 Bẫy 14: Chia Sẻ Snapshot Mã Hóa KMS Xuyên Tài Khoản (Cross-Account Snapshot Sharing) — (U-PT2 Q26, CM-PT6 Q05)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn chia sẻ snapshot cơ sở dữ liệu RDS hoặc EBS volume đã mã hóa từ Tài khoản Production sang Tài khoản Development để phân tích dữ liệu."*
+- **Các phương án bẫy**:
+  - ❌ *Chia sẻ trực tiếp snapshot được mã hóa bằng AWS Managed Key (`aws/ebs` hoặc `aws/rds`)*: Snapshot mã hóa bằng khóa mặc định của AWS **KHÔNG THỂ chia sẻ xuyên tài khoản** (`U-PT2 Q26`)!
+- **Giải pháp ĐÚNG**: Quy trình 4 bước bắt buộc (`U-PT2 Q26`, `CM-PT6 Q05`):
+  1. Sao chép Snapshot sang một bản mới được mã hóa bằng **Customer Managed Key (CMK)** tùy chỉnh.
+  2. Cập nhật **KMS Key Policy** của CMK đó để cấp quyền `kms:CreateGrant`, `kms:DescribeKey`, `kms:Decrypt` cho Target Account ID.
+  3. Chia sẻ quyền truy cập Snapshot (Share Snapshot permissions) sang Target Account.
+  4. Tại Target Account, bắt buộc phải sao chép (**Copy Snapshot**) bản snapshot đó về tài khoản của mình bằng CMK riêng của Target Account trước khi khôi phục (`CM-PT6 Q05`).
+
+#### 🪤 Bẫy 15: Quản Trị Tường Lửa Toàn Doanh Nghiệp Với AWS Firewall Manager & Kiểm Toán Bằng AWS Artifact — (TD-Set1 Q16, TD-Set1 Q42, TD-Set8 Q23, U-PT6 Q10)
+- **Tình huống đề thi**: *"Doanh nghiệp quản trị hàng trăm tài khoản AWS trong AWS Organizations. Cần áp dụng đồng bộ các quy tắc AWS WAF, Security Groups, và Network Firewall trên toàn bộ các tài khoản tự động, đồng thời tải các báo cáo kiểm toán bảo mật chuẩn quốc tế (SOC 1/2/3, ISO 27001, PCI-DSS) để cung cấp cho đối tác kiểm toán độc lập."*
+- **Các phương án bẫy**:
+  - ❌ *Cấu hình WAF thủ công trong từng tài khoản con*: Không thể đồng bộ chính sách bảo mật và tốn công quản trị.
+  - ❌ *Gửi ticket xin báo cáo kiểm toán từ AWS Support*: Tốn thời gian chờ đợi trong khi AWS cung cấp cổng tự phục vụ miễn phí.
+- **Giải pháp ĐÚNG**:
+  - Quản trị bảo mật mạng tập trung: Sử dụng **AWS Firewall Manager** (`TD-Set1 Q16`, `U-PT6 Q10`) kết hợp AWS Organizations để tự động áp dụng WAF WebACL, Shield Advanced, Network Firewall cho mọi tài khoản thành viên mới tạo ra.
+  - Tải chứng nhận tuân thủ: Truy cập **AWS Artifact** (`TD-Set1 Q42`, `TD-Set8 Q23`) để tải trực tiếp các báo cáo kiểm toán SOC, chứng nhận ISO, PCI-DSS và ký thỏa thuận bảo mật HIPAA BAA miễn phí.
+
+#### 🪤 Bẫy 16: Quản Trị Tư Thế An Ninh Với AWS Security Hub & Hồ Dữ Liệu An Ninh Amazon Security Lake — (CM-PT4 Q38, U-PT2 Q34)
+- **Tình huống đề thi**: *"Doanh nghiệp cần một bảng điều khiển trung tâm tổng hợp mọi phát hiện an ninh từ GuardDuty, Inspector, Macie, IAM Access Analyzer, và chuẩn hóa toàn bộ log an ninh đa tài khoản theo định dạng mở để phân tích bằng công cụ SIEM của bên thứ 3."*
+- **Giải pháp ĐÚNG**:
+  - **AWS Security Hub** (`CM-PT4 Q38`): Đóng vai trò Single-pane-of-glass tổng hợp các cảnh báo an ninh, chấm điểm tuân thủ (Security Score) theo chuẩn CIS AWS Foundations Benchmark, PCI-DSS, NIST từ tất cả các tài khoản trong AWS Organizations.
+  - **Amazon Security Lake** (`U-PT2 Q34`): Tự động thu thập log an ninh từ CloudTrail, VPC Flow Logs, Route 53, EKS audit logs và chuyển đổi sang định dạng chuẩn mở **OCSF (Open Cybersecurity Schema Framework)** lưu trên S3 (Parquet) giúp các công cụ SIEM truy vấn nhanh chóng qua Athena.
+
+#### 🪤 Bẫy 17: Lọc Tên Miền FQDN Outbound Bằng AWS Network Firewall vs Gateway Load Balancer (GWLB) — (TD-Set1 Q57, TD-Set2 Q60, TD-Set5 Q27, CM-PT2 Q48)
+- **Tình huống đề thi**: *"Toàn bộ máy chủ EC2 trong VPC private khi truy cập ra ngoài Internet bắt buộc phải bị kiểm soát, chỉ cho phép kết nối tới danh sách tên miền hợp lệ (**Domain FQDN Whitelist**, ví dụ `*.github.com`), cấm kết nối trực tiếp theo IP thô."*
+- **Các phương án bẫy**:
+  - ❌ *Dùng Security Group hoặc Network ACL*: Security Group và NACL chỉ lọc theo IP CIDR và Port, hoàn toàn KHÔNG THỂ lọc theo tên miền FQDN!
+- **Giải pháp ĐÚNG**:
+  - Sử dụng **AWS Network Firewall** (`TD-Set1 Q57`, `TD-Set2 Q60`, `TD-Set5 Q27`): Hỗ trợ tính năng **Stateful Domain List Filtering** giúp kiểm tra và lọc lưu lượng HTTP/HTTPS outbound theo danh sách tên miền FQDN.
+  - Đối chiếu: Nếu doanh nghiệp yêu cầu triển khai thiết bị tường lửa ảo của bên thứ ba (3rd-party Virtual Appliances như Palo Alto, Fortinet) $\rightarrow$ Sử dụng **Gateway Load Balancer (GWLB)** (`CM-PT2 Q48`).
+
+#### 🪤 Bẫy 18: Ma Trận Khóa Lưu Trữ Bất Biến (WORM Matrix): S3 Object Lock, Glacier Vault Lock & EBS Snapshot Lock — (TD-Set4 Q19, CM-PT6 Q20, U-PT6 Q09)
+- **Tình huống đề thi**: *"Đề bài yêu cầu triển khai kiến trúc lưu trữ bất biến (WORM - Write Once, Read Many) cho các đối tượng S3, kho lưu trữ lạnh Glacier và các bản sao lưu EBS snapshot để chống lại các cuộc tấn công mã hóa dữ liệu tống tiền (Ransomware)."*
+- **Ma trận 3 giải pháp WORM chuẩn AWS**:
+  1. **S3 Object Lock** (`TD-Set4 Q19`):
+     - *Governance Mode*: Người dùng có quyền IAM đặc biệt (`s3:BypassGovernanceRetention`) có thể xóa file trước hạn.
+     - *Compliance Mode*: Tuyệt đối không ai (kể cả tài khoản Root hay AWS Support) xóa được file trước khi hết hạn!
+     - *Legal Hold*: Bật/tắt không thời hạn, ngăn chặn xóa tài liệu trong quá trình điều tra pháp lý.
+  2. **S3 Glacier Vault Lock** (`CM-PT6 Q20`): Khóa kho lưu trữ Glacier bằng một Vault Lock Policy bất biến. Sau khi thử nghiệm 24 giờ và hoàn tất lệnh khóa, policy không thể bị chỉnh sửa hay thu hồi bởi bất kỳ ai.
+  3. **EBS Snapshot Lock & Recycle Bin** (`U-PT6 Q09`):
+     - *Recycle Bin*: Giữ các snapshot bị xóa trong thùng rác tối đa 365 ngày để phục hồi khẩn cấp.
+     - *Snapshot Lock*: Khóa bản snapshot ở chế độ Compliance Lock để ngăn chặn ransomware hoặc tài khoản bị xâm nhập xóa các bản snapshot sao lưu.
+
+#### 🪤 Bẫy 19: Thứ Tự Ưu Tiên Quy Tắc AWS WAF & Hỗ Trợ Chống DDoS AWS Shield Advanced SRT — (TD-Set5 Q38, CM-PT5 Q11, U-PT2 Q49, TD-Set1 Q43, CM-PT5 Q48, U-PT3 Q37)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn chặn truy cập từ một quốc gia cụ thể (Geo-match Block) nhưng phải cho phép một số địa chỉ IP của văn phòng đối tác tại quốc gia đó truy cập bình thường."*
+- **Giải pháp ĐÚNG**: Thiết lập thứ tự ưu tiên rule trong AWS WAF:
+  - Rule 1 (Priority 1): **IP Set Allow** (cho phép IP văn phòng đối tác) $\rightarrow$ Action: Allow.
+  - Rule 2 (Priority 2): **Geo-match Rule** (chặn toàn bộ quốc gia đó) $\rightarrow$ Action: Block (`TD-Set5 Q38`, `CM-PT5 Q11`, `U-PT2 Q49`).
+  - Khi đối mặt với tấn công DDoS phức tạp: Kích hoạt **AWS Shield Advanced** để nhận hỗ trợ 24/7 từ **AWS Shield Response Team (SRT)** và chính sách bồi hoàn chi phí tài nguyên tăng vọt do DDoS (**DDoS Cost Protection**) (`TD-Set1 Q43`, `CM-PT5 Q48`, `U-PT3 Q37`).
+
+#### 🪤 Bẫy 20: Bắt Buộc Mã Hóa Dữ Liệu Trên Đường Truyền (Encryption In-Transit) Cho Cơ Sở Dữ Liệu — (TD-Set6 Q38, CM-PT5 Q16, TD-Set1 Q35, TD-Set6 Q65)
+- **Tình huống đề thi**: *"Quy định an ninh bắt buộc toàn bộ kết nối từ ứng dụng đến cơ sở dữ liệu phải được mã hóa bằng TLS/SSL, từ chối mọi kết nối PlainText."*
+- **Giải pháp ĐÚNG**:
+  - Đối với Amazon RDS: Cấu hình tham số DB Parameter Group: **`rds.force_ssl = 1`** (`TD-Set6 Q38`, `CM-PT5 Q16`). RDS sẽ từ chối bất kỳ kết nối client nào không sử dụng SSL/TLS.
+  - Đối với Amazon ElastiCache Redis: Kích hoạt tính năng **In-Transit Encryption** (TLS) khi tạo Replication Group và thiết lập **Redis AUTH Token** để bắt buộc xác thực mật khẩu trên kênh truyền được mã hóa (`TD-Set1 Q35`, `TD-Set6 Q65`).
+
+#### 🪤 Bẫy 21: Mô Hình Multi-Tenant KMS CMK Với Encryption Context & External Key Store (XKS) — (CM-PT5 Q53, CM-PT6 Q50, CM-PT2 Q31)
+- **Tình huống đề thi**: *"Hệ thống SaaS đa người thuê (Multi-tenant) lưu trữ dữ liệu của hàng ngàn khách hàng trên cùng một hạ tầng. Cần phân tách quyền giải mã giữa các tenant bằng AWS KMS mà không cần tạo hàng ngàn khóa CMK tốn kém chi phí."*
+- **Giải pháp ĐÚNG**:
+  - Sử dụng **KMS Encryption Context** kết hợp IAM Policy (`CM-PT5 Q53`):
+    - Encryption Context đóng vai trò như chuỗi dữ liệu xác thực bổ sung (**AAD - Additional Authenticated Data**).
+    - Ứng dụng truyền `{"tenant_id": "cust-1234"}` khi mã hóa. IAM Policy sử dụng condition: `"StringEquals": { "kms:EncryptionContext:tenant_id": "${aws:PrincipalTag/TenantId}" }` để thực thi phân quyền đa người thuê chặt chẽ với duy nhất 1 khóa KMS CMK (`CM-PT5 Q53`).
+  - Đối với quy định chủ quyền dữ liệu bắt buộc vật liệu khóa không bao giờ lưu trữ trên đám mây: Sử dụng **AWS KMS External Key Store (XKS)** kết nối trực tiếp với thiết bị HSM vật lý on-premises của doanh nghiệp (`CM-PT6 Q50`).
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định An Ninh & Mã Hóa Nhanh (Exam Decision Matrix)
@@ -340,8 +425,17 @@ flowchart LR
 | **Tự động tìm kiếm số thẻ tín dụng/PII trong S3** | **Amazon Macie** | AWS IAM Access Analyzer (chỉ phân tích quyền) | `TD-Set1 Q44`, `TD-Set5 Q44`, `TD-Set6 Q44` |
 | **Chống tấn công SQL Injection, XSS, HTTP Flood** | **AWS WAF** (gắn trên ALB/CloudFront) | AWS Shield Standard (chỉ bảo vệ Layer 3/4) | `TD-Set1 Q16` |
 | **Phần cứng FIPS 140-2 Level 3 độc quyền kiểm soát khóa** | **AWS CloudHSM** (hoặc KMS Custom Key Store) | AWS KMS Standard (môi trường Multi-tenant) | `TD-Set1 Q64`, `TD-Set6 Q47` |
-| **Lưu trữ bí mật/mật khẩu rẻ nhất (không cần auto-rotate)** | **SSM Parameter Store (SecureString)** | AWS Secrets Manager ($0.40/secret/tháng đắt đỏ) | `TD-Set3 Q33` |
+| **Nhập sai mật khẩu CO 3 lần trên CloudHSM** | **Zeroization tự động xóa sạch toàn bộ khóa** | Tạm khóa 1 giờ hoặc gửi cảnh báo SNS | `TD-Set5 Q58` |
+| **Lưu trữ bí mật/mật khẩu rẻ nhất (không cần auto-rotate)** | **SSM Parameter Store (SecureString)** | AWS Secrets Manager (\$0.40/secret/tháng đắt đỏ) | `TD-Set3 Q33` |
 | **Tự động xoay vòng mật khẩu DB không gián đoạn** | **AWS Secrets Manager** (kết hợp Lambda) | SSM Parameter Store (không tích hợp xoay vòng tự động) | `TD-Set2 Q10` |
+| **Mã hóa DB RDS / EBS volume đang unencrypted** | **Snapshot $\rightarrow$ Copy Snapshot (Encrypt KMS) $\rightarrow$ Restore** | Bật mã hóa trực tiếp trên RDS/EBS instance | `CM-PT2 Q64`, `U-PT2 Q16` |
+| **Chia sẻ Snapshot mã hóa KMS xuyên tài khoản** | **Mã hóa bằng CMK (không dùng AWS Managed) $\rightarrow$ Share $\rightarrow$ Copy** | Dùng khóa mặc định `aws/ebs` hay `aws/rds` (không thể share) | `U-PT2 Q26`, `CM-PT6 Q05` |
+| **Quản trị WAF/Network Firewall tập trung cho Organizations** | **AWS Firewall Manager** | Cấu hình WAF riêng lẻ trong từng tài khoản con | `TD-Set1 Q16`, `U-PT6 Q10` |
+| **Tải báo cáo kiểm toán bảo mật SOC/ISO/PCI-DSS miễn phí** | **AWS Artifact (Self-service Portal)** | Gửi yêu cầu qua AWS Support | `TD-Set1 Q42`, `TD-Set8 Q23` |
+| **Bảng điều khiển an ninh tập trung chấm điểm tuân thủ** | **AWS Security Hub (CIS / PCI-DSS / NIST)** | CloudWatch Dashboards (chỉ hiển thị metrics thô) | `CM-PT4 Q38` |
+| **Hồ dữ liệu an ninh chuẩn mở OCSF cho SIEM** | **Amazon Security Lake (Parquet trên S3)** | Tự viết script Lambda thu thập log | `U-PT2 Q34` |
+| **Lọc lưu lượng outbound theo tên miền FQDN** | **AWS Network Firewall (Stateful Domain List)** | Security Group / NACL (chỉ lọc được IP và Port) | `TD-Set1 Q57`, `TD-Set2 Q60` |
+| **Triển khai tường lửa ảo bên thứ ba (Palo Alto, Fortinet)** | **Gateway Load Balancer (GWLB)** | Network Load Balancer (không hỗ trợ chuyển tiếp trong suốt) | `CM-PT2 Q48` |
 | **Giấu biến môi trường Lambda khỏi Console Plaintext** | **KMS Encryption Helpers (Customer Managed Key)** | Mã hóa mặc định Lambda (vẫn xem được Plaintext console) | `TD-Set1 Q58` |
 | **Mã hóa S3 CRR xuyên nhiều AWS Regions** | **AWS KMS Multi-Region Key** | Single-Region KMS Key (không giải mã được ở Region khác) | `U-PT4 Q16` |
 | **Khôi phục snapshot chưa mã hóa thành volume mã hóa** | Bật **EBS Encryption by Default** ở cấp Region | Khôi phục trực tiếp (volume sinh ra vẫn unencrypted) | `TD-Set6 Q04` |
@@ -350,10 +444,11 @@ flowchart LR
 | **Cấp chứng chỉ SSL/TLS cho CloudFront Distribution** | **ACM tại Region `us-east-1` (bắt buộc)** | ACM tại các Region khác (CloudFront không nhận) | `TD-Set1 Q19` |
 | **Cắt giảm 99% chi phí API KMS cho S3 SSE-KMS** | **S3 Bucket Keys** | Chuyển sang SSE-S3 (mất quyền kiểm toán CMK) | `U-PT4 Q65` |
 | **Mã hóa toàn diện EBS (at-rest, in-transit, snapshot)** | **Amazon EBS KMS Encryption** | Giải pháp mã hóa ứng dụng tầng OS (phức tạp, chậm) | `U-PT4 Q09` |
-
----
-
----
+| **Chặn một quốc gia nhưng ngoại lệ cho IP văn phòng** | **WAF Priority 1: IP Set Allow $\rightarrow$ Priority 2: Geo Block** | Đặt Geo Block trước IP Set (văn phòng bị chặn) | `TD-Set5 Q38`, `CM-PT5 Q11` |
+| **Hỗ trợ khẩn cấp 24/7 khi bị tấn công DDoS nặng** | **AWS Shield Advanced + Shield Response Team (SRT)** | AWS Shield Standard (không có đội phản ứng và bồi hoàn) | `TD-Set1 Q43`, `CM-PT5 Q48` |
+| **Bắt buộc kết nối RDS qua SSL/TLS** | **`rds.force_ssl = 1` trong DB Parameter Group** | Chỉ cấu hình Security Group (không kiểm tra mã hóa TLS) | `TD-Set6 Q38`, `CM-PT5 Q16` |
+| **Phân tách khách hàng trong SaaS Multi-tenant bằng KMS** | **KMS Encryption Context (`tenant_id`)** | Tạo hàng ngàn khóa CMK riêng biệt (tốn kém chi phí) | `CM-PT5 Q53` |
+| **Khóa mã hóa hoàn toàn nằm ngoài đám mây AWS** | **AWS KMS External Key Store (XKS)** | KMS Multi-Region Key (vật liệu khóa vẫn nằm trong KMS HSM) | `CM-PT6 Q50` |
 
 ---
 
@@ -408,7 +503,7 @@ sequenceDiagram
 | **Tự động xoay vòng** | Tự động xoay vòng khóa KMS (90 - 2560 ngày). | Khách hàng tự lập trình và quản trị vòng đời khóa. | **Tích hợp sẵn gốc (Native)** với Lambda cho RDS/Redshift. | Không hỗ trợ sẵn (Phải tự viết Lambda kích hoạt ngoài). | Hỗ trợ xoay vòng qua Vault Dynamic Secrets engine. |
 | **Quyền kiểm soát vật liệu khóa** | AWS quản lý bên trong HSM; người dùng không trích xuất được Plaintext Key. | **Khách hàng nắm quyền kiểm soát độc quyền**, AWS không thể can thiệp. | AWS quản lý dữ liệu bí mật đã được mã hóa. | AWS quản lý trong hệ thống phân tán. | Khách hàng nắm giữ chìa khóa Unseal Keys. |
 | **Giao thức hỗ trợ** | AWS REST API / AWS SDK / SigV4. | PKCS#11, Java Cryptography Extension (JCE), Microsoft CNG. | AWS REST API / AWS SDK. | AWS REST API / AWS SDK. | Vault HTTP API, HashiCorp CLI, Agent Injector. |
-| **Chi phí tham chiếu** | **$1.00 / key / tháng** + $0.03/10k requests. | **~$1.60/giờ/HSM** (~$1,200/tháng/cụm Multi-AZ 2 nodes). | **$0.40 / secret / tháng** + $0.05/10k requests. | Standard: **$0.00 (Miễn phí)**.<br>Advanced: $0.05/param/tháng. | Cước EC2/EBS hạ tầng tự chạy + phí bản quyền Vault Enterprise. |
+| **Chi phí tham chiếu** | **\$1.00 / key / tháng** + \$0.03/10k requests. | **~\$1.60/giờ/HSM** (~\$1,200/tháng/cụm Multi-AZ 2 nodes). | **\$0.40 / secret / tháng** + \$0.05/10k requests. | Standard: **\$0.00 (Miễn phí)**.<br>Advanced: \$0.05/param/tháng. | Cước EC2/EBS hạ tầng tự chạy + phí bản quyền Vault Enterprise. |
 
 ---
 
@@ -418,13 +513,13 @@ sequenceDiagram
 
 | Thành phần Dịch Vụ | Đơn giá AWS niêm yết | Cơ chế đo lường | Ghi chú tối ưu hóa chi phí FinOps |
 | :--- | :--- | :--- | :--- |
-| **AWS KMS (AWS Managed)** | **$0.00** | Miễn phí không giới hạn số lượng | Dùng cho tài nguyên nội bộ một tài khoản không cần tùy biến Key Policy. |
-| **AWS KMS (Customer Managed Key)** | **$1.00 / key / tháng** | Tính theo số lượng CMK tạo lập | Xóa hoặc hợp nhất các khóa CMK không sử dụng bằng `ScheduleKeyDeletion`. |
-| **KMS API Requests** | **$0.03 / 10,000 requests** | 20,000 requests đầu tiên mỗi tháng miễn phí | Áp dụng Envelope Encryption và Data Key Caching để giảm 99% cuộc gọi API. |
-| **AWS Secrets Manager** | **$0.40 / secret / tháng** | $0.05 / 10,000 API requests | Chuyển các tham số tĩnh không cần xoay vòng sang SSM Parameter Store Standard ($0.00). |
-| **SSM Parameter Store (Standard)** | **$0.00** | Miễn phí tối đa 10,000 tham số / Region | Lựa chọn số 1 cho cấu hình microservices và token tĩnh (`SecureString`). |
-| **AWS WAF** | **$5.00/WebACL + $1.00/rule/tháng** | $0.60 / 1 triệu requests kiểm tra | Hợp nhất WebACL tại CloudFront Edge thay vì gắn phân tán vào nhiều ALB. |
-| **Amazon Macie** | $0.10/bucket + **$1.00 / GB quét** | Tính phí theo dung lượng file thực tế quét | Dùng File Inclusion/Exclusion tránh quét cạn kiệt các file video, binary nén. |
+| **AWS KMS (AWS Managed)** | **\$0.00** | Miễn phí không giới hạn số lượng | Dùng cho tài nguyên nội bộ một tài khoản không cần tùy biến Key Policy. |
+| **AWS KMS (Customer Managed Key)** | **\$1.00 / key / tháng** | Tính theo số lượng CMK tạo lập | Xóa hoặc hợp nhất các khóa CMK không sử dụng bằng `ScheduleKeyDeletion`. |
+| **KMS API Requests** | **\$0.03 / 10,000 requests** | 20,000 requests đầu tiên mỗi tháng miễn phí | Áp dụng Envelope Encryption và Data Key Caching để giảm 99% cuộc gọi API. |
+| **AWS Secrets Manager** | **\$0.40 / secret / tháng** | \$0.05 / 10,000 API requests | Chuyển các tham số tĩnh không cần xoay vòng sang SSM Parameter Store Standard (\$0.00). |
+| **SSM Parameter Store (Standard)** | **\$0.00** | Miễn phí tối đa 10,000 tham số / Region | Lựa chọn số 1 cho cấu hình microservices và token tĩnh (`SecureString`). |
+| **AWS WAF** | **\$5.00/WebACL + \$1.00/rule/tháng** | \$0.60 / 1 triệu requests kiểm tra | Hợp nhất WebACL tại CloudFront Edge thay vì gắn phân tán vào nhiều ALB. |
+| **Amazon Macie** | \$0.10/bucket + **\$1.00 / GB quét** | Tính phí theo dung lượng file thực tế quét | Dùng File Inclusion/Exclusion tránh quét cạn kiệt các file video, binary nén. |
 
 ---
 
@@ -434,60 +529,60 @@ sequenceDiagram
 - **Bối cảnh**: Kho dữ liệu Big Data trên Amazon S3 chứa 80 triệu tệp tin Parquet mã hóa bằng Customer Managed Key (`SSE-KMS`). Các tác vụ Amazon Athena và AWS EMR định kỳ phân tích dữ liệu, phát sinh **150 triệu lượt truy xuất đối tượng mỗi tháng**.
 - **Tính toán chi phí khi chưa bật Bucket Keys**:
   - Mỗi thao tác đọc/ghi file S3 gửi một API call riêng tới KMS:
-  $$\text{Cost}_{\text{KMS\_Default}} = \left( \frac{150{,}000{,}000}{10{,}000} \right) \times \$0.03 = \$450/\text{tháng}$$
+  $$ \text{Cost}_{\text{KMS\_Default}} = \left( \frac{150{,}000{,}000}{10{,}000} \right) \times \$0.03 = \$450/\text{tháng} $$
 - **Giải pháp tối ưu**:
   - Kích hoạt tính năng **S3 Bucket Keys** trên thuộc tính mã hóa của S3 Bucket:
   - S3 sinh ra một khóa tạm thời cấp bucket trong hạ tầng lưu trữ S3, các thao tác đọc/ghi tái sử dụng khóa này cục bộ, cắt giảm 99% số cuộc gọi API lên KMS:
-  $$\text{Cost}_{\text{KMS\_Optimized}} = \left( \frac{1{,}500{,}000}{10{,}000} \right) \times \$0.03 = \$4.50/\text{tháng}$$
+  $$ \text{Cost}_{\text{KMS\_Optimized}} = \left( \frac{1{,}500{,}000}{10{,}000} \right) \times \$0.03 = \$4.50/\text{tháng} $$
 - **Hiệu quả kinh tế**:
-  $$\text{Tiết kiệm} = \$450 - \$4.50 = \$445.50/\text{tháng} \quad (\$5{,}346/\text{năm}) \implies \text{Tiết kiệm } 99\% \text{ chi phí KMS}$$
+  $$ \text{Tiết kiệm} = \$450 - \$4.50 = \$445.50/\text{tháng} \quad (\$5{,}346/\text{năm}) \implies \text{Tiết kiệm } 99\% \text{ chi phí KMS} $$
 
 #### Kịch bản 2: Áp dụng Envelope Encryption với Data Key Caching trong Microservices
 - **Bối cảnh**: Ứng dụng thanh toán xử lý 90 triệu giao dịch/tháng. Đội ngũ phát triển gọi trực tiếp lệnh `kms:Encrypt` cho từng bản ghi thông tin thẻ khách hàng.
 - **Tính toán chi phí ban đầu**:
-  $$\text{Cost}_{\text{Direct\_KMS}} = \left( \frac{90{,}000{,}000}{10{,}000} \right) \times \$0.03 = \$270/\text{tháng}$$
+  $$ \text{Cost}_{\text{Direct\_KMS}} = \left( \frac{90{,}000{,}000}{10{,}000} \right) \times \$0.03 = \$270/\text{tháng} $$
   *Nguy cơ nghiêm trọng*: Thêm 30ms độ trễ mạng HTTPS trên mỗi giao dịch và nguy cơ chạm hạn mức KMS API Request Quota (lỗi HTTP 429 Throttling).
 - **Giải pháp tối ưu**:
   - Tích hợp **AWS Encryption SDK** với **Cryptographic Materials Cache (Data Key Caching)** có thời gian sống TTL = 300 giây (hoặc 1,000 bản ghi/key).
   - Số cuộc gọi KMS API thực tế giảm xuống chỉ còn 30,000 cuộc gọi/tháng:
-  $$\text{Cost}_{\text{Cached\_KMS}} = \left( \frac{30{,}000}{10{,}000} \right) \times \$0.03 = \$0.09/\text{tháng}$$
+  $$ \text{Cost}_{\text{Cached\_KMS}} = \left( \frac{30{,}000}{10{,}000} \right) \times \$0.03 = \$0.09/\text{tháng} $$
 - **Hiệu quả kinh tế**:
-  $$\text{Tiết kiệm} = \$270 - \$0.09 \approx \$269.91/\text{tháng} \quad (\$3{,}238/\text{năm}) \implies \text{Tiết kiệm } 99.96\% \text{ chi phí API}$$
+  $$ \text{Tiết kiệm} = \$270 - \$0.09 \approx \$269.91/\text{tháng} \quad (\$3{,}238/\text{năm}) \implies \text{Tiết kiệm } 99.96\% \text{ chi phí API} $$
 
 #### Kịch bản 3: Phân tầng bí mật giữa Secrets Manager và SSM Parameter Store
 - **Bối cảnh**: Hệ thống microservices quản lý 600 tham số và thông tin đăng nhập. Kỹ sư lưu trữ toàn bộ 600 mục này trong AWS Secrets Manager.
 - **Tính toán chi phí ban đầu**:
-  $$\text{Cost}_{\text{Initial}} = 600 \times \$0.40 = \$240/\text{tháng} \quad (\$2{,}880/\text{năm})$$
+  $$ \text{Cost}_{\text{Initial}} = 600 \times \$0.40 = \$240/\text{tháng} \quad (\$2{,}880/\text{năm}) $$
 - **Giải pháp tối ưu**:
   - Phân loại: Chỉ giữ lại 30 thông tin đăng nhập cơ sở dữ liệu (RDS/Aurora) trên Secrets Manager để tận dụng tính năng **Auto-rotation**.
   - Chuyển 570 tham số cấu hình và API tokens tĩnh còn lại sang **SSM Parameter Store Standard** dưới định dạng `SecureString` (mã hóa KMS miễn phí phí lưu trữ):
-  $$\text{Cost}_{\text{New}} = (30 \times \$0.40) + (570 \times \$0.00) = \$12/\text{tháng}$$
+  $$ \text{Cost}_{\text{New}} = (30 \times \$0.40) + (570 \times \$0.00) = \$12/\text{tháng} $$
 - **Hiệu quả kinh tế**:
-  $$\text{Tiết kiệm} = \$240 - \$12 = \$228/\text{tháng} \quad (\$2{,}736/\text{năm}) \implies \text{Giảm } 95\% \text{ chi phí lưu trữ bí mật}$$
+  $$ \text{Tiết kiệm} = \$240 - \$12 = \$228/\text{tháng} \quad (\$2{,}736/\text{năm}) \implies \text{Giảm } 95\% \text{ chi phí lưu trữ bí mật} $$
 
 #### Kịch bản 4: Hợp nhất WebACL của AWS WAF tại CloudFront Edge
 - **Bối cảnh**: Doanh nghiệp vận hành 10 Application Load Balancers (ALB) cho các ứng dụng web khác nhau. Nhóm an ninh triển khai 10 WebACL riêng biệt trên 10 ALB, mỗi WebACL gắn 8 Managed Rules giống nhau.
 - **Tính toán chi phí cố định**:
-  $$\text{Cost}_{\text{ALB\_WAF}} = 10 \times [\$5.00 + (8 \times \$1.00)] = 10 \times \$13.00 = \$130/\text{tháng}$$
+  $$ \text{Cost}_{\text{ALB\_WAF}} = 10 \times [\$5.00 + (8 \times \$1.00)] = 10 \times \$13.00 = \$130/\text{tháng} $$
 - **Giải pháp tối ưu**:
   - Đặt **Amazon CloudFront** phía trước 10 ALB và tạo duy nhất **1 WebACL** tại Region Global (`us-east-1`):
-  $$\text{Cost}_{\text{CloudFront\_WAF}} = \$5.00 + (8 \times \$1.00) = \$13/\text{tháng}$$
+  $$ \text{Cost}_{\text{CloudFront\_WAF}} = \$5.00 + (8 \times \$1.00) = \$13/\text{tháng} $$
   - Ngoài ra, các yêu cầu tải ảnh tĩnh trúng cache (Cache Hit) tại CloudFront Edge không bị tính phí chuyển tiếp về ALB, giúp tiết kiệm thêm cước xử lý LCU của ALB.
 - **Hiệu quả kinh tế**:
-  $$\text{Tiết kiệm} = \$130 - \$13 = \$117/\text{tháng} \quad (\$1{,}404/\text{năm}) \implies \text{Giảm } 90\% \text{ chi phí WebACL}$$
+  $$ \text{Tiết kiệm} = \$130 - \$13 = \$117/\text{tháng} \quad (\$1{,}404/\text{năm}) \implies \text{Giảm } 90\% \text{ chi phí WebACL} $$
 
 #### Kịch bản 5: Ngăn ngừa bẫy quét dữ liệu ngoài tầm kiểm soát của Amazon Macie
 - **Bối cảnh**: Doanh nghiệp muốn quét dữ liệu nhạy cảm PII trên S3. Kỹ sư tạo một Discovery Job quét toàn bộ S3 bucket lưu trữ camera an ninh và file nén backup dung lượng **20 TB (20,000 GB)**.
 - **Rủi ro chi phí nếu không có bộ lọc**:
-  - Đơn giá quét nội dung của Amazon Macie là $1.00/GB:
-  $$\text{Cost}_{\text{Unfiltered}} = 20{,}000 \times \$1.00 = \$20{,}000 \quad (\text{Hai mươi ngàn USD cho 1 tác vụ!})$$
+  - Đơn giá quét nội dung của Amazon Macie là \$1.00/GB:
+  $$ \text{Cost}_{\text{Unfiltered}} = 20{,}000 \times \$1.00 = \$20{,}000 \quad (\text{Hai mươi ngàn USD cho 1 tác vụ!}) $$
 - **Giải pháp tối ưu**:
   - Áp dụng **File Extension Exclusions** (loại bỏ `.mp4`, `.zip`, `.tar`, `.iso`, `.png`, `.jpg`).
   - Áp dụng **File Extension Inclusions** (chỉ quét `.csv`, `.json`, `.parquet`, `.txt`, `.pdf`).
   - Sử dụng chế độ **Automated Sensitive Data Discovery** lấy mẫu thông minh ngẫu nhiên, dung lượng quét thực tế chỉ là 50 GB:
-  $$\text{Cost}_{\text{Filtered}} = 50 \times \$1.00 = \$50/\text{tháng}$$
+  $$ \text{Cost}_{\text{Filtered}} = 50 \times \$1.00 = \$50/\text{tháng} $$
 - **Hiệu quả kinh tế**:
-  $$\text{Ngăn chặn thảm họa tài chính} = \$20{,}000 - \$50 = \$19{,}950 \implies \text{Tránh lãng phí } 99.75\%$$
+  $$ \text{Ngăn chặn thảm họa tài chính} = \$20{,}000 - \$50 = \$19{,}950 \implies \text{Tránh lãng phí } 99.75\% $$
 
 ---
 
@@ -503,29 +598,46 @@ sequenceDiagram
 
 ---
 
----
-
 ## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Bảo Mật & Mã Hóa AWS (Golden Rules)
 1. **KMS Key Policy là tối thượng**: IAM Policy chỉ có hiệu lực khi được KMS Key Policy cho phép; mất khóa KMS là mất dữ liệu vĩnh viễn.
-2. **Kích hoạt S3 Bucket Keys**: Luôn bật S3 Bucket Keys cho các bucket sử dụng SSE-KMS để cắt giảm 99% chi phí API.
+2. **Kích hoạt S3 Bucket Keys**: Luôn bật S3 Bucket Keys cho các bucket sử dụng SSE-KMS để cắt giảm 99% chi phí API (`U-PT4 Q65`).
 3. **Envelope Encryption cho dữ liệu lớn**: Luôn sử dụng Data Key Caching trong AWS Encryption SDK để bảo vệ ứng dụng khỏi nghẽn quota và giảm độ trễ.
-4. **Phân tầng thông minh giữa Secrets Manager và Parameter Store**: Dùng Secrets Manager cho bí mật cần auto-rotate; dùng SSM Parameter Store `SecureString` cho tham số tĩnh để tiết kiệm 95% chi phí.
+4. **Phân tầng thông minh giữa Secrets Manager và Parameter Store**: Dùng Secrets Manager cho bí mật cần auto-rotate; dùng SSM Parameter Store `SecureString` cho tham số tĩnh để tiết kiệm 95% chi phí (`TD-Set2 Q10`, `TD-Set3 Q33`).
 5. **Đưa WAF ra biên mạng (Edge)**: Gắn WebACL tại CloudFront Distribution để chặn đứng tấn công Layer 7 sớm nhất và tiết kiệm chi phí inspection.
 6. **Không quét mở Amazon Macie**: Luôn thiết lập file exclusion/inclusion để tránh bẫy quét dữ liệu nhị phân hàng chục ngàn USD.
-7. **Cơ chế Kill-Switch với BYOK**: Sử dụng Imported Key Material khi kiến trúc yêu cầu khả năng đóng băng dữ liệu tức thì trong vòng 1 giây.
+7. **Cơ chế Kill-Switch với BYOK**: Sử dụng Imported Key Material khi kiến trúc yêu cầu khả năng đóng băng dữ liệu tức thì trong vòng 1 giây qua `kms:DeleteKeyMaterial`.
 
 ---
 
 ### Danh Mục Kiểm Tra Năng Lực (Learning Checklist)
 - [ ] Tôi phân biệt rõ ràng 4 chiều phân loại của khóa KMS (Quản trị, Thuật toán, Địa lý, Nguồn gốc).
+- [ ] Tôi nắm vững quy tắc xoay vòng khóa KMS: AWS Managed (tự động 1 năm), CMK (tự động 90-2560 ngày hoặc thủ công qua Key Alias `CM-PT3 Q65`), BYOK (chỉ xoay vòng thủ công).
 - [ ] Tôi hiểu rõ nguyên lý hoạt động của Envelope Encryption và vai trò của Data Encryption Key (DEK).
-- [ ] Tôi biết cách cấu hình S3 Bucket Keys để giảm 99% chi phí KMS API cho Data Lake.
-- [ ] Tôi nắm vững quy trình 4 bước tự động xoay vòng mật khẩu của AWS Secrets Manager với Lambda.
-- [ ] Tôi phân biệt được trường hợp sử dụng tối ưu giữa Secrets Manager và SSM Parameter Store.
+- [ ] Tôi biết cách cấu hình S3 Bucket Keys để giảm 99% chi phí KMS API cho Data Lake (`U-PT4 Q65`).
+- [ ] Tôi nắm vững quy trình 4 bước tự động xoay vòng mật khẩu của AWS Secrets Manager với Lambda (`TD-Set2 Q10`).
+- [ ] Tôi phân biệt được trường hợp sử dụng tối ưu giữa Secrets Manager và SSM Parameter Store (`TD-Set3 Q33`).
+- [ ] Tôi hiểu cơ chế tự hủy khóa (Zeroization) trên CloudHSM khi nhập sai mật khẩu Crypto Officer 3 lần (`TD-Set5 Q58`).
+- [ ] Tôi nắm vững quy trình mã hóa in-place cho RDS/EBS đang unencrypted: Snapshot $\rightarrow$ Copy Snapshot (Encrypt) $\rightarrow$ Restore (`CM-PT2 Q64`, `U-PT2 Q16`).
+- [ ] Tôi biết cách chia sẻ snapshot mã hóa KMS xuyên tài khoản: Bắt buộc dùng CMK, chia sẻ Key Policy, và copy tại tài khoản đích (`U-PT2 Q26`, `CM-PT6 Q05`).
+- [ ] Tôi phân biệt được vai trò của AWS Firewall Manager (quản trị WAF/Network Firewall tập trung cho Organizations) và AWS Artifact (tải báo cáo kiểm toán tuân thủ SOC/ISO) (`TD-Set1 Q16`, `TD-Set1 Q42`).
+- [ ] Tôi hiểu rõ ứng dụng của AWS Security Hub (chấm điểm an ninh CIS) và Amazon Security Lake (chuẩn hóa log OCSF Parquet) (`CM-PT4 Q38`, `U-PT2 Q34`).
+- [ ] Tôi phân biệt được AWS Network Firewall (lọc domain FQDN outbound) và Gateway Load Balancer GWLB (tích hợp tường lửa ảo bên thứ 3) (`TD-Set1 Q57`, `CM-PT2 Q48`).
+- [ ] Tôi nắm vững ma trận khóa lưu trữ bất biến WORM: S3 Object Lock (Compliance vs Governance), Glacier Vault Lock, và EBS Snapshot Lock (`TD-Set4 Q19`, `CM-PT6 Q20`, `U-PT6 Q09`).
+- [ ] Tôi hiểu thứ tự ưu tiên trong AWS WAF (IP Set Allow ưu tiên trước Geo-match Block) và dịch vụ hỗ trợ DDoS Shield Advanced SRT (`TD-Set5 Q38`, `TD-Set1 Q43`).
+- [ ] Tôi biết cách bắt buộc mã hóa đường truyền cho RDS (`rds.force_ssl = 1`) và ElastiCache Redis in-transit encryption + AUTH token (`TD-Set6 Q38`, `TD-Set1 Q35`).
+- [ ] Tôi hiểu cách dùng KMS Encryption Context để phân tách tenant trong kiến trúc Multi-tenant SaaS và ứng dụng của External Key Store XKS (`CM-PT5 Q53`, `CM-PT6 Q50`).
 - [ ] Tôi hiểu rõ các tầng phòng ngự của AWS WAF, AWS Shield Standard và Shield Advanced.
 - [ ] Tôi phân biệt được phạm vi và nguồn dữ liệu của bộ ba AI an ninh: GuardDuty, Inspector, và Macie.
+
+---
+
+### Liên kết và Tài liệu Liên quan
+- 📖 [Ghi Chú Bài Học Chương 26: AWS Security & Encryption](../Lesson_Notes/26_AWS_Security_Encryption_KMS.md)
+- 📖 [Tài Liệu Chuyên Sâu: IAM & Quản Trị Định Danh Doanh Nghiệp](./IAM_Identity_and_Access_Management.md)
+- 📖 [Bảng Thuật Ngữ Kỹ Thuật (GLOSSARY.md)](../GLOSSARY.md)
+- ⏭️ Tiếp tục chuyển sang chuyên đề: [AWS Lambda & Kiến Trúc Serverless](./Lambda_Serverless_Architecture.md).
 
 ---
 

@@ -255,12 +255,12 @@ flowchart TD
 - **Giải pháp ĐÚNG**: Khởi tạo **AWS KMS Multi-Region Key** (`mrk-xxxx`) để chia sẻ chung key material xuyên các AWS Regions.
 
 #### 🪤 Bẫy 3: Quy Tắc Chuyển Tầng Lifecycle Chỉ Đi Một Chiều Xuống (One-Way Downward) — (U-PT1 Q41)
-- **Bẫy bất biến**: Lifecycle Rules chỉ hỗ trợ chuyển object từ tầng nóng xuống tầng lạnh hơn:
-  $$\text{Standard} \rightarrow \text{Standard-IA} \rightarrow \text{Intelligent-Tiering} \rightarrow \text{Glacier Instant} \rightarrow \text{Glacier Flexible} \rightarrow \text{Deep Archive}$$
+- **Bẫy bất biến**: Lifecycle Transition Rules chỉ hỗ trợ chuyển object từ tầng nóng xuống tầng lạnh hơn theo một chiều duy nhất:
+  $$\text{Standard} \rightarrow \text{Standard-IA} \rightarrow \text{One Zone-IA} \rightarrow \text{Glacier Instant} \rightarrow \text{Glacier Flexible} \rightarrow \text{Deep Archive}$$
 - **TUYỆT ĐỐI KHÔNG THỂ**:
-  - Không thể cấu hình Lifecycle rule chuyển ngược từ Intelligent-Tiering lên Standard.
-  - Không thể chuyển ngược từ Standard-IA lên Standard.
-  - Không thể chuyển ngược từ Glacier lên các tầng trên bằng Lifecycle rule (chỉ có thể restore bản sao tạm thời).
+  - **Không thể chuyển ngược từ `S3 One Zone-IA` lên `S3 Standard-IA`** (`U-PT1 Q41`): Đề thi thường bẫy tình huống dữ liệu đang ở One Zone-IA muốn nâng cấp lên Standard-IA để tăng độ bền (Resilience) bằng Lifecycle rule $\rightarrow$ **AWS không hỗ trợ chuyển đổi ngược lên giữa các tầng IA**.
+  - Không thể cấu hình Lifecycle rule chuyển ngược từ `Intelligent-Tiering` hoặc `Standard-IA` lên `Standard`.
+  - Không thể chuyển ngược từ `Glacier` lên các tầng trên bằng Lifecycle rule (chỉ có thể khôi phục bản sao tạm thời - temporary restore copy hoặc dùng lệnh Copy ghi đè sang object mới).
 
 #### 🪤 Bẫy 4: Mô Hình Vòng Đời Dữ Liệu Cho Raw Data Lake Zone — (U-PT2 Q58)
 - **Mẫu kiến trúc chuẩn 3 giai đoạn**:
@@ -329,12 +329,13 @@ flowchart TD
   - ❌ *Chỉ bật S3 Versioning*: User có quyền `s3:DeleteObjectVersion` vẫn có thể xóa vĩnh viễn các version cũ.
 - **Giải pháp ĐÚNG**: Kích hoạt **S3 Object Lock** và thiết lập chế độ **Legal Hold**. Legal Hold không có ngày hết hạn; chỉ bị hủy bỏ khi người có quyền hạn chủ động gỡ cờ.
 
-#### 🪤 Bẫy 12: Giới Hạn Cứng 30 Ngày Tối Thiểu Khi Chuyển Sang S3 Standard-IA Bằng Lifecycle — (U-PT4 Q24)
-- **Tình huống đề thi**: *"Bộ phận xuất bản nội dung số lưu trữ hàng triệu tệp tin âm thanh/hình ảnh trên Amazon S3 Standard. Đội ngũ muốn thiết lập một S3 Lifecycle Rule để chuyển tệp sang S3 Standard-IA ngay sau khi tạo 10 ngày nhằm cắt giảm chi phí, sau đó xóa tệp sau 5 năm. Quy tắc này có hợp lệ không?"*
-- **Quy tắc chuyển tầng lưu trữ bất biến của AWS**:
-  - AWS quy định ràng buộc cứng: Một đối tượng **BẮT BUỘC phải được lưu trữ tối thiểu 30 ngày trong S3 Standard** trước khi đủ điều kiện chuyển đổi sang **S3 Standard-IA** hoặc **S3 One Zone-IA**!
-  - Nếu cố gắng cấu hình số ngày chuyển đổi nhỏ hơn 30 ngày (ví dụ 10 ngày hay 15 ngày), AWS Console / API sẽ từ chối cấu hình hoặc vẫn tính phí lưu trữ đủ 30 ngày cơ sở.
-- **Giải pháp ĐÚNG**: Cấu hình chuyển tệp từ S3 Standard sang S3 Standard-IA sau **30 ngày** kể từ ngày khởi tạo, và cấu hình hành động Expiration xóa tệp sau 5 năm (1,825 ngày).
+#### 🪤 Bẫy 12: Giới Hạn Cứng 30 Ngày Tối Thiểu Khi Chuyển Sang S3 Standard-IA Bằng Lifecycle vs Quy Tắc 0-Day Glacier — (U-PT4 Q24, TD-Set5 Q01, TD-Set8 Q10, CM-PT6 Q22)
+- **Tình huống đề thi 1**: *"Bộ phận xuất bản nội dung số lưu trữ hàng triệu tệp tin âm thanh/hình ảnh trên Amazon S3 Standard. Đội ngũ muốn thiết lập một S3 Lifecycle Rule để chuyển tệp sang S3 Standard-IA ngay sau khi tạo 10 ngày nhằm cắt giảm chi phí, sau đó xóa tệp sau 5 năm. Quy tắc này có hợp lệ không?" (`U-PT4 Q24`)*
+- **Tình huống đề thi 2**: *"Hệ thống tạo file backup hàng ngày trên S3 Standard. Đề bài yêu cầu: Chuyển sang S3 Glacier Flexible Retrieval ngay sau 0 ngày (hoặc 7 ngày, 10 ngày), sau đó chuyển sang S3 Glacier Deep Archive sau 180 ngày và xóa sau 365 ngày để tối ưu chi phí tối đa. Cấu hình này có hợp lệ không?" (`TD-Set5 Q01`, `TD-Set8 Q10`, `CM-PT6 Q22`, `U-PT2 Q48`, `U-PT2 Q58`)*
+- **Quy tắc phân biệt sống còn trong đề thi**:
+  - **Quy tắc 30 ngày tối thiểu cho Standard-IA / One Zone-IA**: AWS quy định bắt buộc đối tượng phải lưu trữ tối thiểu **30 ngày** trong `S3 Standard` trước khi đủ điều kiện chuyển tiếp sang `S3 Standard-IA` hoặc `S3 One Zone-IA`. Cấu hình $< 30$ ngày sẽ bị AWS Console/API chặn hoặc vẫn tính phí đủ 30 ngày.
+  - **NGOẠI LỆ ĐẶC BIỆT: Quy tắc 0-Day của Glacier**: Chuyển đổi trực tiếp từ `S3 Standard` sang **`S3 Glacier Flexible Retrieval`** hoặc **`S3 Glacier Deep Archive`** **HOÀN TOÀN KHÔNG BỊ GIỚI HẠN 30 NGÀY NÀY**! Bạn có thể đặt số ngày chuyển đổi là **0 ngày** (ngay khi tạo), **7 ngày**, hoặc **10 ngày**.
+  - **Khác biệt cốt lõi**: Giới hạn 30 ngày chỉ áp dụng cho việc chuyển sang *Infrequent Access tiers* (Standard-IA, One Zone-IA). Các tầng *Archive tiers* (Glacier Flexible, Deep Archive) cho phép chuyển từ ngày đầu tiên (Day 0). Tuy nhiên lưu ý: Một khi đã vào Glacier Flexible, đối tượng phải lưu tối thiểu 90 ngày; vào Deep Archive phải lưu tối thiểu 180 ngày (nếu xóa trước thời hạn sẽ chịu phí prorated early deletion).
 
 #### 🪤 Bẫy 13: Cắt Giảm Tới 99% Chi Phí Gọi API KMS Khi Mã Hóa S3 Bằng S3 Bucket Keys — (U-PT4 Q65)
 - **Tình huống đề thi**: *"Nền tảng xuất bản kỹ thuật số lưu trữ hàng chục triệu tệp tin truyền thông trong S3 Bucket được mã hóa bằng SSE-KMS. Mặc dù chi phí lưu trữ S3 rất thấp, doanh nghiệp choáng váng khi thấy hóa đơn AWS phát sinh hàng ngàn USD chi phí gọi API KMS (`kms:GenerateDataKey` và `kms:Decrypt`) cho mỗi lần upload/download tệp. Làm thế nào để giảm thiểu tối đa chi phí mã hóa này mà không làm giảm mức độ bảo mật KMS?"*
@@ -399,6 +400,98 @@ flowchart TD
   - S3TA sử dụng hơn 400+ Edge Locations của CloudFront để đưa dữ liệu vào mạng cáp quang riêng của AWS ngay tại điểm gần client nhất.
   - Multipart Upload chia nhỏ tệp lớn thành các phần từ 5 MB đến 5 GB, cho phép tải lên song song đồng thời nhiều luồng và tự động tải lại chỉ phần bị lỗi nếu kết nối mạng gặp sự cố.
 
+#### 🪤 Bẫy 21: Phân Biệt 3 Cơ Chế Cấp Quyền Tạm Thời: CloudFront Signed URLs vs CloudFront Signed Cookies vs S3 Presigned URLs — (TD-Set1 Q22, TD-Set1 Q27, TD-Set2 Q62, TD-Set3 Q30, CM-PT3 Q34, CM-PT5 Q29, U-PT6 Q17)
+- **Bảng đối chiếu kỹ thuật cốt lõi trong đề thi**:
+  - **CloudFront Signed URL**: Dùng để bảo vệ **1 file đơn lẻ** qua CDN (chống hotlink, chia sẻ video trả phí tải về). Cấu hình sử dụng **Trusted Key Groups** (chứa Public Key của ứng dụng - khuyến nghị chuẩn mới thay cho Origin Key Groups cũ) (`TD-Set1 Q22`, `CM-PT5 Q29`).
+  - **CloudFront Signed Cookies**: Dùng để cấp quyền truy cập vào **nhiều file cùng lúc** hoặc toàn bộ luồng video streaming (HLS/DASH gồm hàng trăm phân đoạn `.ts` nhỏ) **mà không muốn thay đổi URL** trên trình duyệt của người dùng (`TD-Set1 Q27`, `U-PT6 Q17`).
+  - **S3 Presigned URL**: Cấp quyền truy cập trực tiếp vào S3 **không qua CDN**, do IAM Identity ký số bằng AWS SigV4. Hỗ trợ cả **HTTP PUT** (người dùng tự upload trực tiếp lên S3 không qua server backend) và **HTTP GET** (`TD-Set3 Q30`, `CM-PT3 Q34`).
+- **Các bẫy đề thi**:
+  - ❌ *Dùng S3 Presigned URL khi nội dung được phân phối qua CloudFront*: Người dùng sẽ bypass CDN để tải thẳng từ S3 Origin, gây tăng độ trễ và mất hiệu quả của CDN Caching!
+  - ❌ *Dùng CloudFront Signed URL cho video streaming nhiều file nhỏ*: Client phải liên tục xin URL mới cho từng file `.ts` 5 giây $\rightarrow$ Bắt buộc dùng **CloudFront Signed Cookies**.
+
+#### 🪤 Bẫy 22: Amazon S3 Object Lambda — Biến Đổi Dữ Liệu Hoặc Ẩn Danh PII Động Khi Đọc File — (TD-Set3 Q36, CM-PT5 Q04)
+- **Tình huống đề thi**: *"Doanh nghiệp y tế/tài chính lưu trữ dữ liệu hồ sơ khách hàng dạng JSON/CSV trên S3. Đội ngũ tiếp thị (Marketing) và phân tích cần truy vấn dữ liệu này nhưng các trường thông tin nhận dạng cá nhân (PII như Số CMND, Số thẻ tín dụng, Tên) phải được che giấu/ẩn danh (redacted). Đội ngũ Tuân thủ (Compliance) thì cần đọc dữ liệu gốc đầy đủ. Làm thế nào để đáp ứng yêu cầu mà không phải nhân đôi dữ liệu ra nhiều S3 bucket?"*
+- **Các phương án bẫy**:
+  - ❌ *Tạo cron job chạy Lambda copy dữ liệu đã ẩn danh sang một S3 bucket thứ hai*: Gây tốn chi phí lưu trữ gấp đôi và phát sinh rủi ro lệch đồng bộ dữ liệu giữa 2 bucket.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon S3 Object Lambda**.
+  - S3 Object Lambda tích hợp hàm AWS Lambda can thiệp trực tiếp vào luồng xử lý của lệnh gọi `GetObject`.
+  - Khi đội ngũ Marketing gọi S3 API qua **Object Lambda Access Point**, hàm Lambda tự động lọc bỏ các trường PII theo thời gian thực và trả về kết quả đã biên soạn (redacted payload).
+  - Đội ngũ Compliance truy cập qua Standard Access Point để đọc nguyên bản dữ liệu gốc. Không cần nhân bản dữ liệu, bảo mật tuyệt đối!
+
+#### 🪤 Bẫy 23: Amazon S3 Storage Lens Dashboard — Quản Trị & Phát Hiện Bucket Rủi Ro Toàn Doanh Nghiệp — (TD-Set8 Q12, CM-PT3 Q01, U-PT6 Q08)
+- **Tình huống đề thi**: *"Trưởng bộ phận bảo mật (CISO) của tập đoàn quản lý hàng trăm tài khoản AWS trong AWS Organizations. CISO yêu cầu một công cụ tập trung để kiểm tra toàn bộ tổ chức xem có những S3 bucket nào chưa kích hoạt S3 Versioning, đồng thời phân tích xu hướng tăng trưởng dung lượng lưu trữ theo từng prefix/tài khoản."*
+- **Giải pháp ĐÚNG**: Triển khai **Amazon S3 Storage Lens Dashboard** ở cấp độ **AWS Organizations**.
+  - S3 Storage Lens cung cấp hơn 30+ số liệu (metrics) phân tích chi tiết dung lượng, bảo mật và chi phí cho toàn bộ bucket trong tổ chức.
+  - Cung cấp sẵn các cảnh báo bảo mật quan trọng: Liệt kê tức thì các bucket không bật Versioning, không bật Default Encryption, hoặc các bucket đang chứa tỷ lệ lớn các bản sao phiên bản cũ không được dọn dẹp.
+
+#### 🪤 Bẫy 24: Giới Hạn Của S3 Storage Class Analysis (S3 Analytics) — (U-PT6 Q09)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn sử dụng tính năng S3 Storage Class Analysis để phân tích hành vi truy cập của một bucket chứa 10 TB ảnh và tự động đưa ra khuyến nghị chuyển tầng tối ưu sang S3 Glacier Deep Archive hoặc One Zone-IA."*
+- **Cạm bẫy kỹ thuật của S3 Analytics**:
+  - **S3 Storage Class Analysis CHỈ phân tích mẫu truy cập để khuyến nghị chuyển từ `S3 Standard` sang `S3 Standard-IA`**!
+  - Nó **KHÔNG** đưa ra khuyến nghị cho `S3 One Zone-IA`, `S3 Glacier Instant Retrieval`, hay `S3 Glacier Deep Archive`.
+  - Nếu muốn tự động tối ưu hóa chi phí đa tầng mà không cần phân tích thủ công $\rightarrow$ Giải pháp đúng là kích hoạt **S3 Intelligent-Tiering**.
+
+#### 🪤 Bẫy 25: S3 Requester Pays — Đối Tác Bên Ngoài Tự Trả Chi Phí Request & Data Transfer — (TD-Set4 Q33)
+- **Tình huống đề thi**: *"Viện nghiên cứu gen di truyền lưu trữ bộ dữ liệu khổng lồ 100 TB trên Amazon S3 và muốn chia sẻ công khai dữ liệu này cho các trường đại học và đối tác nghiên cứu trên toàn cầu. Tuy nhiên, ngân sách của viện rất hạn hẹp và không thể chi trả khoản phí Data Transfer Out cũng như phí API GET requests khổng lồ phát sinh khi các đối tác tải dữ liệu."*
+- **Giải pháp ĐÚNG**: Kích hoạt tính năng **S3 Requester Pays** trên bucket.
+  - Khi bật Requester Pays: Người tải (Requester) bắt buộc phải đăng nhập bằng tài khoản AWS của họ và thêm header `x-amz-request-payer = requester` trong mọi yêu cầu API.
+  - Toàn bộ chi phí truyền tải mạng (**Data Transfer-Out**) và chi phí thực hiện yêu cầu (**Request Fees**) sẽ được tính trực tiếp vào hóa đơn AWS của bên tải dữ liệu. Viện nghiên cứu chỉ phải trả duy nhất chi phí lưu trữ dung lượng đĩa (Storage Cost).
+
+#### 🪤 Bẫy 26: S3 Access Points & S3 Access Grants Quản Trị Phân Quyền Quy Mô Lớn — (TD-Set1 Q36, TD-Set1 Q49, U-PT2 Q13)
+- **Tình huống đề thi**: *"Kho dữ liệu S3 Data Lake dùng chung cho 50 ứng dụng và phòng ban khác nhau. Bucket Policy ngày càng phình to vượt quá giới hạn dung lượng tối đa 20 KB của JSON policy. Đội DevOps liên tục gặp sự cố quyền truy cập chéo giữa các nhóm."*
+- **Giải pháp ĐÚNG**:
+  - Sử dụng **Amazon S3 Access Points**: Tạo các điểm truy cập riêng biệt cho từng nhóm/ứng dụng (ví dụ: `finance-ap`, `hr-ap`, `analytics-ap`), mỗi Access Point sở hữu một Access Point Policy riêng biệt gắn với một tiền tố (Prefix) cụ thể trong bucket.
+  - **VPC-Only Access Points**: Giới hạn Access Point chỉ có thể truy cập thông qua một **VPC Endpoint** cụ thể trong mạng nội bộ, ngăn chặn hoàn toàn truy cập từ Internet.
+  - **S3 Access Grants** (`U-PT2 Q13`): Đồng bộ danh tính người dùng doanh nghiệp từ **IAM Identity Center** (Corporate AD/Okta) trực tiếp vào S3 permissions theo phân cấp tổ chức.
+
+#### 🪤 Bẫy 27: Toàn Bộ Các Mô Hình Mã Hóa S3 & S3 Batch Operations — (TD-Set1 Q06, TD-Set2 Q11, TD-Set2 Q45, TD-Set3 Q25, TD-Set3 Q51, TD-Set4 Q36, CM-PT2 Q23, CM-PT3 Q28, CM-PT4 Q24, CM-PT5 Q19, U-PT2 Q28, U-PT6 Q31)
+- **Phân biệt 4 mô hình mã hóa S3**:
+  1. **SSE-S3 (Server-Side Encryption with S3 Managed Keys)**: Khóa AES-256 do AWS tự sinh và quản lý hoàn toàn, miễn phí, mặc định áp dụng cho mọi bucket mới.
+  2. **SSE-KMS (Server-Side Encryption with KMS CMK)**: Cung cấp audit trail chi tiết qua AWS CloudTrail và quyền kiểm soát phân quyền truy cập theo từng IAM Role. Bắt buộc bật **S3 Bucket Keys** để giảm 99% chi phí gọi KMS API.
+  3. **SSE-C (Server-Side Encryption with Customer-Provided Keys)**: Khách hàng tự truyền khóa mã hóa trong mỗi request HTTPS header (`x-amz-server-side-encryption-customer-key`). AWS mã hóa file, lưu ciphertext vào đĩa rồi lập tức xóa bỏ khóa khỏi bộ nhớ RAM (AWS không bao giờ lưu khóa này).
+  4. **Client-Side Encryption (CSE)**: Dữ liệu được mã hóa ngay tại ứng dụng client (bằng AWS Encryption SDK) TRƯỚC KHI gửi qua mạng tới S3. S3 chỉ nhận được ciphertext mù và hoàn toàn không có khả năng giải mã dữ liệu (`TD-Set1 Q06`, `TD-Set3 Q25`, `CM-PT4 Q24`).
+- **Ép buộc mã hóa khi upload**: Tạo S3 Bucket Policy từ chối (`Deny`) hành động `s3:PutObject` nếu request không có header `s3:x-amz-server-side-encryption` (`TD-Set2 Q45`, `TD-Set4 Q36`).
+- **Mã hóa hàng triệu file cũ trong bucket** (`CM-PT5 Q19`): Sử dụng **S3 Inventory** để trích xuất danh sách metadata toàn bộ object $\rightarrow$ Truyền bản kê này vào **S3 Batch Operations** để thực thi tác vụ `PUT Object Copy` ghi đè lên chính nó kèm cấu hình mã hóa KMS.
+
+#### 🪤 Bẫy 28: S3 Glacier Expedited Retrieval & Provisioned Retrieval Capacity — (TD-Set3 Q49)
+- **Tình huống đề thi**: *"Doanh nghiệp lưu trữ dữ liệu y tế trên S3 Glacier Flexible Retrieval. Khi xảy ra sự cố khẩn cấp, bệnh viện cần truy xuất hồ sơ bệnh nhân trong vòng 1 đến 5 phút (Expedited Retrieval). Tuy nhiên trong một đợt thiên tai, yêu cầu Expedited bị hệ thống từ chối do quá tải năng lực truy xuất của vùng AWS. Giải pháp nào đảm bảo 100% khả năng truy xuất Expedited luôn thành công?"*
+- **Giải pháp ĐÚNG**: Đăng ký mua **Provisioned Retrieval Capacity** cho S3 Glacier Flexible Retrieval.
+  - Expedited Retrieval (1–5 phút) chỉ khả dụng trên cơ sở "nỗ lực tốt nhất" (on-demand best-effort) và có thể bị từ chối nếu có quá nhiều khách hàng cùng truy xuất trong giờ cao điểm.
+  - **Provisioned Retrieval Capacity** đảm bảo cung cấp băng thông chuyên dụng với tối thiểu 3 giao dịch Expedited mỗi 5 phút hoặc 150 MB/s thấu lượng khôi phục dữ liệu liên tục trong mọi hoàn cảnh.
+
+#### 🪤 Bẫy 29: Kiểm Soát Bộ Đệm CloudFront & Invalidation — (TD-Set6 Q34, CM-PT3 Q09, CM-PT6 Q04, TD-Set8 Q13, U-PT1 Q08)
+- **Tối ưu hóa Cache Revalidation**:
+  - Header `Cache-Control: max-age=0` hoặc `no-cache`: Yêu cầu CloudFront Edge Location trước khi phục vụ cache phải gửi conditional request (`If-Modified-Since` / `If-None-Match`) về Origin. Nếu file tại Origin chưa đổi, Origin trả về `304 Not Modified` $\rightarrow$ CloudFront phục vụ tiếp cache, tiết kiệm băng thông Origin (`TD-Set6 Q34`, `CM-PT6 Q04`).
+- **Cache Invalidation vs File Versioning**:
+  - Khi cần cập nhật nội dung gấp (ví dụ sửa lỗi code JS khẩn cấp): Chạy **CloudFront Cache Invalidation** (ví dụ `/index.html` hoặc `/*`). AWS miễn phí 1,000 paths invalidation đầu tiên mỗi tháng; vượt quá sẽ tính phí \$0.005 cho mỗi path (`CM-PT3 Q09`, `TD-Set8 Q13`).
+  - **Best Practice trong môi trường DevOps Production**: Sử dụng **File Versioning / Hash Naming** (ví dụ `main.8f3a2b.js`) trong tên file. Mỗi khi release code mới, URL file tự động thay đổi, không bao giờ cần chạy Invalidation và hưởng lợi 100% từ Edge Caching.
+
+#### 🪤 Bẫy 30: Quy Tắc Đặt Tên S3 Static Website Trùng Khít FQDN Route 53 Alias & CORS — (TD-Set1 Q53, TD-Set2 Q21, TD-Set2 Q22)
+- **Quy tắc vàng của Route 53 Alias tới S3 Website Endpoint**:
+  - Khi trỏ một Route 53 Alias Record (hoặc Subdomain) tới một S3 Static Website, **TÊN S3 BUCKET BẮT BUỘC PHẢI TRÙNG KHỚP HOÀN TOÀN TỪNG KÝ TỰ VỚI TÊN MIỀN FQDN** (`TD-Set2 Q22`)!
+  - *Ví dụ*: Muốn host website tại `portal.example.com`, tên S3 Bucket bắt buộc phải là `portal.example.com`. Nếu đặt tên bucket là `portal-bucket`, Route 53 Alias sẽ không thể định tuyến được!
+- **Khắc phục lỗi CORS (Cross-Origin Resource Sharing)** (`TD-Set1 Q53`, `TD-Set2 Q21`):
+  - Khi người dùng tải web từ domain `web.company.com`, nhưng code JavaScript/CSS/Font trên trang web đó tải tài nguyên từ S3 bucket `assets.company.com`, trình duyệt sẽ chặn request do vi phạm chính sách Same-Origin Policy.
+  - **Khắc phục**: Cấu hình **CORS Configuration trên S3 bucket `assets.company.com`**, khai báo thẻ `<CORSRule>` với `<AllowedOrigin>https://web.company.com</AllowedOrigin>` và `<AllowedMethod>GET</AllowedMethod>`.
+
+#### 🪤 Bẫy 31: Quyền Sở Hữu Object Khi Upload Xuyên Tài Khoản & S3 Event Fan-Out — (TD-Set1 Q15, TD-Set3 Q10, TD-Set3 Q65, TD-Set6 Q16, TD-Set8 Q07, CM-PT2 Q33, U-PT2 Q40)
+- **Quyền sở hữu Object đa tài khoản (Cross-Account Ownership)**:
+  - Khi Tài khoản A tải file lên S3 Bucket của Tài khoản B: Mặc định tài khoản A sở hữu object đó và Bucket Owner (Tài khoản B) không thể đọc được file nếu không được cấp ACL!
+  - **Giải pháp chuẩn hiện đại**: Bật thuộc tính **S3 Object Ownership = Bucket Owner Enforced** trên bucket của Tài khoản B. Toàn bộ ACLs bị vô hiệu hóa hoàn toàn và Tài khoản B tự động sở hữu 100% tất cả các object tải vào bucket (`TD-Set3 Q65`, `TD-Set6 Q16`, `CM-PT2 Q33`). Nếu dùng chuẩn cũ: Yêu cầu client truyền header `x-amz-acl: bucket-owner-full-control`.
+- **S3 Event Notifications Fan-Out**:
+  - Một S3 bucket không thể cấu hình gửi trực tiếp một loại sự kiện (như `s3:ObjectCreated:*`) tới nhiều hơn 1 đích đến thông qua cấu hình Event Notification tiêu chuẩn.
+  - **Kiến trúc Fan-Out chuẩn**: Cấu hình **S3 Event Notification đẩy vào Amazon SNS Topic** hoặc kích hoạt **Amazon EventBridge integration**, từ đó phân phối song song tới hàng loạt hàng đợi SQS, hàm Lambda, hoặc Step Functions (`TD-Set1 Q15`, `TD-Set8 Q07`, `U-PT2 Q40`).
+  - **Bắt sự kiện xóa vĩnh viễn**: Để ghi nhận thao tác xóa tệp tin, cần bắt sự kiện `s3:ObjectRemoved:Delete` (xóa version ID vĩnh viễn) phân biệt với `s3:ObjectRemoved:DeleteMarkerCreated` (xóa mềm không chỉ định version ID).
+
+#### 🪤 Bẫy 32: S3 Byte-Range Fetches — Đọc Từng Phân Đoạn Nhỏ Tiết Kiệm Băng Thông Khổng Lồ — (U-PT6 Q57)
+- **Tình huống đề thi**: *"Công ty dữ liệu sở hữu hơn 100,000 tệp tin dữ liệu lớn trên S3 (mỗi file dung lượng 500 MB, tổng dung lượng 50 TB). Ứng dụng phân tích chỉ cần đọc đúng 250 byte đầu tiên của mỗi tệp tin (chứa metadata header) để lập chỉ mục tìm kiếm. Làm thế nào để thực hiện tác vụ này với chi phí băng thông thấp nhất và thời gian xử lý nhanh nhất?"*
+- **Các phương án bẫy**:
+  - ❌ *Tải toàn bộ file về EC2 rồi đọc header bằng script*: Tải toàn bộ 50 TB dữ liệu gây tốn kém hàng ngàn USD chi phí truyền tải mạng và thời gian xử lý mất nhiều giờ.
+  - ❌ *Dùng S3 Select*: S3 Select dùng cho câu lệnh truy vấn lọc cột trong file CSV/JSON/Parquet, không tối ưu cho việc đọc byte header nhị phân.
+- **Giải pháp ĐÚNG**: Sử dụng **S3 Byte-Range Fetches** (truyền header `Range: bytes=0-249` trong lệnh gọi HTTP GET API).
+  - AWS S3 chỉ trả về đúng 250 byte đầu tiên của đối tượng qua mạng internet.
+  - Tổng lưu lượng tải về giảm từ 50 TB xuống chỉ còn **~25 Megabytes**, tiết kiệm 99.99% chi phí và thời gian chạy tính bằng giây!
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Lớp Lưu Trữ S3 Nhanh (Exam Decision Matrix)
@@ -416,6 +509,7 @@ flowchart TD
 | **Lưu trữ tuân thủ 7-10 năm, rẻ nhất thị trường** | **S3 Glacier Deep Archive** | Glacier Flexible (đắt hơn gấp 3 lần) | TD-Set3 Q32, TD-Set2 Q28 |
 | **Dữ liệu phụ tái tạo được, tiết kiệm chi phí** | **S3 One Zone-IA** | Standard-IA (One Zone-IA rẻ hơn 20%) | CM-PT2 Q01 |
 | **Thời gian lưu trữ tối thiểu trước khi sang Standard-IA** | **Bắt buộc tối thiểu 30 ngày trong S3 Standard** | Cấu hình < 30 ngày (bị AWS từ chối/tính phạt) | U-PT4 Q24 |
+| **Chuyển trực tiếp từ S3 Standard sang Glacier sau 0, 7 hoặc 10 ngày** | **Cho phép 0-Day transition sang Glacier Flexible/Deep Archive** | Áp dụng nhầm quy tắc 30 ngày của Standard-IA | TD-Set5 Q01, TD-Set8 Q10 |
 | **Cắt giảm tới 99% chi phí gọi API KMS cho S3** | **Kích hoạt S3 Bucket Keys (SSE-KMS)** | Chuyển SSE-S3 (mất kiểm soát audit khóa KMS) | U-PT4 Q65 |
 | **Chứng chỉ ACM dùng cho CloudFront Distribution** | **Bắt buộc tạo tại Region `us-east-1`** | Tạo ở Region khác (CloudFront không thấy được) | U-PT4 Q10 |
 | **Khóa bất biến kho lưu trữ y tế WORM không ai xóa được** | **S3 Glacier Vault Lock Policy** | Dùng S3 ACLs (không hỗ trợ cơ chế khóa WORM) | U-PT4 Q03 |
@@ -430,12 +524,21 @@ flowchart TD
 | **Tải file lớn > 100 MB xuyên lục địa nhanh nhất** | **S3 Transfer Acceleration + Multipart** | Direct Connect / VPN (tốn kém và chậm triển khai) | TD-Set1 Q31 |
 | **Bảo vệ nội dung S3 chỉ phát qua CloudFront** | **CloudFront Origin Access Control (OAC)** | CNAME / S3 Public Website Endpoint | TD-Set2 Q39, U-PT4 Q10 |
 | **Hàng triệu user upload ảnh sự kiện không sập web tier** | **Amazon S3 Presigned URLs** | Scale EC2 hàng trăm máy (tốn kém & nghẽn I/O) | CM-PT6 Q33 |
+| **Bảo vệ nhiều video streaming HLS không đổi URL** | **CloudFront Signed Cookies** | S3 Presigned URLs / Signed URLs đơn lẻ | TD-Set1 Q27, U-PT6 Q17 |
+| **Bảo vệ 1 file tải về riêng lẻ qua CDN** | **CloudFront Signed URLs (Trusted Key Groups)** | Signed Cookies / S3 Presigned URLs | TD-Set1 Q22, CM-PT5 Q29 |
+| **Ẩn danh dữ liệu PII động không nhân đôi bucket** | **Amazon S3 Object Lambda** | Chạy Batch copy sang bucket mới (tốn dung lượng) | TD-Set3 Q36, CM-PT5 Q04 |
+| **Dashboard quản trị S3 toàn AWS Organizations** | **Amazon S3 Storage Lens Dashboard** | CloudWatch metrics thủ công từng bucket | TD-Set8 Q12, CM-PT3 Q01 |
+| **Đối tác tự trả phí truyền tải Data Transfer-Out** | **S3 Requester Pays** | Bucket Owner tự gánh toàn bộ cước phí mạng | TD-Set4 Q33 |
+| **Phân quyền Data Lake không phình to Bucket Policy** | **S3 Access Points (VPC-only) & S3 Access Grants** | Dồn 50 permissions vào 1 Bucket Policy 20 KB | TD-Set1 Q36, U-PT2 Q13 |
+| **Khắc phục lỗi CORS tải font/JS từ S3 khác domain** | **S3 CORS Configuration (`AllowedOrigins`)** | Mở Public Access S3 bucket (lỗ hổng bảo mật) | TD-Set1 Q53, TD-Set2 Q21 |
+| **Tên miền S3 Static Web trỏ bằng Route 53 Alias** | **Tên Bucket trùng hoàn toàn FQDN domain** | Đặt tên bucket bất kỳ (Route 53 không match) | TD-Set2 Q22 |
+| **Chỉ đọc 250 byte header thay vì tải cả 50 TB file** | **S3 Byte-Range Fetches (`Range: bytes=0-249`)** | Tải toàn bộ 50 TB qua Internet (chậm & tốn phí) | U-PT6 Q57 |
+| **Chuyển quyền sở hữu khi upload object chéo tài khoản** | **S3 Object Ownership = Bucket Owner Enforced** | Dùng ACLs thủ công (dễ lỗi không có quyền đọc) | TD-Set3 Q65, CM-PT2 Q33 |
+| **Đảm bảo khôi phục Glacier Flexible 1-5 phút trong cao điểm** | **Provisioned Retrieval Capacity (3 Units/5 min)** | Dùng Expedited on-demand (có nguy cơ bị throttle) | TD-Set3 Q49 |
 | **Ngăn chặn chi phí ẩn do upload file lớn đứt quãng** | **S3 Lifecycle (Abort Incomplete Multipart Uploads)** | Quét script thủ công (dễ bỏ sót parts dở dang) | CM-PT5 Q27 |
 | **Xử lý ảnh tự động khi người dùng vừa upload** | **S3 Event Notifications kích hoạt AWS Lambda** | EC2 cron job quét S3 định kỳ (trễ và tốn compute) | U-PT4 Q49 |
 | **Tải file vệ tinh/video hàng chục GB lên S3 tối ưu** | **S3 Multipart Upload + Parallel Byte-Ranges** | Tải đơn luồng (dễ rớt mạng, chậm chạp) | Chuẩn AWS |
 | **Chỉ cho phép tài khoản trong cùng Organization đọc S3** | **S3 Bucket Policy điều kiện `aws:PrincipalOrgID`** | Cấp quyền theo từng IAM Role lẻ tẻ | Chuẩn AWS |
-
----
 
 ---
 
@@ -629,8 +732,6 @@ flowchart TD
 
 ---
 
----
-
 ## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon S3 & CloudFront (Golden Rules)
@@ -649,6 +750,27 @@ flowchart TD
    - Cần Server-Side Rendering (SSR), thay đổi kích thước ảnh, gọi API bên thứ ba $\rightarrow$ Chọn **Lambda@Edge**.
 7. **Chiến lược Invalidation không tốn phí**:  
    Sử dụng mã băm phiên bản (Hash Naming) cho các file tĩnh và chỉ thực hiện Invalidate file gốc `/index.html` để nằm trọn trong hạn mức 1,000 paths miễn phí mỗi tháng.
+
+---
+
+### Danh Mục Kiểm Tra Kiến Thức Cốt Lõi (Learning Checklist)
+- [ ] Phân biệt 8 lớp lưu trữ S3: Standard, Intelligent-Tiering, Standard-IA, One Zone-IA, Glacier Instant Retrieval, Glacier Flexible Retrieval, Glacier Deep Archive, và S3 Express One Zone.
+- [ ] Nắm vững quy tắc chuyển tầng Lifecycle: Tối thiểu 30 ngày đối với Standard-IA / One Zone-IA, nhưng được phép 0-day đối với Glacier Flexible / Deep Archive; chuyển tầng chỉ đi một chiều đi xuống (không thể chuyển từ One Zone-IA ngược lên Standard-IA).
+- [ ] Hiểu rõ thời gian lưu trữ tối thiểu (Minimum Storage Duration): Standard (0s), Standard-IA & One Zone-IA (30 ngày), Glacier Instant (90 ngày), Glacier Flexible (90 ngày), Glacier Deep Archive (180 ngày).
+- [ ] Nắm vững cấu hình S3 Lifecycle Abort Incomplete Multipart Uploads (7 ngày) để tránh rò rỉ chi phí ẩn cho các part dở dang.
+- [ ] Phân biệt 3 cơ chế cấp quyền truy cập tạm thời: CloudFront Signed URLs (1 file đơn lẻ/Trusted Key Groups), CloudFront Signed Cookies (nhiều file streaming không đổi URL), S3 Presigned URLs (truy cập trực tiếp S3 GET/PUT).
+- [ ] Nắm vững S3 Object Lambda: Biến đổi dữ liệu hoặc ẩn danh PII động theo thời gian thực mà không nhân đôi dung lượng bucket.
+- [ ] Phân biệt các mô hình bảo mật: S3 Object Lock (Compliance vs Governance vs Legal Hold), S3 Glacier Vault Lock Policy (khóa bất biến WORM 24h).
+- [ ] Hiểu rõ 4 mô hình mã hóa S3: SSE-S3 (AES-256), SSE-KMS (KMS CMK + S3 Bucket Keys tiết kiệm 99%), SSE-C (Customer keys), và Client-Side Encryption (CSE).
+- [ ] Nắm vững S3 Storage Lens Dashboard cấp Organizations để rà soát bucket rủi ro không bật Versioning.
+- [ ] Hiểu rõ giới hạn của S3 Storage Class Analysis: Chỉ khuyến nghị chuyển Standard sang Standard-IA.
+- [ ] Nắm vững S3 Requester Pays: Bên yêu cầu tự trả phí request và phí Data Transfer Out.
+- [ ] Hiểu cách phân quyền mở rộng: S3 Access Points (VPC-only endpoint) và S3 Access Grants tích hợp IAM Identity Center.
+- [ ] Nắm vững S3 Glacier Expedited Retrieval (1–5 phút) và Provisioned Retrieval Capacity đảm bảo băng thông lúc khẩn cấp.
+- [ ] Hiểu cơ chế cache CloudFront: Cache-Control: max-age=0/no-cache, Cache Invalidation vs File Versioning (Hash Naming), và Georestriction.
+- [ ] Nắm vững quy tắc Route 53 Alias trỏ S3 Website: Tên bucket BẮT BUỘC trùng khít FQDN domain, và cấu hình CORS khi tải assets chéo domain.
+- [ ] Nắm vững quyền sở hữu Object: `Bucket Owner Enforced` (vô hiệu hóa ACLs), và kiến trúc S3 Event Fan-Out qua SNS/EventBridge.
+- [ ] Nắm vững S3 Byte-Range Fetches: Chỉ đọc một đoạn byte đầu (ví dụ 250 byte) thay vì tải toàn bộ file 50 TB.
 
 ---
 

@@ -89,7 +89,7 @@ flowchart TD
 | **Tính sẵn sàng cao (HA)** | **Tự động dự phòng trong 1 AZ**; mở rộng đa AZ bằng cách tạo 1 NAT GW cho mỗi AZ. | **Kém (SPOF)**: Chạy trên 1 EC2; muốn HA phải tự viết script chuyển đổi ENI phức tạp. |
 | **Băng thông mạng** | **Tự động co giãn từ 5 Gbps lên tới 100 Gbps**. | Giới hạn theo băng thông card mạng của kiểu máy EC2 đã chọn. |
 | **Cấu hình card mạng** | Không cần can thiệp; bắt buộc phải gắn **Elastic IP**. | **Bắt buộc phải tắt cờ `Source/Destination Check`** trên card mạng ENI. |
-| **Cơ chế tính phí** | Phí theo giờ duy trì (~$0.045/h) + **Phí xử lý dữ liệu ($0.045/GB)**. | Tính phí máy ảo EC2 On-Demand hoặc Spot + phí ổ đĩa EBS. |
+| **Cơ chế tính phí** | Phí theo giờ duy trì (~\\$0.045/h) + **Phí xử lý dữ liệu (\\$0.045/GB)**. | Tính phí máy ảo EC2 On-Demand hoặc Spot + phí ổ đĩa EBS. |
 
 ---
 
@@ -115,17 +115,17 @@ flowchart LR
         SQS[Amazon SQS]
     end
 
-    EC2App -->|Đích đến trong Route Table / $0.00| GatewayEP
+    EC2App -->|Đích đến trong Route Table / \$0.00| GatewayEP
     EC2App -->|Kết nối tới Private IP trên ENI cục bộ| InterfaceEP
 ```
 
 1. **Gateway Endpoints**:
    - Hoạt động như một đích đến trong **Bảng định tuyến (Route Table Target)**.
-   - **HOÀN TOÀN MIỄN PHÍ ($0.00/giờ, $0.00/GB)**.
+   - **HOÀN TOÀN MIỄN PHÍ (\$0.00/giờ, \$0.00/GB)**.
    - **Chỉ hỗ trợ duy nhất 2 dịch vụ**: **Amazon S3** và **Amazon DynamoDB**.
 2. **Interface Endpoints (AWS PrivateLink)**:
    - Khởi tạo một card mạng ảo **ENI riêng** nằm trực tiếp bên trong subnet của bạn với địa chỉ Private IP nội bộ.
-   - **Có tính phí**: Phí giờ duy trì ENI (~$0.01/giờ/AZ) + Phí xử lý dữ liệu (~$0.01/GB).
+   - **Có tính phí**: Phí giờ duy trì ENI (~\\$0.01/giờ/AZ) + Phí xử lý dữ liệu (~\\$0.01/GB).
    - Hỗ trợ hầu hết tất cả các dịch vụ AWS còn lại (KMS, Secrets Manager, CloudWatch, SQS, SNS, ECR...) và các dịch vụ SaaS của bên thứ ba.
 
 ---
@@ -224,7 +224,7 @@ flowchart TD
 - **Tình huống thi**: EC2 / Lambda trong Private Subnet cần đọc/ghi S3 hoặc DynamoDB với chi phí thấp nhất và không có Internet Gateway / NAT Gateway.
 - **Giải pháp chuẩn**:
   - Sử dụng **Gateway VPC Endpoints** cho **Amazon S3** và **Amazon DynamoDB**.
-  - **Đặc tính**: Miễn phí cước phí hoàn toàn ($0.00/tháng), cấu hình bằng cách thêm Prefix List route vào Route Table của Private Subnet.
+  - **Đặc tính**: Miễn phí cước phí hoàn toàn (\$0.00/tháng), cấu hình bằng cách thêm Prefix List route vào Route Table của Private Subnet.
   - Đối với các dịch vụ khác (SQS, SNS, Kinesis, Secrets Manager, CloudWatch): Bắt buộc dùng **Interface VPC Endpoints (AWS PrivateLink)** (tính phí theo ENI giờ + GB dữ liệu).
 
 #### 3. Quản Trị EC2 Trong Private Subnet Bằng Systems Manager Session Manager (Zero Bastion)
@@ -237,13 +237,13 @@ flowchart TD
   - Gán IAM Role với policy `AmazonSSMManagedInstanceCore` cho EC2 instance.
   - Kết nối thông qua AWS Console hoặc AWS CLI (`aws ssm start-session`). Không cần mở cổng 22/3389 ở Security Group Inbound.
 
-#### 4. Mạng Hub-and-Spoke Quy Mô Doanh Nghiệp Với AWS Transit Gateway — (CM-PT1 Q14, TD-Set4 Q18, TD-Set8 Q04)
+#### 4. Mạng Hub-and-Spoke Quy Mô Doanh Nghiệp Với AWS Transit Gateway — (CM-PT1 Q60, TD-Set4 Q18, TD-Set8 Q04)
 - **Tình huống thi**: Doanh nghiệp mở rộng lên hàng chục đến hàng trăm VPCs cần kết nối với nhau và kết nối về Datacenter On-Premises qua Direct Connect hoặc VPN.
 - **Giải pháp chuẩn**:
   - Thay thế mô hình Full-Mesh VPC Peering phức tạp (cần $N(N-1)/2$ kết nối) bằng **AWS Transit Gateway (TGW)**.
   - Transit Gateway đóng vai trò Cloud Router hỗ trợ **Transitive Routing** (VPC A -> TGW -> VPC B hoặc On-Premises), chia sẻ tập trung qua AWS RAM (Resource Access Manager).
 
-#### 5. Chia Sẻ Tài Nguyên Mạng Tập Trung Bằng AWS Resource Access Manager (RAM) — (TD-Set1 Q03)
+#### 5. Chia Sẻ Tài Nguyên Mạng Tập Trung Bằng AWS Resource Access Manager (RAM) — (CM-PT6 Q47, U-PT2 Q53, U-PT3 Q21, U-PT6 Q07)
 - **Tình huống thi**: Công ty đa quốc gia có hàng chục tài khoản AWS khác nhau. Ban giám đốc CNTT muốn mua sắm và quản lý tập trung các tài nguyên mạng đắt đỏ như AWS Transit Gateways, Subnets dùng chung, và quy tắc phân giải Route 53 Resolver Rules, sau đó chia sẻ an toàn cho các tài khoản thành viên để tối ưu chi phí và tăng tính nhất quán.
 - **Giải pháp chuẩn**:
   - Hợp nhất các tài khoản thông qua **AWS Organizations**.
@@ -314,7 +314,7 @@ flowchart TD
 #### 🪤 Bẫy 6: Cắt Giảm Chi Phí NAT Gateway Bằng Egress-Only Internet Gateway Khi Hỗ Trợ IPv6 — (CM-PT2 Q09, CM-PT1 Q33)
 - **Tình huống đề thi**: *"Doanh nghiệp có hàng chục VPC với NAT Gateways tại mỗi AZ để máy chủ trong private subnet gọi ra ngoài API của đối tác. Chi phí NAT Gateway quá đắt đỏ. Đối tác xác nhận API của họ hỗ trợ cả IPv4 và IPv6. Giải pháp nào loại bỏ NAT Gateway mà vẫn giữ an toàn chiều Outbound?"*
 - **Phân tích giải pháp tối ưu**:
-  - NAT Gateway tính phí $0.045/giờ/gateway + $0.045/GB dữ liệu xử lý.
+  - NAT Gateway tính phí \$0.045/giờ/gateway + \$0.045/GB dữ liệu xử lý.
   - Cấu hình dải IPv6 cho VPC và các subnet.
   - Thay thế NAT Gateway bằng **Egress-Only Internet Gateway** (hoàn toàn **miễn phí**).
   - Cập nhật bảng định tuyến private subnet trỏ `::/0` tới Egress-Only IGW. Máy chủ gọi ra ngoài bình thường nhưng Internet hoàn toàn không thể khởi tạo kết nối đi vào!
@@ -392,10 +392,81 @@ flowchart TD
 #### 🪤 Bẫy 16: Tối Ưu Chi Phí Truyền Dữ Liệu Ra (DTO) Khi Truy Cập Data Warehouse — (U-PT4 Q52)
 - **Tình huống đề thi**: *"Doanh nghiệp bán lẻ có đường truyền AWS Direct Connect từ trung tâm dữ liệu và đã di chuyển Data Warehouse lên AWS. Nhóm phân tích cần triển khai một công cụ trực quan hóa dữ liệu (Visualization Tool) để truy vấn khối lượng lớn dữ liệu từ Data Warehouse. Cần triển khai công cụ này ở đâu và kết nối như thế nào để chi phí truyền dữ liệu ra (Data Transfer Out - DTO) là thấp nhất?"*
 - **Bản chất tính phí Data Transfer của AWS**:
-  - Truyền dữ liệu từ AWS ra ngoài Internet công cộng có mức phí cao nhất (~$0.09/GB).
-  - Truyền dữ liệu qua Direct Connect nội vùng (Private VIF trong cùng Region) có chi phí rẻ hơn nhiều (~$0.02/GB).
-  - Truyền dữ liệu giữa các dịch vụ trong **CÙNG MỘT REGION** có chi phí thấp nhất (thậm chí $0.00 nếu cùng AZ).
+  - Truyền dữ liệu từ AWS ra ngoài Internet công cộng có mức phí cao nhất (~\\$0.09/GB).
+  - Truyền dữ liệu qua Direct Connect nội vùng (Private VIF trong cùng Region) có chi phí rẻ hơn nhiều (~\\$0.02/GB).
+  - Truyền dữ liệu giữa các dịch vụ trong **CÙNG MỘT REGION** có chi phí thấp nhất (thậm chí \$0.00 nếu cùng AZ).
 - **Giải pháp ĐÚNG**: **Triển khai Visualization Tool trong CÙNG AWS Region với Data Warehouse** và truy cập công cụ trực quan hóa này từ mạng On-Premises thông qua kết nối **AWS Direct Connect** trong cùng Region.
+
+#### 🪤 Bẫy 17: Chia Sẻ Subnet Đa Tài Khoản Qua AWS Resource Access Manager (VPC Sharing) — (CM-PT6 Q47, U-PT2 Q53, U-PT3 Q21, U-PT6 Q07)
+- **Tình huống đề thi**: Doanh nghiệp có nhiều tài khoản thành viên trong AWS Organizations. Cần triển khai các máy chủ EC2 ở các tài khoản khác nhau nhưng có thể kết nối với nhau bằng địa chỉ IPv4 nội bộ với độ trễ thấp nhất, không tốn chi phí VPC Peering hay Transit Gateway, và quản lý tập trung tài nguyên mạng (VPC, Subnet, Route Table, NAT Gateway).
+- **Giải pháp ĐÚNG**: **VPC Sharing thông qua AWS RAM (Resource Access Manager)**.
+  - Tài khoản quản trị mạng (Owner Account) tạo VPC và chia sẻ Subnets cho các Member Accounts (Participants) trong cùng AWS Organization.
+  - Người dùng ở Member Accounts có thể khởi tạo tài nguyên (EC2, RDS, Lambda) ngay trong Subnet dùng chung.
+  - **Quy tắc an ninh cốt lõi của VPC Sharing**:
+    - Tài khoản Participant KHÔNG THỂ sửa, xóa hay xem tài nguyên (như Security Groups, EC2 instances) của các tài khoản khác dù nằm trong cùng một Subnet chung!
+    - Participant cũng không thể sửa đổi Route Tables, Subnet CIDR hay Network ACLs của Owner.
+    - Giao tiếp giữa các instances ở các tài khoản khác nhau trong cùng Subnet diễn ra qua IP riêng nội bộ, tốc độ cao nhất và hoàn toàn không tốn cước phí truyền dữ liệu liên VPC!
+
+#### 🪤 Bẫy 18: Điều Kiện Tiên Quyết Của Customer Gateway Trong AWS Site-to-Site VPN — (TD-Set2 Q03)
+- **Tình huống đề thi**: Doanh nghiệp thiết lập đường hầm IPsec Site-to-Site VPN từ trung tâm dữ liệu On-Premises lên AWS Virtual Private Gateway (VGW). Khi tạo tài nguyên **Customer Gateway (CGW)** trên AWS console, thiết bị tường lửa tại chỗ cần thông tin cấu hình mạng nào?
+- **Điểm bẫy kỹ thuật**: Đề bài thường đưa ra các lựa chọn như Private IP, dynamic IP từ ISP, NAT IP, hoặc MAC address.
+- **Quy tắc bất biến**: Customer Gateway bắt buộc phải có **1 địa chỉ IP công cộng tĩnh có thể định tuyến được qua Internet (Static, Internet-routable Public IP)**. Nếu thiết bị tại chỗ nằm sau tường lửa NAT, bắt buộc phải dùng IP công cộng của thiết bị NAT đó.
+
+#### 🪤 Bẫy 19: Mở Rộng Băng Thông Site-to-Site VPN Vượt Mốc 1.25 Gbps Bằng Transit Gateway + ECMP — (TD-Set5 Q53)
+- **Tình huống đề thi**: Hệ thống sao lưu On-Premises lên AWS cần truyền dữ liệu với tốc độ 4 Gbps qua đường truyền mã hóa IPsec VPN. Tuy nhiên, mỗi đường hầm AWS VPN Tunnel chỉ hỗ trợ tối đa 1.25 Gbps. Làm thế nào để tăng băng thông mà không cần bỏ VPN?
+- **Các phương án bẫy**: Tạo nhiều VGW (sai vì 1 VPC chỉ gắn 1 VGW); tăng kích thước VM tại On-Premises (vẫn bị giới hạn 1.25 Gbps/tunnel).
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Transit Gateway** và bật tính năng **ECMP (Equal-Cost Multi-Path routing)**.
+  - Thiết lập nhiều kết nối Site-to-Site VPN (VPN Attachments) tới cùng một Transit Gateway.
+  - Bật định tuyến động BGP với ECMP; Transit Gateway sẽ tự động phân phối các luồng lưu lượng (flow-based) đồng đều qua nhiều đường hầm VPN, tổng hợp băng thông vượt xa giới hạn 1.25 Gbps (ví dụ: 4 tunnels $\approx$ 5 Gbps).
+
+#### 🪤 Bẫy 20: Các Cấp Độ Dự Phòng AWS Direct Connect: Tiết Kiệm (VPN Backup) vs Tối Đa (4 Connections Resiliency) — (TD-Set2 Q50, CM-PT3 Q32)
+- **Tình huống 1 (Chi phí thấp - Cost-effective Backup)** (`TD-Set2 Q50`): Cần đường truyền dự phòng cho Direct Connect khi cáp quang gặp sự cố với chi phí rẻ nhất $\rightarrow$ Thiết lập **AWS Site-to-Site VPN kết nối vào cùng Virtual Private Gateway / Transit Gateway** làm đường truyền dự phòng tự động (failover via BGP AS-Path Prepending).
+- **Tình huống 2 (Độ chịu lỗi tối đa cho 2 Datacenters - Maximum Resiliency)** (`CM-PT3 Q32`): Doanh nghiệp có 2 trung tâm dữ liệu độc lập (DC1 và DC2) yêu cầu kiến trúc Direct Connect không có điểm nghẽn đơn lẻ (Zero SPOF), chịu được sự cố hỏng cả thiết bị lẫn hỏng cả trung tâm kết nối colocation Direct Connect $\rightarrow$ Bắt buộc triển khai **tổng cộng 4 kết nối Direct Connect**: Mỗi DC nối vào 2 vị trí DX Location khác nhau (DC1 nối DX1 + DX2; DC2 nối DX1 + DX2), kết nối về **Direct Connect Gateway**.
+
+#### 🪤 Bẫy 21: Chia Sẻ Cơ Sở Dữ Liệu RDS Riêng Tư Xuyên Tài Khoản Qua NLB + AWS PrivateLink — (CM-PT4 Q15, U-PT1 Q02)
+- **Tình huống đề thi**: Một công ty có CSDL Amazon RDS PostgreSQL/MySQL đặt trong Private Subnet của VPC Tài khoản A. Ứng dụng thuộc VPC Tài khoản B (của đối tác hoặc công ty con) cần truy vấn CSDL này nhưng đội an ninh nghiêm cấm mở Public IP, cấm dùng VPC Peering (do sợ lộ toàn bộ VPC) và cấm Transit Gateway.
+- **Giải pháp ĐÚNG**:
+  1. Tại VPC A: Tạo một **Network Load Balancer (NLB)** nội bộ trỏ Target Group tới IP riêng của máy chủ RDS.
+  2. Tạo một **VPC Endpoint Service** gắn với NLB này và cấp phép (Allow Principal) cho AWS Account ID của VPC B.
+  3. Tại VPC B: Tạo một **Interface VPC Endpoint (AWS PrivateLink)** kết nối tới Endpoint Service của VPC A.
+  4. Ứng dụng tại VPC B truy vấn RDS qua DNS nội bộ của Interface Endpoint, hoàn toàn riêng tư và không cần định tuyến mạng trực tiếp!
+
+#### 🪤 Bẫy 22: Chống Thất Thoát Dữ Liệu Bằng VPC Endpoint Policy & Khóa S3 Bucket Bằng `aws:SourceVpc` / `aws:SourceVpce` — (TD-Set2 Q06, CM-PT1 Q09, U-PT6 Q56)
+- **Tình huống 1 (Ngăn nhân viên rò rỉ dữ liệu qua VPC Endpoint)** (`TD-Set2 Q06`): Nhân viên trong VPC có thể dùng VPC Endpoint để tải dữ liệu nhạy cảm lên tài khoản S3 cá nhân của họ.
+  - *Giải pháp*: Gắn **VPC Endpoint Policy** vào Gateway/Interface Endpoint, cấu hình `Effect: Allow`, `Principal: *`, `Action: s3:*`, `Resource: arn:aws:s3:::corporate-bucket/*` (chỉ cho phép truy cập bucket của công ty, tự động chặn mọi bucket ngoài).
+- **Tình huống 2 (Khóa S3 Bucket chỉ cho phép truy cập từ 1 VPC cụ thể)** (`CM-PT1 Q09`, `U-PT6 Q56`):
+  - *Giải pháp*: Cấu hình S3 Bucket Policy với điều kiện `StringNotEquals` kết hợp `aws:sourceVpc: vpc-xxxx` hoặc `aws:sourceVpce: vpce-xxxx` để từ chối mọi yêu cầu đến từ ngoài VPC đó, kể cả khi có IAM credentials hợp lệ!
+
+#### 🪤 Bẫy 23: Xử Lý Cạn Kiệt IPv4 Trong Dual-Stack VPC Bằng Subnet IPv6-only (/64) & Hành Vi Mặc Định Của Subnet — (TD-Set2 Q19, TD-Set3 Q38)
+- **Tình huống đề thi** (`TD-Set2 Q19`): Doanh nghiệp bị cạn kiệt địa chỉ IPv4 trong VPC lớn và không thể mở rộng thêm dải CIDR IPv4. Họ cần thêm hàng ngàn container/microservices mới mà không cần cấp phát thêm IPv4.
+  - *Giải pháp*: Chuyển VPC sang **Dual-Stack**, tạo các **Subnets IPv6-only** với tiền tố chuẩn `/64` (cung cấp \(2^{64} \approx 18.4\) tỷ tỷ địa chỉ IP khả dụng). Các máy chủ/container trong subnet này giao tiếp với nhau và ra ngoài qua IPv6 mà không tiêu tốn 1 địa chỉ IPv4 nào!
+- **Hành vi mặc định khi tạo mới Subnet** (`TD-Set3 Q38`):
+  - Subnet mới tạo **luôn luôn được tự động liên kết (associated) với Main Route Table** của VPC trừ khi bạn chủ động gán nó vào một Custom Route Table.
+  - Subnet **bắt buộc nằm trọn vẹn trong DUY NHẤT MỘT Availability Zone (AZ)**, không bao giờ trải rộng trên nhiều AZ.
+
+#### 🪤 Bẫy 24: Bẫy Cơ Chế NAT Của Internet Gateway vs NAT Instance & 3 Điểm Khác Biệt Cốt Lõi — (U-PT3 Q55, U-PT3 Q64, U-PT6 Q29)
+- **Bẫy cơ chế NAT** (`U-PT3 Q64`): Khi một EC2 instance có gắn Elastic IP (Public IPv4) đặt trong Public Subnet (có route `0.0.0.0/0 -> igw-xxx`), thì **chính Internet Gateway thực hiện dịch địa chỉ 1:1 NAT tĩnh (Static 1:1 NAT)** giữa Private IP và Public IP của instance. Dù bạn có khởi tạo một NAT Instance trong cùng subnet đó thì NAT Instance cũng KHÔNG tham gia vào luồng NAT của máy chủ này trừ khi Route Table chủ động trỏ tới nó!
+- **3 tính năng chỉ có ở NAT Instance mà NAT Gateway KHÔNG hỗ trợ** (`U-PT3 Q55`):
+  1. **Gắn Security Group**: NAT Instance là máy ảo EC2 thông thường nên gắn được Security Group để kiểm soát cổng vào/ra (NAT Gateway không có Security Group).
+  2. **Chuyển tiếp cổng (Port Forwarding)**: Hỗ trợ cấu hình `iptables` để chuyển tiếp cổng từ ngoài vào máy backend.
+  3. **Dùng làm Bastion Host**: Có thể SSH trực tiếp vào NAT Instance để nhảy vào các máy trong private subnet.
+  - *Lưu ý sống còn*: NAT Instance bắt buộc phải **Tắt cờ kiểm tra địa chỉ nguồn/đích (Disable Source/Destination Check)** trên ENI (`U-PT6 Q29`) thì mới có thể chuyển tiếp gói tin được!
+
+#### 🪤 Bẫy 25: Bẫy Cấu Hình Security Group: Không Thể Điền Internet Gateway ID (`igw-xxx`) Làm Nguồn — (U-PT3 Q17)
+- **Tình huống đề thi**: Một lập trình viên muốn bảo vệ máy chủ Web trong Public Subnet, chỉ muốn cho phép lưu lượng truy cập từ Internet Gateway đi vào máy chủ nên đã cố gắng điền `igw-01234567` vào trường Source của Security Group Inbound Rule.
+- **Điểm bẫy kỹ thuật**: Security Group **CHỈ CHẤP NHẬN 3 loại Source**:
+  1. Địa chỉ IP CIDR cụ thể (ví dụ: `0.0.0.0/0`, `203.0.113.5/32`, `10.0.0.0/16`).
+  2. Mã Security Group ID khác (ví dụ: `sg-0abc1234`).
+  3. Mã Prefix List ID (ví dụ: `pl-63a5400a`).
+- **TUYỆT ĐỐI KHÔNG THỂ** điền Gateway ID (`igw-xxx`), Subnet ID (`subnet-xxx`) hay VPC ID (`vpc-xxx`) vào trường Source của Security Group!
+
+#### 🪤 Bẫy 26: Inter-Region VPC Peering & Bẫy Kết Nối Hình Sao Không Bắc Cầu (Non-Transitive Hub-and-Spoke) — (TD-Set5 Q39, CM-PT4 Q09, CM-PT4 Q25, U-PT1 Q25, U-PT4 Q31, U-PT6 Q61)
+- **Đặc điểm Inter-Region VPC Peering**: Toàn bộ dữ liệu đi qua hạ tầng mạng backbone riêng của AWS, được mã hóa tự động ở tầng vật lý, không đi qua Internet công cộng (`TD-Set5 Q39`, `U-PT1 Q25`). Hỗ trợ tham chiếu Security Group xuyên Region (`CM-PT4 Q09`).
+- **Bẫy mô hình Hub-and-Spoke bằng VPC Peering** (`U-PT4 Q31`, `U-PT6 Q61`): Nếu VPC A kết nối Peering với VPC B (Hub), và VPC B kết nối Peering với VPC C (Spoke), thì **VPC A KHÔNG THỂ giao tiếp với VPC C qua VPC B** vì VPC Peering **không có tính chất bắc cầu (Non-Transitive)**. Gói tin sẽ bị drop tại VPC B. Để khắc phục, bắt buộc phải tạo Peering trực tiếp giữa A và C, hoặc chuyển sang dùng **AWS Transit Gateway**.
+
+#### 🪤 Bẫy 27: Giám Sát Mạng Lai Bằng Amazon CloudWatch Network Monitor & Pipeline VPC Flow Logs Thời Gian Thực — (CM-PT1 Q47, CM-PT6 Q19)
+- **Giám sát mạng lai On-Premises và AWS** (`CM-PT1 Q47`): Khi cần đo đạc liên tục độ trễ khứ hồi (**Round-Trip Time - RTT**) và tỷ lệ mất gói tin (**Packet Loss**) giữa VPC và các văn phòng chi nhánh/On-Premises mà không cần cài đặt thêm phần mềm giám sát phức tạp $\rightarrow$ Kích hoạt **Amazon CloudWatch Network Monitor**.
+- **Pipeline xử lý VPC Flow Logs thời gian thực** (`CM-PT6 Q19`): Để phát hiện tấn công DDoS, quét cổng và phân tích bất thường mạng trong vòng vài giây $\rightarrow$ Đẩy VPC Flow Logs tới **CloudWatch Logs** $\rightarrow$ Dùng **CloudWatch Logs Subscription Filter** đẩy luồng sang **Amazon Kinesis Data Streams / Firehose** $\rightarrow$ Nạp vào **Amazon OpenSearch Service** để trực quan hóa trên OpenSearch Dashboards theo thời gian thực.
 
 ---
 
@@ -409,25 +480,25 @@ flowchart TD
 | **Mở cổng vào Web trên NACL nhưng người dùng bị timeout** | **Mở thêm Outbound Ephemeral Ports (1024-65535)** | NACL là stateless, gói tin phản hồi bị chặn lại | U-PT4 Q22 |
 | **EC2 Private gọi S3 qua Gateway Endpoint bị timeout** | **Gán S3 Prefix List vào Subnet Route Table** | Chưa cập nhật Route Table trỏ tới `vpce-xxxx` | U-PT4 Q06 |
 | **Tối ưu chi phí Data Transfer Out truy vấn Data Warehouse** | **Đặt tool trong cùng Region + Direct Connect nội vùng** | Xuất dữ liệu qua Internet công cộng (phí cực đắt) | U-PT4 Q52 |
-| **Chia sẻ Subnets & Transit Gateway đa tài khoản** | **AWS Resource Access Manager (RAM)** | Tạo duplicate tài nguyên ở từng account (lãng phí tiền) | TD-Set1 Q03 |
+| **Chia sẻ Subnets & Transit Gateway đa tài khoản** | **AWS Resource Access Manager (RAM)** | Tạo duplicate tài nguyên ở từng account (lãng phí tiền) | CM-PT6 Q47, U-PT2 Q53, U-PT3 Q21 |
 | **Kiểm tra gói tin sâu L3-L7 và chặn FQDN độc hại** | **AWS Network Firewall** | Security Groups / NACL (chỉ lọc L4, không lọc URL/FQDN) | TD-Set1 Q57, TD-Set2 Q60 |
 | **Chuyển dự phòng luồng mạng tức thì khi máy sập** | **Secondary ENI / Secondary Private IPv4** | Sửa bản ghi DNS (bị trễ do TTL của client cache) | TD-Set2 Q38 |
-| **Hàng chục VPCs + On-Prem, Transitive Routing** | **AWS Transit Gateway** | Loại VPC Peering (không hỗ trợ bắc cầu) | TD-Set4 Q18, TD-Set8 Q04 |
-| **EC2 Private truy cập S3 / DynamoDB miễn phí** | **Gateway VPC Endpoint** ($0.00 cước phí) | Loại NAT Gateway (tốn phí $0.045/h + data processing) | TD-Set1 Q33 |
+| **Hàng chục VPCs + On-Prem, Transitive Routing** | **AWS Transit Gateway** | Loại VPC Peering (không hỗ trợ bắc cầu) | CM-PT1 Q60, TD-Set4 Q18, TD-Set8 Q04 |
+| **EC2 Private truy cập S3 / DynamoDB miễn phí** | **Gateway VPC Endpoint** (\$0.00 cước phí) | Loại NAT Gateway (tốn phí \$0.045/h + data processing) | TD-Set1 Q33 |
 | **EC2 Private truy cập SQS / SSM / Secrets Manager** | **Interface VPC Endpoint** (PrivateLink) | Gateway Endpoint không hỗ trợ các dịch vụ này | TD-Set1 Q30, TD-Set5 Q10 |
-| **Quản trị EC2 không mở port 22 / không Public IP** | **Systems Manager Session Manager** | Loại Bastion Host (tốn chi phí & rủi ro bảo mật) | TD-Set6 Q54 |
-| **On-Prem giải quyết DNS của AWS** | **Route 53 Resolver Inbound Endpoint** | Loại Outbound Endpoint (sai chiều truy vấn) | TD-Set1 Q03 |
-| **AWS VPC giải quyết DNS nội bộ của On-Prem** | **Route 53 Resolver Outbound Endpoint** | Loại Inbound Endpoint (sai chiều truy vấn) | TD-Set6 Q54 |
-| **IPv6 trong Private Subnet cần ra Internet tải bản vá** | **Egress-Only Internet Gateway** | Loại NAT Gateway (chỉ hỗ trợ IPv4) | TD-Set1 Q57 |
-| **On-Premises truy cập S3 qua Direct Connect** | **Direct Connect Public VIF** | Loại Private VIF (chỉ truy cập VPC nội bộ) | TD-Set1 Q31 |
-| **Kết nối Direct Connect vào AWS Transit Gateway** | **Direct Connect Transit VIF + DX Gateway** | Private VIF (không thể gắn vào Transit Gateway) | TD-Set3 Q22, TD-Set4 Q18 |
+| **Quản trị EC2 không mở port 22 / không Public IP** | **Systems Manager Session Manager** | Loại Bastion Host (tốn chi phí & rủi ro bảo mật) | U-PT3 Q47, TD-Set6 Q54 |
+| **On-Prem giải quyết DNS của AWS** | **Route 53 Resolver Inbound Endpoint** | Loại Outbound Endpoint (sai chiều truy vấn) | CM-PT1 Q41 |
+| **AWS VPC giải quyết DNS nội bộ của On-Prem** | **Route 53 Resolver Outbound Endpoint** | Loại Inbound Endpoint (sai chiều truy vấn) | CM-PT1 Q41, U-PT1 Q20 |
+| **IPv6 trong Private Subnet cần ra Internet tải bản vá** | **Egress-Only Internet Gateway** | Loại NAT Gateway (chỉ hỗ trợ IPv4) | CM-PT1 Q33 |
+| **On-Premises truy cập S3 qua Direct Connect** | **Direct Connect Public VIF** | Loại Private VIF (chỉ truy cập VPC nội bộ) | U-PT6 Q03 |
+| **Kết nối Direct Connect vào AWS Transit Gateway** | **Direct Connect Transit VIF + DX Gateway** | Private VIF (không thể gắn vào Transit Gateway) | U-PT3 Q31 |
 | **Truyền dữ liệu nhạy cảm qua Direct Connect an toàn** | **Direct Connect + Site-to-Site VPN (IPsec)** | Direct Connect đơn thuần chưa được mã hóa at-transit | U-PT1 Q42 |
-| **Kiểm tra an ninh gói tin sâu L3/L4 bằng Firewall ảo 3rd-party** | **Gateway Load Balancer (GWLB) cổng GENEVE 6081** | ALB / NLB (chấm dứt kết nối TCP/TLS, mất IP header gốc) | TD-Set6 Q28, TD-Set8 Q02 |
-| **Cắt giảm chi phí NAT Gateway khi hỗ trợ IPv6** | **Egress-Only Internet Gateway ($0 chi phí)** | NAT Gateway ($0.045/giờ + phí dữ liệu data processing) | CM-PT2 Q09 |
-
----
-
----
+| **Kiểm tra an ninh gói tin sâu L3/L4 bằng Firewall ảo 3rd-party** | **Gateway Load Balancer (GWLB) cổng GENEVE 6081** | ALB / NLB (chấm dứt kết nối TCP/TLS, mất IP header gốc) | CM-PT2 Q48 |
+| **Cắt giảm chi phí NAT Gateway khi hỗ trợ IPv6** | **Egress-Only Internet Gateway (\$0 chi phí)** | NAT Gateway (\$0.045/giờ + phí dữ liệu data processing) | CM-PT2 Q09 |
+| **Mở rộng VPN vượt 1.25 Gbps** | **Transit Gateway + ECMP (nhiều VPN Tunnels)** | VGW đơn lẻ (bị trần 1.25 Gbps) | TD-Set5 Q53 |
+| **Chia sẻ RDS riêng tư xuyên tài khoản** | **NLB nội bộ + Interface VPC Endpoint (PrivateLink)** | VPC Peering (lộ dải CIDR), Public IP (mất an toàn) | CM-PT4 Q15, U-PT1 Q02 |
+| **Khóa truy cập S3 Bucket chỉ từ 1 VPC** | **S3 Bucket Policy với điều kiện `aws:sourceVpc`** | IAM User Policy (không khóa được tầng mạng VPC) | CM-PT1 Q09, U-PT6 Q56 |
+| **Đo độ trễ RTT & packet loss mạng lai On-Prem** | **Amazon CloudWatch Network Monitor** | VPC Flow Logs (không đo được RTT ứng dụng) | CM-PT1 Q47 |
 
 ---
 
@@ -500,11 +571,11 @@ flowchart TD
 
 | Giải pháp kết nối | Băng thông hỗ trợ | Độ trễ mạng | Hỗ trợ Transitive Routing | Xung đột dải IP (Overlapping CIDR) | Chi phí kết nối | Kịch bản sử dụng chuẩn mực |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **VPC Peering** | Không giới hạn (Băng thông EC2) | Rất thấp (Cùng Region) | ❌ **KHÔNG** (Non-transitive) | ❌ **BỊ LỖI** (Không thể kết nối) | **MIỄN PHÍ kết nối** ($0/h, $0/GB) | Kết nối giữa 2–5 VPC trong cùng tổ chức có dải IP không trùng nhau. |
-| **AWS Transit Gateway** | Tới 50 Gbps trên mỗi attachment | Thấp (1–2 ms qua hub) |  **CÓ HỖ TRỢ** (Transitive) | ❌ **BỊ LỖI** (Yêu cầu định tuyến CIDR) | **TÍNH PHÍ** ($0.05/h/VPC + $0.02/GB) | Mô hình Hub-and-Spoke kết nối hàng chục đến hàng trăm VPC và On-Premises. |
-| **AWS PrivateLink** | Hàng chục Gbps | Cực thấp | ❌ Không áp dụng |  **CHO PHÉP** (Ánh xạ qua ENI riêng) | Phí ENI ($0.01/h) + Phí dữ liệu ($0.01/GB) | Chia sẻ dịch vụ API an toàn cho khách hàng/đối tác mà không để lộ mạng VPC. |
+| **VPC Peering** | Không giới hạn (Băng thông EC2) | Rất thấp (Cùng Region) | ❌ **KHÔNG** (Non-transitive) | ❌ **BỊ LỖI** (Không thể kết nối) | **MIỄN PHÍ kết nối** (\$0/h, \$0/GB) | Kết nối giữa 2–5 VPC trong cùng tổ chức có dải IP không trùng nhau. |
+| **AWS Transit Gateway** | Tới 50 Gbps trên mỗi attachment | Thấp (1–2 ms qua hub) |  **CÓ HỖ TRỢ** (Transitive) | ❌ **BỊ LỖI** (Yêu cầu định tuyến CIDR) | **TÍNH PHÍ** (\$0.05/h/VPC + \$0.02/GB) | Mô hình Hub-and-Spoke kết nối hàng chục đến hàng trăm VPC và On-Premises. |
+| **AWS PrivateLink** | Hàng chục Gbps | Cực thấp | ❌ Không áp dụng |  **CHO PHÉP** (Ánh xạ qua ENI riêng) | Phí ENI (\$0.01/h) + Phí dữ liệu (\$0.01/GB) | Chia sẻ dịch vụ API an toàn cho khách hàng/đối tác mà không để lộ mạng VPC. |
 | **Amazon VPC Lattice** | Hàng chục Gbps | Cực thấp |  Tự động ở Layer 7 |  **HOÀN TOÀN HỖ TRỢ** | Tính phí theo số dịch vụ + cước xử lý dữ liệu | Mạng kết nối Microservices và Container hiện đại không cần quản lý mạng CIDR. |
-| **AWS Direct Connect** | 1 Gbps đến 100 Gbps | **Cực thấp & Ổn định** |  (Khi kết hợp với TGW) | ❌ Bị lỗi nếu trùng CIDR | Phí cổng vật lý cao + Cước DTO rẻ ($0.02/GB) | Kết nối mạng trục doanh nghiệp lớn, truyền dữ liệu Big Data hàng ngày. |
+| **AWS Direct Connect** | 1 Gbps đến 100 Gbps | **Cực thấp & Ổn định** |  (Khi kết hợp với TGW) | ❌ Bị lỗi nếu trùng CIDR | Phí cổng vật lý cao + Cước DTO rẻ (\$0.02/GB) | Kết nối mạng trục doanh nghiệp lớn, truyền dữ liệu Big Data hàng ngày. |
 
 ---
 
@@ -514,13 +585,13 @@ flowchart TD
 
 | Thành phần tính phí | Cơ chế tính phí chi tiết (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
-| **VPC, Subnets, Route Tables, IGW** | **HOÀN TOÀN MIỄN PHÍ ($0.00)**. | **$0.00** | Không có chi phí cố định cho hạ tầng mạng cốt lõi này. |
-| **VPC Peering (Cùng Region)** | **MIỄN PHÍ KẾT NỐI ($0.00/h, $0.00/GB)**. | $0.00 | Chỉ tính phí truyền dữ liệu liên AZ ($0.01/GB mỗi chiều) nếu máy ảo nằm ở 2 AZ khác nhau. |
-| **NAT Gateway** | • Phí cố định: **~$0.045 / giờ / NAT GW** (~$32.40/tháng/AZ).<br>• Phí xử lý dữ liệu: **$0.045 / GB**. | Rất đắt nếu truyền tải dữ liệu lớn ra ngoài. | Tải hàng chục Terabytes dữ liệu lên S3 qua NAT Gateway thay vì dùng Gateway Endpoint miễn phí. |
-| **VPC Gateway Endpoints** | **HOÀN TOÀN MIỄN PHÍ ($0.00/giờ, $0.00/GB)**. | **$0.00** (Dành cho S3 & DynamoDB). | Quên không bật Gateway Endpoint, để dữ liệu S3 đi vòng qua NAT Gateway tốn tiền. |
-| **VPC Interface Endpoints (PrivateLink)**| • Phí duy trì ENI: **$0.01 / giờ / AZ** (~$7.20/tháng/AZ).<br>• Phí xử lý dữ liệu: **$0.01 / GB**. | Cần tính toán số lượng AZ triển khai. | Tạo Interface Endpoints trên tất cả các AZ cho các dịch vụ hầu như không phát sinh lưu lượng. |
-| **AWS Transit Gateway (TGW)** | • Phí kết nối: **$0.05 / giờ / VPC attachment** (~$36.00/tháng/VPC).<br>• Phí xử lý dữ liệu: **$0.02 / GB**. | Khá tốn kém ở quy mô nhỏ. | Dùng Transit Gateway khi chỉ có 2 VPC cần kết nối với nhau thay vì dùng VPC Peering miễn phí. |
-| **Địa chỉ Public IPv4** | • Áp dụng từ 2024–2026: **$0.005 / giờ / IP** (~$3.65/tháng) cho TẤT CẢ Public IPv4. | $3.65 / tháng / IP. | Bật `Auto-assign Public IP` cho hàng chục máy ảo backend trong Public Subnet. |
+| **VPC, Subnets, Route Tables, IGW** | **HOÀN TOÀN MIỄN PHÍ (\$0.00)**. | **\$0.00** | Không có chi phí cố định cho hạ tầng mạng cốt lõi này. |
+| **VPC Peering (Cùng Region)** | **MIỄN PHÍ KẾT NỐI (\$0.00/h, \$0.00/GB)**. | \$0.00 | Chỉ tính phí truyền dữ liệu liên AZ (\$0.01/GB mỗi chiều) nếu máy ảo nằm ở 2 AZ khác nhau. |
+| **NAT Gateway** | • Phí cố định: **~\$0.045 / giờ / NAT GW** (~\\$32.40/tháng/AZ).<br>• Phí xử lý dữ liệu: **\$0.045 / GB**. | Rất đắt nếu truyền tải dữ liệu lớn ra ngoài. | Tải hàng chục Terabytes dữ liệu lên S3 qua NAT Gateway thay vì dùng Gateway Endpoint miễn phí. |
+| **VPC Gateway Endpoints** | **HOÀN TOÀN MIỄN PHÍ (\$0.00/giờ, \$0.00/GB)**. | **\$0.00** (Dành cho S3 & DynamoDB). | Quên không bật Gateway Endpoint, để dữ liệu S3 đi vòng qua NAT Gateway tốn tiền. |
+| **VPC Interface Endpoints (PrivateLink)**| • Phí duy trì ENI: **\$0.01 / giờ / AZ** (~\\$7.20/tháng/AZ).<br>• Phí xử lý dữ liệu: **\$0.01 / GB**. | Cần tính toán số lượng AZ triển khai. | Tạo Interface Endpoints trên tất cả các AZ cho các dịch vụ hầu như không phát sinh lưu lượng. |
+| **AWS Transit Gateway (TGW)** | • Phí kết nối: **\$0.05 / giờ / VPC attachment** (~\\$36.00/tháng/VPC).<br>• Phí xử lý dữ liệu: **\$0.02 / GB**. | Khá tốn kém ở quy mô nhỏ. | Dùng Transit Gateway khi chỉ có 2 VPC cần kết nối với nhau thay vì dùng VPC Peering miễn phí. |
+| **Địa chỉ Public IPv4** | • Áp dụng từ 2024–2026: **\$0.005 / giờ / IP** (~\\$3.65/tháng) cho TẤT CẢ Public IPv4. | \$3.65 / tháng / IP. | Bật `Auto-assign Public IP` cho hàng chục máy ảo backend trong Public Subnet. |
 
 ---
 
@@ -532,7 +603,7 @@ flowchart TD
   $$\text{Chi phí NAT Gateway Data Processing} = 30,000 \text{ GiB} \times 0.045\$/\text{GiB} = \mathbf{1,350.00\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
   - Tạo một **VPC Gateway Endpoint** cho Amazon S3 và gắn trực tiếp vào Route Table của Private Subnet.
-  - Gateway Endpoint hoạt động ở tầng định tuyến, **hoàn toàn MIỄN PHÍ 100% ($0.00/giờ, $0.00/GB)**. Toàn bộ lưu lượng 30 TB đi thẳng qua mạng trục AWS Backbone.
+  - Gateway Endpoint hoạt động ở tầng định tuyến, **hoàn toàn MIỄN PHÍ 100% (\$0.00/giờ, \$0.00/GB)**. Toàn bộ lưu lượng 30 TB đi thẳng qua mạng trục AWS Backbone.
 * **Kết quả tiết kiệm**:
   $$\text{Số tiền tiết kiệm} = \mathbf{1,350.00\$/\text{tháng}} \quad (\approx \mathbf{16,200\$/\text{năm}})$$
   **Tiết kiệm 100% chi phí xử lý dữ liệu S3**, đồng thời tăng tốc độ truyền tải tệp tin lên gấp 3 lần.
@@ -564,7 +635,7 @@ flowchart TD
     $$\text{Tổng chi phí Transit Gateway} = 144.00\$ + 100.00\$ = \mathbf{244.00\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
   - Với quy mô nhỏ dưới 5–10 VPCs, thiết lập các kết nối **VPC Peering** điểm-điểm trực tiếp giữa các VPC.
-  - VPC Peering trong cùng Region **hoàn toàn MIỄN PHÍ cước duy trì kết nối ($0.00) và MIỄN PHÍ cước xử lý dữ liệu ($0.00)**.
+  - VPC Peering trong cùng Region **hoàn toàn MIỄN PHÍ cước duy trì kết nối (\$0.00) và MIỄN PHÍ cước xử lý dữ liệu (\$0.00)**.
 * **Kết quả tiết kiệm**:
   $$\text{Số tiền tiết kiệm} = \mathbf{244.00\$/\text{tháng}} \quad (\approx \mathbf{2,928\$/\text{năm}})$$
   **Tiết kiệm 100% chi phí điều phối mạng** mà độ trễ truyền dữ liệu lại thấp hơn.
@@ -573,7 +644,7 @@ flowchart TD
 
 #### Kịch bản 4: Xóa Bỏ Public IPv4 Và Bastion Hosts Bằng SSM Session Manager
 * **Bối cảnh thực tế**:
-  Doanh nghiệp duy trì 35 máy ảo EC2 trong Public Subnet được bật cờ `Auto-assign Public IP` ($0.005/giờ/IP) và duy trì 2 Bastion Hosts để các lập trình viên SSH vào làm việc.
+  Doanh nghiệp duy trì 35 máy ảo EC2 trong Public Subnet được bật cờ `Auto-assign Public IP` (\$0.005/giờ/IP) và duy trì 2 Bastion Hosts để các lập trình viên SSH vào làm việc.
   $$\text{Chi phí Public IPv4 (37 IPs)} = 37 \text{ IPs} \times 0.005\$ \times 720 \text{ giờ} = 133.20\$$$
   $$\text{Chi phí máy ảo 2 Bastion Hosts (t3.medium)} = 2 \times 0.0416\$ \times 720 = 59.90\$$$
   $$\text{Tổng chi phí ban đầu} = 133.20\$ + 59.90\$ = \mathbf{193.10\$/\text{tháng}}$$
@@ -595,9 +666,9 @@ flowchart TD
   $$\text{Tổng chi phí ban đầu} = \mathbf{1,060.00\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
   - Cấu hình đích đến của VPC Flow Logs trực tiếp vào **Amazon S3**:
-    - Phí nạp dữ liệu vào S3: **$0.00 / GiB (Hoàn toàn miễn phí)**.
-    - Phí lưu trữ S3 Standard: $2,000 \text{ GiB} \times 0.023\$ = 46.00\$$
-    - Thiết lập S3 Lifecycle Rule tự động chuyển log sang **S3 Glacier Deep Archive** sau 30 ngày ($0.00099/GiB).
+    - Phí nạp dữ liệu vào S3: **\$0.00 / GiB (Hoàn toàn miễn phí)**.
+    - Phí lưu trữ S3 Standard: $$ 2,000 \text{ GiB} \times 0.023\$/\text{GiB} = 46.00\$ $$
+    - Thiết lập S3 Lifecycle Rule tự động chuyển log sang **S3 Glacier Deep Archive** sau 30 ngày (\$0.00099/GiB).
   - Sử dụng **Amazon Athena** truy vấn trực tiếp file log trên S3 khi cần điều tra sự cố.
 * **Kết quả tiết kiệm**:
   $$\text{Số tiền tiết kiệm} = 1,060.00\$ - 46.00\$ = \mathbf{1,014.00\$/\text{tháng}} \quad (\approx \mathbf{12,168\$/\text{năm}})$$
@@ -618,8 +689,6 @@ flowchart TD
 
 ---
 
----
-
 ## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon VPC (Golden Rules)
@@ -633,12 +702,25 @@ flowchart TD
 4. **Quy tắc triển khai NAT Gateway tối ưu**:  
    Môi trường Production bắt buộc dùng Multi-NAT Gateway (1 chiếc/AZ để đảm bảo HA); môi trường Dev/Test/QA chỉ dùng duy nhất 1 NAT Gateway để tiết kiệm 66% chi phí.
 5. **Loại bỏ Public IPv4 và Bastion Hosts**:  
-   Chuyển toàn bộ máy ảo vào Private Subnet và sử dụng **AWS Systems Manager Session Manager** để kết nối an toàn mà không tốn phí $0.005/giờ/IP.
+   Chuyển toàn bộ máy ảo vào Private Subnet và sử dụng **AWS Systems Manager Session Manager** để kết nối an toàn mà không tốn phí \$0.005/giờ/IP.
 6. **Lựa chọn đúng giữa VPC Peering và Transit Gateway**:  
-   - Dưới 5–10 VPCs kết nối đơn giản $\rightarrow$ Dùng **VPC Peering** (miễn phí $0.00).  
+   - Dưới 5–10 VPCs kết nối đơn giản $\rightarrow$ Dùng **VPC Peering** (miễn phí \$0.00).  
    - Hàng chục đến hàng trăm VPCs, cần Transitive Routing hoặc kết nối mạng lai Hybrid $\rightarrow$ Dùng **AWS Transit Gateway**.
 7. **Đẩy VPC Flow Logs về Amazon S3**:  
    Với các VPC có lưu lượng lớn, luôn cấu hình đẩy Flow Logs trực tiếp về **Amazon S3** và phân tích bằng **Amazon Athena** để tiết kiệm tới 95% chi phí so với việc nạp log vào CloudWatch Logs.
+
+---
+
+### ✅ Danh Mục Kiểm Tra Kiến Thức Thực Chiến (Learning Checklist)
+- [ ] Phân biệt cơ chế và trường hợp sử dụng giữa Security Groups (Stateful, L4, IP/SG/Prefix List) và Network ACLs (Stateless, L4, Subnet-level, Ephemeral Ports 1024-65535, Allow & Deny).
+- [ ] Nắm vững cách tính 5 địa chỉ IP bị AWS giữ lại trong mỗi Subnet (`.0` Network, `.1` VPC Router, `.2` Amazon DNS, `.3` Future use, `.255` Broadcast).
+- [ ] Thiết kế kiến trúc Hub-and-Spoke với AWS Transit Gateway hỗ trợ Transitive Routing và mở rộng VPN qua ECMP.
+- [ ] Triển khai VPC Sharing qua AWS Resource Access Manager (RAM) để chia sẻ Subnets đa tài khoản trong Organization.
+- [ ] Phân biệt Gateway VPC Endpoint (S3, DynamoDB - miễn phí, gán Route Table) vs Interface VPC Endpoint / PrivateLink (hầu hết dịch vụ AWS, SaaS 3rd party, NLB - có ENI, tính phí).
+- [ ] Nắm rõ các điều kiện kỹ thuật của AWS Direct Connect (Public VIF, Private VIF, Transit VIF, MACsec/IPsec over DX, 4 connections Resiliency).
+- [ ] Cấu hình Route 53 Resolver Inbound Endpoint (cho On-Premises gọi AWS) và Outbound Endpoint (cho AWS gọi On-Premises).
+- [ ] Triển khai Gateway Load Balancer (GWLB) cổng UDP 6081 (GENEVE) và AWS Network Firewall cho kiểm tra an ninh chuyên sâu.
+- [ ] Tối ưu hóa chi phí mạng: thay thế NAT Gateway bằng S3 Gateway Endpoint, Egress-Only IGW cho IPv6, đẩy Flow Logs về S3.
 
 ---
 

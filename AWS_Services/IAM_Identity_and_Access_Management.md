@@ -238,12 +238,13 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
 
 ### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
 
-#### 🪤 Bẫy 1: Giới Hạn Truy Cập S3 Cho Thành Viên Organization Bằng `aws:PrincipalOrgID` — (CM-PT1 Q09)
+#### 🪤 Bẫy 1: Giới Hạn Truy Cập S3 Cho Thành Viên Organization Bằng `aws:PrincipalOrgID` — (TD-Set1 Q14, TD-Set3 Q39, CM-PT2 Q41, CM-PT5 Q56, U-PT1 Q43) vs `aws:SourceVpc` (CM-PT1 Q09)
 - **Tình huống đề thi**: *"Doanh nghiệp có hàng chục tài khoản AWS thuộc cùng một AWS Organization. Họ muốn chia sẻ một S3 bucket trung tâm cho toàn bộ nhân viên nội bộ, nhưng phải ngăn chặn triệt để mọi truy cập từ bên ngoài tổ chức."*
 - **Các phương án bẫy**:
   - ❌ *Liệt kê thủ công từng Account ID trong Bucket Policy*: Tốn công vận hành và dễ bỏ sót khi tổ chức tạo thêm tài khoản mới.
   - ❌ *Dùng Service Control Policy (SCP)*: SCP chỉ áp dụng từ trên xuống dưới cho các tài khoản thành viên trong Org; SCP **không thể** kiểm soát hành vi truy cập của người dùng bên ngoài vào bucket của bạn!
-- **Giải pháp ĐÚNG**: Sử dụng S3 Bucket Policy kết hợp Condition Key **`aws:PrincipalOrgID`**:
+  - ❌ *Dùng `aws:SourceVpc` / `aws:sourceVpce`*: Điều kiện này (`CM-PT1 Q09`, `U-PT6 Q56`) dùng để giới hạn request bắt buộc phải đi từ một mạng VPC cụ thể hoặc VPC Endpoint cụ thể, không giải quyết được bài toán phân quyền theo danh tính tổ chức (AWS Organization).
+- **Giải pháp ĐÚNG**: Sử dụng S3 Bucket Policy kết hợp Condition Key **`aws:PrincipalOrgID`** (`TD-Set1 Q14`, `TD-Set3 Q39`, `CM-PT2 Q41`, `CM-PT5 Q56`, `U-PT1 Q43`):
   ```json
   {
     "Sid": "EnforceOrgMembersOnly",
@@ -294,13 +295,19 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
   - Nếu EC2 nằm trong VPC và gọi qua **Gateway VPC Endpoint**, IP nguồn của request là **Private IP** trong VPC, không phải Public IP -> **Request sẽ bị DENY nhầm lẫn**!
   - `aws:SourceIp` chỉ hoạt động chuẩn xác khi người dùng thực hiện API call từ máy trạm On-Premises trực tiếp qua Internet công cộng.
 
-#### 🪤 Bẫy 6: Thứ Tự Ưu Tiên Tuyệt Đối: Deny Luôn Phủ Quyết Allow — (CM-PT6 Q57)
-- **Tình huống đề thi**: *"Một người dùng IAM thuộc một nhóm được gắn 2 chính sách: Chính sách 1 cho phép toàn quyền trên Amazon S3 (`Allow s3:*`). Chính sách 2 từ chối quyền xóa bucket (`Deny s3:DeleteBucket`). Người dùng này có thể xóa được một S3 bucket không?"*
-- **Nguyên lý đánh giá IAM Logic bất biến của AWS**:
-  - Mặc định mọi thao tác là **Implicit Deny** (ngầm định từ chối).
-  - Một thao tác chỉ được thực thi khi có ít nhất một **Explicit Allow**.
-  - **NHƯNG NẾU CÓ BẤT KỲ MỘT `EXPLICIT DENY` NÀO TỒN TẠI, NÓ SẼ NGAY LẬP TỨC PHỦ QUYẾT TẤT CẢ CÁC LỆNH ALLOW KHÁC**!
-  - Do đó, câu trả lời là **KHÔNG THỂ XÓA ĐƯỢC** (thao tác xóa bucket chắc chắn bị lỗi `403 Access Denied`).
+#### 🪤 Bẫy 6: Phạm Vi Của Explicit Deny: Deny `ds:Delete*` Vẫn Cho Phép `ec2:Delete*` — (CM-PT6 Q57)
+- **Tình huống đề thi**: *"Một kỹ sư điện toán đám mây được thêm vào một IAM Group có gắn 2 IAM policies:*
+  - *Policy 1: `Allow` với các action: `iam:Get*`, `iam:List*`, `kms:List*`, `ec2:*`, `ds:*`, `logs:Get*`, `logs:Describe*` trên tài nguyên `Resource: "*"`;*
+  - *Policy 2: `Deny` với action `ds:Delete*` trên tài nguyên `Resource: "*"`;*
+  - *Hỏi kỹ sư này có thể thực hiện hành động nào sau đây? (A) Deleting logs from CloudWatch; (B) Deleting directories; (C) Deleting IAM users; (D) Deleting Amazon EC2 instances."* (`CM-PT6 Q57`)
+- **Các phương án bẫy**:
+  - ❌ *Nghĩ rằng lệnh Deny chặn mọi thao tác xóa trên toàn hệ thống*: Sai vì lệnh Deny chỉ áp dụng cho action `ds:Delete*` (Directory Service).
+  - ❌ *Nhầm tưởng `ds:` là "Data Storage" (ổ đĩa EC2)*: `ds` là tiền tố riêng của dịch vụ **AWS Directory Service**.
+  - ❌ *Chọn xóa logs hoặc xóa IAM users*: Sai vì các action `logs:Delete*` và `iam:DeleteUser` không hề có trong danh sách Allow của Policy 1 (bị `Implicit Deny`).
+- **Giải pháp ĐÚNG**: **(D) Deleting Amazon EC2 instances** (`CM-PT6 Q57`)!
+  - Policy 1 cấp quyền `ec2:*` (bao gồm `ec2:TerminateInstances` và `ec2:DeleteVolume`).
+  - Policy 2 chỉ Explicit Deny đối với `ds:Delete*` (chỉ chặn xóa thư mục Directory Service). Lệnh Deny này **hoàn toàn KHÔNG ảnh hưởng đến các thao tác xóa của EC2**!
+  - Nguyên tắc cốt lõi: Explicit Deny chỉ phủ quyết những action khớp chính xác với tiền tố dịch vụ và chuỗi hành động được chỉ định.
 
 #### 🪤 Bẫy 7: Phạm Vi Áp Dụng Của SCP Lên Các Member Accounts Cụ Thể — (CM-PT5 Q40)
 - **Tình huống đề thi**: *"Tổ chức AWS Organizations gồm 4 tài khoản nằm chung trong Root OU (1 Production account và 3 Nonproduction accounts). Doanh nghiệp muốn áp dụng một Service Control Policy (SCP) giới hạn các dịch vụ đắt đỏ chỉ cho 3 tài khoản Nonproduction mà tuyệt đối không ảnh hưởng đến Production account."*
@@ -383,6 +390,104 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
   - Access Analyzer sử dụng chứng minh toán học (Automated Reasoning) để phân tích các Resource-based Policies (S3, KMS, SQS, Secrets Manager, Lambda, IAM Role Trust Policies) trong toàn bộ Organization.
   - Tự động tạo finding cảnh báo ngay lập tức nếu một tài nguyên cho phép truy cập từ một AWS account nằm ngoài "Zone of Trust" (vùng tin cậy) hoặc cho phép truy cập công khai (`*`).
 
+#### 🪤 Bẫy 16: Chia Sẻ Tài Nguyên An Toàn Xuyên Tài Khoản Bằng AWS RAM (Resource Access Manager) — (TD-Set1 Q03, CM-PT3 Q55, U-PT2 Q53, U-PT3 Q21, U-PT6 Q07)
+- **Tình huống đề thi**: *"Doanh nghiệp có mô hình Multi-Account trong AWS Organizations. Bộ phận mạng (Network Team) sở hữu VPC trung tâm chứa các Subnets, Transit Gateway và Route 53 Resolver Rules. Làm thế nào để các tài khoản Development và Production có thể triển khai EC2/Lambda trực tiếp vào các Subnet này mà không cần cấp quyền quản trị mạng cho họ và không cần tạo VPC Peering phức tạp?"*
+- **Các phương án bẫy**:
+  - ❌ *Tạo VPC độc lập trong từng tài khoản rồi thiết lập full-mesh VPC Peering*: Chi phí quản trị tăng theo cấp số nhân ($N(N-1)/2$), khó kiểm soát IP CIDR trùng lặp.
+  - ❌ *Cấp quyền IAM quản trị VPC cho tài khoản con*: Vi phạm nghiêm trọng nguyên tắc phân tách trách nhiệm (Separation of Duties).
+- **Giải pháp ĐÚNG**: Sử dụng **AWS Resource Access Manager (AWS RAM)** (`TD-Set1 Q03`, `CM-PT3 Q55`, `U-PT2 Q53`, `U-PT3 Q21`, `U-PT6 Q07`):
+  - Kích hoạt tính năng chia sẻ tài nguyên trong AWS Organizations.
+  - Tạo một Resource Share trên AWS RAM từ tài khoản Network, chia sẻ các **VPC Subnets** cho Organizational Units (OUs) mong muốn (**Shared VPC Pattern**).
+  - Các tài khoản con có thể nhìn thấy và khởi tạo EC2 instances, NLB, Lambda ENI ngay trong subnet được chia sẻ, nhưng hoàn toàn KHÔNG THỂ sửa đổi Route Table, Network ACLs, hay Internet Gateway của VPC đó.
+
+#### 🪤 Bẫy 17: Xác Thực Cơ Sở Dữ Liệu Không Cần Mật Khẩu Bằng RDS IAM Database Authentication — (TD-Set1 Q18, TD-Set5 Q52, TD-Set6 Q41, CM-PT3 Q36)
+- **Tình huống đề thi**: *"Ứng dụng chạy trên EC2 hoặc AWS Lambda cần kết nối tới cơ sở dữ liệu Amazon RDS PostgreSQL hoặc MySQL. Ban kiểm toán bảo mật yêu cầu: Tuyệt đối không lưu trữ hardcode database username/password trong mã nguồn hoặc file cấu hình, đồng thời mọi kết nối phải được mã hóa bằng TLS/SSL."*
+- **Các phương án bẫy**:
+  - ❌ *Lưu thông tin mật khẩu tĩnh trong AWS Systems Manager Parameter Store*: Vẫn tiềm ẩn rủi ro lộ mật khẩu khi truy vấn API và phải duy trì mã giải mã trong ứng dụng.
+  - ❌ *Sử dụng AWS Secrets Manager*: Mặc dù Secrets Manager hỗ trợ xoay vòng mật khẩu tự động, nhưng về bản chất vẫn là xác thực bằng database password truyền thống, vẫn đòi hỏi ứng dụng phải lấy password về để mở kết nối.
+- **Giải pháp ĐÚNG**: Kích hoạt **RDS IAM Database Authentication** (`TD-Set1 Q18`, `TD-Set5 Q52`, `TD-Set6 Q41`, `CM-PT3 Q36`):
+  - Cấu hình user trong database sử dụng plugin xác thực AWS IAM: `GRANT rds_iam TO dbuser;`.
+  - Gán IAM Role cho EC2 instance hoặc Lambda function với quyền `rds-db:connect` trên database resource ARN: `arn:aws:rds-db:<region>:<account>:dbuser/<dbi-resource-id>/<dbuser>`.
+  - Khi ứng dụng kết nối, AWS SDK tự động tạo một **Authentication Token** tạm thời có chữ ký SigV4, **có hiệu lực duy nhất trong 15 phút**, loại bỏ hoàn toàn việc phải quản trị mật khẩu tĩnh!
+
+#### 🪤 Bẫy 18: Chiều Thiết Lập Trust Relationship Trong AWS Managed Microsoft AD (One-Way Trust) vs AD Connector — (CM-PT2 Q65, TD-Set5 Q02, CM-PT3 Q58, CM-PT6 Q63, U-PT2 Q04)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn cho phép nhân viên tại On-Premises Active Directory truy cập các ứng dụng Windows Server chạy trên AWS Managed Microsoft AD trên đám mây. Tuy nhiên, chính sách bảo mật nội bộ nghiêm cấm chiều ngược lại: người dùng từ đám mây AWS tuyệt đối không được phép truy cập bất kỳ tài nguyên nào tại mạng On-Premises."*
+- **Các phương án bẫy**:
+  - ❌ *Thiết lập Two-Way Forest Trust*: Vi phạm bảo mật vì mở quyền cho tài khoản trên AWS truy cập ngược lại On-Premises.
+  - ❌ *Sử dụng AWS Directory Service AD Connector*: AD Connector không thể thiết lập quan hệ tin cậy Forest Trust, chỉ đóng vai trò proxy chuyển tiếp xác thực thuần túy (`TD-Set5 Q02`, `U-PT2 Q04`).
+- **Giải pháp ĐÚNG**: Thiết lập **One-Way Forest Trust (Chiều: AWS Managed Microsoft AD tin tưởng On-Premises AD)** (`CM-PT2 Q65`):
+  - **Trusting Domain (Resource Domain)**: AWS Managed Microsoft AD (nơi chứa tài nguyên ứng dụng đám mây).
+  - **Trusted Domain (Account Domain)**: On-Premises Active Directory (nơi lưu trữ định danh người dùng).
+  - **Quy tắc nhớ vàng**: Hướng của Trust (Tin cậy) **NGƯỢC CHIỀU** với hướng của Access (Truy cập). Khi AWS trust On-Prem, người dùng On-Prem có thể truy cập tài nguyên AWS, nhưng người dùng AWS không thể truy cập On-Prem!
+
+#### 🪤 Bẫy 19: Giới Hạn Loại Máy Chủ EC2 Bằng SCP (`ec2:InstanceType`) & Ngoại Lệ Bất Khả Xâm Phạm Của Service-Linked Roles — (CM-PT3 Q18, CM-PT4 Q32, CM-PT5 Q40, U-PT3 Q24)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn kiểm soát ngân sách, yêu cầu các tài khoản Development trong AWS Organizations chỉ được phép khởi chạy các dòng máy ảo EC2 giá rẻ (`t3.micro`, `t3.small`), cấm tuyệt đối việc tạo các máy chủ đắt tiền (`m5`, `c5`, `p4d`), nhưng phải đảm bảo không làm gãy các tác vụ bảo trì tự động của AWS."*
+- **Các phương án bẫy**:
+  - ❌ *Chỉ dùng IAM Policy cục bộ trong từng tài khoản con*: Các quản trị viên của tài khoản con có quyền sửa đổi hoặc gỡ bỏ policy này.
+  - ❌ *Tạo SCP Deny không có ngoại lệ*: Có thể vô tình chặn các tác vụ hệ thống tự động của AWS.
+- **Giải pháp ĐÚNG**: Sử dụng **Service Control Policy (SCP)** với Condition Key **`ec2:InstanceType`** (`CM-PT3 Q18`, `CM-PT4 Q32`, `CM-PT5 Q40`):
+  ```json
+  {
+    "Sid": "RestrictEC2InstanceTypes",
+    "Effect": "Deny",
+    "Action": "ec2:RunInstances",
+    "Resource": "arn:aws:ec2:*:*:instance/*",
+    "Condition": {
+      "StringNotEquals": {
+        "ec2:InstanceType": ["t3.micro", "t3.small"]
+      }
+    }
+  }
+  ```
+  - **Ghi nhớ bất biến kỳ thi**: SCP **KHÔNG BAO GIỜ áp dụng** lên các **AWS Service-Linked Roles** (`U-PT3 Q24`). Dù bạn có viết SCP Deny chặt chẽ đến đâu, các tiến trình tự động của AWS (như Auto Scaling Service-Linked Role) vẫn hoạt động an toàn mà không bị gián đoạn.
+
+#### 🪤 Bẫy 20: Phân Biệt ARN Cấp Bucket vs ARN Cấp Object Trong IAM & S3 Bucket Policy — (TD-Set1 Q61, U-PT1 Q27, U-PT2 Q30)
+- **Tình huống đề thi**: *"Lập trình viên viết một IAM Policy cấp quyền đọc S3 cho ứng dụng backend:*
+  ```json
+  {
+    "Effect": "Allow",
+    "Action": ["s3:ListBucket", "s3:GetObject"],
+    "Resource": "arn:aws:s3:::production-analytics/*"
+  }
+  ```
+  *Ứng dụng vẫn có thể đọc được file khi biết đường dẫn chính xác, nhưng khi gọi hàm liệt kê danh sách files (`aws s3 ls`) thì liên tục bị trả về lỗi `403 Access Denied`. Tại sao?"*
+- **Nguyên nhân cốt lõi**:
+  - **ARN Cấp Bucket (`arn:aws:s3:::production-analytics`)**: Áp dụng cho các thao tác ở cấp độ thùng chứa, bao gồm `s3:ListBucket`, `s3:GetBucketLocation`, `s3:GetBucketPolicy`.
+  - **ARN Cấp Object (`arn:aws:s3:::production-analytics/*`)**: Áp dụng cho các thao tác lên từng đối tượng file riêng lẻ bên trong, bao gồm `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`.
+- **Giải pháp ĐÚNG**: Tách rõ ràng 2 tài nguyên trong phần Resource (`TD-Set1 Q61`, `U-PT1 Q27`, `U-PT2 Q30`):
+  ```json
+  {
+    "Effect": "Allow",
+    "Action": "s3:ListBucket",
+    "Resource": "arn:aws:s3:::production-analytics"
+  },
+  {
+    "Effect": "Allow",
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::production-analytics/*"
+  }
+  ```
+
+#### 🪤 Bẫy 21: Tăng Cường Bảo Mật Root Account Với Multi-MFA (Tối Đa 8 Thiết Bị) & Cấu Hình Alternate Contacts — (CM-PT4 Q28, U-PT6 Q38)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn thắt chặt bảo mật cho tài khoản Root của tài khoản AWS chính, phòng ngừa trường hợp thiết bị MFA duy nhất bị hỏng/mất làm mất quyền truy cập tài khoản, đồng thời cần đảm bảo các cảnh báo bảo mật và hóa đơn tài chính của AWS được gửi thẳng tới các bộ phận liên quan mà không cần đăng nhập vào tài khoản Root."*
+- **Các phương án bẫy**:
+  - ❌ *Tạo thêm IAM User có quyền AdministratorAccess để dự phòng khi Root mất MFA*: Vẫn không giải quyết được rủi ro tê liệt tài khoản Root khi thực hiện các tác vụ độc quyền của Root (như thay đổi gói hỗ trợ, đóng tài khoản).
+  - ❌ *Chia sẻ thông tin đăng nhập tài khoản Root cho đội ngũ Tài chính và An ninh*: Vi phạm nghiêm trọng tiêu chuẩn bảo mật đám mây AWS.
+- **Giải pháp ĐÚNG**:
+  1. Kích hoạt tính năng **Root Multi-MFA**: AWS cho phép đăng ký **tối đa 8 thiết bị MFA** (FIDO2 Hardware Security Keys hoặc Virtual Authenticator Apps) cho tài khoản Root (`CM-PT4 Q28`). Giúp phân tán thiết bị dự phòng cho nhiều lãnh đạo cấp cao mà không sợ rủi ro single-point-of-failure.
+  2. Thiết lập **Alternate Contacts** (Security, Billing, Operations Contacts) trong phần AWS Account Settings (`U-PT6 Q38`). AWS sẽ tự động gửi email thông báo bảo mật khẩn cấp (như thông báo rò rỉ khóa, vi phạm chính sách) trực tiếp đến đội SecOps và hóa đơn thanh toán đến đội Kế toán mà họ không cần bất kỳ thông tin đăng nhập Root nào!
+
+#### 🪤 Bẫy 22: Kết Nối SSH Tạm Thời Không Cần Key Pair Bằng EC2 Instance Connect — (U-PT4 Q41)
+- **Tình huống đề thi**: *"Doanh nghiệp quản trị hàng trăm máy chủ Linux EC2 trên đám mây. Đội ngũ an ninh yêu cầu loại bỏ hoàn toàn các file khóa riêng tư SSH tĩnh (`.pem` keys) lưu trên máy tính cá nhân của kỹ sư, đồng thời ghi nhận đầy đủ nhật ký ai đã kết nối SSH vào máy chủ nào và có thể thu hồi quyền SSH tức thì qua IAM."*
+- **Các phương án bẫy**:
+  - ❌ *Tạo một SSH Key Pair dùng chung và phân phối file `.pem` cho toàn bộ lập trình viên*: Cực kỳ rủi ro vì không thể biết ai đã SSH, khi 1 người nghỉ việc phải xoay vòng khóa trên hàng trăm server.
+  - ❌ *Dùng mật khẩu tĩnh Linux (Password-based SSH)*: Dễ bị tấn công Brute-force qua cổng 22.
+- **Giải pháp ĐÚNG**: Sử dụng **EC2 Instance Connect** (`U-PT4 Q41`):
+  - Lập trình viên sử dụng AWS CLI hoặc EC2 Console để kết nối.
+  - Lệnh gọi API `ec2-instance-connect:SendSSHPublicKey` sẽ đẩy một khóa SSH Public Key tạm thời lên dịch vụ Instance Metadata (IMDS) của máy chủ EC2.
+  - Khóa tạm thời này **chỉ có hiệu lực duy nhất trong vòng 60 giây**, tự động hết hạn và biến mất sau khi phiên kết nối được thiết lập!
+  - Mọi thao tác đều được kiểm soát bằng IAM Policy và ghi vết đầy đủ vào **AWS CloudTrail**.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Phân Quyền & Danh Tính Nhanh (Exam Decision Matrix)
@@ -394,25 +499,28 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
 | **Chặn developer tự cấp quyền Admin cho role mới** | **IAM Permissions Boundary** | SCP không phân biệt được role do ai tạo | Chuẩn AWS |
 | **Bắt buộc đính kèm Boundary khi gọi CreateRole** | **Condition `iam:PermissionsBoundary`** | Tự review code thủ công (dễ sót lỗi) | Chuẩn AWS |
 | **Cần AD thực sự trong VPC, hỗ trợ Forest Trust** | **AWS Managed Microsoft AD** | AD Connector (chỉ là proxy gateway, không hỗ trợ trust) | `TD-Set8 Q08` |
-| **Xác thực On-Prem AD vào AWS không lưu credentials** | **AWS Directory Service AD Connector** | Managed AD (chi phí đắt gấp 8 lần không cần thiết) | `TD-Set8 Q08` |
+| **Xác thực On-Prem AD vào AWS không lưu credentials** | **AWS Directory Service AD Connector** | Managed AD (chi phí đắt gấp 8 lần không cần thiết) | `TD-Set5 Q02`, `U-PT2 Q04` |
+| **Người dùng On-Prem truy cập AWS nhưng cấm chiều ngược lại** | **One-Way Forest Trust (AWS trusts On-Premises AD)** | Two-Way Trust (mở quyền cho AWS truy cập On-Prem vi phạm bảo mật) | `CM-PT2 Q65` |
+| **Chia sẻ Subnets/Transit Gateway xuyên tài khoản Org** | **AWS Resource Access Manager (AWS RAM - Shared VPC)** | Tạo VPC độc lập và full-mesh VPC Peering (chi phí và phức tạp cao) | `TD-Set1 Q03`, `CM-PT3 Q55`, `U-PT2 Q53` |
+| **Kết nối RDS không cần lưu mật khẩu tĩnh** | **RDS IAM Database Authentication (Token 15 phút)** | Lưu mật khẩu tĩnh trong mã nguồn hoặc biến môi trường | `TD-Set1 Q18`, `TD-Set5 Q52`, `CM-PT3 Q36` |
+| **Giới hạn dòng máy ảo EC2 giá rẻ cho tài khoản Dev** | **SCP Deny `ec2:RunInstances` + Condition `ec2:InstanceType`** | IAM Policy cục bộ (admin con có thể chỉnh sửa gỡ bỏ) | `CM-PT3 Q18`, `CM-PT4 Q32` |
+| **Ngoại lệ bất khả xâm phạm của SCP** | **Service-Linked Roles & Management Account miễn nhiễm** | Cho rằng SCP chặn được cả Service-Linked Roles | `U-PT3 Q24` |
+| **Phân biệt ARN S3 Bucket vs ARN S3 Object** | **`arn:aws:s3:::bucket` cho List, `.../*` cho Get/Put/Delete** | Gán chung `/*` cho ListBucket (bị lỗi 403 AccessDenied) | `TD-Set1 Q61`, `U-PT1 Q27` |
+| **Phòng ngừa mất MFA Root Account & nhận thông báo an ninh** | **Root Multi-MFA (tối đa 8 thiết bị) + Alternate Contacts** | Chia sẻ thông tin Root hoặc tạo thêm IAM User admin dự phòng | `CM-PT4 Q28`, `U-PT6 Q38` |
+| **SSH tạm thời không cần quản lý private key tĩnh** | **EC2 Instance Connect (Public Key tạm thời 60 giây)** | Dùng chung 1 file private key `.pem` tĩnh trên máy tính cá nhân | `U-PT4 Q41` |
 | **Hệ thống LDAP cũ không hỗ trợ SAML 2.0** | **Custom Identity Broker + AWS STS** | IAM Identity Center (bắt buộc chuẩn SAML 2.0) | `TD-Set4 Q02` |
 | **Quản trị truy cập đa tài khoản tập trung cho nhân viên** | **IAM Identity Center + Permission Sets** | Tạo IAM User thủ công tại từng tài khoản con | `TD-Set2 Q12`, `TD-Set8 Q08` |
 | **Tự động hóa Landing Zone & Guardrails cho multi-account** | **AWS Control Tower (Account Factory)** | Dựng tài khoản thủ công (khó kiểm soát baseline) | `TD-Set2 Q16`, `TD-Set4 Q29` |
-| **Chỉ cho phép tài khoản trong Org truy cập S3** | **S3 Policy + `aws:PrincipalOrgID`** | Liệt kê từng Account ID không thể scale | Chuẩn AWS |
-| **Giới hạn Region được phép tạo tài nguyên** | **SCP / Policy + `aws:RequestedRegion`** | `aws:SourceIp` chỉ kiểm tra IP người gọi | Chuẩn AWS |
+| **Chỉ cho phép tài khoản trong Org truy cập S3** | **S3 Policy + `aws:PrincipalOrgID`** | Liệt kê từng Account ID không thể scale | `TD-Set1 Q14`, `CM-PT2 Q41` |
+| **Giới hạn Region được phép tạo tài nguyên** | **SCP / Policy + `aws:RequestedRegion`** | `aws:SourceIp` chỉ kiểm tra IP người gọi | `U-PT2 Q23` |
 | **Ngăn chặn Member Account vô hiệu hóa AWS Config/GuardDuty** | **Service Control Policy (SCP) Deny** | IAM Policy trong Member Account (Admin con có thể gỡ) | `TD-Set3 Q18`, `TD-Set6 Q45` |
 | **Ủy quyền tạm thời deploy từ Dev sang Prod** | **`sts:AssumeRole` (Cross-Account Role)** | Cung cấp Access Key dài hạn của Production | `TD-Set2 Q17` |
 | **Sao chép S3 xuyên tài khoản trao quyền sở hữu** | **Bucket Policy + `--acl bucket-owner-full-control`** | Copy không cờ ACL (tài khoản đích không đọc được file) | `TD-Set3 Q65` |
 | **Đánh giá liên tục tuân thủ IAM Password Policy** | **AWS Config Managed Rule (`iam-password-policy`)** | Quét log CloudTrail thủ công | `TD-Set4 Q45` |
 | **Phân quyền Pod EKS đọc S3/DynamoDB độc lập** | **IAM Roles for Service Accounts (IRSA)** | Gán quyền vào Node Instance Profile vi phạm Least Privilege | `TD-Set1 Q13` |
-| **Kiểm toán tự động tài nguyên bị lộ ra ngoài Internet** | **AWS IAM Access Analyzer** | AWS CloudTrail chỉ ghi log, không phân tích quyền tự động | Chuẩn AWS |
-| **Xử lý xung đột giữa quyền Allow và Deny** | **Explicit Deny luôn thắng (phủ quyết mọi Allow)** | Cho phép thực thi (sai nguyên lý IAM evaluation) | Chuẩn AWS |
-| **Áp dụng SCP chỉ cho các tài khoản Nonproduction** | **Tạo OU riêng cho Nonproduction và gắn SCP** | Gắn vào Root OU (làm ảnh hưởng cả Production) | `TD-Set8 Q22` |
-| **Chia sẻ AMI mã hóa KMS cho tài khoản con khởi chạy** | **Share AMI Launch Permissions + KMS Key Policy** | Chỉ share AMI (EC2 boot lỗi vì không decrypt được disk) | Chuẩn AWS |
-
----
-
----
+| **Phạm vi của Explicit Deny: Deny `ds:Delete*`** | **Vẫn được phép xóa EC2 (`ec2:TerminateInstances`)** | Nhầm lẫn `ds:` là "Data Storage" hoặc tưởng Deny áp dụng toàn cục | `CM-PT6 Q57` |
+| **Áp dụng SCP chỉ cho các tài khoản Nonproduction** | **Tạo OU riêng cho Nonproduction và gắn SCP** | Gắn vào Root OU (làm ảnh hưởng cả Production) | `CM-PT5 Q40` |
+| **Chia sẻ AMI mã hóa KMS cho tài khoản con khởi chạy** | **Share AMI Launch Permissions + KMS Key Policy** | Chỉ share AMI (EC2 boot lỗi vì không decrypt được disk) | `CM-PT4 Q48` |
 
 ---
 
@@ -487,7 +595,7 @@ sequenceDiagram
 | **Đối tượng sử dụng** | Các ứng dụng legacy bên ngoài không hỗ trợ AWS STS. | Workloads trên AWS (EC2, ECS, Lambda), CI/CD (GitHub Actions). | Kỹ sư, Lập trình viên, Quản trị viên, Kiểm toán viên nội bộ. | Người dùng ứng dụng di động/web (Mobile & Web App End-users). | Máy ảo Windows Server gia nhập Domain, WorkSpaces, FSx for Windows. |
 | **Khả năng mở rộng đa tài khoản** | Kém: Phải tạo user riêng rẽ tại từng tài khoản AWS. | Rất tốt: Hỗ trợ Cross-Account AssumeRole linh hoạt. | Tuyệt vời: Cung cấp quyền truy cập vào hàng trăm tài khoản từ 1 Portal. | Không áp dụng: Dành cho User ứng dụng, không quản trị AWS. | Tốt: Kết nối nhiều VPC và tài khoản thông qua RAM hoặc AD Connector. |
 | **Rủi ro rò rỉ bảo mật** | **Cực cao** nếu Access Key bị commit lên GitHub công khai. | **Rất thấp**: Khóa lưu trên RAM, tự hết hạn, không ghi ổ đĩa. | **Cực thấp**: Quản lý tập trung, thu hồi quyền tức thì khi nghỉ việc. | **Thấp**: Chuẩn OIDC/OAuth 2.0 an toàn. | **Thấp**: Bảo vệ bởi giao thức xác thực Active Directory chuẩn doanh nghiệp. |
-| **Mô hình tính phí** | **Miễn phí $0.00** | **Miễn phí $0.00** | **Miễn phí $0.00** | Miễn phí 50,000 MAUs đầu; sau đó tính phí theo bậc người dùng hoạt động. | Tính phí theo giờ máy chủ AD ($0.05/h - $0.40/h tùy phiên bản). |
+| **Mô hình tính phí** | **Miễn phí \$0.00** | **Miễn phí \$0.00** | **Miễn phí \$0.00** | Miễn phí 50,000 MAUs đầu; sau đó tính phí theo bậc người dùng hoạt động. | Tính phí theo giờ máy chủ AD (\$0.05/h - \$0.40/h tùy phiên bản). |
 
 ---
 
@@ -497,13 +605,13 @@ sequenceDiagram
 
 | Thành phần Dịch Vụ | Đơn giá AWS niêm yết | Cơ chế đo lường | Ghi chú tối ưu hóa chi phí FinOps |
 | :--- | :--- | :--- | :--- |
-| **AWS IAM Core** (Users, Roles, Policies, STS) | **$0.00** | Miễn phí không giới hạn số lượng | Tận dụng tối đa để thay thế các phần mềm PAM/IAM thương mại đắt tiền cho hạ tầng AWS. |
-| **AWS IAM Identity Center** | **$0.00** | Miễn phí đăng nhập đa tài khoản | Tiết kiệm hàng ngàn USD chi phí bản quyền giải pháp SSO bên thứ 3 khi truy cập AWS. |
-| **AWS Organizations & SCPs** | **$0.00** | Miễn phí tạo OUs và áp dụng SCPs | Sử dụng Consolidated Billing để kích hoạt Volume Tier Discount tự động. |
-| **AWS IAM Access Analyzer** (External Access) | **$0.00** | Quét tài nguyên chia sẻ ngoài tài khoản | Miễn phí hoàn toàn cho kiểm tra bảo mật cấu hình S3, KMS, IAM Roles. |
-| **IAM Access Analyzer** (Unused Access) | **$0.20 / IAM identity / tháng** | Đo lường theo số lượng IAM Role & IAM User được quét | Chỉ bật trên các tài khoản Production trọng yếu hoặc kích hoạt định kỳ 1 tháng trước kỳ kiểm toán. |
-| **AWS Directory Service** (AD Connector) | **$0.05 / giờ** (~$36.50/tháng) | 2 proxy instances chạy liên tục | Rẻ hơn 87% so với việc khởi tạo cụm AWS Managed Microsoft AD độc lập. |
-| **AWS Directory Service** (Managed Enterprise AD) | **$0.40 / giờ** (~$292/tháng) | Cụm 2 Domain Controllers chuyên dụng | Chỉ sử dụng khi không có sẵn Active Directory on-premises và cần tính năng Domain Trust phức tạp. |
+| **AWS IAM Core** (Users, Roles, Policies, STS) | **\$0.00** | Miễn phí không giới hạn số lượng | Tận dụng tối đa để thay thế các phần mềm PAM/IAM thương mại đắt tiền cho hạ tầng AWS. |
+| **AWS IAM Identity Center** | **\$0.00** | Miễn phí đăng nhập đa tài khoản | Tiết kiệm hàng ngàn USD chi phí bản quyền giải pháp SSO bên thứ 3 khi truy cập AWS. |
+| **AWS Organizations & SCPs** | **\$0.00** | Miễn phí tạo OUs và áp dụng SCPs | Sử dụng Consolidated Billing để kích hoạt Volume Tier Discount tự động. |
+| **AWS IAM Access Analyzer** (External Access) | **\$0.00** | Quét tài nguyên chia sẻ ngoài tài khoản | Miễn phí hoàn toàn cho kiểm tra bảo mật cấu hình S3, KMS, IAM Roles. |
+| **IAM Access Analyzer** (Unused Access) | **\$0.20 / IAM identity / tháng** | Đo lường theo số lượng IAM Role & IAM User được quét | Chỉ bật trên các tài khoản Production trọng yếu hoặc kích hoạt định kỳ 1 tháng trước kỳ kiểm toán. |
+| **AWS Directory Service** (AD Connector) | **\$0.05 / giờ** (~\$36.50/tháng) | 2 proxy instances chạy liên tục | Rẻ hơn 87% so với việc khởi tạo cụm AWS Managed Microsoft AD độc lập. |
+| **AWS Directory Service** (Managed Enterprise AD) | **\$0.40 / giờ** (~\$292/tháng) | Cụm 2 Domain Controllers chuyên dụng | Chỉ sử dụng khi không có sẵn Active Directory on-premises và cần tính năng Domain Trust phức tạp. |
 
 ---
 
@@ -512,56 +620,56 @@ sequenceDiagram
 #### Kịch bản 1: Kích hoạt Consolidated Billing trong AWS Organizations để hưởng Volume Tier Discounts
 - **Bối cảnh**: Doanh nghiệp mở rộng quy mô, vận hành 20 tài khoản AWS độc lập với 20 thẻ tín dụng riêng lẻ. Mỗi tài khoản lưu trữ trung bình 40 TB trên Amazon S3 Standard.
 - **Tính toán chi phí riêng rẽ**:
-  - Đơn giá bậc 1 S3 Standard (0 - 50 TB): $0.023/GB. Do không tài khoản nào vượt 50 TB, toàn bộ 800 TB của công ty đều bị tính ở đơn giá cao nhất:
-  $$\text{Cost}_{\text{Separate}} = 20 \times (40{,}000 \times 0.023) = 20 \times \$920 = \$18{,}400/\text{tháng}$$
+  - Đơn giá bậc 1 S3 Standard (0 - 50 TB): \$0.023/GB. Do không tài khoản nào vượt 50 TB, toàn bộ 800 TB của công ty đều bị tính ở đơn giá cao nhất:
+  $$ \text{Cost}_{\text{Separate}} = 20 \times (40{,}000 \times 0.023) = 20 \times \$920 = \$18{,}400/\text{tháng} $$
 - **Giải pháp tối ưu**:
   - Gộp 20 tài khoản vào AWS Organizations qua **Consolidated Billing** dưới 1 Payer Account:
-  - 50 TB đầu: $50{,}000 \times 0.023 = \$1{,}150$
-  - 450 TB tiếp theo: $450{,}000 \times 0.022 = \$9{,}900$
-  - 300 TB còn lại: $300{,}000 \times 0.021 = \$6{,}300$
-  $$\text{Cost}_{\text{Consolidated}} = 1{,}150 + 9{,}900 + 6{,}300 = \$17{,}350/\text{tháng}$$
+  - 50 TB đầu: $ 50{,}000 \times 0.023 = \$1{,}150 $
+  - 450 TB tiếp theo: $ 450{,}000 \times 0.022 = \$9{,}900 $
+  - 300 TB còn lại: $ 300{,}000 \times 0.021 = \$6{,}300 $
+  $$ \text{Cost}_{\text{Consolidated}} = 1{,}150 + 9{,}900 + 6{,}300 = \$17{,}350/\text{tháng} $$
 - **Hiệu quả kinh tế**:
-  $$\text{Tiết kiệm} = \$18{,}400 - \$17{,}350 = \$1{,}050/\text{tháng} \quad (\$12{,}600/\text{năm}) \implies \text{Tiết kiệm } 5.7\% \text{ chi phí lưu trữ}$$
+  $$ \text{Tiết kiệm} = \$18{,}400 - \$17{,}350 = \$1{,}050/\text{tháng} \quad (\$12{,}600/\text{năm}) \implies \text{Tiết kiệm } 5.7\% \text{ chi phí lưu trữ} $$
 
 #### Kịch bản 2: Chia sẻ tự động hạn mức Savings Plans & Reserved Instances qua Organizations
-- **Bối cảnh**: Tài khoản `Dev-Account` cam kết mua Compute Savings Plans trị giá $20/giờ trong 3 năm. Sau khi chuyển đổi hệ thống sang kiến trúc Serverless, mức tiêu thụ compute của `Dev-Account` giảm xuống còn $4/giờ, lãng phí $16/giờ cam kết. Trong khi đó, tài khoản `Prod-Account` đang chi trả $35/giờ cho các máy chủ EC2 On-Demand.
+- **Bối cảnh**: Tài khoản `Dev-Account` cam kết mua Compute Savings Plans trị giá \$20/giờ trong 3 năm. Sau khi chuyển đổi hệ thống sang kiến trúc Serverless, mức tiêu thụ compute của `Dev-Account` giảm xuống còn \$4/giờ, lãng phí \$16/giờ cam kết. Trong khi đó, tài khoản `Prod-Account` đang chi trả \$35/giờ cho các máy chủ EC2 On-Demand.
 - **Tính toán chi phí**:
-  - Khi chưa liên kết Organizations: `Dev-Account` trả thừa $16 \times 730 = \$11{,}680/\text{tháng}$; `Prod-Account` trả $35 \times 730 = \$25{,}550/\text{tháng}$.
+  - Khi chưa liên kết Organizations: `Dev-Account` trả thừa $ 16 \times 730 = \$11{,}680/\text{tháng} $; `Prod-Account` trả $ 35 \times 730 = \$25{,}550/\text{tháng} $.
 - **Giải pháp tối ưu**:
   - Đưa cả 2 tài khoản vào cùng AWS Organization và bật tính năng **Discount Sharing**.
-  - Phần cam kết $16/giờ dư thừa của `Dev-Account` tự động được bù trừ vào các máy chủ EC2 On-Demand của `Prod-Account` (hạ giá từ On-Demand xuống mức chiết khấu Savings Plans ~40%).
+  - Phần cam kết \$16/giờ dư thừa của `Dev-Account` tự động được bù trừ vào các máy chủ EC2 On-Demand của `Prod-Account` (hạ giá từ On-Demand xuống mức chiết khấu Savings Plans ~40%).
 - **Hiệu quả kinh tế**:
-  $$\text{Tiết kiệm tức thì} = 16 \times 730 = \$11{,}680/\text{tháng} \quad (\$140{,}160/\text{năm})$$
+  $$ \text{Tiết kiệm tức thì} = 16 \times 730 = \$11{,}680/\text{tháng} \quad (\$140{,}160/\text{năm}) $$
 
 #### Kịch bản 3: Thay thế Managed Microsoft AD Enterprise bằng AD Connector
 - **Bối cảnh**: Doanh nghiệp cần xác thực cho 150 người dùng Windows EC2 và WorkSpaces. Công ty đã có sẵn cụm Active Directory on-premises đặt tại văn phòng. Kỹ sư dự định triển khai AWS Managed Microsoft AD Enterprise Edition trên đám mây.
 - **Tính toán chi phí**:
-  $$\text{Cost}_{\text{Managed AD}} = \$0.40 \times 730 = \$292/\text{tháng} \quad (\$3{,}504/\text{năm})$$
+  $$ \text{Cost}_{\text{Managed AD}} = \$0.40 \times 730 = \$292/\text{tháng} \quad (\$3{,}504/\text{năm}) $$
 - **Giải pháp tối ưu**:
   - Triển khai **AWS Directory Service AD Connector** kết nối trực tiếp về Domain Controller on-premises qua VPN IPsec hiện có:
-  $$\text{Cost}_{\text{AD Connector}} = \$0.05 \times 730 = \$36.50/\text{tháng} \quad (\$438/\text{năm})$$
+  $$ \text{Cost}_{\text{AD Connector}} = \$0.05 \times 730 = \$36.50/\text{tháng} \quad (\$438/\text{năm}) $$
 - **Hiệu quả kinh tế**:
-  $$\text{Tiết kiệm} = \$292 - \$36.50 = \$255.50/\text{tháng} \quad (\$3{,}066/\text{năm}) \implies \text{Giảm } 87.5\% \text{ chi phí}$$
+  $$ \text{Tiết kiệm} = \$292 - \$36.50 = \$255.50/\text{tháng} \quad (\$3{,}066/\text{năm}) \implies \text{Giảm } 87.5\% \text{ chi phí} $$
 
 #### Kịch bản 4: Triệt tiêu rủi ro tài chính do lộ lọt Access Keys bằng IAM Identity Center & STS
-- **Bối cảnh**: Doanh nghiệp cấp phát 120 cặp Access Keys tĩnh cho các lập trình viên lưu trên máy cá nhân. Nếu chỉ 1 Access Key bị lộ lên kho mã nguồn công khai, bot tự động có thể chiếm quyền và khởi tạo 50 máy ảo GPU `g5.12xlarge` ($5.672/giờ) để đào tiền mã hóa.
+- **Bối cảnh**: Doanh nghiệp cấp phát 120 cặp Access Keys tĩnh cho các lập trình viên lưu trên máy cá nhân. Nếu chỉ 1 Access Key bị lộ lên kho mã nguồn công khai, bot tự động có thể chiếm quyền và khởi tạo 50 máy ảo GPU `g5.12xlarge` (\$5.672/giờ) để đào tiền mã hóa.
 - **Thiệt hại ước tính chỉ sau 48 giờ**:
-  $$\text{Thiệt hại} = 50 \times \$5.672 \times 48 = \$13{,}612.80$$
+  $$ \text{Thiệt hại} = 50 \times \$5.672 \times 48 = \$13{,}612.80 $$
 - **Giải pháp tối ưu**:
   - Thu hồi toàn bộ Access Keys tĩnh của người dùng cá nhân.
-  - Chuyển sang **IAM Identity Center** với chi phí **$0.00**. Lập trình viên sử dụng `aws configure sso` để nhận credentials tạm thời có thời hạn tối đa 4 giờ.
+  - Chuyển sang **IAM Identity Center** với chi phí **\$0.00**. Lập trình viên sử dụng `aws configure sso` để nhận credentials tạm thời có thời hạn tối đa 4 giờ.
 - **Hiệu quả kinh tế**:
-  $$\text{Chi phí phần mềm} = \$0.00; \quad \text{Rủi ro tài chính bị triệt tiêu } 100\%$$
+  $$ \text{Chi phí phần mềm} = \$0.00; \quad \text{Rủi ro tài chính bị triệt tiêu } 100\% $$
 
 #### Kịch bản 5: Tối ưu hóa chi phí phân tích quyền thừa với IAM Access Analyzer
 - **Bối cảnh**: Đơn vị có 1,500 IAM Roles tạm thời từ hệ thống CI/CD và 100 IAM Users. Nếu bật tính năng phân tích quyền thừa (Unused Access Analyzer) liên tục 24/7 trên toàn bộ 1,600 identities:
-  $$\text{Cost}_{\text{Continuous}} = 1{,}600 \times \$0.20 = \$320/\text{tháng} \quad (\$3{,}840/\text{năm})$$
+  $$ \text{Cost}_{\text{Continuous}} = 1{,}600 \times \$0.20 = \$320/\text{tháng} \quad (\$3{,}840/\text{năm}) $$
 - **Giải pháp tối ưu**:
   - Cấu hình Analyzer có chọn lọc: Chỉ theo dõi 100 IAM Users và 50 IAM Roles quan trọng của môi trường Production.
   - Sử dụng tính năng **IAM Access Advisor** (truy cập miễn phí qua Console và API) để tự động hóa rà soát Least Privilege qua script định kỳ không tốn phí.
-  $$\text{Cost}_{\text{Optimized}} = 150 \times \$0.20 = \$30/\text{tháng}$$
+  $$ \text{Cost}_{\text{Optimized}} = 150 \times \$0.20 = \$30/\text{tháng} $$
 - **Hiệu quả kinh tế**:
-  $$\text{Tiết kiệm} = \$320 - \$30 = \$290/\text{tháng} \quad (\$3{,}480/\text{năm}) \implies \text{Giảm } 90.6\% \text{ chi phí kiểm toán}$$
+  $$ \text{Tiết kiệm} = \$320 - \$30 = \$290/\text{tháng} \quad (\$3{,}480/\text{năm}) \implies \text{Giảm } 90.6\% \text{ chi phí kiểm toán} $$
 
 ---
 
@@ -577,16 +685,14 @@ sequenceDiagram
 
 ---
 
----
-
 ## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Quản Trị Định Danh AWS (Golden Rules)
-1. **Khóa chặt tài khoản Root**: Luôn bảo vệ bằng Hardware MFA (FIDO2) và không tạo Access Key cho Root.
+1. **Khóa chặt tài khoản Root**: Luôn bảo vệ bằng Hardware MFA (FIDO2) với tối đa 8 thiết bị dự phòng và không tạo Access Key cho Root (`CM-PT4 Q28`).
 2. **Loại bỏ khóa tĩnh (No Long-Term Credentials)**: Chuyển 100% nhân sự sang **IAM Identity Center** và toàn bộ máy chủ/container sang **IAM Roles**.
-3. **Nguyên tắc Đặc quyền Tối thiểu (Principle of Least Privilege)**: Luôn cấp quyền tối thiểu cần thiết; kiểm tra định kỳ và thu hồi quyền thừa qua **IAM Access Advisor**.
-4. **Quy tắc Explicit Deny**: Bất kỳ một câu lệnh Deny nào đều ghi đè và hủy bỏ toàn bộ các câu lệnh Allow.
-5. **Rào chắn đa tài khoản (Guardrails First)**: Sử dụng **Service Control Policies (SCPs)** trong AWS Organizations để thiết lập ranh giới an toàn tối đa cho mọi tài khoản con.
+3. **Nguyên tắc Đặc quyền Tối thiểu (Principle of Least Privilege)**: Luôn cấp quyền tối thiểu cần thiết; kiểm tra định kỳ và thu hồi quyền thừa qua **IAM Access Advisor** và **IAM Access Analyzer**.
+4. **Quy tắc Explicit Deny**: Bất kỳ một câu lệnh Deny nào đều ghi đè và hủy bỏ toàn bộ các câu lệnh Allow trong phạm vi action của nó (`CM-PT6 Q57`).
+5. **Rào chắn đa tài khoản (Guardrails First)**: Sử dụng **Service Control Policies (SCPs)** trong AWS Organizations để thiết lập ranh giới an toàn tối đa cho mọi tài khoản con (loại trừ Service-Linked Roles `U-PT3 Q24`).
 6. **Bảo vệ chống SSRF**: Bắt buộc cấu hình **IMDSv2** (`HttpTokens=required`, HopLimit=1) cho toàn bộ máy ảo EC2.
 7. **Phòng chống Confused Deputy**: Luôn yêu cầu `sts:ExternalId` khi cấp quyền cho bên thứ 3 AssumeRole vào hệ thống của bạn.
 
@@ -596,10 +702,27 @@ sequenceDiagram
 - [ ] Tôi hiểu rõ sự khác biệt giữa IAM User, Group, Role, và nguyên lý hoạt động của AWS STS.
 - [ ] Tôi có thể viết một IAM Policy JSON chuẩn mực với đầy đủ 5 thành tố (Version, Statement, Effect, Action, Resource, Condition).
 - [ ] Tôi giải thích được logic đánh giá phân quyền (Default Deny, Explicit Deny, SCP, Boundary, Resource/Identity Policies).
+- [ ] Tôi hiểu phạm vi của Explicit Deny: `ds:Delete*` chỉ chặn Directory Service, không chặn `ec2:Delete*` hay `ec2:TerminateInstances` (`CM-PT6 Q57`).
+- [ ] Tôi phân biệt được ARN Cấp Bucket (`arn:aws:s3:::bucket` cho `s3:ListBucket`) và ARN Cấp Object (`arn:aws:s3:::bucket/*` cho `s3:GetObject`) (`TD-Set1 Q61`, `U-PT1 Q27`).
+- [ ] Tôi nắm vững nguyên lý hoạt động của `AWS Resource Access Manager (AWS RAM)` để chia sẻ Subnet, Transit Gateway xuyên tài khoản Org (`TD-Set1 Q03`, `CM-PT3 Q55`).
+- [ ] Tôi hiểu cách cấu hình `RDS IAM Database Authentication` với token 15 phút để loại bỏ mật khẩu database tĩnh (`TD-Set1 Q18`, `TD-Set5 Q52`).
+- [ ] Tôi phân biệt được hướng thiết lập `One-Way Forest Trust` (AWS tin tưởng On-Prem AD) và trường hợp sử dụng `AD Connector` (`CM-PT2 Q65`, `TD-Set5 Q02`).
+- [ ] Tôi nắm vững các ngoại lệ của SCP: Service-Linked Roles và Management Account hoàn toàn miễn nhiễm với SCP (`U-PT3 Q24`).
+- [ ] Tôi biết cách áp dụng SCP với Condition `ec2:InstanceType` để giới hạn dòng máy ảo EC2 cho tài khoản Dev (`CM-PT3 Q18`, `CM-PT4 Q32`).
+- [ ] Tôi hiểu cách cấu hình `Root Multi-MFA` (tối đa 8 thiết bị) và thiết lập `Alternate Contacts` cho bảo mật và tài chính (`CM-PT4 Q28`, `U-PT6 Q38`).
+- [ ] Tôi biết cách dùng `EC2 Instance Connect` để đẩy SSH public key tạm thời 60 giây mà không cần lưu private key `.pem` tĩnh (`U-PT4 Q41`).
 - [ ] Tôi biết cách cấu hình Instance Profile cho EC2 và Task Role cho ECS để loại bỏ khóa tĩnh.
 - [ ] Tôi hiểu rõ cách thức thiết lập OIDC giữa AWS và GitHub Actions để triển khai CI/CD không cần Access Key.
 - [ ] Tôi nắm vững các chỉ số CloudTrail và các bước xử lý sự cố khi gặp lỗi `AccessDenied` hoặc `ExpiredToken`.
 - [ ] Tôi có thể thiết kế kiến trúc phân quyền đa tài khoản kết hợp giữa AWS Organizations, SCPs và IAM Identity Center.
+
+---
+
+### Liên kết và Tài liệu Liên quan
+- 📖 [Ghi Chú Bài Học Chương 04: IAM & AWS CLI](../Lesson_Notes/04_IAM_and_AWS_CLI.md)
+- 📖 [Ghi Chú Bài Học Chương 25: Quản Trị Định Danh Doanh Nghiệp Nâng Cao](../Lesson_Notes/25_Identity_and_Access_Management_Advanced.md)
+- 📖 [Bảng Thuật Ngữ Kỹ Thuật (GLOSSARY.md)](../GLOSSARY.md)
+- ⏭️ Tiếp tục chuyển sang chuyên đề: [AWS Key Management Service (KMS) & Mã Hóa Dữ Liệu](./KMS_Security_Encryption.md).
 
 ---
 

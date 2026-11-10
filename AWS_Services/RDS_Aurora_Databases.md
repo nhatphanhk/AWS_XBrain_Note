@@ -547,12 +547,133 @@ sequenceDiagram
   - Tương thích hoàn toàn với các công cụ, trình điều khiển (drivers) và ứng dụng MongoDB hiện có.
   - Tự động đo lường và co giãn năng lực tính toán theo thời gian thực (tính theo DocumentDB Capacity Units - DCU), chỉ tính phí theo dung lượng và tài nguyên thực tế sử dụng.
 
+#### 🪤 Bẫy 19: Cấu Hình IOPS Độc Lập Lên Tới 64,000 Trên RDS gp3 Storage vs Giới Hạn 16,000 IOPS Của EBS gp3 Trên EC2 — (CM-PT6 Q46)
+- **Tình huống đề thi**: *"Ứng dụng cơ sở dữ liệu quan hệ RDS MySQL cần hiệu năng I/O đạt 30,000 IOPS và dung lượng lưu trữ 500 GiB. Đội DevOps đề xuất giải pháp tiết kiệm chi phí nhất mà không phải mua dòng ổ đĩa Provisioned IOPS io1/io2 đắt đỏ." (`CM-PT6 Q46`)*
+- **Cạm bẫy kỹ thuật giữa EBS trên EC2 vs Storage trên RDS**:
+  - **Trên Amazon EC2**: 1 ổ đĩa EBS `gp3` bị giới hạn phần cứng tối đa là **16,000 IOPS** và 1,000 MB/s throughput. Nếu muốn đạt 30,000 IOPS trên EC2, bắt buộc phải dùng RAID 0 nhiều ổ gp3 hoặc mua ổ `io1`/`io2`.
+  - **Trên Amazon RDS**: RDS cho phép cấu hình lưu trữ **RDS gp3 Storage** với IOPS độc lập lên tới **64,000 IOPS** và 4,000 MB/s throughput (tùy thuộc vào DB instance class) mà hoàn toàn **KHÔNG BỊ GIỚI HẠN Ở MỨC 16,000 IOPS**!
+  - **Giải pháp ĐÚNG**: Chọn loại lưu trữ **Amazon RDS General Purpose SSD (`gp3`)** và cấp phát trực tiếp 30,000 IOPS mong muốn trên console RDS. Tiết kiệm tới hơn 50% chi phí so với việc chọn Provisioned IOPS `io1`.
+
+#### 🪤 Bẫy 20: Hành Vi Khôi Phục Của Cụm Aurora Chỉ Có 1 Instance (Single-AZ Writer Không Có Replica) — (TD-Set5 Q06)
+- **Tình huống đề thi**: *"Doanh nghiệp chạy một cụm Amazon Aurora MySQL chỉ bao gồm 1 DB instance duy nhất (Primary Writer) để tiết kiệm ngân sách, không cấu hình bất kỳ Aurora Read Replica nào. Nếu DB instance này bị lỗi phần cứng đột ngột, điều gì sẽ xảy ra?" (`TD-Set5 Q06`)*
+- **Các phương án bẫy**:
+  - ❌ *Aurora tự động kích hoạt failover sang một Availability Zone khác trong vòng dưới 30 giây*: Sai hoàn toàn! Failover dưới 30 giây chỉ hoạt động khi bạn ĐÃ CÓ SẴN ít nhất một Aurora Replica ở AZ khác.
+  - ❌ *Dữ liệu bị mất do cụm chỉ nằm ở 1 AZ*: Sai! Tầng lưu trữ của Aurora luôn duy trì 6 bản sao trên 3 AZs dù bạn chỉ tạo 1 instance tính toán.
+- **Giải pháp ĐÚNG**:
+  - Aurora Control Plane sẽ cố gắng **tạo lại một DB instance mới trong CÙNG Availability Zone ban đầu** theo cơ chế nỗ lực tốt nhất (best-effort recovery).
+  - Quá trình này mất khoảng **10 đến 15 phút**, và trong suốt khoảng thời gian này cơ sở dữ liệu sẽ hoàn toàn bị gián đoạn (Downtime). Để đạt RTO $< 30$ giây, bắt buộc phải triển khai tối thiểu 1 Aurora Replica ở AZ khác.
+
+#### 🪤 Bẫy 21: Di Chuyển Không Gián Đoạn (Near-Zero Downtime) Lên Aurora & Aurora Serverless v2 — (TD-Set3 Q28, CM-PT4 Q46, U-PT3 Q58)
+- **Di chuyển từ RDS MySQL/PostgreSQL lên Aurora** (`CM-PT4 Q46`, `U-PT3 Q58`):
+  - Thay vì dùng `mysqldump` hoặc tạo snapshot (gây downtime lâu), tạo trực tiếp một **Aurora Read Replica** từ DB RDS instance hiện tại.
+  - Aurora sử dụng cơ chế đọc trực tiếp binary log hoặc EBS snapshot để đồng bộ. Khi độ trễ sao chép (Replica Lag) giảm về 0, thực hiện thao tác **Promote** Aurora Read Replica thành cụm Aurora độc lập. Thời gian gián đoạn chỉ vài chục giây trong lúc đổi Endpoint ứng dụng!
+- **Chuyển đổi từ Aurora Provisioned sang Aurora Serverless v2 Không Downtime** (`TD-Set3 Q28`):
+  - Thêm một **Aurora Serverless v2 Reader** vào cụm Aurora hiện tại.
+  - Chờ instance này đồng bộ hoàn tất, sau đó thực hiện lệnh **Failover** để thăng cấp Serverless v2 instance lên làm Primary Writer.
+  - Xóa bỏ Provisioned instance cũ $\rightarrow$ Toàn bộ quá trình diễn ra êm đẹp không gián đoạn kết nối của khách hàng!
+
+#### 🪤 Bẫy 22: Babelfish for Aurora PostgreSQL Giảm Thiểu Viết Lại Code T-SQL Của SQL Server — (U-PT1 Q61)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn cắt giảm chi phí bản quyền Microsoft SQL Server khổng lồ bằng cách chuyển sang Amazon Aurora PostgreSQL mã nguồn mở. Tuy nhiên, hàng ngàn thủ tục lưu trữ (Stored Procedures) và truy vấn của ứng dụng được viết bằng phương ngữ T-SQL (Transact-SQL) của Microsoft, việc viết lại toàn bộ mã nguồn sang PL/pgSQL sẽ mất hàng năm trời."*
+- **Giải pháp ĐÚNG**: Triển khai **Babelfish for Aurora PostgreSQL**.
+  - Babelfish là tính năng tích hợp sẵn của Aurora PostgreSQL, cho phép database hiểu trực tiếp giao thức kết nối TDS (Tabular Data Stream) và các câu lệnh truy vấn cú pháp **T-SQL** của SQL Server.
+  - Ứng dụng client có thể trỏ thẳng vào Babelfish port mà không cần sửa đổi hoặc chỉ sửa đổi tối thiểu mã nguồn ứng dụng, kết hợp với **AWS Schema Conversion Tool (SCT)** và **AWS Database Migration Service (DMS)** để di chuyển dữ liệu nhanh chóng.
+
+#### 🪤 Bẫy 23: Kích Hoạt Hàm AWS Lambda Trực Tiếp Từ Aurora MySQL Triggers Bằng `mysql.lambda_async` — (TD-Set1 Q17)
+- **Tình huống đề thi**: *"Hệ thống thương mại điện tử cần gửi thông báo chúc mừng qua email ngay khi có bản ghi người dùng mới được chèn vào bảng `customers` trên Aurora MySQL. Đội ngũ muốn xử lý hoàn toàn tự động từ tầng cơ sở dữ liệu mà không cần tầng ứng dụng phải gọi thêm API phụ trợ."*
+- **Giải pháp ĐÚNG**: Sử dụng thủ tục lưu trữ tích hợp **`mysql.lambda_async`** trong MySQL Trigger.
+  - Tạo Trigger `AFTER INSERT` trên bảng `customers`, gọi thủ tục `mysql.lambda_async` để kích hoạt không đồng bộ một hàm AWS Lambda.
+  - Bắt buộc phải gắn một **IAM Role** vào Aurora DB Cluster cho phép quyền `lambda:InvokeFunction` đối với ARN của hàm Lambda cần gọi.
+
+#### 🪤 Bẫy 24: Tham Số Kiểm Soát RPO Trên Aurora Global Database (`aurora_global_db_rpo`) & Tách Bảng Global/Local — (CM-PT2 Q56, U-PT1 Q46)
+- **Kiểm soát độ trễ RPO của Aurora Global Database** (`CM-PT2 Q56`):
+  - Mặc định Aurora Global Database sao chép dữ liệu xuyên Region qua hạ tầng cáp quang riêng của AWS với độ trễ điển hình $< 1$ giây.
+  - Để đảm bảo tuân thủ RPO nghiêm ngặt, cấu hình tham số **`aurora_global_db_rpo`** (tính bằng giây). Nếu độ trễ sao chép sang Region phụ vượt quá ngưỡng này, Aurora sẽ tự động điều tiết (throttle) các giao dịch ghi trên Primary Region để ngăn không cho dữ liệu bị lệch vượt quá giới hạn cam kết RPO.
+- **Mô hình phân tách bảng Global vs Local** (`U-PT1 Q46`): Dữ liệu người dùng toàn cầu lưu trên Aurora Global Database, còn các bảng tạm, giỏ hàng hoặc log phát sinh cục bộ được lưu trên các instance RDS/Aurora riêng của từng Region để tối ưu hóa chi phí truyền tải mạng và giảm độ trễ ghi cục bộ.
+
+#### 🪤 Bẫy 25: Nhân Bản CSDL Tức Thì Bằng Aurora Fast Database Cloning (Copy-on-Write) — (TD-Set6 Q20)
+- **Tình huống đề thi**: *"Đội ngũ kiểm thử QA cần một bản sao cơ sở dữ liệu Production dung lượng 10 TB để chạy thử nghiệm các kịch bản kiểm thử tải nặng. Quá trình tạo bản sao không được làm ảnh hưởng đến hiệu năng của Production và không được tốn thêm chi phí lưu trữ cho 10 TB dữ liệu trùng lặp."*
+- **Giải pháp ĐÚNG**: Sử dụng tính năng **Aurora Fast Database Cloning**.
+  - Hoạt động theo cơ chế **Copy-on-Write**: Cụm Clone được tạo ra gần như ngay lập tức (trong vòng vài phút) và ban đầu trỏ chung vào cùng các khối dữ liệu lưu trữ vật lý của cụm Production.
+  - Chi phí lưu trữ ban đầu cho bản clone là **\$0**. Chỉ khi môi trường test thực hiện sửa đổi, chèn mới hoặc xóa dữ liệu thì Aurora mới cấp phát các khối lưu trữ mới riêng biệt cho bản clone. Hoàn toàn cách ly và không ảnh hưởng đến hiệu năng của cụm Production gốc!
+
+#### 🪤 Bẫy 26: Cơ Chế Bảo Trì RDS Multi-AZ: OS Patching vs DB Engine Upgrade & 4 Điều Kiện Kích Hoạt Failover — (TD-Set2 Q31, TD-Set6 Q58, U-PT6 Q30, U-PT2 Q65)
+- **OS Patching / Maintenance trên RDS Multi-AZ** (`U-PT6 Q30`, `TD-Set6 Q58`):
+  - AWS tự động bảo trì theo quy trình 3 bước: Cập nhật OS trên Standby instance trước $\rightarrow$ Tự động kích hoạt Failover chuyển Standby thành Primary $\rightarrow$ Cập nhật OS trên Primary cũ (nay là Standby mới). Thời gian gián đoạn chỉ tương đương thời gian failover (~30–60s).
+- **DB Engine Upgrade (Nâng cấp phiên bản động cơ)** (`U-PT2 Q65`):
+  - Nâng cấp Major Version (ví dụ MySQL 5.7 lên 8.0) sẽ cập nhật **đồng thời cả Primary và Standby**, gây gián đoạn dịch vụ kéo dài (downtime).
+  - **Giải pháp chống downtime**: Bắt buộc sử dụng **RDS Blue/Green Deployments** để tạo môi trường Green độc lập, đồng bộ dữ liệu hai chiều, kiểm thử an toàn rồi chuyển giao (Switchover) dưới 1 phút.
+- **4 Điều kiện kích hoạt tự động Failover trên RDS Multi-AZ** (`TD-Set2 Q31`):
+  1. Mất điện hoặc sự cố tại Availability Zone của Primary instance.
+  2. Mất kết nối mạng tới Primary instance.
+  3. Lỗi phần cứng máy tính chủ của Primary instance.
+  4. Thay đổi kích thước cấu hình phần cứng (Compute instance class scaling) của DB instance.
+
+#### 🪤 Bẫy 27: Quy Tắc Cước Phí Truyền Dữ Liệu Nhân Bản: In-Region Miễn Phí vs Cross-Region Tính Phí — (U-PT2 Q08)
+- **Bảng cước phí truyền dữ liệu Database**:
+  - Dữ liệu sao chép giữa Primary và Standby trong cụm RDS Multi-AZ: **MIỄN PHÍ HOÀN TOÀN (Free Data Transfer)**.
+  - Dữ liệu sao chép từ Primary sang In-Region Read Replica (cùng Region, khác AZ): **MIỄN PHÍ HOÀN TOÀN**.
+  - Dữ liệu sao chép từ Primary sang **Cross-Region Read Replica**: **BỊ TÍNH PHÍ TRUYỀN DỮ LIỆU LIÊN VÙNG (Inter-Region Data Transfer Out)** theo biểu giá tiêu chuẩn của AWS.
+  - Lưu lượng truy vấn đọc/ghi giữa EC2 và RDS trong cùng AZ: **Miễn phí**; khác AZ trong cùng Region: **Tính phí mạng nội bộ \$0.01/GB**.
+
+#### 🪤 Bẫy 28: Lưu Trữ Bản Sao Lưu Dài Hạn: Giới Hạn 35 Ngày Của RDS Automated Backups vs AWS Backup 90+ Ngày / 7 Năm — (TD-Set3 Q23, CM-PT3 Q27)
+- **Tình huống đề thi**: *"Doanh nghiệp tài chính chịu sự quản lý của cơ quan kiểm toán, bắt buộc phải lưu trữ các bản sao lưu cơ sở dữ liệu RDS MySQL hàng tuần trong thời gian 90 ngày (hoặc 7 năm). Kỹ sư cấu hình tính năng RDS Automated Backup nhưng nhận thấy hệ thống không cho phép lưu quá 35 ngày. Làm thế nào để đáp ứng yêu cầu?"*
+- **Cạm bẫy kỹ thuật**: **RDS Automated Backups (kèm khả năng PITR khôi phục từng giây) có giới hạn cứng tối đa là 35 ngày**!
+- **Giải pháp ĐÚNG**: Tích hợp **AWS Backup**.
+  - Tạo Backup Plan trên AWS Backup để lập lịch chụp bản sao lưu RDS định kỳ.
+  - AWS Backup cho phép lưu giữ bản chụp vô thời hạn (90 ngày, 1 năm, 7 năm), hỗ trợ tự động chuyển bản chụp cũ sang Cold Storage để giảm chi phí, và bảo vệ bản chụp bằng **AWS Backup Vault Lock (Compliance Mode)** chống xóa nhầm.
+
+#### 🪤 Bẫy 29: Tối Ưu Chi Phí RDS Dev/Test: Instance Scheduler Tự Động Start/Stop (Quy Tắc 7 Ngày) vs Snapshot & Terminate — (TD-Set4 Q14, TD-Set8 Q24, CM-PT1 Q16, CM-PT3 Q31, CM-PT5 Q57)
+- **Quy tắc dừng máy (Stop RDS Instance)** (`TD-Set8 Q24`, `CM-PT1 Q16`, `CM-PT5 Q57`):
+  - Dừng DB instance vào ban đêm và cuối tuần giúp cắt giảm tới 70% chi phí compute. Sử dụng **AWS Instance Scheduler** để tự động hóa.
+  - **CẠM BẪY 7 NGÀY**: Nếu bạn Stop một RDS DB instance, **AWS sẽ TỰ ĐỘNG KHỞI ĐỘNG LẠI instance đó sau 7 ngày** để tránh việc bỏ quên các bản vá bảo trì hệ thống!
+- **Snapshot & Terminate cho môi trường ngắn hạn** (`TD-Set4 Q14`):
+  - Với môi trường test chỉ hoạt động vài tuần mỗi quý: Giải pháp tối ưu chi phí nhất là chụp Snapshot thủ công rồi **Terminate (Xóa)** DB instance. Bạn chỉ phải trả chi phí lưu trữ snapshot trên S3 rất rẻ. Khi bắt đầu chu kỳ test mới, khôi phục DB instance mới từ snapshot.
+- **AWS Trusted Advisor RDS Checks** (`CM-PT3 Q31`): Cung cấp cảnh báo `Amazon RDS Idle DB Instances` (phát hiện instance không có kết nối nào trong 7 ngày) và `Amazon RDS Reserved Instance Optimization` để chuyển sang mua Reserved Instances tiết kiệm tới 69%.
+
+#### 🪤 Bẫy 30: Bảo Vệ An Ninh RDS Với Amazon GuardDuty RDS Protection & Chia Sẻ RDS Riêng Tư Xuyên VPC Bằng NLB + PrivateLink — (CM-PT4 Q15, CM-PT5 Q22, U-PT1 Q02)
+- **Amazon GuardDuty RDS Protection** (`CM-PT5 Q22`):
+  - Tính năng bảo mật chuyên sâu sử dụng học máy (ML) để giám sát và phân tích các hoạt động đăng nhập vào Amazon Aurora MySQL/PostgreSQL và RDS MySQL.
+  - Tự động phát hiện các nỗ lực tấn công dò mật khẩu (Brute-force attacks), đăng nhập thành công từ các địa chỉ IP độc hại đã biết của mạng Tor/botnet, hoặc các hành vi đăng nhập bất thường không tuân theo quy luật lịch sử.
+- **Chia sẻ Database riêng tư xuyên VPC / xuyên tài khoản qua PrivateLink** (`CM-PT4 Q15`, `U-PT1 Q02`):
+  - Tình huống: Tài khoản đối tác bên ngoài cần truy vấn cơ sở dữ liệu RDS trong VPC của bạn nhưng hai bên bị trùng dải mạng IP (overlapping CIDRs) hoặc quy định bảo mật không cho phép thiết lập VPC Peering.
+  - **Giải pháp ĐÚNG**: Đặt một **Network Load Balancer (NLB)** nội bộ trỏ vào địa chỉ IP của RDS DB instance $\rightarrow$ Tạo một **VPC Endpoint Service (AWS PrivateLink)** từ NLB đó $\rightarrow$ Tài khoản đối tác tạo **Interface VPC Endpoint** trong VPC của họ để kết nối trực tiếp vào RDS qua mạng riêng bảo mật tuyệt đối.
+
+#### 🪤 Bẫy 31: ElastiCache for Redis/Valkey (Transit Encryption, Auth Token, Geospatial, Sorted Sets Leaderboard, Write-Through) vs ElastiCache for Memcached (Multi-threaded + Auto Discovery) — (TD-Set1 Q35, TD-Set6 Q06, TD-Set6 Q65, CM-PT1 Q48, U-PT1 Q50, U-PT3 Q35, U-PT4 Q21, U-PT6 Q27)
+- **Amazon ElastiCache for Redis / Valkey**:
+  - **Bảo mật**: Bắt buộc cấu hình mã hóa khi truyền tải (`--transit-encryption-enabled`) và xác thực bằng token mật khẩu (`--auth-token`) khi tạo cụm (`TD-Set1 Q35`, `TD-Set6 Q65`).
+  - **Cấu trúc dữ liệu nâng cao**:
+    - **Geospatial (Geo Sets)**: Tìm kiếm tọa độ không gian địa lý, tính toán khoảng cách và xác định các tài xế / cửa hàng gần nhất trong bán kính $X$ km (`U-PT4 Q21`).
+    - **Sorted Sets (ZSET)**: Xây dựng bảng xếp hạng game online theo thời gian thực (Gaming Leaderboard), tự động sắp xếp điểm số người chơi với độ phức tạp $O(\log N)$ (`U-PT1 Q50`, `U-PT3 Q35`).
+  - **Chiến lược Caching**:
+    - **Write-Through**: Ứng dụng ghi đồng thời dữ liệu vào Cache và Database. Đảm bảo dữ liệu cache không bao giờ bị cũ (never stale), đổi lại độ trễ ghi tăng nhẹ (`CM-PT1 Q48`).
+    - **Lazy Loading (Cache-Aside)**: Chỉ đọc từ Cache; khi Cache Miss mới truy vấn DB và ghi ngược lại vào Cache kèm TTL.
+- **Amazon ElastiCache for Memcached**:
+  - **Kiến trúc Multi-threaded**: Xử lý đa luồng trên nhiều nhân CPU, phù hợp cho việc lưu trữ cache các đối tượng tĩnh đơn giản với thông lượng cực lớn (`TD-Set6 Q06`).
+  - **Auto Discovery**: Thư viện client tự động nhận diện các node mới được bổ sung hoặc loại bỏ khỏi cụm Memcached thông qua Configuration Endpoint mà không cần sửa code (`U-PT6 Q27`).
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Cơ Sở Dữ Liệu Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
 |:---|:---|:---|:---:|
+| **Cần 30,000 IOPS cho RDS MySQL mà không mua ổ io1 đắt đỏ** | **RDS gp3 Storage (cấu hình độc lập tới 64,000 IOPS)** | Mua ổ Provisioned IOPS io1 (đắt gấp đôi không cần thiết) | `CM-PT6 Q46` |
+| **Hành vi Aurora 1 instance duy nhất khi bị sập** | **Tạo lại instance mới trong CÙNG AZ (mất 10-15 phút)** | Tự failover sang AZ khác < 30s (sai: không có replica) | `TD-Set5 Q06` |
+| **Di chuyển RDS MySQL lên Aurora không downtime** | **Tạo Aurora Read Replica từ RDS $\rightarrow$ Chờ sync $\rightarrow$ Promote** | Dùng mysqldump / snapshot restore (downtime nhiều giờ) | `CM-PT4 Q46`, `U-PT3 Q58` |
+| **Chuyển Aurora Provisioned sang Serverless v2 no downtime** | **Thêm Serverless v2 Reader $\rightarrow$ Failover sang Writer** | Tạo cụm mới copy data (gây downtime và đổi endpoint) | `TD-Set3 Q28` |
+| **Chuyển SQL Server sang Aurora Postgres không sửa code T-SQL** | **Babelfish for Aurora PostgreSQL (+ AWS SCT/DMS)** | Viết lại toàn bộ Stored Procedures sang PL/pgSQL | `U-PT1 Q61` |
+| **Kích hoạt Lambda trực tiếp từ Trigger Aurora MySQL** | **Thủ tục lưu trữ tích hợp `mysql.lambda_async`** | EC2 polling liên tục quét bảng CSDL (trễ và tốn compute) | `TD-Set1 Q17` |
+| **Giới hạn RPO tối đa cho Aurora Global Database** | **Cấu hình tham số `aurora_global_db_rpo` (giây)** | Không cấu hình (RPO có thể bị dãn khi mạng lag) | `CM-PT2 Q56` |
+| **Tạo bản sao CSDL 10 TB cho test tức thì, 0 đồng ban đầu** | **Aurora Fast Database Cloning (Copy-on-Write)** | Snapshot Restore sang cụm mới (chờ nhiều giờ, tốn 10TB) | `TD-Set6 Q20` |
+| **Bảo trì OS Patching trên RDS Multi-AZ** | **Update Standby $\rightarrow$ Failover $\rightarrow$ Update Primary cũ** | Update đồng thời cả hai gây sập cụm (sai: RDS tuần tự) | `U-PT6 Q30`, `TD-Set6 Q58` |
+| **Cước phí truyền dữ liệu khi nhân bản CSDL** | **In-Region: Miễn phí; Cross-Region: Tính phí Data Transfer** | Cả hai đều miễn phí / Cả hai đều tính phí | `U-PT2 Q08` |
+| **Lưu trữ backup RDS dài hạn 90 ngày đến 7 năm** | **AWS Backup (Backup Plan + Vault Lock)** | RDS Automated Backups (giới hạn cứng tối đa 35 ngày) | `TD-Set3 Q23`, `CM-PT3 Q27` |
+| **Cắt giảm 70% chi phí RDS test ban đêm và cuối tuần** | **AWS Instance Scheduler (Lưu ý: RDS tự bật lại sau 7 ngày)** | Để máy chạy 24/7 lãng phí ngân sách | `TD-Set8 Q24`, `CM-PT1 Q16` |
+| **Chia sẻ RDS riêng tư xuyên VPC không peering khi trùng IP** | **Network Load Balancer (NLB) + AWS PrivateLink** | VPC Peering (bị lỗi xung đột overlapping CIDRs) | `CM-PT4 Q15`, `U-PT1 Q02` |
+| **Phát hiện tấn công brute-force đăng nhập vào RDS/Aurora** | **Amazon GuardDuty RDS Protection (Machine Learning)** | Chỉ dùng CloudWatch Logs (phải viết regex thủ công) | `CM-PT5 Q22` |
+| **Bảng xếp hạng game online thời gian thực dưới 1ms** | **ElastiCache for Redis / Valkey (Sorted Sets - ZSET)** | RDS SQL Query `ORDER BY score DESC` (nghẽn I/O đĩa) | `U-PT1 Q50`, `U-PT3 Q35` |
+| **Tìm vị trí xe/người dùng gần nhất trong bán kính km** | **ElastiCache for Redis / Valkey (Geospatial API)** | Quét tọa độ toàn bộ bảng DynamoDB/RDS | `U-PT4 Q21` |
+| **Cache đa luồng (Multi-threaded) tự động phát hiện node mới** | **Amazon ElastiCache for Memcached (Auto Discovery)** | ElastiCache Redis (Redis là đơn luồng core xử lý) | `TD-Set6 Q06`, `U-PT6 Q27` |
 | **Tự động mở rộng ổ đĩa RDS không gián đoạn, no reboot** | **Amazon RDS Storage Auto Scaling (Max Threshold)** | Snapshot restore sang DB mới (gây gián đoạn nhiều giờ) | `CM-PT1 Q49` |
 | **Tự động xoay mật khẩu database định kỳ 30 ngày** | **AWS Secrets Manager (Built-in Lambda Rotation)** | Systems Manager Parameter Store (không có built-in rotation) | `CM-PT1 Q03`, `CM-PT1 Q12`, `CM-PT2 Q49` |
 | **Database Document tương thích MongoDB, Serverless co giãn** | **Amazon DocumentDB Serverless (DCUs)** | DynamoDB (không native MongoDB API) / Provisioned cluster | `CM-PT2 Q18` |
@@ -566,14 +687,8 @@ sequenceDiagram
 | **Kết nối RDS MySQL/PostgreSQL không mật khẩu, dùng IAM token** | **IAM Database Authentication** (SSL bắt buộc) | Hardcode password vào config / Secret không xoay | TD-Set1 Q18, TD-Set5 Q52 |
 | **Tải gián đoạn, đột biến bất định có khoảng nghỉ không tải** | **Amazon Aurora Serverless v2** (1–8 ACUs) | Provisioned Instances (lãng phí tiền khi nhàn rỗi) | TD-Set8 Q14 |
 | **Multi-Region DR, RPO < 1s, RTO < 1m (Relational)** | **Amazon Aurora Global Database** | RDS Cross-Region Replica (lag > 1s) | CM-PT1 Q24 |
-| **Tự động xoay mật khẩu database định kỳ 30 ngày** | **AWS Secrets Manager** (Automatic Rotation) | Systems Manager Parameter Store (không có built-in rotation) | CM-PT1 Q13, TD-Set2 Q10 |
-| **Tăng tốc độ đọc DynamoDB lên 10x, microsecond latency** | **Amazon DynamoDB Accelerator (DAX)** | ElastiCache Redis (phải viết lại code gọi SDK mới) | TD-Set2 Q48, TD-Set3 Q04 |
 | **Nâng cấp Major Engine Version không gián đoạn** | **RDS Blue/Green Deployments** | Nâng cấp trực tiếp trên Multi-AZ (bị downtime) | U-PT2 Q65 |
 | **Giảm thời gian gián đoạn failover & chống tràn connection Lambda** | **Amazon RDS Proxy** | Kết nối trực tiếp từ hàng ngàn Lambda (tràn pool) | CM-PT6 Q38, TD-Set2 Q56 |
-
----
-
----
 
 ---
 
@@ -820,8 +935,6 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
 
 ---
 
----
-
 ## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" (Golden Architectural Rules)
@@ -841,6 +954,26 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
    Tuyệt đối tránh nâng cấp Major Version trực tiếp trên môi trường Production; luôn sử dụng **RDS Blue/Green Deployments** để đảm bảo thời gian chuyển giao dưới 1 phút và không mất dữ liệu.
 7. **Lựa chọn bộ nhớ đệm thông minh 2026**:  
    Ưu tiên triển khai **Amazon ElastiCache for Valkey** thay vì Redis để nhận cùng một chuẩn hiệu năng microsecond nhưng chi phí bản quyền và hạ tầng rẻ hơn **33%**.
+
+---
+
+### Danh Mục Kiểm Tra Kiến Thức Cốt Lõi (Learning Checklist)
+- [ ] Phân biệt rõ Multi-AZ Deployment (HA/DR, synchronous, standby không đọc được) vs Read Replicas (Scalability, asynchronous, đọc được) vs Multi-AZ DB Cluster (1 Primary + 2 Standby đọc được trên 3 AZs).
+- [ ] Nắm vững kiến trúc lưu trữ Amazon Aurora: Tách rời Compute & Storage, 6 bản sao trên 3 AZs, Quorum 4/6 Write, 3/6 Read, tự động mở rộng lên tới 256 TiB.
+- [ ] Hiểu rõ RDS gp3 Storage: Cho phép cấu hình độc lập lên tới 64,000 IOPS mà không cần mua Provisioned IOPS io1 đắt đỏ (`CM-PT6 Q46`).
+- [ ] Nắm vững hành vi khôi phục cụm Aurora 1 instance duy nhất: Cố gắng tạo lại instance trong CÙNG AZ (mất 10-15 phút downtime, không có failover tức thì) (`TD-Set5 Q06`).
+- [ ] Nắm vững phương pháp di chuyển Near-Zero Downtime: Tạo Aurora Read Replica từ RDS MySQL/Postgres rồi Promote (`CM-PT4 Q46`), hoặc thêm Serverless v2 Reader rồi Failover (`TD-Set3 Q28`).
+- [ ] Hiểu rõ Babelfish for Aurora PostgreSQL: Cho phép hiểu trực tiếp giao thức T-SQL của Microsoft SQL Server, giảm thiểu sửa đổi mã nguồn (`U-PT1 Q61`).
+- [ ] Nắm vững cú pháp gọi Lambda từ Trigger Aurora MySQL: `mysql.lambda_async` kèm IAM Role (`TD-Set1 Q17`).
+- [ ] Hiểu rõ tham số kiểm soát RPO `aurora_global_db_rpo` trên Aurora Global Database và thiết kế tách bảng Global vs Local (`CM-PT2 Q56`, `U-PT1 Q46`).
+- [ ] Nắm vững Aurora Fast Database Cloning: Cơ chế Copy-on-Write tạo bản sao test 10 TB trong vài phút với chi phí lưu trữ ban đầu \$0 (`TD-Set6 Q20`).
+- [ ] Phân biệt cơ chế bảo trì RDS Multi-AZ: OS Patching (Standby trước -> Failover -> Primary cũ) vs DB Engine Upgrade (downtime nếu không dùng Blue/Green Deployments) (`U-PT6 Q30`, `U-PT2 Q65`).
+- [ ] Nắm vững 4 điều kiện kích hoạt Failover RDS Multi-AZ (`TD-Set2 Q31`): Mất AZ, mất kết nối mạng, hỏng phần cứng máy chủ, và scale compute size.
+- [ ] Hiểu rõ cước phí truyền dữ liệu: In-Region Read Replica hoàn toàn miễn phí; Cross-Region Read Replica tính phí Data Transfer Out liên vùng (`U-PT2 Q08`).
+- [ ] Nắm vững giới hạn lưu trữ sao lưu: RDS Automated Backups tối đa 35 ngày; muốn lưu 90 ngày đến 7 năm bắt buộc dùng AWS Backup (`TD-Set3 Q23`).
+- [ ] Hiểu rõ tối ưu chi phí RDS Dev/Test: AWS Instance Scheduler (lưu ý RDS tự khởi động lại sau 7 ngày) vs Snapshot & Terminate (`TD-Set4 Q14`, `TD-Set8 Q24`).
+- [ ] Nắm vững Amazon GuardDuty RDS Protection và chia sẻ RDS riêng tư xuyên VPC bằng NLB + AWS PrivateLink (`CM-PT4 Q15`, `CM-PT5 Q22`).
+- [ ] Phân biệt ElastiCache for Redis/Valkey (Transit Encryption, Auth Token, Geospatial, Sorted Sets Leaderboard, Write-Through) vs ElastiCache for Memcached (Multi-threaded + Auto Discovery) (`TD-Set1 Q35`, `TD-Set6 Q06`, `U-PT1 Q50`, `U-PT4 Q21`).
 
 ---
 

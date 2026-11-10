@@ -82,7 +82,7 @@ flowchart TD
 | **Bản chất kỹ thuật** | Chuẩn DNS quốc tế thông thường (RFC 1034). | **Tính năng mở rộng độc quyền của Amazon Route 53**. |
 | **Áp dụng cho Zone Apex (`example.com`)** | ❌ **BỊ CẤM HOÀN TOÀN** bởi chuẩn DNS quốc tế. |  **HOÀN TOÀN ĐƯỢC PHÉP** (Áp dụng hoàn hảo cho root domain). |
 | **Đích trỏ tới** | Bất kỳ tên miền hợp lệ nào trên Internet. | **Chỉ trỏ tới tài nguyên nội bộ của AWS** (ALB, CloudFront, S3 Website, API Gateway, VPC Endpoints). |
-| **Chi phí truy vấn DNS** | Bị tính phí cước truy vấn thông thường ($0.40/1M). | **HOÀN TOÀN MIỄN PHÍ TRUY VẤN ($0.00)** khi trỏ tới tài nguyên AWS! |
+| **Chi phí truy vấn DNS** | Bị tính phí cước truy vấn thông thường (\$0.40/1M). | **HOÀN TOÀN MIỄN PHÍ TRUY VẤN (\$0.00)** khi trỏ tới tài nguyên AWS! |
 | **Hiệu năng phân giải** | Client phải truy vấn 2 chặng (2 DNS roundtrips). | Route 53 tự động trả về trực tiếp địa chỉ IP A/AAAA của tài nguyên (1 chặng). |
 | **Nhận biết IP động** | Tĩnh, client tự phân giải lại. | Tự động nhận biết và theo dõi sự thay đổi IP ngầm của ALB/CloudFront. |
 
@@ -183,7 +183,7 @@ flowchart LR
   - **Giải pháp chuẩn của AWS**: Tạo một **Route 53 Alias Record** kiểu A trỏ tới tên miền của ALB hoặc CloudFront (`TD-Set5 Q31`).
   - **Lợi ích**:
     - Hỗ trợ đầy đủ cho Zone Apex.
-    - Truy vấn DNS Alias tới tài nguyên AWS hoàn toàn **MIỄN PHÍ cước phí ($0.00)**.
+    - Truy vấn DNS Alias tới tài nguyên AWS hoàn toàn **MIỄN PHÍ cước phí (\$0.00)**.
     - Route 53 tự động nhận biết khi IP của ALB thay đổi mà không cần cập nhật thủ công.
 
 #### 4. Cân Bằng Tải DNS Đa Vùng Khả Dụng / Đa Region Không Cần ALB Bằng Multi-Value Answer — (TD-Set8 Q15)
@@ -257,7 +257,7 @@ flowchart LR
     - `enableDnsHostnames = true` (gán DNS hostname cho máy có Public IP).
     - `enableDnsSupport = true` (kích hoạt DNS Resolver tại IP `10.x.x.2` / `AmazonProvidedDNS`).
 
-#### 🪤 Bẫy 5: Tăng Tốc Giao Thức TCP/UDP Toàn Cầu: Global Accelerator vs CloudFront — (CM-PT1 Q40, CM-PT6 Q48, TD-Set2 Q02)
+#### 🪤 Bẫy 5: Tăng Tốc Giao Thức TCP/UDP Toàn Cầu: Global Accelerator vs CloudFront — (CM-PT1 Q40, CM-PT6 Q48, TD-Set6 Q15)
 - **Tình huống đề thi**: *"Ứng dụng truyền thông VoIP, máy chủ game trực tuyến hoặc IoT giao tiếp qua giao thức TCP/UDP trên nhiều cổng mạng khác nhau. Khách hàng phân tán trên toàn thế giới và yêu cầu độ trễ thấp nhất, không phụ thuộc vào bộ nhớ đệm IP/DNS trên thiết bị người dùng cuối."*
 - **Các phương án bẫy**:
   - ❌ *Dùng Amazon CloudFront*: CloudFront là mạng phân phối nội dung (CDN) hoạt động ở **Layer 7** chuyên cho các giao thức web (HTTP/HTTPS), hoàn toàn **KHÔNG hỗ trợ giao thức UDP** hay các ứng dụng TCP thô non-HTTP.
@@ -267,7 +267,7 @@ flowchart LR
   - Hỗ trợ đầy đủ cả giao thức **TCP và UDP** trên mọi dải cổng mạng.
   - Đưa lưu lượng gói tin của client vào điểm biên Edge Location gần nhất của AWS, sau đó dẫn truyền toàn bộ qua mạng trục cáp quang riêng tốc độ cao của AWS (AWS Global Network Backbone), giúp giảm tới 60% độ trễ và triệt tiêu hiện tượng jitter/packet loss.
 
-#### 🪤 Bẫy 6: Định Tuyến Đa Vùng Độ Trễ Thấp Nhất Bằng Route 53 Latency Routing — (CM-PT5 Q06, CM-PT5 Q18, TD-Set6 Q18)
+#### 🪤 Bẫy 6: Định Tuyến Đa Vùng Độ Trễ Thấp Nhất Bằng Route 53 Latency Routing — (CM-PT1 Q11, CM-PT5 Q06, TD-Set6 Q18)
 - **Tình huống đề thi**: *"Doanh nghiệp triển khai ứng dụng web trên hai cụm máy chủ EC2 đặt phía sau Application Load Balancers (ALBs) tại 2 AWS Regions khác nhau. Cần giải pháp định tuyến người dùng tới Region có độ trễ mạng thấp nhất và tự động chuyển hướng khi một Region gặp sự cố."*
 - **Giải pháp ĐÚNG**: Sử dụng **Route 53 Public Hosted Zone** với các bản ghi **Alias Record sử dụng Latency-Based Routing Policy** trỏ vào DNS của từng ALB kèm theo Route 53 Health Checks.
   - Route 53 liên tục đo đạc độ trễ mạng từ các mạng người dùng tới từng Region và trả về địa chỉ của ALB gần nhất về mặt thời gian phản hồi mạng.
@@ -287,6 +287,39 @@ flowchart LR
   - Target Group loại `ip` có thể trỏ tới IP private khác VPC (qua Peering/Transit Gateway), nhưng không thể chuyển tải mượt mà giữa các region mà không có hạ tầng mạng liên kết phức tạp.
 - **Giải pháp ĐÚNG**: Sử dụng **Route 53 Multi-Value Answer Routing** hoặc **AWS Global Accelerator** phía trước 2 ALBs riêng biệt ở 2 Regions.
 
+#### 🪤 Bẫy 9: Di Chuyển Nhanh Toàn Bộ Bản Ghi Sang Route 53 Bằng Cách Import DNS Zone File (BIND RFC 1035 Format) — (CM-PT5 Q18)
+- **Tình huống đề thi**: Doanh nghiệp đang quản lý hàng trăm đến hàng ngàn bản ghi DNS phức tạp trên nhà cung cấp DNS bên ngoài hoặc máy chủ DNS On-Premises (BIND). Đội ngũ cần di chuyển toàn bộ hệ thống tên miền này sang Amazon Route 53 với thời gian cấu hình tối thiểu và không tạo thủ công từng bản ghi.
+- **Giải pháp ĐÚNG**:
+  - Xuất file cấu hình vùng từ hệ thống cũ theo định dạng chuẩn **BIND (RFC 1035 Zone File format)**.
+  - Tại Route 53 Console: Tạo mới Public Hosted Zone cho tên miền đó.
+  - Chọn tính năng **Import Zone File**, dán nội dung hoặc tải file zone lên; Route 53 sẽ tự động phân tích cú pháp và khởi tạo hàng loạt tất cả các bản ghi `A`, `CNAME`, `MX`, `TXT`, `SRV` trong tích tắc!
+
+#### 🪤 Bẫy 10: Định Tuyến Latency-Based Routing Kết Hợp Cả Trung Tâm Dữ Liệu On-Premises — (CM-PT1 Q11)
+- **Tình huống đề thi**: Doanh nghiệp triển khai ứng dụng web lai (Hybrid Architecture) chạy đồng thời trên các máy chủ AWS EC2 tại Region `us-east-1` và cụm máy chủ vật lý tại trung tâm dữ liệu On-Premises ở Châu Âu. Cần giải pháp tự động định tuyến người dùng toàn cầu tới nơi có độ trễ mạng thấp nhất giữa AWS và On-Premises.
+- **Phương án bẫy**: Nghĩ rằng Route 53 Latency Routing chỉ áp dụng được cho tài nguyên nội bộ của AWS.
+- **Giải pháp ĐÚNG**: Cấu hình **Latency-Based Routing Policy kết hợp IP On-Premises**.
+  - Tạo bản ghi `A` với chính sách Latency trỏ về IP công cộng của On-Premises Datacenter.
+  - Trong cấu hình bản ghi, Route 53 yêu cầu bạn chọn một **AWS Region gần nhất về mặt địa lý với Datacenter On-Premises đó** (ví dụ: `eu-central-1` đại diện cho Frankfurt).
+  - Route 53 sẽ sử dụng cơ sở dữ liệu độ trễ mạng toàn cầu đo từ client tới Region đại diện đó để quyết định khi nào gửi user về On-Premises và khi nào gửi user về AWS!
+
+#### 🪤 Bẫy 11: Phân Biệt Chi Tiết Alias Record vs CNAME Record Trong Bài Toán Zone Apex và Bên Thứ Ba — (U-PT3 Q44, U-PT3 Q45)
+- **Tình huống 1 (Trỏ Zone Apex `domain.com` sang Subdomain trong cùng Hosted Zone)** (`U-PT3 Q44`): Cần cấu hình tên miền gốc `example.com` tự động trỏ về `www.example.com` mà không tốn phí truy vấn $\rightarrow$ Bắt buộc dùng **Alias Record (Loại A, Alias Target trỏ vào `www.example.com`)**. Tiêu chuẩn DNS RFC nghiêm cấm tạo bản ghi CNAME tại Zone Apex.
+- **Tình huống 2 (Trỏ Subdomain sang tên miền nhà cung cấp bên thứ ba)** (`U-PT3 Q45`): Cần cấu hình subdomain `shop.example.com` trỏ sang sàn thương mại điện tử bên thứ 3 (ví dụ: `custom-store.shopify.com` hoặc `my-saas-app.com`) $\rightarrow$ Bắt buộc dùng **CNAME Record**. Không thể dùng Alias Record vì Alias Record của Route 53 **CHỈ trỏ được vào tài nguyên AWS hoặc bản ghi khác trong cùng Hosted Zone**, KHÔNG THỂ trỏ vào tên miền bên ngoài AWS!
+
+#### 🪤 Bẫy 12: Danh Sách Kiểm Tra Bắt Buộc Khi Cấu Hình Active-Passive Failover: Mở Tường Lửa Cho Health Checkers — (TD-Set2 Q64, CM-PT3 Q16, U-PT2 Q52, U-PT4 Q48)
+- **Tình huống đề thi** (`TD-Set2 Q64`): Thiết lập Route 53 Failover Routing giữa cụm máy chủ Primary (EC2/ALB) và Secondary (S3 Static Website). Ngay sau khi bật Health Check, Route 53 lập tức đánh dấu Primary là `Unhealthy` và chuyển toàn bộ lưu lượng sang Secondary, dù máy chủ Primary vẫn hoạt động hoàn hảo khi truy cập nội bộ!
+- **Nguyên nhân cốt lõi**: Các máy chủ kiểm tra sức khỏe của Route 53 (**Route 53 Health Checkers**) là các máy chủ công khai phân tán trên khắp thế giới. Nếu tường lửa Security Group, NACL, hoặc tường lửa On-Premises chặn IP của các Health Checkers này, Route 53 sẽ nhận định máy chủ đã chết.
+- **Giải pháp ĐÚNG**: Bắt buộc phải **mở Inbound Rule trên Security Group và NACL cho phép dải địa chỉ IP công khai của Route 53 Health Checkers** (Route 53 IP Ranges) truy cập cổng kiểm tra (cổng 80/443).
+
+#### 🪤 Bẫy 13: Định Tuyến Đa Vùng Active-Active Kết Hợp Weighted Routing + Health Checks vs Multi-Value Answer — (TD-Set3 Q53, CM-PT3 Q54)
+- **Active-Active có kiểm soát tỉ lệ tải giữa các Regions** (`TD-Set3 Q53`): Khi doanh nghiệp muốn chia đều lưu lượng (50/50 hoặc 80/20) giữa cụm máy chủ ở 2 Regions khác nhau, và nếu một Region bị sập thì 100% lưu lượng tự động dồn về Region còn lại $\rightarrow$ Cấu hình **Weighted Routing Policy kết hợp Route 53 Health Checks** cho từng Region.
+- **DNS Load Balancing trả về nhiều IP khỏe mạnh ngẫu nhiên** (`CM-PT3 Q54`): Cung cấp khả năng cân bằng tải ở tầng DNS trả về danh sách tối đa 8 IP khỏe mạnh; client sẽ tự chọn 1 trong 8 IP để kết nối $\rightarrow$ Dùng **Multi-Value Answer Routing Policy**.
+
+#### 🪤 Bẫy 14: Toàn Bộ Các Kịch Bản Thực Chiến Của AWS Global Accelerator — (TD-Set6 Q15, CM-PT2 Q15, CM-PT3 Q50, U-PT1 Q58, U-PT2 Q43, U-PT3 Q49, U-PT4 Q63)
+- **Bảo toàn địa chỉ IP nguồn của Client (Client IP Preservation)** (`TD-Set6 Q15`): Global Accelerator bảo toàn địa chỉ IP gốc của người dùng cuối trong gói tin khi chuyển tiếp tới Application Load Balancer hoặc EC2, giúp ứng dụng backend ghi nhận chính xác danh tính khách hàng mà không cần giải mã header phức tạp.
+- **Hai địa chỉ Anycast IP tĩnh thay thế hàng trăm IP/Domain động** (`U-PT3 Q49`): Khi khách hàng doanh nghiệp có chính sách tường lửa khắt khe chỉ cho phép whitelist địa chỉ IP tĩnh cố định (trong khi ALB dùng IP động thay đổi liên tục) $\rightarrow$ Đặt **AWS Global Accelerator** phía trước ALB.
+- **Tăng tốc cả máy chủ AWS lẫn máy chủ On-Premises UDP/TCP** (`U-PT4 Q63`): Global Accelerator có thể trỏ Target tới Network Load Balancer (NLB), và NLB có thể chuyển tiếp lưu lượng qua Direct Connect/VPN về IP private của máy chủ vật lý On-Premises, mang lại khả năng tăng tốc Anycast toàn cầu cho cả hạ tầng lai!
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Chính Sách Định Tuyến DNS Nhanh (Exam Decision Matrix)
@@ -294,24 +327,22 @@ flowchart LR
 | Tình huống / Yêu cầu trong đề thi | Chính sách Route 53 chuẩn | Giải pháp bị loại & Lý do | Nguồn thực chứng |
 |:---|:---|:---|:---|
 | **Giới hạn nội dung theo quốc gia/châu lục / GDPR** | **Geolocation Routing** | Latency-based (không chặn theo vị trí địa lý được) | Chuẩn AWS |
-| **Trải nghiệm mạng nhanh nhất cho user toàn cầu** | **Latency-Based Routing** (+ Health Check) | Weighted Routing (không đo đạc độ trễ mạng) | `TD-Set6 Q18` |
-| **Failover chủ động - dự phòng (Active-Passive)** | **Failover Routing** (+ Health Check) | Multi-Value (trả về nhiều IP cùng lúc) | `TD-Set2 Q26` |
-| **Phân bổ traffic thử nghiệm / Zero-downtime cutover** | **Weighted Routing** | Geolocation Routing | `TD-Set5 Q25`, `TD-Set5 Q32` |
-| **Cân bằng tải DNS đa vùng, tự động loại bỏ server lỗi** | **Multi-Value Answer Routing** (+ Health Checks) | Simple Routing (không hỗ trợ Health Check) | `TD-Set8 Q15` |
-| **Chuyển đổi lưu lượng tức thì, bypass DNS cache** | **AWS Global Accelerator (Traffic Dial)** | Route 53 Weighted (bị nghẽn bởi ISP DNS cache) | `TD-Set2 Q02` |
+| **Trải nghiệm mạng nhanh nhất cho user toàn cầu** | **Latency-Based Routing** (+ Health Check) | Weighted Routing (không đo đạc độ trễ mạng) | `CM-PT1 Q11`, `TD-Set6 Q18` |
+| **Failover chủ động - dự phòng (Active-Passive)** | **Failover Routing** (+ Health Check) | Multi-Value (trả về nhiều IP cùng lúc) | `TD-Set2 Q26`, `TD-Set2 Q64` |
+| **Phân bổ traffic thử nghiệm / Active-Active DR** | **Weighted Routing** (+ Health Checks) | Geolocation Routing | `TD-Set3 Q53`, `TD-Set5 Q32` |
+| **Cân bằng tải DNS đa vùng, tự động loại bỏ server lỗi** | **Multi-Value Answer Routing** (+ Health Checks) | Simple Routing (không hỗ trợ Health Check) | `CM-PT3 Q54`, `TD-Set8 Q15` |
+| **Chuyển đổi lưu lượng tức thì, bypass DNS cache** | **AWS Global Accelerator (Traffic Dial)** | Route 53 Weighted (bị nghẽn bởi ISP DNS cache) | `TD-Set6 Q15`, `U-PT2 Q43` |
 | **Điều chỉnh mở rộng/thu hẹp vùng phục vụ bằng Bias** | **Geoproximity Routing** (Traffic Flow) | Geolocation Routing (không có tính năng Bias) | `TD-Set2 Q59` |
-| **Tên miền gốc `example.com` trỏ vào ALB/CloudFront** | **Alias Record (A/AAAA)** | CNAME Record (vi phạm tiêu chuẩn RFC DNS Apex) | `TD-Set5 Q31` |
+| **Tên miền gốc `example.com` trỏ vào ALB/CloudFront** | **Alias Record (A/AAAA)** | CNAME Record (vi phạm tiêu chuẩn RFC DNS Apex) | `TD-Set5 Q31`, `U-PT3 Q44` |
+| **Subdomain trỏ sang SaaS đối tác bên ngoài AWS** | **CNAME Record** | Alias Record (Alias chỉ trỏ được tài nguyên AWS) | `U-PT3 Q45` |
 | **Tên miền Route 53 trỏ vào S3 Static Website** | **Alias Record (A)** (Tên bucket = Tên miền) | CNAME (Apex không hỗ trợ; bucket sai tên sẽ 404) | `TD-Set2 Q22` |
-| **On-Premises phân giải tên miền private AWS** | **Route 53 Resolver Inbound Endpoint** | Outbound Endpoint (sai chiều đi của query) | `TD-Set1 Q03` |
-| **EC2 trong VPC phân giải tên miền On-Premises** | **Route 53 Resolver Outbound Endpoint** (+ Rule) | Inbound Endpoint (sai chiều đi của query) | `TD-Set6 Q54` |
-| **Chia sẻ DNS Resolver Rules cho nhiều VPC/Account** | **AWS Resource Access Manager (RAM)** | Dựng resolver endpoints riêng lẻ ở từng VPC (lãng phí) | `TD-Set1 Q03`, `TD-Set6 Q54` |
-| **Tăng tốc ứng dụng UDP/VoIP/Game toàn cầu** | **AWS Global Accelerator (2 Static Anycast IPs)** | CloudFront (chỉ hỗ trợ Layer 7 HTTP/HTTPS) | `TD-Set2 Q02` |
+| **On-Premises phân giải tên miền private AWS** | **Route 53 Resolver Inbound Endpoint** | Outbound Endpoint (sai chiều đi của query) | `CM-PT1 Q41` |
+| **EC2 trong VPC phân giải tên miền On-Premises** | **Route 53 Resolver Outbound Endpoint** (+ Rule) | Inbound Endpoint (sai chiều đi của query) | `CM-PT1 Q41`, `U-PT1 Q20` |
+| **Chia sẻ DNS Resolver Rules cho nhiều VPC/Account** | **AWS Resource Access Manager (RAM)** | Dựng resolver endpoints riêng lẻ ở từng VPC (lãng phí) | `CM-PT1 Q41` |
+| **Tăng tốc ứng dụng UDP/VoIP/Game với 2 Anycast IP tĩnh** | **AWS Global Accelerator (2 Static Anycast IPs)** | CloudFront (chỉ hỗ trợ Layer 7 HTTP/HTTPS) | `TD-Set6 Q15`, `U-PT3 Q49` |
 | **Chống giả mạo DNS & đầu độc bộ nhớ đệm (Cache Poisoning)** | **Route 53 DNSSEC** (KMS Asymmetric Key) | SSL/TLS thông thường (chỉ mã hóa dữ liệu truyền) | `TD-Set5 Q05` |
-| **Máy ảo EC2 trong VPC mới không có DNS hostname** | Bật `enableDnsHostnames = true` trên VPC | Đổi AMI máy ảo (vấn đề nằm ở thiết lập VPC) | `TD-Set4 Q64` |
-
----
-
----
+| **Máy ảo EC2 trong VPC mới không có DNS hostname** | Bật `enableDnsHostnames = true` trên VPC | Đổi AMI máy ảo (vấn đề nằm ở thiết lập VPC) | `U-PT6 Q18`, `TD-Set4 Q64` |
+| **Di chuyển hàng ngàn bản ghi DNS từ On-Premises lên AWS** | **Import DNS Zone File (định dạng BIND)** | Tạo thủ công từng bản ghi trên giao diện (chậm, dễ sai) | `CM-PT5 Q18` |
 
 ---
 
@@ -381,12 +412,12 @@ sequenceDiagram
 
 | Thành phần tính phí | Cơ chế tính phí chi tiết (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
-| **Hosted Zones** | • 25 Hosted Zones đầu tiên: **$0.50 / zone / tháng**.<br>• Từ zone thứ 26 trở đi: **$0.10 / zone / tháng**. | Áp dụng cho cả Public và Private Hosted Zones. | Tạo Private Hosted Zone riêng lẻ cho từng VPC thay vì liên kết nhiều VPC vào chung 1 Zone. |
-| **Bản ghi Alias Record** | • **HOÀN TOÀN MIỄN PHÍ TRUY VẤN ($0.00 / query)** khi trỏ tới tài nguyên AWS (ALB, CloudFront, S3 Website, API Gateway, VPC Endpoints). | **$0.00 / 1 triệu queries**. | Dùng bản ghi CNAME thông thường khi trỏ tới ALB làm phát sinh phí truy vấn DNS tiêu chuẩn. |
-| **Truy vấn DNS Tiêu chuẩn** | • Áp dụng cho các bản ghi A, CNAME, TXT, MX thông thường.<br>• **1 Tỷ queries đầu tiên**: **$0.40 / 1 triệu queries**.<br>• Trên 1 Tỷ queries: **$0.20 / 1 triệu queries**. | Rất rẻ ở quy mô nhỏ, nhưng hệ thống hàng trăm triệu queries/tháng sẽ tốn đáng kể. | Cấu hình giá trị TTL quá thấp (ví dụ: 5s–10s) khiến client liên tục gửi query về Route 53. |
-| **Truy vấn Định tuyến Nâng cao** | • **Latency-based Routing**: **$0.60 / 1 triệu queries**.<br>• **Geo DNS & Geoproximity**: **$0.70 / 1 triệu queries**.<br>• **IP-based Routing**: **$0.80 / 1 triệu queries** (đắt gấp đôi Standard). | Phí cao hơn do Route 53 phải xử lý giải thuật đo đạc vị trí IP của client. | Sử dụng Geolocation routing cho các bản ghi dịch vụ nội bộ không cần phân vùng ngôn ngữ. |
-| **Route 53 Health Checks** | • AWS Endpoints (EC2, Elastic IP): **$0.50 / check / tháng**.<br>• Non-AWS Endpoints: **$0.75 / check / tháng**.<br>• Fast Interval (10s): Phụ thu thêm **$1.00 / tháng**.<br>• HTTPS Matching String: Phụ thu thêm **$1.00 / tháng**. | Tính theo số lượng checker toàn cầu. | Tạo hàng chục Health Check riêng lẻ cho từng máy chủ EC2 con phía sau Load Balancer. |
-| **Route 53 Resolver Endpoints** | • **$0.11 / giờ / ENI** (~$80 / tháng cho mỗi Endpoint gồm 2 ENIs trên 2 AZs để HA).<br>• Phí truy vấn qua Resolver: **$0.40 / 1 triệu queries**. | Cần tính toán số lượng Endpoint triển khai giữa các VPC. | Tạo Resolver Endpoints riêng rẽ ở từng VPC thay vì tập trung hóa tại một Hub VPC duy nhất. |
+| **Hosted Zones** | • 25 Hosted Zones đầu tiên: **\$0.50 / zone / tháng**.<br>• Từ zone thứ 26 trở đi: **\$0.10 / zone / tháng**. | Áp dụng cho cả Public và Private Hosted Zones. | Tạo Private Hosted Zone riêng lẻ cho từng VPC thay vì liên kết nhiều VPC vào chung 1 Zone. |
+| **Bản ghi Alias Record** | • **HOÀN TOÀN MIỄN PHÍ TRUY VẤN (\$0.00 / query)** khi trỏ tới tài nguyên AWS (ALB, CloudFront, S3 Website, API Gateway, VPC Endpoints). | **\$0.00 / 1 triệu queries**. | Dùng bản ghi CNAME thông thường khi trỏ tới ALB làm phát sinh phí truy vấn DNS tiêu chuẩn. |
+| **Truy vấn DNS Tiêu chuẩn** | • Áp dụng cho các bản ghi A, CNAME, TXT, MX thông thường.<br>• **1 Tỷ queries đầu tiên**: **\$0.40 / 1 triệu queries**.<br>• Trên 1 Tỷ queries: **\$0.20 / 1 triệu queries**. | Rất rẻ ở quy mô nhỏ, nhưng hệ thống hàng trăm triệu queries/tháng sẽ tốn đáng kể. | Cấu hình giá trị TTL quá thấp (ví dụ: 5s–10s) khiến client liên tục gửi query về Route 53. |
+| **Truy vấn Định tuyến Nâng cao** | • **Latency-based Routing**: **\$0.60 / 1 triệu queries**.<br>• **Geo DNS & Geoproximity**: **\$0.70 / 1 triệu queries**.<br>• **IP-based Routing**: **\$0.80 / 1 triệu queries** (đắt gấp đôi Standard). | Phí cao hơn do Route 53 phải xử lý giải thuật đo đạc vị trí IP của client. | Sử dụng Geolocation routing cho các bản ghi dịch vụ nội bộ không cần phân vùng ngôn ngữ. |
+| **Route 53 Health Checks** | • AWS Endpoints (EC2, Elastic IP): **\$0.50 / check / tháng**.<br>• Non-AWS Endpoints: **\$0.75 / check / tháng**.<br>• Fast Interval (10s): Phụ thu thêm **\$1.00 / tháng**.<br>• HTTPS Matching String: Phụ thu thêm **\$1.00 / tháng**. | Tính theo số lượng checker toàn cầu. | Tạo hàng chục Health Check riêng lẻ cho từng máy chủ EC2 con phía sau Load Balancer. |
+| **Route 53 Resolver Endpoints** | • **\$0.11 / giờ / ENI** (~\\$80 / tháng cho mỗi Endpoint gồm 2 ENIs trên 2 AZs để HA).<br>• Phí truy vấn qua Resolver: **\$0.40 / 1 triệu queries**. | Cần tính toán số lượng Endpoint triển khai giữa các VPC. | Tạo Resolver Endpoints riêng rẽ ở từng VPC thay vì tập trung hóa tại một Hub VPC duy nhất. |
 
 ---
 
@@ -398,7 +429,7 @@ sequenceDiagram
   $$\text{Chi phí DNS CNAME ban đầu} = \frac{600,000,000}{1,000,000} \times 0.40\$ = \mathbf{240.00\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
   - Chuyển đổi bản ghi từ **CNAME** sang **Route 53 Alias Record** (loại A Record với cờ `Alias = Yes`) trỏ trực tiếp tới ALB.
-  - AWS quy định: **Mọi truy vấn DNS tới Route 53 Alias Record trỏ vào tài nguyên AWS đều được MIỄN PHÍ 100% ($0.00)**.
+  - AWS quy định: **Mọi truy vấn DNS tới Route 53 Alias Record trỏ vào tài nguyên AWS đều được MIỄN PHÍ 100% (\$0.00)**.
 * **Kết quả tiết kiệm**:
   $$\text{Số tiền tiết kiệm} = \mathbf{240.00\$/\text{tháng}} \quad (\approx \mathbf{2,880\$/\text{năm}})$$
   **Tiết kiệm 100% chi phí truy vấn DNS**, đồng thời giảm độ trễ phân giải vì không cần truy vấn hai chặng.
@@ -431,7 +462,7 @@ sequenceDiagram
     ```bash
     aws route53 associate-zone-with-vpc --zone-id Z123456789 --vpc VPCRegion=ap-southeast-1,VPCId=vpc-xxxxxx
     ```
-  - AWS chỉ tính phí **$0.50/tháng cho 1 Hosted Zone duy nhất**, không tính thêm phụ phí liên kết cho các VPC bổ sung.
+  - AWS chỉ tính phí **\$0.50/tháng cho 1 Hosted Zone duy nhất**, không tính thêm phụ phí liên kết cho các VPC bổ sung.
 * **Kết quả tiết kiệm**:
   $$\text{Số tiền tiết kiệm} = 20.00\$ - 0.50\$ = \mathbf{19.50\$/\text{tháng}} \quad (\approx \mathbf{234\$/\text{năm}})$$
   **Tỷ lệ tiết kiệm đạt ~97.5%**, đồng thời tập trung hóa việc quản trị bản ghi nội bộ tại một đầu mối duy nhất.
@@ -454,11 +485,11 @@ sequenceDiagram
 
 #### Kịch bản 5: Tối Ưu Chi Phí Health Checks Kết Hợp CloudWatch Metrics
 * **Bối cảnh thực tế**:
-  Kỹ sư tạo 30 Health Checks riêng lẻ cho từng máy ảo EC2 trong một Auto Scaling Group, bật tính năng kiểm tra nhanh (Fast Interval 10s = phụ thu $1.00) và kiểm tra chuỗi HTTPS (phụ thu $1.00):
+  Kỹ sư tạo 30 Health Checks riêng lẻ cho từng máy ảo EC2 trong một Auto Scaling Group, bật tính năng kiểm tra nhanh (Fast Interval 10s = phụ thu \$1.00) và kiểm tra chuỗi HTTPS (phụ thu \$1.00):
   $$\text{Chi phí ban đầu} = 30 \times (0.50\$ + 1.00\$ + 1.00\$) = \mathbf{75.00\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
   - Xóa bỏ toàn bộ 30 Health Checks riêng lẻ của các máy ảo con. Hãy để **Application Load Balancer** tự kiểm tra sức khỏe của các EC2 con trong Target Group (hoàn toàn miễn phí).
-  - Route 53 chỉ cần tạo duy nhất **1 Health Check** giám sát trực tiếp Endpoint của ALB với chu kỳ tiêu chuẩn (**Standard Interval: 30 giây** = $0.50/tháng).
+  - Route 53 chỉ cần tạo duy nhất **1 Health Check** giám sát trực tiếp Endpoint của ALB với chu kỳ tiêu chuẩn (**Standard Interval: 30 giây** = \$0.50/tháng).
 * **Kết quả tiết kiệm**:
   $$\text{Số tiền tiết kiệm} = 75.00\$ - 0.50\$ = \mathbf{74.50\$/\text{tháng}} \quad (\approx \mathbf{894\$/\text{năm}})$$
   **Tiết kiệm hơn 99.3% chi phí giám sát sức khỏe DNS**.
@@ -478,8 +509,6 @@ sequenceDiagram
 
 ---
 
----
-
 ## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon Route 53 (Golden Rules)
@@ -491,13 +520,25 @@ sequenceDiagram
 3. **Điều kiện tiên quyết của Private Hosted Zone**:  
    Bắt buộc phải bật đồng thời cả 2 cờ `enableDnsHostnames = true` và `enableDnsSupport = true` trên Amazon VPC thì máy ảo mới phân giải được tên miền nội bộ.
 4. **Cấu hình Active-Passive Failover chuẩn mực**:  
-   Bản ghi **Primary** bắt buộc phải gắn kèm Route 53 Health Check; luôn thiết lập trang dự phòng **Secondary** (ví dụ: website tĩnh trên S3) để ứng cứu khi cụm chính sập.
+   Bản ghi **Primary** bắt buộc phải gắn kèm Route 53 Health Check; luôn thiết lập trang dự phòng **Secondary** (ví dụ: website tĩnh trên S3) để ứng cứu khi cụm chính sập. Mở Security Group/NACL cho dải IP của Route 53 Health Checkers.
 5. **Tập trung hóa Hybrid DNS bằng Route 53 Resolver**:  
    Chỉ tạo duy nhất một cặp Inbound/Outbound Endpoints tại Hub Network VPC và chia sẻ Rules cho các Spoke VPCs qua **AWS RAM** để tiết kiệm 90% chi phí ENI.
 6. **Bảo mật mạng VPC với DNS Firewall & DNSSEC**:  
    Kích hoạt **DNSSEC** để chống đầu độc cache DNS và triển khai **Route 53 Resolver DNS Firewall** để ngăn chặn máy chủ bị mã độc kết nối ra C&C server.
 7. **Tối ưu hóa giá trị TTL**:  
    Đặt TTL dài (86,400s) cho các bản ghi tĩnh để giảm chi phí truy vấn; hạ TTL xuống 60 giây trước 1 ngày khi chuẩn bị diễn ra đợt chuyển đổi hạ tầng lớn.
+
+---
+
+### ✅ Danh Mục Kiểm Tra Kiến Thức Thực Chiến (Learning Checklist)
+- [ ] Phân biệt bản chất kỹ thuật giữa Alias Record (Zone Apex, tài nguyên AWS, miễn phí, cập nhật IP động) vs CNAME Record (Subdomain, bên ngoài AWS, mất phí truy vấn).
+- [ ] Nắm vững 8 Routing Policies của Route 53: Simple, Weighted, Latency, Failover, Geolocation, Geoproximity (Traffic Flow + Bias), Multi-Value Answer, IP-based.
+- [ ] Nắm rõ điều kiện của Private Hosted Zone (`enableDnsSupport = true` và `enableDnsHostnames = true`) và cách liên kết nhiều VPC vào chung 1 Hosted Zone.
+- [ ] Thiết lập kiến trúc Hybrid DNS hai chiều với Route 53 Resolver Inbound Endpoint (On-Premises truy vấn AWS) và Outbound Endpoint + Forwarding Rules (AWS truy vấn On-Premises).
+- [ ] Hiểu rõ kịch bản mở tường lửa cho Route 53 Health Checkers để tránh tình trạng failover nhầm lẫn sang Secondary.
+- [ ] Phân biệt AWS Global Accelerator (2 Anycast IP tĩnh, L4/L3, TCP/UDP, bỏ qua DNS cache, bảo toàn IP client) vs CloudFront (L7, CDN caching, HTTP/HTTPS).
+- [ ] Sử dụng tính năng Import DNS Zone File (định dạng BIND RFC 1035) để di chuyển hàng loạt bản ghi từ hệ thống ngoài lên Route 53.
+- [ ] Thiết kế Active-Active DR với Weighted Routing + Health Checks vs Active-Passive DR với Failover Routing.
 
 ---
 

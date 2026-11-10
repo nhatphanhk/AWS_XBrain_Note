@@ -208,7 +208,7 @@ flowchart LR
   - Khi cần phát lại, gọi API hoặc nhấn Replay trên Console/CloudFormation để bơm lại toàn bộ sự kiện lịch sử vào target service trong khoảng thời gian mong muốn mà không cần viết 1 dòng code!
 
 #### 🪤 Bẫy 6: Lọc Tin Nhắn Theo Nội Dung Chi Tiết Bằng EventBridge Rules — (CM-PT5 Q20)
-- **Tình huống đề thi**: *"API Gateway chuyển tiếp các request giao dịch đến các microservices hạ nguồn khác nhau tùy theo thuộc tính của payload JSON (ví dụ: giao dịch giá trị lớn > $10,000 cần gửi tới fraud detection). Cần giải pháp lọc tin nhắn với ít chi phí vận hành nhất."*
+- **Tình huống đề thi**: *"API Gateway chuyển tiếp các request giao dịch đến các microservices hạ nguồn khác nhau tùy theo thuộc tính của payload JSON (ví dụ: giao dịch giá trị lớn > \$10,000 cần gửi tới fraud detection). Cần giải pháp lọc tin nhắn với ít chi phí vận hành nhất."*
 - **Giải pháp ĐÚNG**: Chuyển request từ API Gateway thẳng vào **Amazon EventBridge Event Bus** và cấu hình **EventBridge Rules với Content-based Event Patterns**.
   - EventBridge hỗ trợ lọc theo giá trị số học (`"amount": [{"numeric": [">", 10000]}]`), tiền tố, danh sách giá trị hoặc sự hiện diện của trường JSON trực tiếp mà không cần dựng thêm Lambda function để parse code.
 
@@ -290,11 +290,58 @@ flowchart LR
 - **Nguyên lý kiến trúc của Kinesis Consumers**:
   - **Standard Consumer (GetRecords)**: Toàn bộ các consumers phải chia sẻ chung tổng băng thông đọc là **2 MB/giây trên mỗi shard** (thông qua cơ chế kéo HTTP polling). Nếu có 5 consumers cùng đọc 1 shard thì mỗi consumer chỉ còn được chia trung bình 400 KB/s!
   - **Enhanced Fan-Out (EFO)**: Cung cấp băng thông đọc chuyên dụng **2 MB/giây CHO TỪNG CONSUMER trên mỗi shard** (thông qua cơ chế đẩy HTTP/2 server-push).
-- **Giải pháp ĐÚNG**: Kích hoạt tính năng **Enhanced Fan-Out** cho các ứng dụng đọc; 5 ứng dụng sẽ nhận được $5 \times 2 \text{ MB/s} = 10 \text{ MB/s}$ trên mỗi shard mà không gây nghẽn!
+- **Giải pháp ĐÚNG**: Kích hoạt tính năng **Enhanced Fan-Out** cho các ứng dụng đọc; 5 ứng dụng sẽ nhận được $$ 5 \times 2 \text{ MB/s} = 10 \text{ MB/s} $$ trên mỗi shard mà không gây nghẽn!
 
 #### 🪤 Bẫy 18: Tự Động Xử Lý Lỗi Tin Nhắn Bằng Dead-Letter Queue (DLQ) — (U-PT4 Q47)
 - **Tình huống đề thi**: *"Ứng dụng thương mại điện tử gặp hiện tượng một số thông điệp mua hàng bị lỗi cú pháp khiến worker xử lý thất bại và crash liên tục. Những thông điệp độc hại này (poison pills) cứ trôi ngược lại hàng đợi và làm tê liệt các worker khác. Cần cơ chế tự động xử lý các tin nhắn lỗi này mà không làm gián đoạn luồng mua hàng bình thường."*
 - **Giải pháp ĐÚNG**: Cấu hình **Amazon SQS Dead-Letter Queue (DLQ)** với ngưỡng **`maxReceiveCount`**. Khi một tin nhắn bị xử lý lỗi và nhận lại quá số lần quy định, SQS sẽ tự động tách tin nhắn đó ra khỏi hàng đợi chính và chuyển sang DLQ để kỹ sư điều tra riêng.
+
+#### 🪤 Bẫy 19: Amazon SQS Temporary Queues Cho Mô Hình Request-Response Thông Lượng Cao — (U-PT6 Q55)
+- **Tình huống đề thi**: Ứng dụng phân tán yêu cầu giao tiếp hai chiều theo mô hình Yêu cầu - Phản hồi (Request-Response Messaging) qua hàng đợi với quy mô hàng ngàn client cùng lúc. Nếu mỗi client tạo một hàng đợi SQS vật lý độc lập thì chi phí API khởi tạo hàng đợi (`CreateQueue`) và xóa hàng đợi (`DeleteQueue`) quá lớn và chạm trần giới hạn API của AWS.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon SQS Temporary Queue Client**.
+  - Cho phép tạo các **hàng đợi ảo tạm thời (Virtual Temporary Queues)** được dồn kênh (multiplexed) trên cùng một hàng đợi vật lý duy nhất.
+  - Tiết kiệm chi phí API, loại bỏ độ trễ khởi tạo hàng đợi và tự động dọn dẹp hàng đợi ảo khi client ngắt kết nối.
+
+#### 🪤 Bẫy 20: Amazon Simple Workflow Service (Amazon SWF) Cho Kiến Trúc Phân Tán Hybrid — (TD-Set2 Q13)
+- **Tình huống đề thi**: Hệ thống xử lý đơn hàng phức tạp có các bước phối hợp chạy giữa các máy chủ on-premises và các máy ảo EC2 trên đám mây, bao gồm cả các tác vụ can thiệp thủ công của con người (Human-in-the-loop tasks). Đề thi hỏi hai dịch vụ nào của AWS giúp điều phối và tách rời các thành phần của hệ thống lai này?
+- **Giải pháp ĐÚNG**: **Amazon SQS** và **Amazon SWF (Simple Workflow Service)**.
+  - SQS cung cấp hàng đợi tin nhắn đệm giữa các tầng kiến trúc.
+  - SWF theo dõi trạng thái luồng công việc (Stateful Coordination), điều phối tuần tự hoặc song song giữa máy tính On-Premises, EC2 và tác vụ do con người duyệt/ký xác nhận.
+
+#### 🪤 Bẫy 21: Bẫy Thời Gian Lưu Trữ Mặc Định 4 Ngày Của SQS (Tối Đa 14 Ngày) — (TD-Set5 Q43)
+- **Tình huống đề thi**: Một ứng dụng báo cáo tài chính tích lũy các giao dịch vào hàng đợi SQS Standard. Một tiến trình Batch job được lập lịch chạy định kỳ **2 tuần một lần (14 ngày)** để lấy toàn bộ giao dịch về kết chuyển sổ sách. Khi kiểm tra, kế toán phát hiện mất dữ liệu của tuần đầu tiên!
+- **Nguyên nhân cốt lõi**: Hàng đợi Amazon SQS có thuộc tính **`MessageRetentionPeriod` mặc định chỉ là 4 ngày (345,600 giây)**! Sau 4 ngày, các tin nhắn chưa được xử lý sẽ bị xóa vĩnh viễn khỏi hàng đợi mà không gửi sang DLQ.
+- **Giải pháp ĐÚNG**: Bắt buộc phải cấu hình tăng tham số **`MessageRetentionPeriod` lên mức tối đa là 14 ngày (1,209,600 giây)**. (Nếu chu kỳ batch $> 14$ ngày, bắt buộc phải lưu tin nhắn vào Amazon S3).
+
+#### 🪤 Bẫy 22: Quy Trình 3 Bước Di Chuyển Từ SQS Standard Sang SQS FIFO — (U-PT3 Q02)
+- **Tình huống đề thi**: Doanh nghiệp đang dùng hàng đợi SQS Standard, nay yêu cầu nghiệp vụ bắt buộc phải xử lý giao dịch đúng thứ tự tuyệt đối và chống trùng lặp. Kỹ sư tìm tùy chọn chuyển đổi trực tiếp trên AWS Console nhưng không thấy.
+- **Quy tắc bất biến của AWS**: **KHÔNG THỂ chuyển đổi một hàng đợi Standard hiện có sang FIFO Queue (hoặc ngược lại)**.
+- **Quy trình 3 bước chuẩn**:
+  1. Xóa hàng đợi Standard cũ và tạo một hàng đợi mới có đuôi tên bắt buộc là **`.fifo`**.
+  2. Cập nhật mã nguồn ứng dụng producer để gửi kèm `MessageGroupId` và `MessageDeduplicationId`.
+  3. Đảm bảo thông lượng thiết kế nằm trong giới hạn của FIFO: **300 transactions/second** (hoặc **3,000 transactions/second khi dùng batching** 10 tin nhắn/request).
+
+#### 🪤 Bẫy 23: SQS Delay Queues vs Message Timers — (U-PT6 Q37)
+- **SQS Delay Queues (Cấp độ toàn hàng đợi)**: Đặt tham số `DelaySeconds` (từ 0 đến 900 giây / 15 phút) trên cấu hình hàng đợi. Mọi tin nhắn mới gửi vào hàng đợi này đều bị ẩn đi trong khoảng thời gian delay trước khi hiển thị cho consumer poll (`U-PT6 Q37`).
+- **Message Timers (Cấp độ từng tin nhắn riêng lẻ)**: Đặt thuộc tính `DelaySeconds` cụ thể trên từng tin nhắn khi gọi `SendMessage`. Tin nhắn nào có timer sẽ bị hoãn theo thời gian riêng của nó mà không ảnh hưởng tới các tin nhắn khác trong cùng hàng đợi.
+
+#### 🪤 Bẫy 24: Xử Lý Nghẽn SNS-to-Lambda Do Chạm Trần Account Concurrency & Cấu Hình Cross-Account — (U-PT1 Q34, CM-PT1 Q61)
+- **Nghẽn do trần Concurrency** (`U-PT1 Q34`): SNS đẩy thông báo bất đồng bộ sang Lambda với tốc độ hàng chục ngàn tin nhắn/giây, khiến số lượng thực thi đồng thời của hàm Lambda nhanh chóng chạm trần giới hạn **Account Concurrency (mặc định 1,000 concurrent executions)**. Hậu quả là các Lambda function khác trong toàn bộ tài khoản AWS bị nghẽn (throttled).
+  - *Giải pháp*: Chèn một **hàng đợi Amazon SQS vào giữa SNS và Lambda (SNS $\rightarrow$ SQS $\rightarrow$ Lambda)**. SQS đóng vai trò là bộ đệm làm mịn lưu lượng (rate-limiting buffer) và Lambda Event Source Mapping sẽ lấy dữ liệu theo từng lô có kiểm soát mà không làm ngập lụt tài khoản!
+- **Cấu hình Cross-Account SNS-to-Lambda** (`CM-PT1 Q61`): Khi SNS Topic ở Account A đẩy sang Lambda ở Account B, cần cấu hình 2 chiều: (1) Resource-based Policy trên Lambda cho phép `sns.amazonaws.com` gọi `lambda:InvokeFunction`, và (2) Topic Policy trên SNS cho phép Account B subscribe.
+
+#### 🪤 Bẫy 25: Tin Nhắn SMS Hai Chiều Với AWS End User Messaging SMS (Amazon Pinpoint) + SNS — (TD-Set6 Q61)
+- **Tình huống đề thi**: Ứng dụng ngân hàng muốn gửi mã OTP hoặc thông báo nhắc nợ qua SMS cho khách hàng, đồng thời cho phép khách hàng phản hồi lại bằng tin nhắn (ví dụ: soạn `YES` để xác nhận giao dịch).
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon SNS kết hợp AWS End User Messaging SMS (trước đây là Amazon Pinpoint)**.
+  - Cấu hình số điện thoại chuyên dụng (Dedicated Long Code hoặc Short Code) hỗ trợ **Two-Way SMS**.
+  - Khi khách hàng nhắn tin phản hồi, tin nhắn đến được chuyển tiếp vào một SNS Topic hoặc Amazon SQS Queue để backend tự động xử lý.
+
+#### 🪤 Bẫy 26: Tổng Hợp Các Mẫu Sự Kiện Amazon EventBridge Thực Chiến — (TD-Set4 Q08, TD-Set6 Q03, TD-Set8 Q05, TD-Set5 Q44, CM-PT2 Q41, CM-PT2 Q54, CM-PT3 Q62, CM-PT4 Q05, CM-PT6 Q01, U-PT2 Q02)
+- **Bắt sự kiện suy giảm sức khỏe hạ tầng AWS** (`TD-Set4 Q08`): Dùng EventBridge bắt sự kiện `source: "aws.health"` khi có bảo trì phần cứng máy chủ EC2 hoặc sự cố Region để tự động gửi thông báo qua SNS.
+- **Cảnh báo hết hạn chứng chỉ SSL/TLS** (`TD-Set6 Q03`): Dùng EventBridge bắt sự kiện `source: "aws.acm"`, `detail-type: "ACM Certificate Approaching Expiration"` trước 45 ngày để cảnh báo đội ngũ hạ tầng.
+- **Ngăn chặn xóa nhầm khóa KMS bằng SSM Automation** (`TD-Set8 Q05`): EventBridge bắt sự kiện CloudTrail `eventName: "ScheduleKeyDeletion"` trên AWS KMS và ngay lập tức kích hoạt **SSM Automation Runbook gọi `CancelKeyDeletion`** để bảo vệ dữ liệu tối mật!
+- **Lọc cảnh báo phát hiện dữ liệu nhạy cảm của Amazon Macie** (`TD-Set5 Q44`, `CM-PT2 Q41`, `CM-PT4 Q63`): EventBridge Rule lọc các phát hiện có độ nghiêm trọng cao (`severity: "HIGH"`) từ Macie để tự động khóa quyền truy cập công khai của S3 Bucket.
+- **Lập lịch định kỳ chạy ECS Fargate Task** (`CM-PT2 Q54`, `CM-PT3 Q62`, `CM-PT4 Q05`, `CM-PT6 Q01`, `U-PT2 Q02`): Sử dụng **EventBridge Schedule Rule (hoặc EventBridge Scheduler)** định kỳ gọi API `RunTask` trên cụm ECS Fargate để chạy các batch job xử lý hàng ngày/hàng tuần với chi phí tối ưu nhất.
 
 ---
 
@@ -314,15 +361,19 @@ flowchart LR
 | **Kích hoạt batch job container Fargate khi có file S3 mới** | **S3 Event Notification $\rightarrow$ SQS Queue $\rightarrow$ ECS Fargate Auto Scaling** | Polling S3 định kỳ bằng cronjob (chậm, tốn chi phí API S3) | `TD-Set1 Q59`, `TD-Set1 Q15` |
 | **1 sự kiện xuất bản cần đẩy đồng thời tới nhiều dịch vụ độc lập** | **Mô hình Fan-Out: Amazon SNS Topic + Nhiều SQS Queues** | Gửi tuần tự từ ứng dụng (dễ lỗi, chậm trễ, nghẽn mạng) | `TD-Set5 Q64` |
 | **Định tuyến tin nhắn SNS vào từng SQS Queue theo loại dữ liệu** | **SNS Subscription Filter Policy trên Message Attributes** | Dựng hàm Lambda trung gian để phân loại payload JSON | `TD-Set2 Q36` |
-| **Tách rời kiến trúc lai giữa EC2/Fargate và On-Premises data center** | **Amazon SQS Queue (hỗ trợ polling an toàn qua HTTPS)** | Mở cổng socket TCP trực tiếp qua Internet (kém an toàn) | `TD-Set2 Q13` |
+| **Tách rời kiến trúc lai giữa EC2/Fargate và On-Premises data center** | **Amazon SQS Queue (hỗ trợ polling an toàn qua HTTPS) & Amazon SWF** | Mở cổng socket TCP trực tiếp qua Internet (kém an toàn) | `TD-Set2 Q13` |
 | **Phân tầng ưu tiên tin nhắn (Khách VIP vs Khách thường)** | **Multiple SQS Queues (Priority Queue Pattern: poll VIP trước)** | SQS FIFO (FIFO không có cơ chế phân tầng độ ưu tiên) | `U-PT6 Q20` |
 | **Migrate RabbitMQ / ActiveMQ mà không muốn sửa đổi mã nguồn** | **Amazon MQ (hỗ trợ đầy đủ AMQP, MQTT, OpenWire, JMS)** | Amazon SQS (SQS chỉ hỗ trợ giao thức AWS SDK/HTTPS độc quyền) | `U-PT2 Q33` |
 | **Khách hàng bên ngoài kết nối SFTP đẩy file báo cáo vào S3** | **AWS Transfer Family (Fully-managed SFTP endpoint)** | Tự dựng EC2 cài OpenSSH SFTP server (tốn công vá lỗi) | `U-PT2 Q04` |
-| **Hoãn thời gian xử lý tin nhắn đơn hàng mới tới 15 phút** | **SQS Delay Queues (`DelaySeconds` lên tới 900s)** | Viết vòng lặp sleep trong mã nguồn worker (lãng phí CPU) | Chuẩn AWS |
+| **Hoãn thời gian xử lý tin nhắn đơn hàng mới tới 15 phút** | **SQS Delay Queues (`DelaySeconds` lên tới 900s)** | Viết vòng lặp sleep trong mã nguồn worker (lãng phí CPU) | `U-PT6 Q37` |
 | **Lưu trữ & phát lại tin nhắn sự kiện trong vòng 30 ngày** | **Amazon EventBridge Archive and Replay** | SQS (SQS chỉ lưu tối đa 14 ngày và không hỗ trợ replay) | `CM-PT2 Q21` |
 | **Lọc và định tuyến sự kiện JSON dựa trên nội dung chi tiết** | **Amazon EventBridge Rules (Content-based Event Filtering)** | Viết code Lambda tự giải mã và chuyển tiếp JSON | `CM-PT5 Q20` |
-
----
+| **Hàng đợi tạm thời request-response cho hàng ngàn clients** | **SQS Temporary Queue Client (Virtual Queues)** | Tạo physical queues hàng loạt (chạm trần API limit) | `U-PT6 Q55` |
+| **Batch job 2 tuần/lần bị mất dữ liệu tuần đầu** | **Tăng SQS `MessageRetentionPeriod` lên 14 ngày (tối đa)** | Giữ mặc định 4 ngày (bị xóa mất sau 4 ngày) | `TD-Set5 Q43` |
+| **Chuyển đổi Standard Queue sang FIFO** | **Xóa Standard, tạo mới với hậu tố `.fifo`** | Đổi trực tiếp trên hàng đợi hiện có (AWS không hỗ trợ) | `U-PT3 Q02` |
+| **SNS đẩy quá tải làm cạn kiệt Concurrency của Lambda** | **Chèn SQS Queue ở giữa (SNS $\rightarrow$ SQS $\rightarrow$ Lambda)** | Để SNS đẩy trực tiếp không giới hạn rate | `U-PT1 Q34` |
+| **Tin nhắn SMS tương tác 2 chiều với khách hàng** | **Amazon SNS + AWS End User Messaging SMS (Pinpoint)** | SNS SMS thông thường (chỉ gửi 1 chiều ra ngoài) | `TD-Set6 Q61` |
+| **Tự động hủy lịch xóa khóa KMS khi có người kích hoạt** | **EventBridge Rule (ScheduleKeyDeletion) $\rightarrow$ SSM Automation** | Đợi admin kiểm tra console thủ công (dễ trễ hạn xóa) | `TD-Set8 Q05` |
 
 ---
 
@@ -389,13 +440,13 @@ sequenceDiagram
 
 | Thành phần Dịch Vụ | Đơn giá AWS niêm yết | Cơ chế đo lường | Ghi chú tối ưu hóa chi phí FinOps |
 | :--- | :--- | :--- | :--- |
-| **Amazon SQS (Standard)** | **$0.40 / 1 triệu requests** | Tính trên mỗi API call (khối 64 KB) | 1,000,000 requests miễn phí mỗi tháng (Free Tier vĩnh viễn). |
-| **Amazon SQS (FIFO)** | **$0.50 / 1 triệu requests** | Tính trên mỗi API call (khối 64 KB) | 1,000,000 requests miễn phí mỗi tháng; dùng batching để giảm chi phí. |
-| **Amazon SNS (Publish)** | **$0.50 / 1 triệu requests** | Miễn phí 1 triệu publish đầu/tháng | Đẩy sang SQS và Lambda hoàn toàn **miễn phí delivery**. |
-| **Amazon SNS (Delivery)** | SQS/Lambda: **$0.00**<br>HTTP: **$0.60/1M**<br>SMS: **$0.01 - $0.05/SMS** | Tính theo số lượng thông báo chuyển phát | Sử dụng Subscription Filter Policy để tránh bắn tin thừa cho subscribers. |
-| **EventBridge (AWS Events)** | **$0.00** | Miễn phí không giới hạn sự kiện | Tận dụng tối đa sự kiện hệ thống AWS thay vì chạy code polling định kỳ. |
-| **EventBridge (Custom Events)** | **$1.00 / 1 triệu events** | Tính trên mỗi sự kiện tự tạo (khối 64 KB) | Chỉ gửi metadata/references trong event, lưu trữ payload lớn trên S3. |
-| **Kinesis Data Streams (Provisioned)** | **$0.015 / Shard-giờ** (~$11/tháng/shard)<br>+ **$0.014 / 1M PUT units** | Tính theo số lượng Shards duy trì | Không dùng Kinesis cho bài toán task queue đơn giản; dùng SQS rẻ hơn 98%. |
+| **Amazon SQS (Standard)** | **\$0.40 / 1 triệu requests** | Tính trên mỗi API call (khối 64 KB) | 1,000,000 requests miễn phí mỗi tháng (Free Tier vĩnh viễn). |
+| **Amazon SQS (FIFO)** | **\$0.50 / 1 triệu requests** | Tính trên mỗi API call (khối 64 KB) | 1,000,000 requests miễn phí mỗi tháng; dùng batching để giảm chi phí. |
+| **Amazon SNS (Publish)** | **\$0.50 / 1 triệu requests** | Miễn phí 1 triệu publish đầu/tháng | Đẩy sang SQS và Lambda hoàn toàn **miễn phí delivery**. |
+| **Amazon SNS (Delivery)** | SQS/Lambda: **\$0.00**<br>HTTP: **\$0.60/1M**<br>SMS: **\$0.01 - \$0.05/SMS** | Tính theo số lượng thông báo chuyển phát | Sử dụng Subscription Filter Policy để tránh bắn tin thừa cho subscribers. |
+| **EventBridge (AWS Events)** | **\$0.00** | Miễn phí không giới hạn sự kiện | Tận dụng tối đa sự kiện hệ thống AWS thay vì chạy code polling định kỳ. |
+| **EventBridge (Custom Events)** | **\$1.00 / 1 triệu events** | Tính trên mỗi sự kiện tự tạo (khối 64 KB) | Chỉ gửi metadata/references trong event, lưu trữ payload lớn trên S3. |
+| **Kinesis Data Streams (Provisioned)** | **\$0.015 / Shard-giờ** (~\\$11/tháng/shard)<br>+ **\$0.014 / 1M PUT units** | Tính theo số lượng Shards duy trì | Không dùng Kinesis cho bài toán task queue đơn giản; dùng SQS rẻ hơn 98%. |
 
 ---
 
@@ -407,7 +458,7 @@ sequenceDiagram
   - Mỗi worker gửi trung bình 8 requests/giây để thăm dò hàng đợi:
   $$\text{Số requests} = 8 \text{ workers} \times 8 \text{ req/s} \times 86{,}400 \text{ s} \times 30 \text{ ngày} = 165{,}888{,}000 \text{ requests/tháng}$$
   $$\text{Cost}_{\text{Short}} = \left( \frac{165{,}888{,}000 - 1{,}000{,}000}{1{,}000{,}000} \right) \times \$0.40 = \$65.95/\text{tháng}$$
-  *(Doanh nghiệp có 30 hàng đợi microservices lãng phí gần $2,000/tháng chỉ để nhận phản hồi rỗng!)*
+  *(Doanh nghiệp có 30 hàng đợi microservices lãng phí gần \$2,000/tháng chỉ để nhận phản hồi rỗng!)*
 - **Giải pháp tối ưu**:
   - Cấu hình thuộc tính cấp hàng đợi `ReceiveMessageWaitTimeSeconds = 20` (Long Polling 20 giây tối đa).
   - Khi hàng đợi rỗng, mỗi worker chỉ gửi tối đa 3 requests/phút:
@@ -455,12 +506,12 @@ sequenceDiagram
   $$\text{Tiết kiệm} = \$87.66 - \$1.20 = \$86.46/\text{tháng} \quad (\$1{,}037/\text{năm}) \implies \text{Tiết kiệm } 98.6\% \text{ chi phí}$$
 
 #### Kịch bản 5: Tận dụng EventBridge AWS-Emitted Events Miễn Phí thay vì Polling Cron Jobs
-- **Bối cảnh**: Đội ngũ DevOps duy trì 2 máy ảo EC2 `t3.micro` ($0.0104/giờ) chạy các script Python liên tục gọi DescribeInstances, DescribeSnapshots mỗi 30 giây để phát hiện máy ảo tắt hoặc snapshot hoàn tất.
+- **Bối cảnh**: Đội ngũ DevOps duy trì 2 máy ảo EC2 `t3.micro` (\$0.0104/giờ) chạy các script Python liên tục gọi DescribeInstances, DescribeSnapshots mỗi 30 giây để phát hiện máy ảo tắt hoặc snapshot hoàn tất.
 - **Tính toán chi phí máy chủ Polling**:
   $$\text{Cost}_{\text{Polling}} = 2 \times \$0.0104 \times 730 = \$15.18/\text{tháng}$$
 - **Giải pháp tối ưu**:
   - Tắt toàn bộ máy ảo và script polling.
-  - Sử dụng **Amazon EventBridge Default Event Bus**. Toàn bộ các dịch vụ AWS tự động phát hành sự kiện trạng thái (System Events) vào EventBus mặc định **hoàn toàn MIỄN PHÍ ($0.00)**.
+  - Sử dụng **Amazon EventBridge Default Event Bus**. Toàn bộ các dịch vụ AWS tự động phát hành sự kiện trạng thái (System Events) vào EventBus mặc định **hoàn toàn MIỄN PHÍ (\$0.00)**.
   - Cấu hình EventBridge Rule kích hoạt thẳng Lambda function khi có sự kiện.
 - **Hiệu quả kinh tế**:
   $$\text{Tiết kiệm } 100\% \text{ chi phí máy chủ, đồng thời giảm độ trễ phản hồi từ 30 giây xuống còn <1 giây}$$
@@ -476,8 +527,6 @@ sequenceDiagram
 | **Hàng đợi SQS FIFO bị tắc nghẽn hoàn toàn không xử lý tiếp được** | Tin nhắn đầu tiên bị lỗi (Poison Pill) và chưa được xóa khỏi hàng đợi, làm chặn toàn bộ các tin nhắn sau có cùng **Message Group ID**. | - Kiểm tra lỗi exception của consumer khi xử lý tin nhắn đầu hàng đợi.<br>- Giám sát `ApproximateAgeOfOldestMessage`. | Sửa lỗi của worker hoặc cấu hình Dead-Letter Queue cho hàng đợi FIFO để tự động tách tin nhắn lỗi ra ngoài. | Xử lý khối `try...catch` toàn diện và gửi tin nhắn lỗi vào DLQ thủ công nếu gặp ngoại lệ nghiệp vụ. |
 | **Kinesis Data Streams báo lỗi `ProvisionedThroughputExceededException`** | Tốc độ ghi dữ liệu của Producer vượt quá hạn mức 1 MB/s hoặc 1,000 records/s trên một Shard cụ thể. | - Giám sát CloudWatch metric `WriteProvisionedThroughputExceeded` theo ShardId. | 1. Tăng số lượng Shards (Sharding Resplitting).<br>2. Chuyển sang chế độ **Kinesis On-Demand Mode**.<br>3. Áp dụng Exponential Backoff trong SDK. | Thiết kế Partition Key có độ phân tán cao (High Cardinality) như UUID để chia đều tải giữa các Shards. |
 | **Lambda xử lý luồng DynamoDB Streams bị trễ nghiêm trọng** | Hàm Lambda bị lỗi crash liên tục trên một bản ghi hoặc thời gian xử lý của Lambda quá lâu so với tốc độ ghi dữ liệu. | - Giám sát CloudWatch metric **`IteratorAge`** của Lambda (chỉ số tính bằng mili-giây). | 1. Bật tính năng **BisectBatchOnFunctionError** để Lambda tự động chia nhỏ batch khi gặp lỗi.<br>2. Cấu hình On-failure Destination gửi lỗi sang SQS. | Tối ưu hóa code Lambda và giới hạn `BatchSize` hợp lý. |
-
----
 
 ---
 

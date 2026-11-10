@@ -386,27 +386,78 @@ Chi Phí Rẻ Nhất / RTO-RPO Lâu Nhất                Chi Phí Đắt Nhất
   - AWS Migration Hub cung cấp giao diện tập trung (**Single Pane of Glass**) kết nối với AWS MGN, AWS DMS, và Partner Tools.
   - Cho phép gom nhóm các máy chủ thành ứng dụng nghiệp vụ (Applications) và theo dõi trạng thái di chuyển từng bước xuyên suốt toàn bộ dự án.
 
+#### 🪤 Bẫy 17: AWS Data Transfer Terminal vs AWS Snowball Edge Khi Di Chuyển Hàng Trăm Terabytes — (TD-Set2 Q52, TD-Set2 Q63)
+- **Tình huống đề thi**: *"Doanh nghiệp có lượng dữ liệu lưu trữ khổng lồ từ 80 TB đến 250 TB trên các thiết bị lưu trữ vật lý di động và muốn đưa lên Amazon S3 / EFS với thời gian nhanh nhất mà không phải chờ đợi đơn vị bưu chính giao nhận thiết bị Snowball đến tận văn phòng rồi gửi ngược lại." (`TD-Set2 Q52`, `TD-Set2 Q63`)*
+- **Phân biệt 2 giải pháp vật lý trong đề thi mới**:
+  - **AWS Data Transfer Terminal**: Trạm kết nối vật lý tốc độ cao (băng thông cáp quang lên tới **400 Gbps**) được đặt tại các địa điểm trung tâm của AWS. Khách hàng có thể trực tiếp mang các thiết bị lưu trữ / ổ cứng di động đến cắm vào trạm để chuyển dữ liệu trực tiếp vào Amazon S3 hoặc EFS trong vòng vài giờ mà không cần chờ vận chuyển bưu chính (`TD-Set2 Q52`, `TD-Set2 Q63`).
+  - **AWS Snowball Edge**: Thiết bị lưu trữ vật lý do AWS gửi đến cơ sở của khách hàng qua đường bưu điện (chuyển phát nhanh 3–5 ngày). Khách hàng sao chép dữ liệu vào Snowball qua mạng LAN nội bộ, sau đó gửi trả thiết bị về trung tâm dữ liệu AWS để nạp vào S3 (`CM-PT4 Q23`, `U-PT4 Q20`).
+  - **Dấu hiệu nhận biết trong đề thi**: Nếu đề bài nhấn mạnh vào việc "khách hàng mang thiết bị đến trạm kết nối tốc độ cao của AWS" $\rightarrow$ Chọn **AWS Data Transfer Terminal**. Nếu đề bài yêu cầu "AWS gửi thiết bị phần cứng tới trung tâm dữ liệu của công ty" $\rightarrow$ Chọn **AWS Snowball Edge**.
+
+#### 🪤 Bẫy 18: AWS Application Discovery Service & Thiết Lập Home Region Bắt Buộc Trên Migration Hub — (CM-PT4 Q39)
+- **Tình huống đề thi**: *"Trước khi tiến hành di chuyển quy mô lớn, doanh nghiệp sử dụng AWS Application Discovery Service để thu thập thông tin về cấu hình máy chủ, phần mềm và các kết nối mạng. Khi bắt đầu thiết lập trên AWS Migration Hub, kiến trúc sư cần lưu ý ràng buộc cấu hình sống còn nào?" (`CM-PT4 Q39`)*
+- **Ràng buộc Home Region bất biến của AWS Migration Hub**:
+  - Khi kích hoạt AWS Migration Hub lần đầu tiên, bạn **BẮT BUỘC PHẢI CHỌN MỘT HOME REGION**!
+  - Home Region là nơi AWS lưu trữ toàn bộ dữ liệu khám phá (Discovery data) và siêu dữ liệu theo dõi tiến độ di chuyển.
+  - **LƯU Ý CỐT LÕI**: Một khi Home Region đã được chọn, **BẠN TUYỆT ĐỐI KHÔNG THỂ THAY ĐỔI HOẶC DI CHUYỂN HOME REGION SANG REGION KHÁC**! Mọi dữ liệu từ Application Discovery Service và các công cụ di chuyển đều phải được chuyển về Home Region này.
+
+#### 🪤 Bẫy 19: Bộ Ba Quản Trị Sao Lưu Nâng Cao: Audit Manager, Vault Lock Compliance Mode & Cross-Account Copy — (CM-PT1 Q31, CM-PT1 Q58, CM-PT1 Q57, CM-PT3 Q41, CM-PT4 Q26, U-PT4 Q54)
+- **AWS Backup Audit Manager** (`CM-PT1 Q31`): Cung cấp các khung đánh giá tự động (Auditing Frameworks) để theo dõi và chứng minh tính tuân thủ của các chính sách sao lưu đối với các tiêu chuẩn pháp lý (HIPAA, PCI-DSS, ISO 27001), tự động tạo báo cáo kiểm toán định kỳ.
+- **AWS Backup Vault Lock (Compliance Mode vs Governance Mode)** (`CM-PT1 Q58`):
+  - **Compliance Mode**: Khóa bất biến WORM (Write Once, Read Many). Sau thời gian ân hạn làm quen (Cooling-off Period từ 1 đến 365 ngày), **KHÔNG MỘT AI (kể cả tài khoản AWS Root hay Support của AWS) CÓ THỂ XÓA HOẶC SỬA BẢN SAO LƯU** cho đến khi hết thời hạn Retention Period. Đây là lá chắn tối thượng chống mã độc tống tiền (Ransomware).
+  - **Governance Mode**: Vẫn cho phép người dùng có quyền IAM đặc biệt (`backup:DeleteRecoveryPoint`) xóa bản sao lưu.
+- **Cross-Account & Cross-Region Backup Copy** (`CM-PT1 Q57`, `CM-PT4 Q26`, `U-PT4 Q54`): Tự động sao chép các điểm phục hồi (Recovery Points) sang một Region thứ hai (cho DR) và sang một **AWS Account độc lập trong AWS Organizations** (cho Security Isolation, chống trường hợp tài khoản chính bị hacker chiếm đoạt).
+
+#### 🪤 Bẫy 20: AWS DataSync Cho Sao Chép Cloud-to-Cloud & Truyền Tải Riêng Tư Qua VPC Endpoint — (TD-Set8 Q23, U-PT2 Q31, CM-PT5 Q46, CM-PT6 Q08)
+- **Sao chép dữ liệu Cloud-to-Cloud bằng AWS DataSync** (`TD-Set8 Q23`):
+  - Không chỉ dùng từ On-Premises lên Cloud, AWS DataSync hỗ trợ sao chép định kỳ hàng triệu tệp tin giữa các dịch vụ lưu trữ ngay trên AWS: **S3 sang EFS, S3 sang FSx, hoặc EFS xuyên Region**.
+  - Tự động nén, mã hóa TLS và xác thực toàn vẹn dữ liệu (Data Integrity Verification) với chi phí thấp hơn nhiều so với việc duy trì các máy chủ EC2 tự chạy rsync.
+- **Truyền tải dữ liệu an toàn qua PrivateLink (Interface VPC Endpoint)** (`U-PT2 Q31`, `CM-PT5 Q46`, `CM-PT6 Q08`):
+  - Khi cần truyền dữ liệu nhạy cảm từ On-Premises lên AWS qua kết nối AWS Direct Connect hoặc Site-to-Site VPN mà **chính sách bảo mật cấm tuyệt đối dữ liệu đi qua Internet công cộng**:
+  - Khởi tạo **AWS DataSync Agent** trong mạng on-premise $\rightarrow$ Cấu hình Agent kết nối vào AWS thông qua **Interface VPC Endpoint (AWS PrivateLink)** được tạo trong VPC. Toàn bộ luồng dữ liệu truyền tải sẽ đi hoàn toàn trong mạng riêng an toàn.
+
+#### 🪤 Bẫy 21: AWS DMS Di Chuyển NoSQL Sang DynamoDB & Cặp Đôi SCT + DMS — (TD-Set2 Q53, U-PT4 Q55, CM-PT5 Q44, U-PT1 Q61, U-PT3 Q61)
+- **Di chuyển NoSQL sang Amazon DynamoDB bằng AWS DMS** (`TD-Set2 Q53`):
+  - AWS DMS hỗ trợ nguồn dữ liệu NoSQL như **MongoDB** hoặc **Apache Cassandra** (chạy trên EC2 hoặc on-premise) và đích đến là **Amazon DynamoDB**. DMS tự động chuyển đổi các document JSON thành các item trong bảng DynamoDB.
+- **Khi nào BẮT BUỘC dùng AWS Schema Conversion Tool (SCT)**:
+  - **Homogeneous (Cùng loại động cơ)**: MySQL -> RDS MySQL, Oracle -> RDS Oracle $\rightarrow$ Chỉ cần **AWS DMS đơn thuần** (hoặc Native Dump/Restore).
+  - **Heterogeneous (Khác loại động cơ)**: Oracle / SQL Server -> Aurora PostgreSQL $\rightarrow$ **BẮT BUỘC KẾT HỢP CẢ HAI**: Sử dụng **AWS SCT** để chuyển đổi Schema, View, Index, Stored Procedures, sau đó sử dụng **AWS DMS** để nạp dữ liệu và đồng bộ CDC liên tục (`CM-PT5 Q44`, `U-PT3 Q61`).
+- **AWS DMS Serverless** (`U-PT4 Q55`): Tự động cấp phát và co giãn năng lực replication theo đơn vị DMS Capacity Units (DCU) dựa trên khối lượng dữ liệu thực tế, giải phóng kỹ sư khỏi việc tính toán cỡ Replication Instance.
+
+#### 🪤 Bẫy 22: Chiến Lược DR Bằng Cross-Region AMI Copy vs AWS Elastic Disaster Recovery (AWS DRS) — (CM-PT6 Q49, TD-Set6 Q11)
+- **So sánh 2 giải pháp DR cho máy chủ (EC2 & On-Premises)**:
+  - **Cross-Region AMI Copy + AWS CloudFormation** (`CM-PT6 Q49`):
+    - Hoạt động: Định kỳ sao chép AMI và EBS Snapshot sang Region phụ. Khi thảm họa xảy ra, chạy template CloudFormation để launch lại máy ảo EC2 từ AMI đã copy.
+    - Đặc điểm: Chi phí cực kỳ rẻ (chỉ trả tiền lưu trữ AMI/Snapshot trên S3), phù hợp khi yêu cầu **RTO $< 4$ giờ** và **RPO tính bằng giờ** (theo tần suất snapshot).
+  - **AWS Elastic Disaster Recovery (AWS DRS)** (`TD-Set6 Q11`):
+    - Hoạt động: Cài đặt DRS Agent trên máy chủ nguồn (vật lý, VMware, hoặc EC2 Region A). Agent liên tục sao chép dữ liệu ở tầng khối (Block-level replication) vào một khu vực lưu trữ đệm (**Staging Area**) giá rẻ trên AWS Region B.
+    - Đặc điểm: Mang lại **RPO tính bằng giây ($\le 60\text{s}$)** và **RTO tính bằng phút hoặc dưới 1 giờ ($\le 1\text{h}$)**. Không cần chạy máy chủ dự phòng đắt đỏ 24/7, tiết kiệm hơn 80% chi phí so với mô hình Warm Standby truyền thống!
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Công Cụ Di Chuyển & DR Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
 |:---|:---|:---|:---|
+| **Di chuyển 80-250 TB dữ liệu cắm trực tiếp tại trạm kết nối AWS** | **AWS Data Transfer Terminal (400 Gbps physical terminal)** | Snowball Edge (mất 3-5 ngày chờ bưu điện giao nhận) | `TD-Set2 Q52`, `TD-Set2 Q63` |
+| **Di chuyển 100 TB dữ liệu offline bưu chính lên S3 Glacier** | **AWS Snowball Edge + S3 Lifecycle to Glacier** | Truyền qua Internet 100 Mbps (mất > 92 ngày gây nghẽn) | `U-PT4 Q20` |
+| **Cấu hình Migration Hub bắt buộc chọn và không thể đổi** | **Home Region (cố định vĩnh viễn sau khi chọn)** | Có thể đổi Home Region bất kỳ lúc nào (sai hoàn toàn) | `CM-PT4 Q39` |
 | **Khóa bản sao lưu chống Ransomware, Root không thể xóa** | **AWS Backup Vault Lock (Compliance Mode)** | Governance Mode (Root hoặc IAM admin vẫn xóa được) | `CM-PT1 Q58` |
+| **Tự động kiểm toán tuân thủ chính sách sao lưu và tạo report** | **AWS Backup Audit Manager** | AWS Config đơn thuần (không chuyên sâu báo cáo audit backup) | `CM-PT1 Q31` |
+| **Sao chép bản sao lưu sang tài khoản bảo mật độc lập** | **AWS Backup Cross-Account Backup Copy** | Snapshot thủ công (khó quản lý tập trung và tự động) | `CM-PT1 Q57`, `U-PT4 Q54` |
+| **Đồng bộ file Cloud-to-Cloud giữa S3 và EFS định kỳ** | **AWS DataSync (Cloud-to-Cloud transfer)** | Tự dựng EC2 chạy rsync script (tốn chi phí và công quản trị) | `TD-Set8 Q23` |
+| **Truyền tải DataSync riêng tư qua Direct Connect không ra Net** | **AWS DataSync + Interface VPC Endpoint (PrivateLink)** | Truyền qua Public Internet (vi phạm chính sách an ninh mạng) | `U-PT2 Q31`, `CM-PT5 Q46` |
+| **Di chuyển MongoDB/Cassandra trên EC2 sang DynamoDB** | **AWS Database Migration Service (DMS NoSQL Target)** | AWS SCT (SCT chỉ chuyển schema RDBMS quan hệ) | `TD-Set2 Q53` |
+| **Đổi engine Oracle/MSSQL sang Aurora PostgreSQL** | **AWS SCT (Schema) + AWS DMS (Dữ liệu)** | AWS DataSync (không chuyển đổi schema DB) | `TD-Set1 Q09`, `TD-Set5 Q34` |
+| **Di chuyển máy chủ RTO < 4h, chi phí rẻ nhất** | **Cross-Region AMI Copy + AWS CloudFormation** | Warm Standby chạy máy 24/7 (lãng phí tiền bạc) | `CM-PT6 Q49` |
+| **DR máy chủ vật lý/VMware với RPO $\le 60\text{s}$, RTO $\le 1\text{h}$** | **AWS Elastic Disaster Recovery (AWS DRS - Staging Area)** | Multi-Region Active-Active (chi phí đắt gấp nhiều lần) | `TD-Set6 Q11` |
 | **Lập bản đồ phụ thuộc mạng (Inbound/Outbound IP:Port)** | **AWS Application Discovery Agent (Agent-based)** | Agentless Connector (không xem được tiến trình & network connections) | `TD-Set2 Q14` |
 | **Khảo sát máy ảo VMware vCenter không cài phần mềm vào OS** | **AWS Agentless Discovery Connector (OVA)** | Agent-based (yêu cầu cài đặt phần mềm lên từng OS) | `TD-Set2 Q14` |
 | **Theo dõi tiến độ di chuyển từ nhiều công cụ (MGN, DMS, Partner)** | **AWS Migration Hub** | AWS Control Tower / AWS Systems Manager | `TD-Set2 Q35` |
 | **Ước tính TCO so sánh chi phí On-Premises vs AWS** | **AWS Migration Evaluator (TSO Logic)** | AWS Cost Explorer (chỉ phân tích chi tiêu tài nguyên AWS đã dùng) | Chuẩn AWS |
-| **Di chuyển 100 TB dữ liệu offline lên S3 Glacier** | **AWS Snowball Edge + S3 Lifecycle to Glacier** | Truyền qua Internet 100 Mbps (mất > 92 ngày gây nghẽn) | `U-PT4 Q20` |
 | **Failover Active-Passive sang web thông báo bảo trì** | **Route 53 Failover Routing + S3 Static Website** | Weighted Routing (chỉ chia tỉ lệ tải, không tự động failover) | `U-PT4 Q48` |
 | **Đồng bộ CDC DB liên tục không cần quản trị máy chủ** | **AWS DMS Serverless (Auto-scaling DCUs)** | AWS Glue (chuyên ETL theo batch, không hỗ trợ CDC OLTP) | `U-PT4 Q55` |
 | **Di chuyển máy ảo/vật lý Lift-and-Shift lên EC2 (Downtime thấp)** | **AWS Application Migration Service (MGN)** | VM Import/Export (downtime nhiều giờ do phải tắt máy) | `TD-Set4 Q65` |
-| **Di chuyển database quan hệ sang đám mây** | **AWS Database Migration Service (DMS)** | AWS MGN (MGN chuyển đổi toàn bộ máy chủ, không tối ưu cho DB) | `TD-Set1 Q09`, `TD-Set1 Q32` |
-| **Đổi engine Oracle/MSSQL sang Aurora PostgreSQL** | **AWS SCT (Schema) + AWS DMS (Dữ liệu)** | AWS DataSync (không chuyển đổi schema DB) | `TD-Set1 Q09`, `TD-Set5 Q34` |
 | **Chuyển SQL Server sang Aurora PostgreSQL ít sửa code nhất** | **Babelfish for Aurora PostgreSQL + SCT + DMS** | Viết lại toàn bộ code ứng dụng sang PostgreSQL | `TD-Set4 Q26` |
-| **Sao chép database MySQL on-premise lên S3 dạng CSV** | **AWS DMS (Target Endpoint = S3 CSV)** | Script export thủ công (không có CDC liên tục) | `TD-Set2 Q04` |
-| **Di chuyển 250 TB dữ liệu lưu trữ ngoại tuyến lên S3** | **Cụm thiết bị AWS Snowball Edge** | Kéo cáp Internet (mất nhiều tháng, chi phí băng thông lớn) | `TD-Set2 Q52` |
-| **Truyền Terabytes dữ liệu từ NFS/SMB On-Prem lên S3** | **AWS DataSync** | AWS Snowball (chỉ dùng khi mạng quá chậm) | `TD-Set2 Q28`, `TD-Set8 Q23` |
 | **Tập tin Windows SMB, tích hợp AD, DFS** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ giao thức Linux NFS) | `TD-Set2 Q28` |
 | **Đồng bộ FSx Single-AZ sang Multi-AZ** | **Tạo FSx Multi-AZ mới + AWS DataSync** | Sửa in-place trên FSx cũ (AWS không hỗ trợ) | `TD-Set1 Q05` |
 | **Ứng dụng On-Premises mount S3 như ổ NFS cục bộ** | **AWS Storage Gateway (S3 File Gateway)** | AWS Direct Connect đơn thuần | `TD-Set1 Q20` |
@@ -415,11 +466,6 @@ Chi Phí Rẻ Nhất / RTO-RPO Lâu Nhất                Chi Phí Đắt Nhất
 | **Đồng bộ file NFS giữa 2 Regions cho kịch bản DR** | **AWS DataSync (NFS-to-NFS Cross-Region)** | rsync / script định kỳ (dễ gián đoạn khi đứt mạng) | Chuẩn AWS |
 | **Di chuyển DB Oracle cần can thiệp quyền Root OS** | **Amazon RDS Custom for Oracle** | RDS Standard (AWS cấm truy cập root OS) | Chuẩn AWS |
 | **Di chuyển web app không downtime bằng định tuyến** | **Route 53 Weighted Routing (50/50 cutover)** | Cắt DNS tức thì mà không test tải thực tế | `TD-Set5 Q32` |
-| **DR tối ưu chi phí cho SQL Server On-Premises lên AWS** | **Warm Standby / Pilot Light với AWS DMS** | Multi-Region Active-Active (quá đắt đỏ) | `TD-Set6 Q11` |
-
----
-
----
 
 ---
 
@@ -478,7 +524,7 @@ sequenceDiagram
 | **Thời gian vận hành** | Chạy liên tục **24/7/365** ở chế độ dự phòng. | Chạy tạm thời trong vài tuần cho đến ngày Cut-over. | Chạy tạm thời hoặc duy trì sao chép liên tục. | Chạy theo lịch trình định kỳ (Cron schedule). | Chạy định kỳ hoặc chạy theo đợt đồng bộ dữ liệu. |
 | **Tác động đến máy chủ nguồn** | Rất thấp (Agent nén block-level nhẹ). | Rất thấp (Agent nén block-level nhẹ). | Đọc transaction logs, tiêu tốn một phần nhỏ I/O database. | Không ảnh hưởng (sử dụng API snapshot nền của AWS). | Sử dụng DataSync Agent on-prem tối ưu hóa đường truyền mạng. |
 | **Khả năng diễn tập (Drills)** |  **Hỗ trợ diễn tập định kỳ** không ảnh hưởng hệ thống nguồn. | Hỗ trợ kiểm thử Cut-over (Testing instances). | Hỗ trợ chạy thử nghiệm trên database đích độc lập. | Hỗ trợ tính năng kiểm tra phục hồi (Restore Testing). | Hỗ trợ kiểm tra toàn vẹn dữ liệu (Data verification). |
-| **Mô hình tính phí** | Phí theo giờ trên từng máy chủ nguồn ($0.03/h) + Staging EBS. | Miễn phí 90 ngày đầu tiên cho mỗi server di chuyển. | Tính phí theo giờ máy chủ replication instance + storage. | Tính theo dung lượng backup Warm ($0.05/GB) và Cold ($0.01/GB). | **$0.0125 / GB** dữ liệu truyền tải thành công. |
+| **Mô hình tính phí** | Phí theo giờ trên từng máy chủ nguồn (\$0.03/h) + Staging EBS. | Miễn phí 90 ngày đầu tiên cho mỗi server di chuyển. | Tính phí theo giờ máy chủ replication instance + storage. | Tính theo dung lượng backup Warm (\$0.05/GB) và Cold (\$0.01/GB). | **\$0.0125 / GB** dữ liệu truyền tải thành công. |
 
 ---
 
@@ -488,36 +534,36 @@ sequenceDiagram
 
 | Thành phần Dịch Vụ | Đơn giá AWS niêm yết (us-east-1) | Cơ chế đo lường | Ghi chú tối ưu hóa chi phí FinOps |
 | :--- | :--- | :--- | :--- |
-| **AWS DRS (Bản quyền Server)** | **$0.03 / giờ / server** (~$21.60/tháng) | Tính trên mỗi máy chủ nguồn đang sao chép | Rẻ hơn 70% so với việc nuôi máy chủ EC2 cấu hình lớn chạy không tải 24/7. |
-| **AWS DRS Staging Storage** | **$0.08 / GB / tháng** (gp3) hoặc $0.045/GB (st1) | Tính theo dung lượng ổ đĩa Staging | Sử dụng ổ đĩa dung lượng thấp và gom 1 Staging EC2 cho nhiều máy chủ. |
-| **AWS DMS Replication Instance** | `dms.t3.medium`: **$0.07 / giờ**<br>`dms.c5.xlarge`: **$0.30 / giờ** | Tính theo giờ máy chủ chạy | Dùng instance lớn cho Full Load, hạ cấu hình xuống t3.medium cho CDC và xóa ngay khi cut-over. |
-| **AWS DataSync** | **$0.0125 / GB** ($12.50 / TB) | Tính theo dung lượng dữ liệu truyền | Dùng bộ lọc loại trừ các thư mục rác, file tạm để tránh tốn cước truyền tải. |
-| **AWS Snowball Edge (80 TB)** | **$300 trọn gói** (10 ngày sử dụng) | $30 / ngày từ ngày thứ 11 trở đi | Miễn phí hoàn toàn cước nạp dữ liệu vào S3 (Data Ingress = $0.00). |
-| **AWS Backup (Warm Storage)** | **$0.05 / GB / tháng** | Tính theo dung lượng snapshot | Tự động chuyển sang Cold Storage sau 30 ngày để giảm 80% chi phí. |
-| **AWS Backup (Cold Storage / Archive)** | **$0.01 / GB / tháng** | Tiết kiệm 80% so với Warm Storage | Dành cho các bản backup lưu trữ dài hạn từ 1 đến 7 năm phục vụ quy chuẩn pháp lý. |
+| **AWS DRS (Bản quyền Server)** | **\$0.03 / giờ / server** (~\$21.60/tháng) | Tính trên mỗi máy chủ nguồn đang sao chép | Rẻ hơn 70% so với việc nuôi máy chủ EC2 cấu hình lớn chạy không tải 24/7. |
+| **AWS DRS Staging Storage** | **\$0.08 / GB / tháng** (gp3) hoặc \$0.045/GB (st1) | Tính theo dung lượng ổ đĩa Staging | Sử dụng ổ đĩa dung lượng thấp và gom 1 Staging EC2 cho nhiều máy chủ. |
+| **AWS DMS Replication Instance** | `dms.t3.medium`: **\$0.07 / giờ**<br>`dms.c5.xlarge`: **\$0.30 / giờ** | Tính theo giờ máy chủ chạy | Dùng instance lớn cho Full Load, hạ cấu hình xuống t3.medium cho CDC và xóa ngay khi cut-over. |
+| **AWS DataSync** | **\$0.0125 / GB** (\$12.50 / TB) | Tính theo dung lượng dữ liệu truyền | Dùng bộ lọc loại trừ các thư mục rác, file tạm để tránh tốn cước truyền tải. |
+| **AWS Snowball Edge (80 TB)** | **\$300 trọn gói** (10 ngày sử dụng) | \$30 / ngày từ ngày thứ 11 trở đi | Miễn phí hoàn toàn cước nạp dữ liệu vào S3 (Data Ingress = \$0.00). |
+| **AWS Backup (Warm Storage)** | **\$0.05 / GB / tháng** | Tính theo dung lượng snapshot | Tự động chuyển sang Cold Storage sau 30 ngày để giảm 80% chi phí. |
+| **AWS Backup (Cold Storage / Archive)** | **\$0.01 / GB / tháng** | Tiết kiệm 80% so với Warm Storage | Dành cho các bản backup lưu trữ dài hạn từ 1 đến 7 năm phục vụ quy chuẩn pháp lý. |
 
 ---
 
 ### 6.2. 5 Kịch Bản Tối Ưu Hóa Chi Phí Thực Tế (FinOps Scenarios)
 
 #### Kịch bản 1: Tối ưu chi phí DR bằng AWS Elastic Disaster Recovery (AWS DRS vs Warm Standby)
-- **Bối cảnh**: Doanh nghiệp có 25 máy chủ ứng dụng (mỗi máy `m5.large` = $0.096/giờ). Kỹ sư duy trì 25 máy ảo này chạy không tải 24/7 ở Region dự phòng theo chiến lược Warm Standby.
+- **Bối cảnh**: Doanh nghiệp có 25 máy chủ ứng dụng (mỗi máy `m5.large` = \$0.096/giờ). Kỹ sư duy trì 25 máy ảo này chạy không tải 24/7 ở Region dự phòng theo chiến lược Warm Standby.
 - **Tính toán chi phí Warm Standby**:
   $$\text{Cost}_{\text{WarmStandby}} = 25 \times \$0.096 \times 730 \text{ giờ} = \$1{,}752/\text{tháng} \quad (\$21{,}024/\text{năm})$$
 - **Giải pháp tối ưu bằng AWS DRS**:
-  - Bản quyền DRS: $25 \text{ servers} \times \$0.03/\text{giờ} \times 730 \text{ giờ} = \$547.50/\text{tháng}$.
-  - Vùng đệm Staging Area: Chỉ cần 2 máy chủ nhỏ gom dữ liệu `t3.small` ($0.0208 \times 730 \times 2 \approx \$30.37$) và ổ đĩa lưu trữ gp3/st1 giá rẻ (~$180/tháng):
+  - Bản quyền DRS: \(25 \text{ servers} \times 0.03\$/\text{giờ} \times 730 \text{ giờ} = 547.50\$/\text{tháng}\).
+  - Vùng đệm Staging Area: Chỉ cần 2 máy chủ nhỏ gom dữ liệu `t3.small` (\(0.0208 \times 730 \times 2 \approx 30.37\$\)) và ổ đĩa lưu trữ gp3/st1 giá rẻ (~\$180/tháng):
   $$\text{Cost}_{\text{DRS}} = \$547.50 + \$30.37 + \$180 = \$757.87/\text{tháng}$$
 - **Hiệu quả kinh tế**:
   $$\text{Tiết kiệm} = \$1{,}752 - \$757.87 = \$994.13/\text{tháng} \quad (\$11{,}930/\text{năm}) \implies \text{Tiết kiệm } 56.7\% \text{ chi phí DR}$$
 
 #### Kịch bản 2: Phân tầng cấu hình máy chủ di chuyển AWS DMS (Full-Load vs CDC)
-- **Bối cảnh**: Doanh nghiệp di chuyển cơ sở dữ liệu Oracle 4 TB lên Amazon Aurora PostgreSQL. Kỹ sư khởi tạo máy chủ DMS cỡ lớn `dms.c5.4xlarge` ($1.20/giờ) và để chạy liên tục trong 5 tháng chuẩn bị.
+- **Bối cảnh**: Doanh nghiệp di chuyển cơ sở dữ liệu Oracle 4 TB lên Amazon Aurora PostgreSQL. Kỹ sư khởi tạo máy chủ DMS cỡ lớn `dms.c5.4xlarge` (\$1.20/giờ) và để chạy liên tục trong 5 tháng chuẩn bị.
 - **Tính toán chi phí khi không tối ưu**:
   $$\text{Cost}_{\text{DMS\_Unoptimized}} = 5 \text{ tháng} \times (730 \text{ giờ} \times \$1.20) = \$4{,}380$$
 - **Giải pháp tối ưu**:
-  - **Giai đoạn Full Load (3 ngày đầu)**: Dùng máy chủ lớn `dms.c5.2xlarge` ($0.60/giờ) để tải dữ liệu ban đầu trong thời gian nhanh nhất: $3 \times 24 \times \$0.60 = \$43.20$.
-  - **Giai đoạn CDC (4.9 tháng tiếp theo)**: Hạ cấu hình máy chủ DMS xuống `dms.t3.medium` ($0.07/giờ) vì lưu lượng transaction logs hàng ngày rất nhỏ: $147 \text{ ngày} \times 24 \times \$0.07 \approx \$246.96$.
+  - **Giai đoạn Full Load (3 ngày đầu)**: Dùng máy chủ lớn `dms.c5.2xlarge` (\$0.60/giờ) để tải dữ liệu ban đầu trong thời gian nhanh nhất: \(3 \times 24 \times 0.60\$ = 43.20\$\).
+  - **Giai đoạn CDC (4.9 tháng tiếp theo)**: Hạ cấu hình máy chủ DMS xuống `dms.t3.medium` (\$0.07/giờ) vì lưu lượng transaction logs hàng ngày rất nhỏ: \(147 \text{ ngày} \times 24 \times 0.07\$ \approx 246.96\$\).
   - **Ngay khi Cut-over xong**: Xóa ngay DMS Replication Instance.
   $$\text{Total Cost}_{\text{DMS\_Optimized}} = \$43.20 + \$246.96 = \$290.16$$
 - **Hiệu quả kinh tế**:
@@ -527,29 +573,29 @@ sequenceDiagram
 - **Bối cảnh**: Doanh nghiệp có 80 TB dữ liệu lưu trữ tại Data Center cần chuyển lên Amazon S3. Đường truyền Internet doanh nghiệp có băng thông khả dụng cho việc chuyển dữ liệu là 50 Mbps.
 - **Đánh giá thời gian truyền qua Internet**:
   $$\text{Thời gian} = \frac{80 \times 10^{12} \times 8 \text{ bits}}{50 \times 10^6 \text{ bps}} = 12{,}800{,}000 \text{ giây} \approx 148 \text{ ngày (hơn 4.9 tháng!)}$$
-  *(Chi phí nâng cấp băng thông Internet tạm thời lên 1 Gbps tốn hơn $3,000/tháng)*.
+  *(Chi phí nâng cấp băng thông Internet tạm thời lên 1 Gbps tốn hơn \$3,000/tháng)*.
 - **Giải pháp tối ưu bằng AWS Snowball Edge Storage Optimized (80 TB)**:
-  - Thuê 1 thiết bị Snowball Edge 80 TB: Phí trọn gói cho 10 ngày sử dụng là **$300.00**.
-  - Phí nạp dữ liệu vào Amazon S3: **$0.00 (Hoàn toàn Miễn phí)**.
+  - Thuê 1 thiết bị Snowball Edge 80 TB: Phí trọn gói cho 10 ngày sử dụng là **\$300.00**.
+  - Phí nạp dữ liệu vào Amazon S3: **\$0.00 (Hoàn toàn Miễn phí)**.
   - Thời gian: Copy dữ liệu qua mạng LAN 10 Gbps mất 2 ngày, vận chuyển đường bộ mất 3 ngày.
 - **Hiệu quả kinh tế**:
   $$\text{Thời gian hoàn tất rút ngắn từ 5 tháng xuống còn 1 tuần; Tiết kiệm hàng ngàn USD chi phí viễn thông}$$
 
 #### Kịch bản 4: Quản lý vòng đời sao lưu dài hạn bằng AWS Backup Lifecycle (Warm to Cold Storage)
-- **Bối cảnh**: Doanh nghiệp tài chính cần lưu trữ 12 TB bản sao lưu cơ sở dữ liệu hàng ngày trong vòng 7 năm để tuân thủ pháp luật. Toàn bộ backup được lưu ở dạng snapshot thông thường (Warm Storage = $0.05/GB/tháng).
+- **Bối cảnh**: Doanh nghiệp tài chính cần lưu trữ 12 TB bản sao lưu cơ sở dữ liệu hàng ngày trong vòng 7 năm để tuân thủ pháp luật. Toàn bộ backup được lưu ở dạng snapshot thông thường (Warm Storage = \$0.05/GB/tháng).
 - **Tính toán chi phí Warm Storage**:
   $$\text{Cost}_{\text{WarmOnly}} = 12{,}000 \text{ GB} \times \$0.05/\text{GB} = \$600/\text{tháng} \quad (\$7{,}200/\text{năm})$$
 - **Giải pháp tối ưu**:
   - Thiết lập **AWS Backup Plan** với chính sách vòng đời tự động (Lifecycle Rules):
     1. Giữ ở **Warm Storage** trong **30 ngày đầu tiên** (phục vụ khôi phục khẩn cấp).
-    2. Sau 30 ngày, tự động chuyển bản sao lưu sang **Cold Storage / Glacier Archive** với mức giá chỉ **$0.01 / GB / tháng**.
+    2. Sau 30 ngày, tự động chuyển bản sao lưu sang **Cold Storage / Glacier Archive** với mức giá chỉ **\$0.01 / GB / tháng**.
     3. Tự động xóa sau 7 năm.
   $$\text{Cost}_{\text{Optimized}} = 12{,}000 \text{ GB} \times \$0.01 = \$120/\text{tháng} \quad (\$1{,}440/\text{năm})$$
 - **Hiệu quả kinh tế**:
   $$\text{Tiết kiệm} = \$600 - \$120 = \$480/\text{tháng} \quad (\$5{,}760/\text{năm}) \implies \text{Tiết kiệm } 80\% \text{ chi phí lưu trữ backup}$$
 
 #### Kịch bản 5: Tối ưu chi phí truyền dữ liệu Cross-Region Data Transfer cho DR
-- **Bối cảnh**: Đồng bộ hóa dữ liệu cơ sở dữ liệu và snapshots liên tục giữa Region Singapore (`ap-southeast-1`) và Region Tokyo (`ap-northeast-1`). Dữ liệu thay đổi phát sinh khoảng 25 TB mỗi tháng. Cước Cross-Region Data Transfer Out là $0.02/GB.
+- **Bối cảnh**: Đồng bộ hóa dữ liệu cơ sở dữ liệu và snapshots liên tục giữa Region Singapore (`ap-southeast-1`) và Region Tokyo (`ap-northeast-1`). Dữ liệu thay đổi phát sinh khoảng 25 TB mỗi tháng. Cước Cross-Region Data Transfer Out là \$0.02/GB.
 - **Tính toán chi phí truyền dữ liệu ban đầu**:
   $$\text{Cost}_{\text{DataTransfer}} = 25{,}000 \text{ GB} \times \$0.02/\text{GB} = \$500/\text{tháng}$$
 - **Giải pháp tối ưu**:
@@ -573,8 +619,6 @@ sequenceDiagram
 
 ---
 
----
-
 ## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Vàng Khắc Phục Thảm Họa & Di Chuyển AWS (Golden Rules)
@@ -582,20 +626,23 @@ sequenceDiagram
 2. **Ưu tiên AWS DRS cho Máy Chủ**: Thay thế mô hình Warm Standby tốn kém bằng AWS DRS để tiết kiệm hơn 60% chi phí hạ tầng dự phòng.
 3. **Phân tầng cấu hình DMS**: Luôn dùng instance lớn cho giai đoạn Full Load, hạ cấu hình xuống `t3.medium` cho CDC và xóa ngay sau khi Cut-over.
 4. **Sử dụng SCT cho Heterogeneous Migration**: Luôn chạy báo cáo SCT Assessment Report để đánh giá độ tương thích trước khi chuyển đổi cơ sở dữ liệu khác loại.
-5. **Snow Family cho dữ liệu lớn**: Không bao giờ truyền qua mạng Internet nếu dung lượng lớn hơn 15 TB trên đường truyền dưới 100 Mbps; hãy dùng Snowball Edge.
-6. **Bảo vệ chống Ransomware bằng Vault Lock**: Luôn bật AWS Backup Vault Lock ở chế độ WORM để bảo vệ các bản sao lưu cốt lõi.
+5. **Snow Family cho dữ liệu lớn**: Không bao giờ truyền qua mạng Internet nếu dung lượng lớn hơn 15 TB trên đường truyền dưới 100 Mbps; hãy dùng Snowball Edge hoặc AWS Data Transfer Terminal.
+6. **Bảo vệ chống Ransomware bằng Vault Lock**: Luôn bật AWS Backup Vault Lock ở chế độ WORM (Compliance Mode) để bảo vệ các bản sao lưu cốt lõi.
 7. **Định kỳ diễn tập Game Days**: Mọi kế hoạch DR trên giấy tờ đều vô giá trị nếu không được kiểm chứng bằng các buổi diễn tập sự cố thực tế 6 tháng/lần.
 
 ---
 
 ### Danh Mục Kiểm Tra Năng Lực (Learning Checklist)
-- [ ] Tôi phân biệt được định nghĩa và mối quan hệ giữa RPO và RTO.
-- [ ] Tôi nắm vững 4 chiến lược DR (Backup & Restore, Pilot Light, Warm Standby, Multi-Site Active-Active).
-- [ ] Tôi hiểu nguyên lý hoạt động của AWS DRS và cấu trúc của Staging Area.
-- [ ] Tôi phân biệt được Homogeneous Migration và Heterogeneous Migration với AWS DMS và AWS SCT.
-- [ ] Tôi hiểu cơ chế Change Data Capture (CDC) của DMS để di chuyển dữ liệu không gián đoạn.
-- [ ] Tôi nắm vững các dòng thiết bị Snowcone, Snowball Edge và Snowmobile.
-- [ ] Tôi biết cách cấu hình AWS Backup Vault Lock để bảo vệ dữ liệu chống Ransomware.
+- [ ] Phân biệt 4 chiến lược DR truyền thống (Backup & Restore, Pilot Light, Warm Standby, Multi-Site Active-Active) theo thang đo RPO/RTO và chi phí đầu tư.
+- [ ] Nắm vững AWS Elastic Disaster Recovery (AWS DRS): Khác biệt với Warm Standby, sao chép mức khối (Block-level replication) vào Staging Area giá rẻ, RPO $\le 60\text{s}$, RTO $\le 1\text{h}$ (`TD-Set6 Q11`).
+- [ ] So sánh giải pháp DR tiết kiệm: Cross-Region AMI Copy + CloudFormation cho RTO $< 4$h và RPO tính bằng giờ (`CM-PT6 Q49`).
+- [ ] Phân biệt AWS Data Transfer Terminal (trạm cắm trực tiếp 400 Gbps tại cơ sở AWS - `TD-Set2 Q52`, `TD-Set2 Q63`) vs AWS Snowball Edge (vận chuyển bưu điện 3-5 ngày).
+- [ ] Nắm vững AWS Migration Hub: Bắt buộc chọn Home Region cố định và KHÔNG THỂ thay đổi sau khi chọn (`CM-PT4 Q39`).
+- [ ] Phân biệt AWS Application Discovery Service: Agent-based (lập bản đồ IP:Port và tiến trình) vs Agentless Connector (OVA cho VMware vCenter).
+- [ ] Nắm vững bộ ba AWS Backup: Audit Manager (tự động đánh giá tuân thủ framework), Vault Lock Compliance Mode (khóa bất biến WORM chống Ransomware kể cả Root), và Cross-Account/Cross-Region Backup Copy.
+- [ ] Hiểu rõ AWS DataSync: Hỗ trợ sao chép Cloud-to-Cloud (S3 sang EFS/FSx, EFS sang EFS - `TD-Set8 Q23`) và truyền tải qua Interface VPC Endpoint (PrivateLink) + Direct Connect không ra Internet.
+- [ ] Phân biệt AWS DMS: Homogeneous (chỉ cần DMS) vs Heterogeneous (Bắt buộc AWS SCT để đổi Schema + DMS nạp dữ liệu & CDC), DMS NoSQL Target cho DynamoDB, và DMS Serverless co giãn theo DCU.
+- [ ] Nắm vững Babelfish for Aurora PostgreSQL: Hiểu trực tiếp giao thức T-SQL của SQL Server, giảm thiểu việc viết lại code khi di chuyển.
 
 ---
 

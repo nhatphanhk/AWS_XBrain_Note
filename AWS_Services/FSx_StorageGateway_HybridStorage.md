@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Amazon FSx & AWS Storage Gateway (Hệ Thống Lưu Trữ Lai & Tệp Tin Chuyên Biệt Doanh Nghiệp)
+﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon FSx & AWS Storage Gateway (Hệ Thống Lưu Trữ Lai & Tệp Tin Chuyên Biệt Doanh Nghiệp)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal Storage & Hybrid Cloud Solutions Architect (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu 100% thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -241,10 +241,9 @@ flowchart TD
   - Bật tính năng kiểm tra tính toàn vẹn dữ liệu tự động (**Checksum Verification**) và lên lịch chạy tác vụ vào ban đêm.
   - DataSync tự động tăng tốc truyền tải mạng gấp 10 lần so với các công cụ mã nguồn mở và không đòi hỏi viết script tùy chỉnh.
 
----
-
 
 ---
+
 
 
 ### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
@@ -370,10 +369,9 @@ sequenceDiagram
     GW->>S3: Đồng bộ bất đồng bộ khối dữ liệu mới lên Amazon S3 ở chế độ nền!
 ```
 
----
-
 
 ---
+
 
 
 ## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
@@ -386,10 +384,9 @@ sequenceDiagram
 | **AWS Backup** | Centralized Backup Plan | Quản lý lịch trình chụp snapshot tự động, thiết lập chính sách lưu giữ và khóa bản sao lưu (**Vault Lock Compliance**) cho toàn bộ hệ thống tệp FSx. |
 | **AWS Direct Connect / VPN** | Hybrid Network Link | Cung cấp đường truyền riêng tư, băng thông cao, độ trễ thấp để các máy ảo Storage Gateway tại chỗ giao tiếp với hạ tầng lưu trữ AWS. |
 
----
-
 
 ---
+
 
 
 ## 5. Bảng So Sánh Toàn Bộ Các Giải Pháp Lưu Trữ Chuyên Biệt & Lai (Ecosystem Comparison)
@@ -423,10 +420,9 @@ sequenceDiagram
   - Cấp phát thêm một lượng nhỏ bộ đệm SSD Cache để tăng tốc: $\sim 100\$/\text{tháng}$.
   - 👉 **Tổng chi phí mới $\approx 725.00\$/\text{tháng}$ (Tiết kiệm gần 89% ngân sách hàng tháng)!**
 
----
-
 
 ---
+
 
 
 ## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
@@ -437,10 +433,9 @@ sequenceDiagram
 | **Người dùng mạng LAN truy cập Storage Gateway bị chậm bất thường** | Dung lượng bộ nhớ đệm cục bộ (**Local Cache Disk**) bị đầy, dẫn đến tỷ lệ **Cache Miss** cao (Gateway phải liên tục tải dữ liệu từ S3 qua mạng Internet). | Kiểm tra metric CloudWatch `CachePercentDirty` và `CachePercentUsed`. | Tăng thêm ổ đĩa cứng SSD vật lý làm Local Cache cho máy ảo Storage Gateway tại chỗ. |
 | **Không thể gia nhập (Join) FSx for Windows vào Active Directory** | Cấu hình sai DNS IP trong VPC DHCP Option Sets hoặc Security Group chặn các cổng Kerberos/LDAP (Port 53, 88, 389, 445). | Kiểm tra nhật ký tạo hệ thống tệp trong AWS Console; kiểm tra kết nối mạng từ VPC tới máy chủ Domain Controller (DC). | 1. Mở các cổng cần thiết trên Security Group của FSx và máy chủ Active Directory.<br>2. Đảm bảo VPC Route Table có đường truyền tới Domain Controllers. |
 
----
-
 
 ---
+
 
 
 ## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
@@ -454,7 +449,19 @@ sequenceDiagram
 6. **Tape Gateway cứu cánh cho sao lưu lâu dài**: Muốn bãi bỏ kho lưu trữ băng từ vật lý mà không muốn vứt bỏ phần mềm sao lưu cũ $\rightarrow$ Chọn Tape Gateway.
 7. **FSx for Windows HDD + Deduplication siêu tiết kiệm**: Với dữ liệu văn phòng chia sẻ ít khi dùng, kết hợp ổ HDD với tính năng Data Deduplication giúp giảm tới gần 90% chi phí lưu trữ!
 
+
 ---
+
+
+### Danh Mục Kiểm Tra Năng Lực (Learning Checklist)
+- [ ] Tôi phân biệt được khi nào dùng FSx for Windows File Server (SMB, NTFS, AD, DFS) so với EFS (NFS, POSIX).
+- [ ] Tôi hiểu rõ FSx for Lustre cho HPC, Machine Learning và khả năng đồng bộ trực tiếp với S3 Data Lake.
+- [ ] Tôi nắm vững tính năng SnapMirror, SnapVault và đa giao thức của FSx for NetApp ONTAP.
+- [ ] Tôi phân biệt được 3 loại AWS Storage Gateway: S3 File Gateway (tệp tin), Volume Gateway (ổ đĩa iSCSI), và Tape Gateway (băng từ ảo VTL).
+- [ ] Tôi hiểu sự khác biệt giữa Cached Volumes (tiết kiệm đĩa local, dữ liệu chính trên S3) và Stored Volumes (dữ liệu chính local, backup S3).
+- [ ] Tôi biết cách dùng FSx File Gateway để truy cập máy chủ FSx for Windows từ xa với độ trễ thấp qua local cache.
+- [ ] Tôi hiểu cách tối ưu chi phí FSx for Windows bằng Single-AZ HDD kết hợp Data Deduplication (tiết kiệm tới 80-90%).
+- [ ] Tôi biết cấu hình FSx for Lustre Scratch (tạm thời, không nhân bản) vs Persistent (lâu dài, tự phục hồi cùng AZ) cho xử lý tính toán cao.
 
 ### Liên Kết Nội Bộ và Tài Liệu Tham Khảo (Internal Links)
 - 📖 [Tài Liệu Chuyên Sâu: Amazon EBS & Amazon EFS](./EBS_EFS_Storage.md)
