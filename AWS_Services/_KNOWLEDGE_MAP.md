@@ -1,6 +1,6 @@
 # 🗺️ Master Knowledge Map: Bản Đồ Tri Thức Đồng Bộ Đề Thi & Tài Liệu AWS Services
 
-> **Tài liệu chuẩn hóa kiến trúc & luyện thi cấp cao**: Bảng tổng hợp liên kết toàn diện giữa **1,129+ câu hỏi đề thi thực hành** (*Cloud_Mentor PT1–PT6*, *Tutorials Dojo Set 1–6 & Set 8*, *Udemy PT1–PT4 & PT6*) và hệ thống **21 tài liệu chuyên sâu** trong thư mục `AWS_Services`.  
+> **Tài liệu chuẩn hóa kiến trúc & luyện thi cấp cao**: Bảng tổng hợp liên kết toàn diện giữa **1,129+ câu hỏi đề thi thực hành** (*Cloud_Mentor PT1–PT6*, *Tutorials Dojo Set 1–6 & Set 8*, *Udemy PT1–PT4 & PT6*) và hệ thống **23 tài liệu chuyên sâu** trong thư mục `AWS_Services`.  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (bảo lưu thuật ngữ kiến trúc AWS chuẩn quốc tế).  
 > **Mục tiêu**: Tra cứu tức thì giải pháp kiến trúc, bẫy thi và tài liệu tương ứng cho mọi kịch bản xuất hiện trong kỳ thi **AWS Certified Solutions Architect (SAA-C03, SAP-C02)**.
 
@@ -60,6 +60,14 @@ flowchart TD
         WAF[AWS_Well_Architected_Framework.md]
         CFN[CloudFormation_Systems_Manager.md]
     end
+
+    subgraph OtherServices["8. Deployment, Messaging & Modern Apps"]
+        OtherDeploy[Other_Services_Deployment_Management.md]
+    end
+
+    subgraph CostDB["9. Cost Optimization, Specialized DBs & Migration"]
+        CostOpt[Cost_Optimization_Database_Migration.md]
+    end
 ```
 
 ---
@@ -97,6 +105,30 @@ Bảng dưới đây ánh xạ các tình huống, từ khóa "bẫy" và câu h
 | **VPC & Security** | Kết nối mạng an toàn giữa 2 VPC có dải IP trùng lặp (Overlapping CIDR) | Thiết lập **AWS PrivateLink** (Interface VPC Endpoint + NLB) | `TD-Set4 Q18`, `U-PT2 Q31` | [VPC_Networking.md](./VPC_Networking.md) <br> *(Mục 2 & Bẫy 12)* |
 | **VPC & Security** | Chèn cụm tường lửa bên thứ ba (Palo Alto, Fortinet) kiểm tra lưu lượng trong VPC | Triển khai **Gateway Load Balancer (GWLB)** kèm GENEVE protocol (port 6081) | `TD-Set1 Q05`, `U-PT1 Q44` | [VPC_Networking.md](./VPC_Networking.md) & [ELB_and_ASG_High_Availability.md](./ELB_and_ASG_High_Availability.md) |
 | **Security / EC2 Access** | Quản trị máy chủ EC2 an toàn không mở cổng SSH 22, không cần Bastion Host, ghi log đầy đủ | **AWS Systems Manager Session Manager** (kết hợp Interface Endpoint `ssmmessages`) | `TD-Set1 Q11`, `CM-PT2 Q09` | [CloudFormation_Systems_Manager.md](./CloudFormation_Systems_Manager.md) & [VPC_Networking.md](./VPC_Networking.md) |
+| **Deployment / PaaS** | Deploy web app nhanh không quản lý server, vẫn truy cập được EC2, cần zero-downtime rolling update | **AWS Elastic Beanstalk** + chiến lược **Rolling with Additional Batch** (Full capacity + không phát sinh thêm chi phí) hoặc **Immutable** (Rollback nhanh nhất) | `TD-Set6 Q2`, `CM-PT2 Q4` | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md#22-các-chiến-lược-triển-khai-deployment-policies--trọng-tâm-thi) |
+| **Certificate / Security** | SSL/TLS cert sắp hết hạn, cần cảnh báo tự động 30 ngày trước | **ACM + EventBridge Rule + Lambda + SNS** (ACM không có built-in SNS alert trực tiếp) | `TD-Set6 Q11`, `CM-PT3 Q8` | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md#33-giám-sát-hết-hạn-chứng-chỉ--bẫy-thi) |
+| **Compliance & Config** | Kiểm tra liên tục S3 bucket có public không, tự động sửa chữa vi phạm | **AWS Config** + Managed Rule `s3-bucket-public-read-prohibited` + **SSM Automation** (Auto Remediation) | `TD-Set5 Q32`, `CM-PT4 Q17` | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md#4-aws-config--tuân-thủ--lịch-sử-cấu-hình-tài-nguyên) |
+| **Batch Computing** | Chạy hàng nghìn batch jobs HPC, kết hợp Spot Instances tối ưu chi phí | **AWS Batch** (Job Definitions + Job Queue + Spot Compute Environment) | `TD-Set5 Q41`, `CM-PT1 Q11` | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md#6-aws-batch--xử-lý-tính-toán-hàng-loạt-batch-computing) |
+| **Legacy Migration / Messaging** | Migrate ActiveMQ/RabbitMQ on-prem lên AWS, giữ nguyên JMS/AMQP protocol | **Amazon MQ** (Managed ActiveMQ/RabbitMQ; KHÔNG dùng SQS vì phải thay đổi code) | `CM-PT2 Q14`, `TD-Set4 Q28` | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md#7-amazon-mq--message-broker-managed-cho-legacy-apps) |
+| **Graph Database** | Mạng xã hội, phát hiện gian lận, recommendation engine với deep relationship queries | **Amazon Neptune** (Gremlin / openCypher / SPARQL; không dùng DynamoDB cho deep graph traversal) | `CM-PT3 Q21`, `TD-Set5 Q18` | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md#4-amazon-neptune--graph-database) |
+| **Document Database** | Migrate MongoDB app lên AWS, flexible JSON schema, không muốn thay đổi code | **Amazon DocumentDB** (MongoDB wire protocol compatible; tự động scale storage đến 128 TB) | `TD-Set3 Q42`, `U-PT3 Q18` | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md#5-amazon-documentdb--mongodb-compatible-document-database) |
+| **Cost Optimization** | Phân tích chi phí lịch sử, dự báo tương lai, right-sizing EC2 | **AWS Cost Explorer** (12 tháng lịch sử + forecast 12 tháng; phân tích theo service/account/tag) | `CM-PT4 Q22`, `TD-Set6 Q38` | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md#21-aws-cost-explorer--phân-tích--dự-báo-chi-phí) |
+| **Cost Governance** | Tự động ngừng EC2 khi vượt ngân sách, cảnh báo trước khi vượt | **AWS Budgets** + **Budget Actions** (gắn IAM Policy hoặc dừng EC2/RDS tự động) | `CM-PT5 Q19`, `TD-Set6 Q42` | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md#22-aws-budgets--giám-sát--hành-động-tự-động) |
+| **Savings Plans vs RI** | Giảm chi phí On-Demand linh hoạt thay đổi instance type/region | **Compute Savings Plans** (không cần capacity reservation; áp dụng EC2 + Fargate + Lambda) vs **Zonal RI** (khi cần capacity reservation) | `CM-PT4 Q9`, `TD-Set5 Q55` | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md#24-savings-plans-vs-reserved-instances--bẫy-thi-kinh-điển) |
+| **Online Data Transfer** | Sync dữ liệu NFS/SMB on-prem → S3/EFS định kỳ, có Internet/Direct Connect | **AWS DataSync** (tốc độ cao + toàn vẹn checksum + TLS; nhanh hơn rsync đến 10x) | `CM-PT3 Q6`, `TD-Set4 Q51` | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md#6-aws-datasync--truyền-dữ-liệu-online-nhanh--bảo-mật) |
+| **B2B File Transfer** | Đối tác bên ngoài cần upload file bằng SFTP trực tiếp vào S3 | **AWS Transfer Family** (SFTP/FTPS/FTP endpoint → S3/EFS; không cần quản lý FTP server) | `CM-PT1 Q28`, `TD-Set5 Q22` | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md#7-aws-transfer-family--sftpftp-managed-vào-s3efs) |
+| **Offline Data Migration** | Di chuyển TB–PB dữ liệu khi kết nối mạng kém/không có | **AWS Snowball Edge** (10 TB – 1 PB; edge computing + EC2 + Lambda; ship thiết bị vật lý) | `CM-PT2 Q32`, `TD-Set3 Q48` | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md#8-aws-snow-family--di-chuyển-dữ-liệu-offline-quy-mô-lớn) |
+| **Security Investigation** | Điều tra nguyên nhân gốc rễ (Root Cause) sau khi có cảnh báo bảo mật, trực quan hóa đồ thị tấn công | **Amazon Detective** (phân tích log CloudTrail, VPC Flow, GuardDuty bằng graph theory & ML) | `SAA-C03 Update` | [KMS_Security_Encryption.md](./KMS_Security_Encryption.md#amazon-detective-điều-tra-nguyên-nhân-gốc-rễ-sự-cố-bảo-mật) |
+| **Centralized Firewall** | Tự động áp đặt bộ quy tắc WAF/Shield/Security Groups cho mọi tài khoản & VPC mới trong Organizations | **AWS Firewall Manager** (quản lý tập trung tường lửa đa tài khoản trong AWS Organizations) | `SAA-C03 Update` | [KMS_Security_Encryption.md](./KMS_Security_Encryption.md#aws-firewall-manager-quản-trị-tường-lửa-tập-trung-đa-tài-khoản) |
+| **Audit & Compliance** | Tải báo cáo kiểm toán bảo mật bên thứ ba (ISO, SOC, PCI-DSS) và chấp nhận thỏa thuận HIPAA BAA | **AWS Artifact** (cổng tự phục vụ tải báo cáo kiểm toán và thỏa thuận pháp lý của AWS) | `SAA-C03 Update` | [IAM_Identity_and_Access_Management.md](./IAM_Identity_and_Access_Management.md#aws-artifact-cổng-báo-cáo-tuân-thủ--thỏa-thuận-pháp-lý) |
+| **Extreme S3 Latency** | Object storage cho ML training, phân tích tài chính cần độ trễ single-digit millisecond trong 1 AZ | **Amazon S3 Express One Zone** (Directory Buckets, nhanh gấp 10 lần, giảm 50% chi phí request) | `SAA-C03 Update` | [S3_and_CloudFront_Storage.md](./S3_and_CloudFront_Storage.md#chuyên-sâu-amazon-s3-express-one-zone-directory-buckets) |
+| **S3 Linux Mount** | Gắn S3 bucket thành local file system trên Linux cho tác vụ đọc/ghi tuần tự thông lượng cao | **Mountpoint for Amazon S3** (dịch API file sang S3 REST API; nếu cần POSIX locking chọn FSx for Lustre) | `SAA-C03 Update` | [S3_and_CloudFront_Storage.md](./S3_and_CloudFront_Storage.md#mountpoint-for-amazon-s3-mount-s3-thành-local-file-system) |
+| **Network Forensics** | Sao chép toàn bộ gói tin mạng thực tế (raw packet payload) từ ENI để kiểm tra sâu IDS/DPI | **VPC Traffic Mirroring** (gửi raw packets tới appliance/NLB out-of-band; khác VPC Flow Logs chỉ có metadata) | `SAA-C03 Update` | [VPC_Networking.md](./VPC_Networking.md#vpc-traffic-mirroring-sao-chép-gói-tin-mạng-thực-tế) |
+| **NoSQL Migration** | Di chuyển cụm Apache Cassandra on-premises lên AWS dạng Serverless không đổi mã nguồn | **Amazon Keyspaces (for Apache Cassandra)** (100% CQL compatible, On-Demand/Provisioned, Multi-AZ) | `TD-Set4 Q61`, `U-PT3 Q58` | [DynamoDB_NoSQL_Databases.md](./DynamoDB_NoSQL_Databases.md#9-amazon-keyspaces-for-apache-cassandra) |
+| **Time-Series IoT** | Lưu trữ và phân tích hàng triệu sự kiện cảm biến IoT / telemetry mỗi giây theo chuỗi thời gian | **Amazon Timestream** (tự động phân tầng lưu trữ In-Memory Store sang Magnetic Store chi phí thấp) | `SAA-C03 Update` | [Analytics_Big_Data_Services.md](./Analytics_Big_Data_Services.md#73-amazon-timestream-cơ-sở-dữ-liệu-chuỗi-thời-gian---time-series-database) |
+| **Data Lake Governance** | Quản trị phân quyền chi tiết cấp cột/dòng cho Data Lake đa tài khoản mà không copy dữ liệu | **AWS Lake Formation** (Fine-grained access control qua Glue Data Catalog cho Athena, Redshift, EMR) | `TD-Set1 Q02`, `TD-Set6 Q63` | [Analytics_Big_Data_Services.md](./Analytics_Big_Data_Services.md#1-aws-lake-formation-kiến-trúc-quản-trị-data-lake-tập-trung-đa-tài-khoản) |
+| **SaaS Data Ingestion** | Truyền tải luồng dữ liệu lớn 2 chiều giữa Salesforce/ServiceNow và S3/Redshift qua PrivateLink no-code | **Amazon AppFlow** (tích hợp SaaS 2 chiều không cần viết code, hỗ trợ PrivateLink) | `TD-Set5 Q18`, `U-PT6 Q31` | [SQS_SNS_EventBridge_Decoupling.md](./SQS_SNS_EventBridge_Decoupling.md#5-amazon-appflow-tích-hợp-dữ-liệu-saas-không-cần-viết-code) |
+| **Document OCR & ML** | Trích xuất văn bản in, chữ viết tay, bảng biểu (Tables) và biểu mẫu (Forms) từ tài liệu scan/PDF | **Amazon Textract** (ML-powered OCR trích xuất key-value forms và tables từ hóa đơn, hợp đồng) | `TD-Set4 Q46`, `TD-Set4 Q50` | [AI_Machine_Learning_Services.md](./AI_Machine_Learning_Services.md#3-chuyên-sâu-amazon-textract-trích-xuất-văn-bản-bảng-biểu--biểu-mẫu-bằng-mlocr) |
 
 ---
 
@@ -145,6 +177,37 @@ Danh mục đối chiếu nhanh 40+ dịch vụ cốt lõi và tài liệu chuy�
 | **AWS Systems Manager** | [CloudFormation_Systems_Manager.md](./CloudFormation_Systems_Manager.md) | Parameter Store, Session Manager, Patch Manager, Run Command |
 | **AWS Transit Gateway** | [VPC_Networking.md](./VPC_Networking.md) | Hub-and-Spoke topology, TGW Route Tables, Peering, Multicast |
 | **AWS WAF & Shield** | [AWS_Well_Architected_Framework.md](./AWS_Well_Architected_Framework.md) & [S3_and_CloudFront_Storage.md](./S3_and_CloudFront_Storage.md) | Web ACLs, SQL Injection / XSS protection, Rate-based Rules, Shield Standard vs Advanced |
+| **Amazon MQ** | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md) | Managed ActiveMQ / RabbitMQ, JMS/AMQP/MQTT/STOMP support, Multi-AZ Active/Standby, Lift-and-shift messaging |
+| **Amazon Neptune** | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md) | Graph Database, Gremlin / openCypher / SPARQL, Social networks, Fraud detection, 15 Read Replicas |
+| **Amazon DocumentDB** | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md) | MongoDB-compatible, JSON/BSON documents, Auto-scale 128 TB, 6 replicas × 3 AZs |
+| **Amazon EKS** | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md) | Managed Kubernetes, EC2/Fargate nodes, EKS Anywhere (hybrid), Helm, CSI drivers |
+| **AWS Elastic Beanstalk** | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md) | PaaS, Deployment Policies (All-at-once/Rolling/Immutable/Traffic Splitting), .ebextensions |
+| **AWS Certificate Manager (ACM)** | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md) | Public SSL/TLS miễn phí, Auto-renewal, EventBridge+Lambda+SNS cho expiry alerts |
+| **AWS Config** | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md) | Continuous compliance, Managed/Custom Rules, Auto Remediation via SSM, Multi-Account Aggregator |
+| **AWS Trusted Advisor** | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md) | 5 pillars: Cost/Performance/Security/Fault Tolerance/Service Limits, Business/Enterprise full access |
+| **AWS Batch** | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md) | HPC batch jobs, Job Queues, Spot integration, không giới hạn runtime (khác Lambda 15p) |
+| **AWS Amplify** | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md) | Full-stack hosting, Git CI/CD, Cognito/AppSync integration, React/Next.js/Mobile |
+| **AWS AppSync** | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md) | Managed GraphQL, Real-time WebSocket Subscriptions, Offline sync, Multi-source resolver |
+| **Amazon SES** | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md) | Bulk email, Transactional email, DKIM/SPF, Bounce/Complaint tracking, Low cost |
+| **Amazon Pinpoint** | [Other_Services_Deployment_Management.md](./Other_Services_Deployment_Management.md) | Multi-channel (Email+SMS+Push), User segmentation, Journey orchestration, Kinesis event streaming |
+| **AWS Cost Explorer** | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md) | Historical 12M analysis, Forecast 12M, Right-sizing EC2/RDS, Savings Plans recommendations |
+| **AWS Budgets** | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md) | Cost/Usage/RI/SP budgets, SNS alerts, Budget Actions (IAM Policy / Stop EC2) |
+| **AWS Compute Optimizer** | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md) | ML right-sizing: EC2/ASG/EBS/Lambda/ECS on Fargate, 14-day CloudWatch analysis |
+| **Savings Plans** | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md) | Compute SP (EC2+Fargate+Lambda, all regions), EC2 Instance SP (1 family), Không có capacity reservation |
+| **AWS DataSync** | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md) | Online NFS/SMB/HDFS → S3/EFS/FSx, TLS encryption, Checksum integrity, 10x faster than rsync |
+| **AWS Transfer Family** | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md) | SFTP/FTPS/FTP/AS2 endpoint → S3/EFS, B2B file transfer, No FTP server management |
+| **AWS Snow Family** | [Cost_Optimization_Database_Migration.md](./Cost_Optimization_Database_Migration.md) | Snowcone (8TB, edge), Snowball Edge (80TB, EC2+Lambda), Snowmobile (100PB, data center) |
+| **Amazon AppFlow** | [SQS_SNS_EventBridge_Decoupling.md](./SQS_SNS_EventBridge_Decoupling.md) | No-code SaaS data transfer 2 chiều (Salesforce, ServiceNow, Zendesk) vào S3/Redshift qua PrivateLink |
+| **Amazon Detective** | [KMS_Security_Encryption.md](./KMS_Security_Encryption.md) | Điều tra nguyên nhân gốc rễ (Root Cause Analysis), Visual Graph từ GuardDuty, VPC Flow Logs, CloudTrail |
+| **Amazon Keyspaces** | [DynamoDB_NoSQL_Databases.md](./DynamoDB_NoSQL_Databases.md) & [Analytics_Big_Data_Services.md](./Analytics_Big_Data_Services.md) | Serverless Apache Cassandra, CQL API, On-Demand & Provisioned capacity, Multi-AZ |
+| **Amazon S3 Express One Zone** | [S3_and_CloudFront_Storage.md](./S3_and_CloudFront_Storage.md) | Directory Bucket, Single-digit millisecond latency trong 1 AZ cho AI/ML và High-request workloads |
+| **Amazon Textract** | [AI_Machine_Learning_Services.md](./AI_Machine_Learning_Services.md) | Trích xuất văn bản in, chữ viết tay, bảng (Tables) và biểu mẫu (Forms) từ scanned PDF qua ML |
+| **Amazon Timestream** | [Analytics_Big_Data_Services.md](./Analytics_Big_Data_Services.md) | Serverless Time-series database cho IoT/telemetry, Automated storage tiering (In-memory & Magnetic) |
+| **AWS Artifact** | [IAM_Identity_and_Access_Management.md](./IAM_Identity_and_Access_Management.md) | Báo cáo kiểm toán tuân thủ (ISO, SOC, PCI-DSS) & Ký thỏa thuận pháp lý (HIPAA BAA) |
+| **AWS Firewall Manager** | [KMS_Security_Encryption.md](./KMS_Security_Encryption.md) | Quản trị chính sách tường lửa tập trung đa tài khoản (WAF, Shield, Network Firewall, Route 53 DNS Firewall) |
+| **AWS Lake Formation** | [Analytics_Big_Data_Services.md](./Analytics_Big_Data_Services.md) | Quản trị tập trung Data Lake, Fine-grained access control (cột/dòng) trên S3 qua Glue Catalog |
+| **Mountpoint for Amazon S3** | [S3_and_CloudFront_Storage.md](./S3_and_CloudFront_Storage.md) | Mount S3 thành local file system trên Linux với thông lượng đọc tuần tự/ngẫu nhiên cao |
+| **VPC Traffic Mirroring** | [VPC_Networking.md](./VPC_Networking.md) | Sao chép gói tin mạng thực tế (raw packet payload) từ ENI để phân tích sâu (Deep Packet Inspection) |
 
 ---
 
@@ -184,4 +247,6 @@ Danh mục đối chiếu nhanh 40+ dịch vụ cốt lõi và tài liệu chuy�
 - 🛡️ [Disaster Recovery & Migration](./Disaster_Recovery_Migration.md)
 - 🏗️ [AWS Well-Architected Framework](./AWS_Well_Architected_Framework.md)
 - 📜 [CloudFormation & Systems Manager](./CloudFormation_Systems_Manager.md)
+- 🚀 [Other Services: Deployment, Messaging & Modern Apps](./Other_Services_Deployment_Management.md) *(Elastic Beanstalk, ACM, AWS Config, Trusted Advisor, AWS Batch, Amazon MQ, AppSync, Amplify, SES, Pinpoint)*
+- 💰 [Cost Optimization, Specialized DBs & Migration](./Cost_Optimization_Database_Migration.md) *(Cost Explorer, Budgets, Compute Optimizer, Savings Plans, EKS, Neptune, DocumentDB, DataSync, Transfer Family, Snow Family)*
 

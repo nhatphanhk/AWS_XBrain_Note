@@ -12,11 +12,11 @@
 ## 📌 Mục Lục Điều Hướng
 
 1. [Bảng Phản Xạ 60 Giây: Từ Khóa Đề Bài $\rightarrow$ Giải Pháp Chuẩn AWS](#1-bảng-phản-xạ-60-giây-từ-khóa-đề-bài--giải-pháp-chuẩn-aws)
-2. [Domain 1: Thiết Kế Kiến Trúc Kiên Cường (Resilient Architectures - 26%)](#2-domain-1-thiết-kế-kiến-trúc-kiên-cường-resilient-architectures---26)
-3. [Domain 2: Thiết Kế Kiến Trúc Hiệu Năng Cao (High-Performing Architectures - 30%)](#3-domain-2-thiết-kế-kiến-trúc-hiệu-năng-cao-high-performing-architectures---30)
-4. [Domain 3: Thiết Kế Kiến Trúc Bảo Mật (Secure Architectures - 30%)](#4-domain-3-thiết-kế-kiến-trúc-bảo-mật-secure-architectures---30)
-5. [Domain 4: Thiết Kế Kiến Trúc Tối Ưu Chi Phí (Cost-Optimized Architectures - 14%)](#5-domain-4-thiết-kế-kiến-trúc-tối-ưu-chi-phí-cost-optimized-architectures---14)
-6. [Top 15 Cặp Khái Niệm Rất Dễ Nhầm Lẫn Trong Đề Thi](#6-top-15-cặp-khái-niệm-rất-dễ-nhầm-lẫn-trong-đề-thi)
+2. [Domain 1: Thiết Kế Kiến Trúc Bảo Mật (Design Secure Architectures - 30%)](#2-domain-1-thiết-kế-kiến-trúc-bảo-mật-design-secure-architectures---30)
+3. [Domain 2: Thiết Kế Kiến Trúc Kiên Cường (Design Resilient Architectures - 26%)](#3-domain-2-thiết-kế-kiến-trúc-kiên-cường-design-resilient-architectures---26)
+4. [Domain 3: Thiết Kế Kiến Trúc Hiệu Năng Cao (Design High-Performing Architectures - 24%)](#4-domain-3-thiết-kế-kiến-trúc-hiệu-năng-cao-design-high-performing-architectures---24)
+5. [Domain 4: Thiết Kế Kiến Trúc Tối Ưu Chi Phí (Design Cost-Optimized Architectures - 20%)](#5-domain-4-thiết-kế-kiến-trúc-tối-ưu-chi-phí-design-cost-optimized-architectures---20)
+6. [Top 20 Cặp Khái Niệm Dễ Nhầm Lẫn Trong Đề Thi](#6-top-20-cặp-khái-niệm-dễ-nhầm-lẫn-trong-đề-thi)
 
 ---
 
@@ -48,67 +48,18 @@ Khi gặp các cụm từ kích hoạt (Trigger Keywords) này trong đề thi, 
 | **"Zero downtime storage growth for RDS"** | **Amazon RDS Storage Auto Scaling** | `TD-Set2 Q08`, `U-PT1 Q14` | ❌ Không chọn tăng thủ công đĩa từ snapshot (mất downtime chuyển đổi). |
 | **"Visual no-code data prep for business analysts"** | **AWS Glue DataBrew** (Recipes & Datasets) | `TD-Set5 Q14`, `U-PT4 Q22` | ❌ Không chọn Glue ETL Jobs (đòi hỏi viết mã Python/PySpark). |
 | **"Centralized immutable cryptographically verifiable ledger"** | **Amazon QLDB** (SHA-256 Merkle Tree) | `TD-Set3 Q55`, `U-PT2 Q51` | ❌ Không chọn Managed Blockchain (QLDB là tập trung, không phải Blockchain). |
-| **"NoSQL Cassandra migration with CQL compatibility"** | **Amazon Keyspaces (for Apache Cassandra)** | `TD-Set4 Q61`, `U-PT3 Q58` | ❌ Không chọn DynamoDB (DynamoDB không hỗ trợ ngôn ngữ truy vấn CQL). |
+| **"Single-digit millisecond S3 latency, Co-locate storage & compute in 1 AZ, High-request-rate ML training"** | **[Amazon S3 Express One Zone (Directory Bucket)](https://aws.amazon.com/s3/storage-classes/express-one-zone/)** | `SAA-C03 Update` | ❌ Lưu trong 1 AZ duy nhất dưới dạng Directory Bucket, nhanh gấp 10 lần S3 Standard, giảm 50% chi phí request. |
+| **"Mount S3 bucket as local Linux file system, High read throughput without POSIX locking"** | **[Mountpoint for Amazon S3](https://aws.amazon.com/s3/features/mountpoint/)** | `SAA-C03 Update` | ❌ Chuyển đổi lệnh file local sang S3 REST API; nếu cần đầy đủ POSIX locking thì chọn [Amazon FSx for Lustre](https://aws.amazon.com/fsx/lustre/). |
+| **"Migrate Apache Cassandra to AWS, No cluster management / CQL compatible"** | **[Amazon Keyspaces (for Apache Cassandra)](https://aws.amazon.com/keyspaces/)** | `TD-Set4 Q61`, `U-PT3 Q58` | ❌ Serverless Cassandra, hỗ trợ On-Demand và Provisioned capacity kèm Auto Scaling. |
+| **"Copy raw network packets from EC2 ENI, Out-of-band IDS / deep packet inspection"** | **[VPC Traffic Mirroring](https://docs.aws.amazon.com/vpc/latest/mirroring/what-is-traffic-mirroring.html)** | `SAA-C03 Update` | ❌ Sao chép toàn bộ gói tin thực tế (khác với VPC Flow Logs chỉ ghi metadata header). |
+| **"Download ISO / SOC / PCI-DSS compliance reports, Accept HIPAA BAA agreement"** | **[AWS Artifact](https://aws.amazon.com/artifact/)** | `SAA-C03 Update` | ❌ Cổng tải tài liệu kiểm toán & ký thỏa thuận pháp lý (không nhầm với AWS Audit Manager hay AWS Config). |
+| **"Extract text, tables, and forms from scanned PDFs/invoices using OCR + ML"** | **[Amazon Textract](https://aws.amazon.com/textract/)** | `SAA-C03 Update` | ❌ Trích xuất cấu trúc bảng/form từ ảnh/PDF (không nhầm với [Amazon Comprehend](https://aws.amazon.com/comprehend/) dùng phân tích ngữ nghĩa NLP). |
 
 ---
 
-## 2. Domain 1: Thiết Kế Kiến Trúc Kiên Cường (Resilient Architectures - 26%)
+## 2. Domain 1: Thiết Kế Kiến Trúc Bảo Mật (Design Secure Architectures - 30%)
 
 ### 2.1. Từ Vựng & Thuật Ngữ Trọng Tâm
-* **Multi-AZ Architecture**: Mô hình phân bổ tài nguyên trên tối thiểu 2 (tốt nhất là 3) Availability Zones độc lập về điện, mạng và lũ lụt. Thành phần gồm: Application Load Balancer (Public Subnets) $\rightarrow$ Auto Scaling Group (Private Subnets) $\rightarrow$ Multi-AZ RDS / Aurora DB Cluster.
-* **Auto Scaling Lifecycle Hooks**:
-  - `Pending:Wait`: Tạm dừng khởi động instance để cài đặt phần mềm, nạp cấu hình, chạy script kiểm tra trước khi nhận traffic từ ELB.
-  - `Terminating:Wait`: Tạm dừng quá trình tắt instance lỗi để **thu thập nhật ký ứng dụng (logs)** đẩy về CloudWatch Logs hoặc S3 trước khi đĩa bị hủy.
-* **Decoupling (Tách Rời Kiến Trúc)**:
-  - **Amazon SQS Standard**: Thông lượng gần như vô hạn, bảo đảm phân phối ít nhất một lần (**At-least-once**), thứ tự ngẫu nhiên (**Best-effort ordering**).
-  - **Amazon SQS FIFO**: Đảm bảo thứ tự nghiêm ngặt (**First-In-First-Out**), xử lý đúng một lần (**Exactly-once processing**) qua `MessageGroupId` và `MessageDeduplicationId`, tối đa 3,000 msg/s với batching (300 msg/s không batching).
-  - **Visibility Timeout**: Khoảng thời gian một tin nhắn sau khi được consumer nhận sẽ "vô hình" với các consumer khác (mặc định 30 giây, tối đa 12 giờ). Nếu consumer xử lý lâu hơn, phải gọi `ChangeMessageVisibility` để tránh tin nhắn bị consumer khác nhận trùng.
-  - **Dead-Letter Queue (DLQ)**: Hàng đợi chứa các tin nhắn xử lý thất bại nhiều lần (vượt quá `maxReceiveCount`), giúp cô lập **Poison Pill** không làm treo toàn bộ worker fleet.
-* **Amazon Aurora High Availability**:
-  - **Shared Storage Fleet**: Lưu trữ 6 bản sao trên 3 Availability Zones (mỗi AZ 2 bản sao), tự động chịu lỗi mất 2 bản sao mà không ảnh hưởng ghi, mất 3 bản sao mà không ảnh hưởng đọc.
-  - **Aurora Replicas**: Tối đa 15 bản sao chỉ đọc (Read Replicas), dùng chung tầng lưu trữ nên replication lag $< 100$ ms, tự động thăng cấp thành Primary trong $< 30$ giây khi Primary gặp sự cố.
-  - **Aurora Global Database**: Nhân bản dữ liệu đa vùng ở tầng lưu trữ chuyên dụng (Storage-level replication) với độ trễ $< 1$ giây, hỗ trợ failover xuyên vùng trong $< 1$ phút với zero data loss.
-
-### 2.2. Chiến Lược Disaster Recovery (DR) So Sánh 4 Cấp Độ
-
-```mermaid
-flowchart LR
-    A["1. Backup & Restore\nRPO: Hàng giờ\nRTO: Hàng ngày ($)"] --> B["2. Pilot Light\nRPO: Hàng phút\nRTO: Hàng chục phút ($$)"]
-    B --> C["3. Warm Standby\nRPO: Hàng giây\nRTO: Vài phút ($$$)"]
-    C --> D["4. Multi-Region Multi-Active\nRPO: Gần như 0\nRTO: Gần như 0 ($$$$)"]
-```
-
-| Tiêu chí so sánh | 1. Backup & Restore | 2. Pilot Light | 3. Warm Standby | 4. Multi-Region Multi-Active |
-| :--- | :--- | :--- | :--- | :--- |
-| **Trạng thái Database ở Region phụ** | Không có DB chạy (chỉ có snapshot/backup trên S3) | **DB luôn CHẠY và đồng bộ liên tục** (Read Replica / Global DB) | **DB luôn CHẠY và đồng bộ liên tục** | **DB luôn CHẠY và nhận GHI/ĐỌC đồng thời** (Global Tables) |
-| **Trạng thái Compute (EC2) ở Region phụ** | Hoàn toàn KHÔNG có | **TẮT HOÀN TOÀN (0 instance)**, chỉ có AMI / CloudFormation | **CHẠY 24/7 với quy mô thu nhỏ** (scaled-down minimum fleet) | **CHẠY 24/7 với 100% công suất** ở tất cả các Region |
-| **Chi phí vận hành** | Rẻ nhất ($) | Thấp ($$) | Trung bình ($$$) | Đắt nhất ($$$$) |
-| **RPO (Mất mát dữ liệu)** | Hàng giờ | Vài phút | Vài giây | Gần bằng 0 |
-| **RTO (Thời gian phục hồi)** | 24 giờ+ | Hàng chục phút | Vài phút | Tức thì (vài giây) |
-
----
-
-## 3. Domain 2: Thiết Kế Kiến Trúc Hiệu Năng Cao (High-Performing Architectures - 30%)
-
-### 3.1. Từ Vựng & Thuật Ngữ Trọng Tâm
-* **EC2 Placement Groups**:
-  - **Cluster Placement Group**: Gom cụm các máy ảo vào cùng 1 rack mạng trong 1 AZ duy nhất $\rightarrow$ Đạt băng thông 100 Gbps, độ trễ cực thấp cho HPC và tính toán song song.
-  - **Spread Placement Group**: Đặt mỗi máy ảo trên một tủ rack phần cứng riêng biệt (tối đa 7 instances mỗi AZ) $\rightarrow$ Tối ưu khả năng chịu lỗi cho các ứng dụng quan trọng sống còn.
-  - **Partition Placement Group**: Chia AZ thành nhiều partition (mỗi partition chứa nhiều rack), các partition không dùng chung rack $\rightarrow$ Phù hợp cho cụm phân tán lớn như HDFS, Cassandra, Kafka.
-* **Mạng Hiệu Năng Cao (High-Performance Networking)**:
-  - **ENA (Elastic Network Adapter)**: Hỗ trợ băng thông lên tới 100 Gbps cho lưu lượng TCP/IP thông thường.
-  - **EFA (Elastic Fabric Adapter)**: Bổ sung tính năng **OS-bypass** cho ENA, cho phép ứng dụng bypass nhân Linux để giao tiếp trực tiếp với card mạng, bắt buộc cho các thư viện tính toán song song **MPI** và **NCCL**.
-* **Lưu Trữ Tốc Độ Cao**:
-  - **EC2 Instance Store**: Ổ đĩa NVMe SSD gắn vật lý trực tiếp vào máy chủ host $\rightarrow$ Hàng triệu IOPS, độ trễ microsecond, miễn phí đi kèm instance, nhưng là bộ nhớ tạm thời (**Ephemeral Storage** - mất dữ liệu khi stop/terminate).
-  - **EBS gp3**: 3,000 IOPS và 125 MB/s cơ sở miễn phí, cho phép nâng cấp IOPS (lên 16,000) và Throughput (lên 1,000 MB/s) độc lập với dung lượng đĩa.
-  - **EBS io2 Block Express**: Lên tới 256,000 IOPS, 4,000 MB/s throughput, độ bền 99.999%, hỗ trợ Multi-Attach (gắn vào tối đa 16 EC2 trong cùng 1 AZ).
-  - **Amazon FSx for Lustre**: Hệ thống tệp POSIX song song cực nhanh, tích hợp trực tiếp với S3 bucket (đọc/ghi thẳng vào S3), phục vụ xử lý dữ liệu lớn, render đồ họa 3D và Machine Learning.
-
----
-
-## 4. Domain 3: Thiết Kế Kiến Trúc Bảo Mật (Secure Architectures - 30%)
-
-### 4.1. Từ Vựng & Thuật Ngữ Trọng Tâm
 * **Bảo Vệ Dữ Liệu Bất Biến (Immutability & WORM)**:
   - **S3 Object Lock**:
     - **Compliance Mode**: Không một ai (kể cả tài khoản Root) có thể xóa hoặc sửa object hay giảm thời gian lưu trữ trước khi hết hạn.
@@ -128,7 +79,61 @@ flowchart LR
 
 ---
 
-## 5. Domain 4: Thiết Kế Kiến Trúc Tối Ưu Chi Phí (Cost-Optimized Architectures - 14%)
+## 3. Domain 2: Thiết Kế Kiến Trúc Kiên Cường (Design Resilient Architectures - 26%)
+
+### 3.1. Từ Vựng & Thuật Ngữ Trọng Tâm
+* **Multi-AZ Architecture**: Mô hình phân bổ tài nguyên trên tối thiểu 2 (tốt nhất là 3) Availability Zones độc lập về điện, mạng và lũ lụt. Thành phần gồm: Application Load Balancer (Public Subnets) $\rightarrow$ Auto Scaling Group (Private Subnets) $\rightarrow$ Multi-AZ RDS / Aurora DB Cluster.
+* **Auto Scaling Lifecycle Hooks**:
+  - `Pending:Wait`: Tạm dừng khởi động instance để cài đặt phần mềm, nạp cấu hình, chạy script kiểm tra trước khi nhận traffic từ ELB.
+  - `Terminating:Wait`: Tạm dừng quá trình tắt instance lỗi để **thu thập nhật ký ứng dụng (logs)** đẩy về CloudWatch Logs hoặc S3 trước khi đĩa bị hủy.
+* **Decoupling (Tách Rời Kiến Trúc)**:
+  - **Amazon SQS Standard**: Thông lượng gần như vô hạn, bảo đảm phân phối ít nhất một lần (**At-least-once**), thứ tự ngẫu nhiên (**Best-effort ordering**).
+  - **Amazon SQS FIFO**: Đảm bảo thứ tự nghiêm ngặt (**First-In-First-Out**), xử lý đúng một lần (**Exactly-once processing**) qua `MessageGroupId` và `MessageDeduplicationId`, tối đa 3,000 msg/s với batching (300 msg/s không batching).
+  - **Visibility Timeout**: Khoảng thời gian một tin nhắn sau khi được consumer nhận sẽ "vô hình" với các consumer khác (mặc định 30 giây, tối đa 12 giờ). Nếu consumer xử lý lâu hơn, phải gọi `ChangeMessageVisibility` để tránh tin nhắn bị consumer khác nhận trùng.
+  - **Dead-Letter Queue (DLQ)**: Hàng đợi chứa các tin nhắn xử lý thất bại nhiều lần (vượt quá `maxReceiveCount`), giúp cô lập **Poison Pill** không làm treo toàn bộ worker fleet.
+* **Amazon Aurora High Availability**:
+  - **Shared Storage Fleet**: Lưu trữ 6 bản sao trên 3 Availability Zones (mỗi AZ 2 bản sao), tự động chịu lỗi mất 2 bản sao mà không ảnh hưởng ghi, mất 3 bản sao mà không ảnh hưởng đọc.
+  - **Aurora Replicas**: Tối đa 15 bản sao chỉ đọc (Read Replicas), dùng chung tầng lưu trữ nên replication lag $< 100$ ms, tự động thăng cấp thành Primary trong $< 30$ giây khi Primary gặp sự cố.
+  - **Aurora Global Database**: Nhân bản dữ liệu đa vùng ở tầng lưu trữ chuyên dụng (Storage-level replication) với độ trễ $< 1$ giây, hỗ trợ failover xuyên vùng trong $< 1$ phút với zero data loss.
+
+### 3.2. Chiến Lược Disaster Recovery (DR) So Sánh 4 Cấp Độ
+
+```mermaid
+flowchart LR
+    A["1. Backup & Restore\nRPO: Hàng giờ\nRTO: Hàng ngày ($)"] --> B["2. Pilot Light\nRPO: Hàng phút\nRTO: Hàng chục phút ($$)"]
+    B --> C["3. Warm Standby\nRPO: Hàng giây\nRTO: Vài phút ($$$)"]
+    C --> D["4. Multi-Region Multi-Active\nRPO: Gần như 0\nRTO: Gần như 0 ($$$$)"]
+```
+
+| Tiêu chí so sánh | 1. Backup & Restore | 2. Pilot Light | 3. Warm Standby | 4. Multi-Region Multi-Active |
+| :--- | :--- | :--- | :--- | :--- |
+| **Trạng thái Database ở Region phụ** | Không có DB chạy (chỉ có snapshot/backup trên S3) | **DB luôn CHẠY và đồng bộ liên tục** (Read Replica / Global DB) | **DB luôn CHẠY và đồng bộ liên tục** | **DB luôn CHẠY và nhận GHI/ĐỌC đồng thời** (Global Tables) |
+| **Trạng thái Compute (EC2) ở Region phụ** | Hoàn toàn KHÔNG có | **TẮT HOÀN TOÀN (0 instance)**, chỉ có AMI / CloudFormation | **CHẠY 24/7 với quy mô thu nhỏ** (scaled-down minimum fleet) | **CHẠY 24/7 với 100% công suất** ở tất cả các Region |
+| **Chi phí vận hành** | Rẻ nhất ($) | Thấp ($$) | Trung bình ($$$) | Đắt nhất ($$$$) |
+| **RPO (Mất mát dữ liệu)** | Hàng giờ | Vài phút | Vài giây | Gần bằng 0 |
+| **RTO (Thời gian phục hồi)** | 24 giờ+ | Hàng chục phút | Vài phút | Tức thì (vài giây) |
+
+---
+
+## 4. Domain 3: Thiết Kế Kiến Trúc Hiệu Năng Cao (Design High-Performing Architectures - 24%)
+
+### 4.1. Từ Vựng & Thuật Ngữ Trọng Tâm
+* **EC2 Placement Groups**:
+  - **Cluster Placement Group**: Gom cụm các máy ảo vào cùng 1 rack mạng trong 1 AZ duy nhất $\rightarrow$ Đạt băng thông 100 Gbps, độ trễ cực thấp cho HPC và tính toán song song.
+  - **Spread Placement Group**: Đặt mỗi máy ảo trên một tủ rack phần cứng riêng biệt (tối đa 7 instances mỗi AZ) $\rightarrow$ Tối ưu khả năng chịu lỗi cho các ứng dụng quan trọng sống còn.
+  - **Partition Placement Group**: Chia AZ thành nhiều partition (mỗi partition chứa nhiều rack), các partition không dùng chung rack $\rightarrow$ Phù hợp cho cụm phân tán lớn như HDFS, Cassandra, Kafka.
+* **Mạng Hiệu Năng Cao (High-Performance Networking)**:
+  - **ENA (Elastic Network Adapter)**: Hỗ trợ băng thông lên tới 100 Gbps cho lưu lượng TCP/IP thông thường.
+  - **EFA (Elastic Fabric Adapter)**: Bổ sung tính năng **OS-bypass** cho ENA, cho phép ứng dụng bypass nhân Linux để giao tiếp trực tiếp với card mạng, bắt buộc cho các thư viện tính toán song song **MPI** và **NCCL**.
+* **Lưu Trữ Tốc Độ Cao**:
+  - **EC2 Instance Store**: Ổ đĩa NVMe SSD gắn vật lý trực tiếp vào máy chủ host $\rightarrow$ Hàng triệu IOPS, độ trễ microsecond, miễn phí đi kèm instance, nhưng là bộ nhớ tạm thời (**Ephemeral Storage** - mất dữ liệu khi stop/terminate).
+  - **EBS gp3**: 3,000 IOPS và 125 MB/s cơ sở miễn phí, cho phép nâng cấp IOPS (lên 16,000) và Throughput (lên 1,000 MB/s) độc lập với dung lượng đĩa.
+  - **EBS io2 Block Express**: Lên tới 256,000 IOPS, 4,000 MB/s throughput, độ bền 99.999%, hỗ trợ Multi-Attach (gắn vào tối đa 16 EC2 trong cùng 1 AZ).
+  - **Amazon FSx for Lustre**: Hệ thống tệp POSIX song song cực nhanh, tích hợp trực tiếp với S3 bucket (đọc/ghi thẳng vào S3), phục vụ xử lý dữ liệu lớn, render đồ họa 3D và Machine Learning.
+
+---
+
+## 5. Domain 4: Thiết Kế Kiến Trúc Tối Ưu Chi Phí (Design Cost-Optimized Architectures - 20%)
 
 ### 5.1. Bảng Quyết Định Tối Ưu Chi Phí Lưu Trữ S3
 
@@ -147,7 +152,7 @@ flowchart LR
 
 ---
 
-## 6. Top 15 Cặp Khái Niệm Rất Dễ Nhầm Lẫn Trong Đề Thi
+## 6. Top 20 Cặp Khái Niệm Dễ Nhầm Lẫn Trong Đề Thi
 
 | # | Khái Niệm A | Khái Niệm B | Điểm Khác Biệt Cốt Lõi Để Chọn Đúng Trong Đề Thi |
 |:---:| :--- | :--- | :--- |
@@ -166,4 +171,34 @@ flowchart LR
 | **13**| **DynamoDB Global Tables** | **Amazon Aurora Global Database** | • **DynamoDB Global Tables**: **Active-Active** (mọi Region đều nhận Write và Read, giải quyết xung đột bằng Last-writer-wins).<br>• **Aurora Global Database**: **Active-Passive** (1 Primary Writer Region duy nhất, các Region khác chỉ nhận Read). |
 | **14**| **CloudFront Price Classes** | **CloudFront Geo-Restrictions** | • **Price Classes**: Cắt giảm chi phí bằng cách không kích hoạt Edge Locations ở các vùng đắt đỏ (PriceClass_100/200/All).<br>• **Geo-Restrictions**: Chặn hoặc cho phép người dùng truy cập dựa trên quốc gia của họ (WhiteList / Blacklist). |
 | **15**| **Gateway VPC Endpoint** | **Interface VPC Endpoint** | • **Gateway Endpoint**: Miễn phí $0, cấu hình vào Route Table, chỉ dùng cho **S3** và **DynamoDB**.<br>• **Interface Endpoint**: Tính phí theo giờ + dung lượng data, dùng ENI có IP riêng, dùng cho tất cả dịch vụ AWS khác qua PrivateLink. |
+| **16**| **Amazon GuardDuty** | **Amazon Detective vs Amazon Macie** | • **GuardDuty**: Dịch vụ **phát hiện mối đe dọa (Threat Detection)** tự động bằng ML dựa trên logs (CloudTrail, VPC Flow, DNS).<br>• **Detective**: Dịch vụ **điều tra nguyên nhân gốc rễ (Root-Cause Investigation)** bằng đồ thị trực quan (Visual Graph).<br>• **Macie**: Dịch vụ **quét và bảo vệ dữ liệu nhạy cảm (PII / Sensitive Data)** trong S3. |
+| **17**| **RDS Multi-AZ (Instance / Cluster)** | **RDS Read Replicas** | • **Multi-AZ DB Instance**: Đồng bộ sang 1 Standby thụ động, KHÔNG nhận đọc, failover ~60–120s.<br>• **Multi-AZ DB Cluster**: Đồng bộ sang 2 Readable Standbys, CẢ 2 ĐỀU CHO PHÉP ĐỌC, failover ~35s.<br>• **Read Replicas**: Nhân bản bất đồng bộ mở rộng đọc (Read Scaling) hoặc DR Cross-Region. |
+| **18**| **Amazon EventBridge** | **Amazon AppFlow** | • **EventBridge**: Serverless **Event Bus** định tuyến sự kiện JSON thời gian thực từ AWS/SaaS để kích hoạt Lambda, SNS, Step Functions.<br>• **AppFlow**: Tích hợp luồng dữ liệu lớn (**Bulk/Incremental Data Transfer**) 2 chiều SaaS (Salesforce, Zendesk...) vào S3/Redshift qua PrivateLink không cần viết code. |
+| **19**| **S3 Object Lock (Gov / Comp)** | **S3 Glacier Vault Lock** | • **S3 Object Lock**: WORM cấp **S3 Object** (cần Versioning); Governance có thể bypass bằng quyền IAM đặc biệt; Compliance không ai xóa được kể cả Root.<br>• **Glacier Vault Lock**: WORM cấp **Glacier Vault** qua Vault Lock Policy (khóa trong 24 giờ, tuân thủ SEC 17a-4). |
+| **20**| **AWS Organizations SCPs** | **IAM Permission Boundaries** | • **SCPs**: Rào chắn an ninh tối đa (Guardrail) cấp **Root/OU/Member Account**, phủ quyết cả Root của Member Account.<br>• **IAM Permission Boundaries**: Giới hạn quyền tối đa cho **từng IAM User hoặc Role cụ thể** trong 1 Account. |
+
+### Chi Tiết Cặp Khái Niệm 16–20
+
+### 16. Amazon GuardDuty vs Amazon Detective vs Amazon Macie
+- **Amazon GuardDuty:** Dịch vụ **phát hiện mối đe dọa (Threat Detection)** tự động bằng ML dựa trên 3 nguồn log chính: CloudTrail Logs, VPC Flow Logs, và DNS Logs (cùng EKS Audit Logs, S3 Data Events). Từ khóa: `detect malicious activity`, `anomalous API calls`, `cryptocurrency mining`.
+- **Amazon Detective:** Dịch vụ **điều tra nguyên nhân gốc rễ (Root-Cause Investigation)** sau khi đã có cảnh báo bảo mật, sử dụng đồ thị trực quan (Visual Graph) để liên kết các sự kiện. Từ khóa: `investigate security findings`, `root cause analysis`, `interactive visualizations`.
+- **Amazon Macie:** Dịch vụ **quét và bảo vệ dữ liệu nhạy cảm (PII / Sensitive Data)** lưu trữ trên Amazon S3. Từ khóa: `discover PII`, `sensitive data in S3`, `HIPAA/GDPR data classification`.
+
+### 17. RDS Multi-AZ DB Instance vs RDS Multi-AZ DB Cluster vs RDS Read Replicas
+- **RDS Multi-AZ DB Instance (1 Standby):** Đồng bộ (Synchronous) sang 1 Standby thụ động ở AZ khác. Standby **KHÔNG** nhận truy vấn đọc, chỉ dùng cho High Availability (Failover ~60–120 giây).
+- **RDS Multi-AZ DB Cluster (2 Readable Standbys):** Đồng bộ (Semisynchronous) sang 2 Standby ở 2 AZ khác nhau. Cả 2 Standby **ĐỀU CHO PHÉP ĐỌC (Read-only traffic)**, giảm độ trễ ghi và rút ngắn thời gian Failover xuống ~35 giây.
+- **RDS Read Replicas:** Nhân bản bất đồng bộ (Asynchronous) tối đa 5–15 bản sao (trong cùng Region hoặc Cross-Region) chuyên dùng để **mở rộng quy mô đọc (Read Scaling)** hoặc làm DR Cross-Region.
+
+### 18. Amazon EventBridge vs Amazon AppFlow
+- **Amazon EventBridge:** Serverless **Event Bus** nhận và định tuyến các **sự kiện (events)** thời gian thực theo quy tắc lọc JSON từ dịch vụ AWS hoặc đối tác SaaS để kích hoạt Lambda, Step Functions, SNS.
+- **Amazon AppFlow:** Dịch vụ tích hợp truyền tải **luồng dữ liệu lớn (Bulk/Incremental Data Transfer)** 2 chiều không cần viết code (no-code) giữa các ứng dụng SaaS (Salesforce, ServiceNow, Zendesk, Slack) và AWS (S3, Redshift) qua mạng riêng AWS PrivateLink.
+
+### 19. S3 Object Lock (Governance vs Compliance Mode) vs S3 Glacier Vault Lock
+- **S3 Object Lock - Governance Mode:** Bảo vệ WORM cấp độ S3 Object (cần bật Versioning), nhưng người dùng có quyền IAM đặc biệt (`s3:BypassGovernanceRetention`) vẫn có thể xóa hoặc thay đổi thời hạn lưu trữ.
+- **S3 Object Lock - Compliance Mode:** Không bất kỳ ai — **kể cả tài khoản AWS Root User** — có thể xóa hoặc rút ngắn thời gian lưu trữ của Object cho đến khi hết hạn retention.
+- **S3 Glacier Vault Lock:** Áp dụng chính sách WORM cấp độ **Glacier Vault** thông qua Vault Lock Policy (có bước xác nhận khóa trong vòng 24 giờ) để đáp ứng tuân thủ pháp lý nghiêm ngặt (SEC Rule 17a-4).
+
+### 20. AWS Organizations SCPs vs IAM Permission Boundaries
+- **Service Control Policies (SCPs):** Hàng rào giới hạn quyền tối đa (Guardrail) áp dụng ở cấp độ **Organization Root, OU, hoặc Member Account**. SCP không tự cấp quyền và có hiệu lực lên cả IAM Users, Roles lẫn Root User của Member Account.
+- **IAM Permission Boundaries:** Giới hạn quyền tối đa áp dụng cho **từng IAM User hoặc IAM Role cụ thể** bên trong 1 AWS Account (quyền thực tế = giao thoa giữa Identity-based Policy và Permission Boundary).
 

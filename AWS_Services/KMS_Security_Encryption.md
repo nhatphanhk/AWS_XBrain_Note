@@ -2,7 +2,7 @@
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
-> **Các dịch vụ liên quan**: AWS KMS, AWS Secrets Manager, AWS Systems Manager Parameter Store, AWS CloudHSM, AWS WAF, AWS Shield, Amazon GuardDuty, Amazon Inspector, Amazon Macie.
+> **Các dịch vụ liên quan**: AWS KMS, AWS Secrets Manager, AWS Systems Manager Parameter Store, AWS CloudHSM, AWS WAF, AWS Shield, Amazon GuardDuty, Amazon Inspector, Amazon Macie, Amazon Detective, AWS Firewall Manager.
 
 ---
 
@@ -178,6 +178,28 @@ flowchart LR
     Insp --> Hub
     Macie --> Hub
 ```
+
+---
+
+### 6. Quản Trị Tường Lửa & Điều Tra Sự Cố Bảo Mật (Firewall Manager & Detective)
+
+### Amazon Detective (Điều Tra Nguyên Nhân Gốc Rễ Sự Cố Bảo Mật)
+- **Bản chất:** Dịch vụ phân tích và điều tra bảo mật tự động sử dụng Machine Learning, phân tích thống kê và lý thuyết đồ thị (Graph Theory) để dựng lại toàn bộ ngữ cảnh của một cuộc tấn công.
+- **Nguồn dữ liệu đầu vào:** Tự động thu thập và tổng hợp log từ **AWS CloudTrail**, **Amazon VPC Flow Logs**, và các phát hiện từ **Amazon GuardDuty** (cùng EKS Audit Logs, Security Hub).
+- **Bẫy thi SAA-C03:**
+  - Khi đề bài hỏi **"Phát hiện (Detect)"** hành vi bất thường -> Chọn **Amazon GuardDuty**.
+  - Khi đề bài hỏi **"Điều tra nguyên nhân gốc rễ (Investigate root cause / Analyze security findings quickly with visualizations)"** -> Chọn **Amazon Detective**.
+  - Khi đề bài hỏi **"Tổng hợp cảnh báo (Aggregate findings) và kiểm tra tiêu chuẩn CIS/PCI-DSS"** -> Chọn **AWS Security Hub**.
+
+### AWS Firewall Manager (Quản Trị Tường Lửa Tập Trung Đa Tài Khoản)
+- **Bản chất:** Dịch vụ quản lý bảo mật tập trung cho phép cấu hình và áp đặt tự động các quy tắc tường lửa xuyên suốt toàn bộ các tài khoản và OU trong **AWS Organizations**.
+- **Phạm vi chính sách hỗ trợ:**
+  1. **AWS WAF** (trên ALB, API Gateway, CloudFront).
+  2. **AWS Shield Advanced** (bảo vệ DDoS nâng cao).
+  3. **VPC Security Groups** (kiểm toán và áp đặt Security Group chuẩn).
+  4. **AWS Network Firewall** (tường lửa cấp VPC).
+  5. **Amazon Route 53 Resolver DNS Firewall**.
+- **Bẫy thi SAA-C03:** Nếu đề bài nêu kịch bản *"Có hàng chục/hàng trăm tài khoản trong AWS Organizations, muốn tự động áp dụng bộ rule WAF hoặc Security Group cho mọi tài nguyên mới tạo ra"* -> Chọn **AWS Firewall Manager** (không dùng script Lambda tự viết hay cấu hình thủ công từng tài khoản).
 
 ---
 

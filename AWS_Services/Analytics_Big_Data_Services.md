@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: AWS Analytics & Big Data Services (Athena, Glue, Lake Formation, EMR, Kinesis, Redshift, OpenSearch, QuickSight)
+# Tài Liệu Học Tập Chuyên Sâu: AWS Analytics & Big Data Services (Athena, Glue, Lake Formation, EMR, Kinesis, Redshift, OpenSearch, QuickSight, Timestream)
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Big Data Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -117,9 +117,12 @@ flowchart TD
   - Không cần di chuyển hay sao chép dữ liệu vật lý (No data duplication).
   - Sử dụng giao thức **Resource Links** hoặc chia sẻ qua **AWS RAM (Resource Access Manager)** tích hợp trong Lake Formation.
 * **Phân quyền bảo mật chi tiết (Fine-grained Access Control - FGAC)**:
+  - Cho phép cấp quyền truy cập dữ liệu tinh chỉnh theo mô hình giống RDBMS (`GRANT` / `REVOKE`) xuống tới cấp độ **Database, Table, Column (Cột), Row (Hàng), và Cell-level (Ô dữ liệu)** thông qua Tag-Based Access Control (LF-TBAC).
+  - Áp dụng đồng nhất một chính sách phân quyền duy nhất cho nhiều dịch vụ truy vấn cùng lúc gồm **Amazon Athena, Amazon Redshift Spectrum, Amazon EMR, và AWS Glue** mà không cần cấu hình hàng trăm S3 Bucket Policies phức tạp.
   - **Column-level security**: Cho phép bộ phận Marketing xem cột `customer_name`, `email` nhưng ẩn cột `credit_card_number`.
   - **Row-level security**: Cho phép quản lý chi nhánh chỉ xem các dòng có `region = 'Asia-Pacific'`.
   - **Data Filters**: Kết hợp lọc dòng và lọc cột trong một chính sách duy nhất.
+- **Bẫy thi SAA-C03:** Khi đề bài yêu cầu *"Ẩn các cột chứa thông tin nhạy cảm (PII) trong S3 Data Lake đối với nhóm Data Analyst khi họ truy vấn bằng Athena hoặc Redshift Spectrum với chi phí vận hành thấp nhất"* -> Chọn **AWS Lake Formation** (Fine-grained column/row-level security).
 
 ---
 
@@ -241,6 +244,15 @@ flowchart TD
   - Tự động co giãn theo dung lượng đọc/ghi (chế độ On-Demand hoặc Provisioned Capacity).
   - Tự động sao chép dữ liệu trên 3 Availability Zones để đảm bảo tính sẵn sàng cao 99.999%.
   - Quản trị viên không bao giờ phải lo lắng về việc cấu hình cụm, vá lỗi OS, phân vùng lại hạt nhân hay bảo trì node Cassandra như khi tự cài trên EC2 (*TD-Set5 Q15*).
+
+#### 7.3. Amazon Timestream (Cơ Sở Dữ Liệu Chuỗi Thời Gian - Time-Series Database)
+- **Bản chất:** Cơ sở dữ liệu chuyên dụng cho dữ liệu chuỗi thời gian (Time-Series Data) như cảm biến IoT, telemetry công nghiệp, metrics hạ tầng DevOps và phân tích hành vi ứng dụng theo thời gian thực (hỗ trợ cả kiến trúc Serverless và Timestream for InfluxDB).
+- **Cơ chế phân tầng lưu trữ tự động (Automated Storage Tiering):**
+  - Dữ liệu mới (Recent data) được ghi vào tầng **In-Memory Store** để truy vấn thời gian thực tốc độ cực cao.
+  - Dữ liệu lịch sử (Historical data) tự động được chuyển xuống tầng **Magnetic Store** chi phí thấp theo chính sách vòng đời (Lifecycle policy) do người dùng cấu hình mà không cần viết script ETL.
+- **Bẫy thi SAA-C03:** Khi đề bài xuất hiện từ khóa `millions of IoT sensor events per second`, `time-series data`, `analyze data over time intervals`, `automatic tiering from memory to cost-optimized storage` -> Chọn **Amazon Timestream** (nhanh hơn và rẻ hơn nhiều so với việc dùng RDS hay DynamoDB cho dữ liệu chuỗi thời gian).
+
+---
 
 ### 8. Amazon QuickSight: Kiến Trúc Serverless Business Intelligence, Động Cơ SPICE & Bảo Mật Dữ Liệu (RLS/CLS)
 - **Tổng quan kiến trúc**: Amazon QuickSight là dịch vụ BI đám mây đầu tiên áp dụng mô hình Serverless hoàn toàn, co giãn tự động từ 10 đến 100,000+ người dùng mà không cần cung cấp hay quản trị máy chủ.

@@ -57,6 +57,7 @@ flowchart TD
   - **Value**: Nội dung dữ liệu (kích thước từ 0 byte tới **tối đa 5 TB** cho một object đơn lẻ; bắt buộc phải dùng **Multi-part Upload** cho tệp tin > 5 GB).
   - **Version ID**: Định danh phiên bản khi bật **S3 Versioning**.
   - **Metadata**: Thông tin mô tả hệ thống (`Content-Type`, `Cache-Control`) hoặc do người dùng tự định nghĩa (`x-amz-meta-*`).
+* **Strong Read-After-Write Consistency**: S3 cung cấp **Strong Consistency** tức thì cho mọi thao tác `PUT` (cả tạo mới lẫn ghi đè), `DELETE` và `LIST` trên tất cả các Region ngay sau khi nhận phản hồi HTTP 200 thành công. Mỗi prefix hỗ trợ tối thiểu **3,500 PUT/COPY/POST/DELETE** và **5,500 GET/HEAD requests/giây** (không cần random hóa tên prefix như kiến trúc cũ).
 * ⚠️ **LƯU Ý THI CỬ & KIẾN TRÚC 2026 - ĐỊNH DẠNG URL**:
   - **S3 Path-Style Access `[Deprecated]`**: `https://s3.amazonaws.com/bucket-name/key` hiện đã bị AWS ngừng khuyến nghị và không hỗ trợ cho các bucket tạo mới.
   - **Virtual-Hosted Style Access (Bắt buộc chuẩn)**: `https://bucket-name.s3.region.amazonaws.com/key`.
@@ -75,6 +76,25 @@ flowchart TD
 | **S3 Glacier Instant Retrieval** | 99.999999999% | 99.9% | Đa AZs ($\ge$ 3 AZ) | **90 ngày** | **\$0.03 / GiB** | Dữ liệu lưu trữ y tế, hồ sơ khách hàng chỉ truy cập 1 lần mỗi quý nhưng cần lấy lại trong **mili-giây**. |
 | **S3 Glacier Flexible Retrieval** | 99.999999999% | 99.99% | Đa AZs ($\ge$ 3 AZ) | **90 ngày** | Có phí (Trừ Bulk) | Lưu trữ dài hạn: Expedited (1–5 phút), Standard (3–5 giờ), Bulk (5–12 giờ miễn phí). |
 | **S3 Glacier Deep Archive** | 99.999999999% | 99.99% | Đa AZs ($\ge$ 3 AZ) | **180 ngày** | Có phí | Lưu trữ tuân thủ pháp lý 7–10 năm; giá rẻ nhất thế giới (< \$1/TB/tháng). Thời gian rút dữ liệu từ 12 đến 48 giờ. |
+
+### Chuyên Sâu: Amazon S3 Express One Zone (Directory Buckets)
+- **Bản chất:** Phân lớp lưu trữ đám mây tốc độ cao nhất của S3, được thiết kế chuyên biệt cho các ứng dụng nhạy cảm về độ trễ yêu cầu truy xuất dữ liệu ở mức **single-digit millisecond (dưới 10ms)**.
+- **Đặc điểm kỹ thuật cốt lõi:**
+  - Sử dụng loại bucket đặc biệt gọi là **S3 Directory Bucket** (cấu trúc phân cấp thư mục thực sự thay vì flat namespace như General Purpose Bucket), hỗ trợ tới **200,000 TPS đọc / 100,000 TPS ghi** mặc định và mở rộng tới hàng triệu requests/giây.
+  - Dữ liệu được lưu trữ trong **1 Availability Zone (AZ) duy nhất** do người dùng chỉ định, cho phép đặt chung (co-locate) S3 Express One Zone cùng một AZ với các cụm compute (EC2, EKS, EMR, SageMaker) để tối ưu độ trễ mạng và giảm chi phí compute.
+  - Tốc độ truy xuất nhanh gấp **10 lần** và chi phí mỗi request thấp hơn **50%** so với S3 Standard.
+- **Bẫy thi SAA-C03:** Khi đề bài yêu cầu *"Object storage cho Machine Learning training, phân tích tài chính thời gian thực hoặc Apache Spark cần độ trễ vài mili-giây và hàng trăm nghìn requests/giây trong cùng 1 AZ"* -> Chọn **S3 Express One Zone**.
+
+### Mountpoint for Amazon S3 (Mount S3 Thành Local File System)
+- **Bản chất:** File client mã nguồn mở của AWS cho phép gắn (mount) trực tiếp một S3 bucket lên Linux EC2/Container dưới dạng hệ thống tệp cục bộ (local file system) và tự động dịch các lệnh gọi file API sang S3 REST API với băng thông đọc cực cao.
+- **Đặc điểm & Giới hạn:**
+  - Hỗ trợ đọc tuần tự/ngẫu nhiên tốc độ cao (Terabytes tới Petabytes) và ghi tuần tự tạo file mới.
+  - **Không** hỗ trợ đầy đủ các thao tác POSIX phức tạp như sửa đổi giữa file hiện có (in-place file modification), đổi tên thư mục, hoặc khóa file (POSIX file locking).
+- **Bẫy thi SAA-C03:** Nếu ứng dụng ML/Rendering trên Linux chỉ cần đọc/ghi tuần tự dữ liệu trên S3 qua giao diện file cục bộ với chi phí thấp nhất -> Chọn **Mountpoint for Amazon S3**. Nếu ứng dụng yêu cầu **đầy đủ POSIX-compliant file system kèm file locking** liên kết với S3 -> Chọn **Amazon FSx for Lustre**.
+
+### Phân Biệt S3 Object Lock và S3 Glacier Vault Lock
+- **S3 Object Lock:** Áp dụng mô hình WORM (Write-Once-Read-Many) ở cấp độ từng **S3 Object** (yêu cầu bật S3 Versioning). Gồm 2 chế độ: **Governance Mode** (user có quyền `s3:BypassGovernanceRetention` có thể ghi đè/xóa) và **Compliance Mode** (bất khả xâm phạm, ngay cả Root User cũng không thể xóa trước hạn) cùng tính năng **Legal Hold** (khóa vô thời hạn phục vụ điều tra pháp lý).
+- **S3 Glacier Vault Lock:** Áp dụng mô hình WORM ở cấp độ **Glacier Vault** bằng một **Vault Lock Policy**. Quy trình gồm 2 bước: khởi tạo khóa (`InitiateVaultLock`) và xác nhận khóa (`CompleteVaultLock`) trong vòng **24 giờ**. Một khi đã khóa hoàn tất, chính sách này không thể thay đổi hay xóa bỏ.
 
 ---
 
@@ -132,6 +152,7 @@ flowchart TD
 
 * ⚠️ **S3 ACLs `[Deprecated]`**: Access Control Lists là cơ chế phân quyền kế thừa cũ. Chuẩn mực bảo mật hiện nay yêu cầu kích hoạt tùy chọn **Bucket Owner Enforced** để vô hiệu hóa hoàn toàn ACLs và tập trung kiểm soát quyền qua **IAM Policies** và **S3 Bucket Policies**.
 * **S3 Block Public Access (BPA)**: Chốt chặn bảo vệ an toàn 4 lớp tập trung, ngăn ngừa triệt để việc vô tình để lộ dữ liệu nhạy cảm ra Internet do cấu hình sai Bucket Policy hoặc ACLs.
+* **Amazon S3 Default Encryption**: Mọi S3 bucket mới và mọi object tải lên S3 đều **mặc định được mã hóa tự động bằng SSE-S3 (AES-256)** miễn phí mà không cần cấu hình thêm. Chỉ chuyển sang **SSE-KMS** khi cần quản lý Key Policy riêng, xoay vòng khóa (Key Rotation) hoặc kiểm toán lời gọi `Decrypt`/`GenerateDataKey` trên CloudTrail, và luôn bật **S3 Bucket Keys** để giảm tới 99% lưu lượng gọi KMS API.
 * **S3 Bucket Keys**: Tính năng cốt lõi khi dùng `SSE-KMS`. Giúp S3 tự sinh khóa tạm thời cấp bucket, giảm số lượng cuộc gọi API tới AWS KMS tới **99%**, tiết kiệm hàng ngàn USD cho các kho dữ liệu lớn.
 
 ---

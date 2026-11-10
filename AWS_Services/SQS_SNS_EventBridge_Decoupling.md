@@ -2,7 +2,7 @@
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
-> **Các dịch vụ liên quan**: Amazon SQS, Amazon SNS, Amazon EventBridge, Amazon Kinesis, Amazon MQ.
+> **Các dịch vụ liên quan**: Amazon SQS, Amazon SNS, Amazon EventBridge, Amazon Kinesis, Amazon MQ, Amazon AppFlow.
 
 ---
 
@@ -135,6 +135,25 @@ flowchart LR
   - Cung cấp kết nối điểm-điểm (Point-to-Point) tích hợp sẵn giữa Nguồn (Source: DynamoDB Streams, Kinesis, SQS) và Đích (Target: Step Functions, Lambda, API Destinations) với các bước lọc (**Filtering**) và làm giàu dữ liệu (**Enrichment**) mà không cần viết mã nguồn trung gian.
 - **EventBridge Scheduler**:
   - Dịch vụ đặt lịch tác vụ phi máy chủ thế hệ mới, cho phép lập lịch hàng triệu tác vụ định kỳ (Cron/Rate) hoặc tác vụ kích hoạt một lần duy nhất (**One-time Schedules**) với độ trễ thấp và độ tin cậy cao.
+
+---
+
+### 5. Amazon AppFlow (Tích Hợp Dữ Liệu SaaS Không Cần Viết Code)
+- **Bản chất:** Dịch vụ tích hợp hoàn toàn được quản lý (Fully Managed) cho phép tự động hóa luồng truyền dữ liệu 2 chiều bảo mật giữa các ứng dụng **SaaS** (như Salesforce, ServiceNow, SAP, Zendesk, Marketo, Slack, Google Analytics) và các dịch vụ AWS (như **Amazon S3, Amazon Redshift**) mà **không cần viết code**.
+- **Tính năng nổi bật:**
+  - Hỗ trợ chạy theo lịch (Scheduled), theo sự kiện (Event-triggered) hoặc theo yêu cầu (On-demand), đồng thời tích hợp sẵn khả năng lọc (filtering), ánh xạ trường dữ liệu (mapping), che giấu dữ liệu nhạy cảm (masking) và xác thực (validation).
+  - Tích hợp trực tiếp với **AWS PrivateLink** để truyền dữ liệu từ các đối tác SaaS hỗ trợ PrivateLink (như Salesforce, Trend Micro, Snowflake) vào thẳng VPC/S3/Redshift mà **không đi qua mạng Internet công cộng**.
+- **Bẫy thi SAA-C03:** Khi gặp bài toán *"Ingest dữ liệu khách hàng từ Salesforce hoặc phiếu hỗ trợ từ ServiceNow/Zendesk vào S3 hoặc Redshift định kỳ/theo sự kiện một cách bảo mật (qua PrivateLink) với LEAST development effort"* -> Chọn **Amazon AppFlow** (không dùng Lambda tự viết API poller hay AWS DMS).
+
+#### So Sánh: Amazon EventBridge vs Amazon AppFlow
+
+| Tiêu chí | Amazon EventBridge | Amazon AppFlow |
+| :--- | :--- | :--- |
+| **Bản chất** | Serverless **Event Bus** chuyên định tuyến các **sự kiện (Events)** nhỏ thời gian thực | Dịch vụ tích hợp truyền tải **luồng dữ liệu lớn (Bulk / Incremental Data Transfer)** 2 chiều |
+| **Quy mô dữ liệu** | Payload nhỏ (tối đa 256 KB cho mỗi sự kiện JSON) | Dữ liệu lớn (hàng Gigabytes / Terabytes dữ liệu bảng, đối tượng) |
+| **Mục đích chính** | Kích hoạt tác vụ (Event-driven): Lambda, Step Functions, SNS khi có sự kiện thay đổi trạng thái | Đồng bộ và nạp dữ liệu (Data Ingestion/Sync): Ingest dữ liệu SaaS vào S3 Data Lake, Redshift Data Warehouse |
+| **Bảo mật kết nối** | HTTPS / VPC Endpoints | Tích hợp gốc với **AWS PrivateLink** cho kết nối SaaS riêng tư không qua Internet |
+| **Lập trình** | Yêu cầu định nghĩa JSON filter patterns | Giao diện kéo thả No-Code: mapping trường, filtering, data masking tự động |
 
 ---
 

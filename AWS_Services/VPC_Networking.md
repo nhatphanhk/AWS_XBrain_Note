@@ -209,6 +209,18 @@ flowchart TD
   - Tạo một **Secondary Elastic Network Interface (ENI)** gắn địa chỉ Private IPv4 cố định trỏ tới tên miền nội bộ của ứng dụng (*TD-Set2 Q38*).
   - Khi máy chính gặp sự cố, gỡ bỏ Secondary ENI khỏi máy cũ và gắn nóng (**Hot Attach**) sang máy chủ dự phòng (Standby Instance) đã cấu hình sẵn. Luồng lưu lượng mạng được phục hồi chỉ trong vài giây.
 
+### 10. Giám Sát Mạng Chuyên Sâu: VPC Flow Logs & VPC Traffic Mirroring
+
+### VPC Traffic Mirroring (Sao Chép Gói Tin Mạng Thực Tế)
+- **Bản chất:** Tính năng cho phép sao chép toàn bộ lưu lượng mạng (inbound và outbound raw packets) từ **Elastic Network Interface (ENI)** của các EC2 instances và gửi tới các thiết bị bảo mật/giám sát ngoài luồng (out-of-band security & monitoring appliances) để phân tích gói tin sâu (Deep Packet Inspection - DPI).
+- **3 Thành phần cấu hình:**
+  1. **Mirror Source:** ENI của tài nguyên cần giám sát (ví dụ: EC2 instance trên hệ thống Nitro).
+  2. **Mirror Filter:** Quy tắc lọc xác định loại lưu lượng nào (protocol, port, CIDR, inbound/outbound) sẽ được sao chép.
+  3. **Mirror Target:** Đích nhận gói tin sao chép — có thể là một **ENI** của máy ảo bảo mật, một **Network Load Balancer (NLB)**, hoặc một **Gateway Load Balancer Endpoint**.
+- **Bẫy thi SAA-C03 (Phân biệt VPC Flow Logs vs VPC Traffic Mirroring):**
+  - **VPC Flow Logs:** Chỉ ghi lại **siêu dữ liệu (Metadata)** của kết nối (Source/Dest IP, Port, Protocol, Byte count, Action ACCEPT/REJECT), **KHÔNG** chứa nội dung gói tin (packet payload).
+  - **VPC Traffic Mirroring:** Sao chép **toàn bộ gói tin thực tế (Raw Packet Payload)** để phục vụ phát hiện xâm nhập (IDS), phân tích mã độc hoặc điều tra pháp y mạng (Network Forensics).
+
 ---
 
 ### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)

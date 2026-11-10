@@ -1,9 +1,9 @@
 # 📘 Bộ Từ Điển Thuật Ngữ & Cẩm Nang Giải Mã Đề Thi AWS SAA-C03 (Exam Vocabulary & Keyword Playbook)
 
 > **Mục tiêu**: Cung cấp từ điển thuật ngữ chuyên biệt và bộ quy tắc giải mã từ khóa (Keyword Clues) trong các đề thi AWS Certified Solutions Architect - Associate (**SAA-C03**).  
-> **Nguồn trích xuất thực chứng**: Tổng hợp và chuẩn hóa trực tiếp từ **1,064 câu hỏi thực chiến** qua 17 bộ đề thi thực hành chuyên sâu:
+> **Nguồn trích xuất thực chứng**: Tổng hợp và chuẩn hóa trực tiếp từ **1,129+ câu hỏi thực chiến** qua 18 bộ đề thi thực hành chuyên sâu:
 > - **Cloud Mentor (PT1 đến PT6)**: 390 câu hỏi tình huống chuyên sâu.
-> - **Udemy Stephane Maarek (PT1, PT2, PT3, PT6)**: 260 câu hỏi chuẩn hóa cấu trúc đề thi AWS.
+> - **Udemy Stephane Maarek (PT1, PT2, PT3, PT4, PT6)**: 325 câu hỏi chuẩn hóa cấu trúc đề thi AWS.
 > - **Tutorials Dojo - Jon Bonso (Set 1 đến Set 6 & Set 8)**: 414 câu hỏi thực chiến với giải thích chi tiết đáp án đúng/sai, sơ đồ kiến trúc và cheat sheets.  
 > **Tài liệu liên kết**: [Bảng thuật ngữ kỹ thuật tổng quan (GLOSSARY.md)](./GLOSSARY.md) | [Thư viện 21 chuyên đề AWS Services](./AWS_Services/) | [Bộ đề Cloud Mentor (PT1 - PT6)](./Practices_Test/Cloud_Mentor/) | [Bộ đề Udemy (PT1 - PT6)](./Practices_Test/Udemy/) | [Bộ đề Tutorials Dojo (Set 1 - Set 6, Set 8)](./Practices_Test/Dojo/)
 
@@ -354,7 +354,7 @@ Trong đề thi AWS, có những cụm từ cố định đóng vai trò như **
 
 ## Phần 4: Ma Trận Ánh Xạ Từ Khóa $\rightarrow$ Kiến Trúc Chuẩn
 
-Dưới đây là bảng "phản xạ có điều kiện" được đúc kết từ **1,064 câu hỏi thực chiến** (Cloud Mentor, Udemy, Tutorials Dojo):
+Dưới đây là bảng "phản xạ có điều kiện" được đúc kết từ **1,129+ câu hỏi thực chiến** (Cloud Mentor, Udemy, Tutorials Dojo):
 
 ```mermaid
 mindmap
@@ -454,6 +454,12 @@ mindmap
 | Chiến lược DR chi phí thấp: Database chạy liên tục, máy chủ tính toán tắt hoàn toàn chỉ bật khi thảm họa | **Pilot Light Disaster Recovery** | RPO tính bằng giây/phút (DB replicated), RTO tính bằng hàng chục phút (khởi động máy ảo EC2 từ AMIs/IaC templates khi có thảm họa). | TD-Set1 Q39, U-PT4 Q29 |
 | Chiến lược DR RTO ngắn: Cụm máy chủ thu nhỏ (scaled-down fleet) chạy 24/7 sẵn sàng scale up ngay | **Warm Standby Disaster Recovery** | RPO gần bằng 0, RTO tính bằng vài phút (hệ thống thu nhỏ chạy sẵn 24/7 ở secondary region, chỉ cần scale capacity lên khi thảm họa). | TD-Set3 Q50, U-PT2 Q25 |
 | Tích hợp dữ liệu SaaS (Salesforce, ServiceNow, Slack) an toàn vào S3/Redshift qua PrivateLink | **AWS AppFlow** | Tích hợp SaaS hai chiều no-code, hỗ trợ kích hoạt theo lịch hoặc sự kiện, mã hóa KMS và chạy trên mạng riêng AWS PrivateLink. | TD-Set5 Q18, U-PT6 Q31 |
+| Single-digit millisecond S3 latency, Co-locate storage and compute in 1 AZ, High-request-rate ML training | **[Amazon S3 Express One Zone (Directory Bucket)](https://aws.amazon.com/s3/storage-classes/express-one-zone/)** | Lưu trong 1 AZ duy nhất dưới dạng Directory Bucket, nhanh gấp 10 lần S3 Standard, giảm 50% chi phí request. | SAA-C03 Update |
+| Mount S3 bucket as local Linux file system, High read throughput without POSIX locking | **[Mountpoint for Amazon S3](https://aws.amazon.com/s3/features/mountpoint/)** | Chuyển đổi lệnh file local sang S3 REST API; nếu cần đầy đủ POSIX locking thì chọn [Amazon FSx for Lustre](https://aws.amazon.com/fsx/lustre/). | SAA-C03 Update |
+| Migrate Apache Cassandra to AWS, No cluster management / CQL compatible | **[Amazon Keyspaces (for Apache Cassandra)](https://aws.amazon.com/keyspaces/)** | Serverless Cassandra, hỗ trợ On-Demand và Provisioned capacity kèm Auto Scaling. | TD-Set4 Q61, U-PT3 Q58 |
+| Copy raw network packets from EC2 ENI, Out-of-band IDS / deep packet inspection | **[VPC Traffic Mirroring](https://docs.aws.amazon.com/vpc/latest/mirroring/what-is-traffic-mirroring.html)** | Sao chép toàn bộ gói tin thực tế (khác với VPC Flow Logs chỉ ghi metadata header). | SAA-C03 Update |
+| Download ISO / SOC / PCI-DSS compliance reports, Accept HIPAA BAA agreement | **[AWS Artifact](https://aws.amazon.com/artifact/)** | Cổng tải tài liệu kiểm toán & ký thỏa thuận pháp lý (không nhầm với AWS Audit Manager hay AWS Config). | SAA-C03 Update |
+| Extract text, tables, and forms from scanned PDFs/invoices using OCR + ML | **[Amazon Textract](https://aws.amazon.com/textract/)** | Trích xuất cấu trúc bảng/form từ ảnh/PDF (không nhầm với [Amazon Comprehend](https://aws.amazon.com/comprehend/) dùng phân tích ngữ nghĩa NLP). | SAA-C03 Update |
 
 ---
 
@@ -633,6 +639,22 @@ Dưới đây là bảng giải nghĩa chi tiết hơn 90 thuật ngữ cốt l�
 
 * **AWS Transfer Family**: Dịch vụ quản lý cổng truyền tải tệp tin an toàn (Secure File Transfer) hoàn toàn phi máy chủ của AWS. Cung cấp các endpoint công khai hoặc nội bộ hỗ trợ đầy đủ các giao thức truyền tệp tiêu chuẩn công nghiệp: **SFTP (SSH File Transfer Protocol)**, **FTPS (FTP over SSL/TLS)**, **FTP**, và **AS2 (Applicability Statement 2)**. Toàn bộ tệp tin tải lên được lưu trữ trực tiếp nguyên vẹn trên **Amazon S3** hoặc **Amazon EFS**. Hỗ trợ tích hợp xác thực người dùng linh hoạt với AWS IAM, Microsoft Active Directory, Okta hoặc API Gateway tùy chỉnh.
 
+* **Amazon Detective**: Dịch vụ phân tích và điều tra bảo mật tự động sử dụng Machine Learning, phân tích thống kê và lý thuyết đồ thị (Graph Theory) để phân tích nguyên nhân gốc rễ (Root Cause Analysis) sau khi có cảnh báo an ninh từ GuardDuty, VPC Flow Logs và CloudTrail.
+
+* **AWS Firewall Manager**: Dịch vụ quản trị tập trung cấu hình tường lửa đa tài khoản trong AWS Organizations, cho phép tự động áp đặt các bộ quy tắc WAF, Shield Advanced, Network Firewall, Route 53 DNS Firewall và Security Groups cho mọi tài khoản và VPC mới tạo.
+
+* **AWS Artifact**: Cổng thông tin tự phục vụ cung cấp quyền truy cập theo yêu cầu vào các báo cáo kiểm toán bảo mật của AWS (ISO 27001, SOC 1/2/3, PCI-DSS) và quản lý các thỏa thuận pháp lý (như HIPAA BAA Agreement).
+
+* **Amazon S3 Express One Zone**: Phân lớp lưu trữ hiệu năng cao nhất của S3 dạng Directory Bucket, đặt tại 1 Availability Zone duy nhất, cung cấp độ trễ truy xuất mức single-digit millisecond, nhanh gấp 10 lần và giảm 50% chi phí request so với S3 Standard cho các tác vụ AI/ML và phân tích thời gian thực.
+
+* **Mountpoint for Amazon S3**: File client mã nguồn mở cho Linux cho phép gắn (mount) trực tiếp S3 bucket thành local file system với băng thông đọc tuần tự/ngẫu nhiên cao cho các ứng dụng ML/Data processing mà không cần POSIX locking đầy đủ.
+
+* **VPC Traffic Mirroring**: Tính năng sao chép toàn bộ gói tin mạng thực tế (inbound/outbound raw packet payload) từ ENI của máy ảo EC2 gửi tới thiết bị giám sát mạng out-of-band hoặc NLB để phân tích gói tin sâu (Deep Packet Inspection - DPI) và phát hiện xâm nhập.
+
+* **Amazon Timestream**: Cơ sở dữ liệu serverless chuyên dụng cho chuỗi thời gian (Time-Series Data), tự động phân tầng dữ liệu từ In-Memory Store (cho truy vấn real-time) xuống Magnetic Store (chi phí thấp cho dữ liệu lịch sử) phục vụ giám sát IoT và telemetry.
+
+* **Amazon Textract**: Dịch vụ Machine Learning tự động trích xuất văn bản in, chữ viết tay, bảng biểu (Tables) và cặp trường biểu mẫu (Key-Value forms) từ tài liệu quét (PDF, ảnh hóa đơn, hồ sơ bệnh án).
+
 * **4 Chiến Lược Khôi Phục Thảm Họa (Disaster Recovery Strategies)**:
   - **1. Backup and Restore (Sao lưu & Khôi phục)**: RPO tính bằng giờ, RTO tính bằng ngày/24h+. Dữ liệu được sao lưu định kỳ lên S3/Glacier; khi thảm họa xảy ra mới bắt đầu tạo hạ tầng mới từ bản sao lưu. Chi phí rẻ nhất ($).
   - **2. Pilot Light (Ngọn lửa mồi)**: RPO tính bằng phút, RTO tính bằng hàng chục phút. Dữ liệu cốt lõi (Database) luôn chạy và được nhân bản liên tục sang Region dự phòng; toàn bộ máy chủ tính toán (EC2) **hoàn toàn TẮT (0 instance)**, chỉ lưu AMIs và CloudFormation templates sẵn sàng khởi động khi thảm họa. Chi phí thấp ($$).
@@ -680,6 +702,6 @@ flowchart TD
 
 - 📝 [Bộ đề thi thực hành Tutorials Dojo - Jon Bonso (Set 1 đến Set 6 & Set 8 - 414 câu)](./Practices_Test/Dojo/)
 - 📝 [Bộ đề thi thực hành Cloud Mentor (PT1 đến PT6 - 390 câu)](./Practices_Test/Cloud_Mentor/)
-- 📝 [Bộ đề thi thực hành Udemy - Stephane Maarek (PT1 đến PT6 - 260 câu)](./Practices_Test/Udemy/)
+- 📝 [Bộ đề thi thực hành Udemy - Stephane Maarek (PT1 đến PT4, PT6 - 325 câu)](./Practices_Test/Udemy/)
 - 📚 [Thư viện tài liệu chuyên sâu 21 chuyên đề Master AWS Services](./AWS_Services/)
 - 📖 [Bảng thuật ngữ công nghệ Cloud & DevOps tổng quát (GLOSSARY.md)](./GLOSSARY.md)

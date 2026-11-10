@@ -2,6 +2,7 @@
 
 > **Mục tiêu**: Cung cấp từ điển thuật ngữ chuẩn hóa Anh - Việt chuyên sâu về AWS, Cloud DevOps, Kiến trúc mạng (Networking), Bảo mật (Security), Tự động hóa hạ tầng (IaC) và Khả năng quan sát (Observability).  
 > **Tài liệu luyện thi chuyên sâu**: 👉 Xem ngay **[Cẩm Nang Từ Vựng & Giải Mã Đề Thi AWS SAA-C03 (EXAM_VOCABULARY.md)](./EXAM_VOCABULARY.md)** (Tổng hợp từ khóa, bẫy thi và ma trận ánh xạ từ 650 câu hỏi qua 10 bộ đề thi thực hành Cloud Mentor & Udemy).  
+> 💡 **Tra cứu nhanh trước giờ thi:** Xem thêm [Bảng Phản Xạ 60 Giây & Top 20 Cặp Khái Niệm Dễ Nhầm Lẫn (EXAM_VOCABULARY_INDEX.md)](./Practices_Test/EXAM_VOCABULARY_INDEX.md).  
 > **Nguyên tắc**: Giữ nguyên thuật ngữ tiếng Anh chuẩn công nghiệp, giải thích nghĩa tiếng Việt chính xác và nêu rõ ngữ cảnh ứng dụng thực tế trong công việc kỹ thuật Cloud/DevOps.
 
 ---

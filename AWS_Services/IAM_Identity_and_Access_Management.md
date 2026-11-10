@@ -2,7 +2,7 @@
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Senior AWS Solutions Architect & Cloud DevOps Engineer (cập nhật mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
-> **Các dịch vụ liên quan**: AWS IAM, AWS STS, AWS Organizations, AWS IAM Identity Center (AWS SSO), AWS Directory Service, AWS Control Tower, AWS IAM Access Analyzer.
+> **Các dịch vụ liên quan**: AWS IAM, AWS STS, AWS Organizations, AWS IAM Identity Center (AWS SSO), AWS Directory Service, AWS Control Tower, AWS IAM Access Analyzer, AWS Artifact.
 
 ---
 
@@ -174,6 +174,24 @@ Khi bạn cấp quyền cho một dịch vụ SaaS bên thứ 3 quản lý tài 
   - **Nguyên lý hoạt động**: Quyền hạn thực tế của một Principal luôn là **giao điểm (Intersection)** giữa Policy được gắn và Permissions Boundary:
     $$\text{Quyền hạn thực tế} = \text{Identity-based Policy} \cap \text{Permissions Boundary}$$
   - Dù developer có cố tình gắn policy `AdministratorAccess` (`*.*`), quyền thực thi tối đa vẫn bị chặn lại ở ranh giới do Permissions Boundary quy định.
+
+#### Bảng So Sánh Toàn Diện: Service Control Policies (SCPs) vs IAM Permission Boundaries
+
+| Tiêu chí | Service Control Policies (SCPs) | IAM Permission Boundaries |
+| :--- | :--- | :--- |
+| **Cấp độ áp dụng** | **AWS Organizations**: Root, Organizational Unit (OU), hoặc Member Account | **Từng Identity cụ thể**: IAM User hoặc IAM Role bên trong một tài khoản |
+| **Ai thiết lập?** | Quản trị viên của Management Account trong AWS Organizations | Quản trị viên IAM (hoặc CI/CD pipeline) của từng tài khoản đơn lẻ |
+| **Ảnh hưởng Root User?** | **CÓ** (Áp dụng lên cả Root User và Administrator của Member Accounts) | **KHÔNG** (Không ảnh hưởng đến tài khoản Root hay các entity khác không gắn boundary) |
+| **Ngoại lệ bất khả xâm phạm** | **Service-Linked Roles** và **Management Account** hoàn toàn miễn nhiễm | Không có ngoại lệ nếu đã được gắn vào User/Role |
+| **Mục đích sử dụng chính** | Thiết lập hàng rào bảo vệ cấp tổ chức (**Organization-wide Guardrails**): cấm tắt CloudTrail, cấm tạo EC2 ngoài Region chỉ định, cấm xóa S3 bucket của an ninh | Ngăn chặn leo thang đặc quyền (**Privilege Escalation**): cho phép Developer tự tạo Role nhưng không thể cấp quyền Administrator cho Role đó |
+| **Cơ chế hoạt động** | Giới hạn quyền tối đa (Maximum permissions filter). Không tự cấp quyền. | Giới hạn quyền tối đa (Maximum permissions filter). Quyền thực tế = $\text{Identity Policy} \cap \text{Permission Boundary}$ |
+
+#### AWS Artifact (Cổng Báo Cáo Tuân Thủ & Thỏa Thuận Pháp Lý)
+- **Bản chất:** Cổng thông tin tự phục vụ (Self-service portal) miễn phí cung cấp quyền truy cập theo yêu cầu vào các báo cáo bảo mật, chứng chỉ tuân thủ của AWS và quản lý các thỏa thuận pháp lý.
+- **2 Thành phần cốt lõi:**
+  1. **AWS Artifact Reports:** Tải xuống các báo cáo kiểm toán của bên thứ ba đối với hạ tầng AWS như **ISO 27001, SOC 1/2/3, PCI-DSS, FedRAMP**.
+  2. **AWS Artifact Agreements:** Xem xét, chấp nhận và quản lý các thỏa thuận pháp lý trực tiếp với AWS cho từng tài khoản hoặc toàn bộ AWS Organizations — điển hình nhất là **BAA (Business Associate Addendum)** cho tuân thủ dữ liệu y tế **HIPAA**.
+- **Bẫy thi SAA-C03:** AWS Artifact **KHÔNG** phải là kho lưu trữ gói phần mềm (như Maven/npm repository — đó là **AWS CodeArtifact**). Khi đề bài có từ khóa `download AWS compliance reports`, `auditor requests SOC/PCI-DSS certification`, hoặc `sign HIPAA BAA agreement` -> Chọn **AWS Artifact**.
 
 #### 2. Phân Quyền Tinh Gọn Cấp Độ Pod Trong Amazon EKS Bằng IRSA
 - **Tình huống thi**: Cụm Amazon EKS chạy nhiều microservices trên các EC2 worker nodes. Dịch vụ UI chỉ được đọc DynamoDB, dịch vụ Xử lý dữ liệu chỉ được ghi vào S3. Yêu cầu tuân thủ nguyên tắc đặc quyền tối thiểu (Least Privilege).

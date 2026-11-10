@@ -179,6 +179,16 @@ flowchart LR
 
 ---
 
+### 9. Amazon Keyspaces (for Apache Cassandra)
+- **Bản chất:** Dịch vụ cơ sở dữ liệu NoSQL dạng cột rộng (Wide-column store) **Serverless, hoàn toàn được quản lý (Fully Managed)** và tương thích với mã nguồn mở **Apache Cassandra**.
+- **Đặc điểm kỹ thuật:**
+  - Hỗ trợ trực tiếp ngôn ngữ truy vấn **CQL (Cassandra Query Language)** — cho phép di chuyển (migrate) các ứng dụng Cassandra từ on-premises hoặc EC2 lên AWS mà không cần viết lại code ứng dụng.
+  - Dữ liệu được sao chép mặc định **3 lần trên nhiều Availability Zones (Multi-AZ)** với cam kết SLA 99.99% (hoặc 99.999% với Multi-Region Replication).
+  - Tương tự DynamoDB, Keyspaces cung cấp 2 chế độ công suất: **On-Demand Mode** (trả tiền theo từng request thực tế cho tải khó đoán) và **Provisioned Mode** (kèm Application Auto Scaling và Point-in-Time Recovery - PITR).
+- **Bẫy thi SAA-C03:** Khi đề bài nêu *"Công ty đang vận hành cụm Apache Cassandra trên on-premises hoặc EC2, tốn nhiều công sức vá lỗi và cân bằng node, muốn chuyển sang giải pháp managed/serverless trên AWS với ít thay đổi code nhất"* -> Chọn **Amazon Keyspaces**.
+
+---
+
 ### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
 
 #### 1. Tăng Tốc Độ Đọc DynamoDB Lên Hàng Chục Lần Không Sửa Mã Nguồn Bằng DAX — (CM-PT2 Q25, CM-PT4 Q60, TD-Set2 Q48, TD-Set3 Q04)
@@ -389,6 +399,7 @@ sequenceDiagram
 | **Amazon DynamoDB** | NoSQL Key-Value & Document | DynamoDB API (`GetItem`, `Query`) | **Tối đa 400 KB / Item** | Auto Scaling hoặc **On-Demand** | Serverless Web, Game State, Shopping Cart, IoT, quy mô hàng triệu RPS với độ trễ $< 10\text{ ms}$. |
 | **Amazon DocumentDB** | Managed JSON Document DB | **MongoDB API** (BSON format) | **Lên tới 16 MB / Document** | Compute scaling hoặc **DocumentDB Serverless** | Ứng dụng di chuyển từ MongoDB, Catalog sản phẩm JSON lớn ($> 1\text{ MB}$), nội dung biến động mạnh. |
 | **Amazon Neptune** | Managed Graph Database | **Gremlin, openCypher, SPARQL (RDF)** | Tùy biến đồ thị hàng tỷ cạnh | Multi-AZ Read Replicas | Mạng xã hội, phát hiện gian lận đa tầng, Knowledge Graphs, sơ đồ phụ thuộc hạ tầng CNTT. |
+| **Amazon Keyspaces** | Serverless Wide-Column Store | **CQL (Cassandra Query Language)** | Dung lượng bảng không giới hạn | **On-Demand** hoặc Provisioned Auto Scaling | Di chuyển cụm Apache Cassandra lên AWS không quản lý server, zero code change. |
 | **DynamoDB Accelerator (DAX)** | In-Memory Write-Through Cache | DynamoDB API (Zero code change) | Tương thích DynamoDB | Cluster node scaling (1-10 nodes) | Tăng tốc độ đọc DynamoDB lên 10x (microsecond latency) cho ứng dụng đọc lặp lại nặng. |
 | **Amazon ElastiCache** | Managed In-Memory Cache | **Redis / Valkey / Memcached** | Vài trăm MB đến GB theo RAM | Auto Scaling / Cluster Sharding | Caching đa dụng cho RDS/EBS, quản lý session đăng nhập, Geospatial, Sorted Sets Leaderboard. |
 | **Amazon MemoryDB** | Primary In-Memory Database | Redis OSS Protocol | Dung lượng theo RAM cụm | Sharding đa partition | Cơ sở dữ liệu chính in-memory siêu tốc, đảm bảo độ bền vững tuyệt đối chuẩn ACID bằng Multi-AZ WAL. |

@@ -63,6 +63,15 @@ flowchart TD
 
 ---
 
+### 3. Chuyên Sâu: Amazon Textract (Trích Xuất Văn Bản, Bảng Biểu & Biểu Mẫu Bằng ML/OCR)
+- **Bản chất:** Dịch vụ Machine Learning tự động trích xuất văn bản in, chữ viết tay, các trường biểu mẫu (Key-Value pairs trong Forms) và cấu trúc bảng biểu (Tables) từ các tài liệu quét (scanned PDFs, ảnh chụp hóa đơn, biên lai, hồ sơ y tế, CMND/CCCD).
+- **Bẫy thi SAA-C03 (Chuỗi kết hợp AI Services kinh điển):**
+  - Trích xuất dữ liệu từ hóa đơn/biểu mẫu PDF scan -> **Amazon Textract**.
+  - Phân tích cảm xúc (Sentiment), trích xuất thực thể (Named Entity Recognition) hoặc phát hiện PII trong văn bản sau khi đọc -> **Amazon Comprehend** (hoặc **Comprehend Medical** cho bệnh án).
+  - Tìm kiếm thông minh bằng ngôn ngữ tự nhiên trên kho tài liệu doanh nghiệp -> **Amazon Kendra**.
+
+---
+
 ## 2. Các Kịch Bản Kiến Trúc & Bẫy Thi Thường Gặp (Architecture Scenarios & Exam Traps)
 
 ### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
