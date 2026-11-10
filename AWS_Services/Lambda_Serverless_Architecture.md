@@ -121,6 +121,76 @@ flowchart TD
 
 ---
 
+### 6. Kiến Trúc Mạng Lambda Trong VPC (Lambda VPC Networking & Hyperplane ENI)
+
+```mermaid
+flowchart TD
+    subgraph VPC["Amazon VPC (10.0.0.0/16)"]
+        subgraph PrivateSubnet["Private Subnet (10.0.1.0/24)"]
+            HENI["AWS Hyperplane ENI\n(Được cấp phát và dùng chung cho Lambda SG)"]
+            RDS[(Amazon RDS / Aurora\nSecurity Group: Allow 3306/5432 from Lambda SG)]
+        end
+
+        subgraph PublicSubnet["Public Subnet (10.0.0.0/24)"]
+            NAT[NAT Gateway\nElastic IP gán kèm]
+            IGW[Internet Gateway]
+            NAT --> IGW
+        end
+
+        subgraph Endpoints["VPC Endpoints (PrivateLink)"]
+            GW_S3[Gateway VPC Endpoint -> S3 / DynamoDB\n(Miễn phí, gán vào Route Table)]
+            IF_SQS[Interface VPC Endpoint -> SQS / Secrets Manager\n(ENI có phí, gắn Private IP)]
+        end
+
+        HENI --> RDS
+        HENI -.->|0.0.0.0/0 qua Route Table| NAT
+        HENI -.-> GW_S3
+        HENI -.-> IF_SQS
+    end
+
+    LambdaWorker["AWS Lambda Execution Fleet\n(Nằm trong VPC do AWS quản lý)"] -->|Tạo tunnel qua Hyperplane| HENI
+    IGW --> Internet((Public Internet / External APIs))
+```
+
+* **Cơ chế Hyperplane ENI (AWS Managed Cross-Account ENI)**:
+  - Trước 2019, mỗi Lambda instance gắn vào VPC phải tự tạo 1 Elastic Network Interface (ENI) riêng, gây độ trễ Cold Start lên tới 10-30 giây và làm cạn kiệt IP subnet.
+  - Từ phiên bản kiến trúc hiện đại, AWS sử dụng **AWS Hyperplane**. Hyperplane cấp phát một số lượng nhỏ ENI dùng chung (**Shared ENIs**) cho mỗi cặp `Subnet + Security Group`. Khi Lambda scale từ 1 lên 1,000 instances, chúng tái sử dụng cùng các Hyperplane ENI này, **triệt tiêu hoàn toàn độ trễ Cold Start do gắn mạng**.
+* **3 Quy Tắc Sống Còn Khi Đưa Lambda Vào VPC**:
+  1. **Lambda trong VPC KHÔNG BAO GIỜ nhận Public IP**: Kể cả khi bạn đặt Lambda vào một Public Subnet (có route trỏ ra Internet Gateway), Lambda vẫn **KHÔNG THỂ truy cập Internet**. Muốn Lambda ra Internet (gọi bên thứ ba), **bắt buộc phải đặt Lambda vào Private Subnet** và định tuyến `0.0.0.0/0` qua **NAT Gateway** nằm tại Public Subnet (*CM-PT1 Q23, CM-PT2 Q05*).
+  2. **Truy cập Database riêng tư (RDS / Aurora)**:
+     - Gán Lambda vào các Private Subnets trong cùng VPC với RDS.
+     - Cấu hình **Security Group Referencing**: RDS Security Group cho phép Inbound port (MySQL 3306, PostgreSQL 5432) với Source là **ID của Lambda Security Group** (thay vì dải CIDR IP).
+  3. **Truy cập dịch vụ AWS mà không cần qua NAT Gateway**:
+     - Cấu hình **Gateway VPC Endpoint** cho S3 và DynamoDB (hoàn toàn miễn phí, lưu lượng định tuyến nội bộ AWS backbone).
+     - Cấu hình **Interface VPC Endpoint** cho SQS, SNS, Secrets Manager để tiết kiệm chi phí data transfer qua NAT Gateway (*CM-PT2 Q12*).
+
+---
+
+### 7. Khả Năng Chống Chịu Khi Xử Lý Luồng Dữ Liệu (Event Source Mapping Resiliency)
+
+```mermaid
+flowchart TD
+    Stream[(Kinesis Data Streams / DynamoDB Streams)] -->|Lấy 1 lô 100 bản ghi| ESM[Event Source Mapping]
+    ESM --> Lambda[Hàm AWS Lambda]
+    Lambda -->|Bản ghi thứ 45 bị lỗi ném Exception| ESM
+    
+    ESM --> BisectCheck{Bật BisectBatchOnFunctionError?}
+    BisectCheck -->|CÓ (Khuyến nghị)| Split["Tự động chia đôi lô dữ liệu thành 2 nửa (50 bản ghi)\nGọi lại Lambda độc lập cho từng nửa"]
+    Split --> FindPoison["Cô lập chính xác bản ghi lỗi (Poison Pill)\nGửi bản ghi hỏng vào SQS DLQ / SNS Destination"]
+    Split --> ProcessHealthy["99 bản ghi hợp lệ còn lại được xử lý thành công!"]
+    
+    BisectCheck -->|KHÔNG (Mặc định)| RetryForever["Thử lại toàn bộ lô 100 bản ghi liên tục\n-> GÂY NGHẼN TOÀN BỘ SHARD (Head-of-Line Blocking)!"]
+```
+
+* **Vấn đề Head-of-Line Blocking**: Khi xử lý Kinesis hoặc DynamoDB Streams theo thứ tự thời gian (shards), nếu một bản ghi trong lô bị lỗi (`poison pill`), mặc định Lambda sẽ thử lại toàn bộ lô đó cho đến khi hết hạn (Retention Period). Điều này làm tắc nghẽn toàn bộ luồng xử lý của shard.
+* **Bộ cấu hình phục hồi chuẩn mực (Stream Resiliency Controls)**:
+  1. **`BisectBatchOnFunctionError: true`**: Khi gặp lỗi, tự động chia đôi lô dữ liệu và thử lại từng nửa. Quá trình chia đôi lặp lại cho đến khi cô lập đúng 1 bản ghi lỗi duy nhất (*TD-Set3 Q18*).
+  2. **`MaximumRetryAttempts`**: Giới hạn số lần thử lại tối đa (ví dụ: 3 lần) thay vì thử lại vô tận.
+  3. **`MaximumRecordAgeInSeconds`**: Bỏ qua các bản ghi đã quá cũ (ví dụ: quá 3,600 giây).
+  4. **`On-Failure Destination`**: Tự động chuyển metadata của bản ghi lỗi sang **Amazon SQS** hoặc **Amazon SNS** để kỹ sư phân tích sau, giải phóng shard tiếp tục xử lý (*CM-PT1 Q50*).
+
+---
+
 ### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
 
 #### 1. Pipeline Ingestion Serverless Hoàn Toàn: SQS Standard + Lambda + DynamoDB Auto-Scaling
@@ -253,12 +323,42 @@ flowchart TD
   - Quản trị viên cấu hình mã hóa biến môi trường bằng KMS CMK riêng.
   - Mã nguồn Lambda gọi AWS KMS API để giải mã biến môi trường trong runtime và phân quyền chi tiết qua KMS Key Policy.
 
+#### 🪤 Bẫy 13: Lambda Trong VPC Truy Cập Database Nội Bộ và Đi Ra Internet — (CM-PT1 Q23, CM-PT2 Q05, CM-PT2 Q12)
+- **Tình huống đề thi**: *"Hàm AWS Lambda cần truy vấn dữ liệu từ cơ sở dữ liệu Amazon RDS PostgreSQL nằm trong Private Subnet của VPC, đồng thời phải gọi một REST API thanh toán của bên thứ ba nằm ngoài môi trường Internet công cộng. Cấu hình mạng nào là ĐÚNG?"*
+- **Các phương án bẫy**:
+  - ❌ *Gán Lambda vào Public Subnet có Internet Gateway*: Sai nghiêm trọng! Khi Lambda được gán vào VPC, nó không bao giờ được cấp Public IP. Ngay cả khi nằm trong Public Subnet, nó hoàn toàn KHÔNG THỂ giao tiếp với Internet qua Internet Gateway (IGW đòi hỏi tài nguyên phải có Public IP).
+  - ❌ *Cấu hình Security Group của RDS cho phép 0.0.0.0/0*: Sai về bảo mật tối thiểu (Least Privilege) và làm lộ cổng cơ sở dữ liệu.
+- **Giải pháp ĐÚNG**:
+  - Gán hàm Lambda vào **Private Subnets** có route `0.0.0.0/0` trỏ tới **NAT Gateway** (NAT Gateway đặt ở Public Subnet kèm Elastic IP).
+  - Cấu hình Security Group của RDS cho phép Inbound port 5432 với Source là **Security Group ID của hàm Lambda**.
+  - Nếu Lambda gọi thêm S3 hoặc DynamoDB, tạo thêm **Gateway VPC Endpoints** gắn vào Route Table của Private Subnet để không tốn cước NAT Gateway.
+
+#### 🪤 Bẫy 14: Xử Lý Lỗi Tắc Nghẽn Luồng Stream Bằng BisectBatchOnFunctionError — (TD-Set3 Q18, CM-PT1 Q50)
+- **Tình huống đề thi**: *"Hàm AWS Lambda đọc các lô bản ghi từ Amazon Kinesis Data Streams. Thỉnh thoảng có một vài bản ghi bị định dạng sai (malformed payload - poison pill) làm hàm ném ra exception. Mặc định Lambda thử lại liên tục làm toàn bộ quá trình xử lý của Shard bị tắc nghẽn hoàn toàn. Giải pháp nào giải quyết vấn đề mà ít tốn công tùy biến code nhất?"*
+- **Các phương án bẫy**:
+  - ❌ *Tăng shard count của Kinesis*: Không giải quyết được bản ghi hỏng nằm trong shard hiện tại.
+  - ❌ *Tăng timeout và RAM của hàm Lambda*: Vô ích vì bản ghi bị hỏng logic, tăng tài nguyên vẫn ném Exception.
+- **Giải pháp ĐÚNG**: Bật tính năng **`BisectBatchOnFunctionError: true`** kết hợp **`On-Failure Destination` (trỏ tới Amazon SQS DLQ)** trên cấu hình Event Source Mapping.
+  - Lambda sẽ tự động chia đôi lô dữ liệu mỗi khi gặp lỗi và gọi lại từng nửa cho đến khi tách riêng được đúng bản ghi hỏng.
+  - Bản ghi hỏng được đẩy sang SQS DLQ để phân tích sau, còn 99% các bản ghi hợp lệ khác tiếp tục được xử lý mượt mà.
+
+#### 🪤 Bẫy 15: WebSocket APIs Cho Ứng Dụng Hai Chiều Real-Time (Stateful) vs REST/HTTP APIs — (U-PT1 Q17, U-PT3 Q09)
+- **Tình huống đề thi**: *"Doanh nghiệp xây dựng một ứng dụng bảng giá chứng khoán trực tiếp hoặc ứng dụng chat trực tuyến đa người dùng. Hệ thống backend cần chủ động đẩy (push) dữ liệu cập nhật tức thì về cho trình duyệt máy khách mà máy khách không cần phải liên tục gửi request thăm dò (polling). Loại API Gateway nào phù hợp nhất?"*
+- **Các phương án bẫy**:
+  - ❌ *Sử dụng API Gateway REST API hoặc HTTP API*: REST và HTTP APIs hoạt động theo mô hình Request-Response một chiều không trạng thái (Stateless). Máy chủ không thể chủ động khởi tạo việc gửi dữ liệu tới máy khách nếu máy khách không gửi request lên trước.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon API Gateway WebSocket API**.
+  - Duy trì kết nối hai chiều có trạng thái (**Stateful 2-way persistent connection**) giữa máy khách và API Gateway.
+  - Cho phép backend đẩy tin nhắn về client bất kỳ lúc nào với độ trễ tính bằng mili-giây qua các route: `$connect`, `$disconnect`, `$default`.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Công Nghệ Serverless Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Tham chiếu đề thi |
 |:---|:---|:---|:---|
+| **Lambda trong VPC cần vừa gọi RDS vừa gọi Internet** | **Lambda ở Private Subnet + NAT Gateway + RDS SG Reference** | Đặt Lambda ở Public Subnet (Lambda không có Public IP) | `CM-PT1 Q23`, `CM-PT2 Q05` |
+| **Cô lập bản ghi hỏng Kinesis tránh nghẽn shard** | **`BisectBatchOnFunctionError` + On-Failure Destination SQS** | Retry mặc định (gây tắc nghẽn toàn bộ luồng Shard) | `TD-Set3 Q18`, `CM-PT1 Q50` |
+| **Ứng dụng chat / giá chứng khoán real-time push 2 chiều** | **Amazon API Gateway WebSocket API** | REST API / HTTP API (Stateless, không push chủ động được) | `U-PT1 Q17` |
 | **Giới hạn kết nối đồng thời bảo vệ database hạ nguồn** | **Lambda Reserved Concurrency** (kết hợp SQS buffer) | Tăng RAM Lambda (không hạn chế được số kết nối đồng thời) | `TD-Set1 Q39` |
 | **Triệt tiêu Cold Start cho Java/Container microservices** | **Lambda Provisioned Concurrency** | Gọi ping cronjob thủ công (chỉ làm ấm được 1 instance đơn lẻ) | `TD-Set1 Q39`, `TD-Set8 Q09` |
 | **Bảo vệ Lambda trước đợt tăng vọt traffic hàng trăm ngàn user** | **Amazon API Gateway Throttling (Steady-state + Burst)** | Để Lambda co giãn tự do (dễ vượt account concurrency limit) | `TD-Set1 Q14` |

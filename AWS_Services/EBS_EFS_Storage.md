@@ -169,6 +169,37 @@ sequenceDiagram
   - **EFS Infrequent Access (EFS IA)**: Rẻ hơn **91%** so với Standard; tự động chuyển file sau 7, 14, 30 hoặc 90 ngày không có lượt truy cập.
   - **EFS Archive**: Rẻ hơn **97%** so với Standard (\$0.008/GiB/tháng), tối ưu cho các tệp tin lưu trữ dài hạn chỉ đọc vài lần mỗi năm.
 
+#### Đi Sâu: Amazon EFS Access Points (Cổng Truy Cập Tệp Serverless & Đa Tài Khoản)
+
+```mermaid
+flowchart TD
+    subgraph Clients["Các Nguồn Truy Cập Phân Tán"]
+        Lambda[Hàm AWS Lambda / Container Fargate\n(Tài khoản A hoặc B)]
+        EC2[Máy chủ EC2 Linux]
+    end
+
+    subgraph AccessPoint["Amazon EFS Access Point (ap-xxxx)"]
+        POSIX[Cưỡng chế Danh tính POSIX:\nUID: 1001, GID: 1001]
+        RootPath[Cưỡng chế Thư mục Gốc:\nRoot Directory: /data/app1]
+    end
+
+    subgraph EFSFileSystem["Amazon EFS File System (fs-xxxx)"]
+        Dir1["/data/app1 (Chỉ ứng dụng App1 được truy cập)"]
+        Dir2["/data/app2 (Bị cô lập hoàn toàn)"]
+    end
+
+    Lambda -->|IAM Client Authorization\narn:aws:elasticfilesystem:.../access-point/ap-xxxx| AccessPoint
+    EC2 --> AccessPoint
+    AccessPoint --> Dir1
+```
+
+* **Mục đích giải quyết**: Trong môi trường Serverless (Lambda, ECS Fargate) hoặc môi trường đa tài khoản, ứng dụng không có tài khoản người dùng Linux truyền thống (POSIX user). Nếu mount EFS trực tiếp, mọi tác vụ mặc định chạy với quyền root (hoặc bị root-squash thành `nobody`), tiềm ẩn nguy cơ bảo mật nghiêm trọng hoặc xung đột quyền ghi đĩa.
+* **4 Đặc tính kỹ thuật cốt lõi của EFS Access Points**:
+  1. **Cưỡng chế danh tính POSIX (Enforce POSIX Identity)**: Tự động gán cố định User ID (UID) và Group ID (GID) cho mọi yêu cầu tệp tin đi qua Access Point, loại bỏ hoàn toàn việc phải tạo tài khoản người dùng Linux thủ công trên từng máy khách (*U-PT1 Q14*).
+  2. **Cưỡng chế thư mục gốc (Enforce Root Directory Path)**: Giới hạn ứng dụng chỉ được nhìn thấy và thao tác trong một thư mục cụ thể (ví dụ: `/analytics/workload_a`), ngăn chặn tuyệt đối việc người dùng duyệt ngược lên thư mục gốc của hệ thống tệp (*U-PT1 Q29*).
+  3. **Tự động khởi tạo thư mục gốc**: Nếu thư mục gốc chưa tồn tại, Access Point sẽ tự động tạo thư mục với đúng quyền hạn POSIX được định nghĩa trước khi client kết nối lần đầu.
+  4. **Tích hợp chính sách kiểm soát quyền IAM (IAM Client Authorization)**: Cho phép kết hợp IAM Resource Policy với Access Point để kiểm soát chi tiết IAM Role nào được quyền mount (`elasticfilesystem:ClientMount`) và ghi (`elasticfilesystem:ClientWrite`) (*U-PT1 Q29*).
+
 ---
 
 ### 5. Bảo mật & Quản trị mã hóa (Security & Operations)
@@ -334,12 +365,32 @@ sequenceDiagram
   - Amazon EFS cung cấp giao diện chuẩn POSIX cho cụm máy chủ Linux đọc ghi song song xuyên AZ.
   - Sử dụng **AWS Backup** để tự động lập lịch sao lưu tệp tin EFS định kỳ sang một **AWS Region khác** để đáp ứng kế hoạch Disaster Recovery.
 
+#### 🪤 Bẫy 16: Phân Quyền Truy Cập Chia Sẻ Tệp EFS Cho Ứng Dụng Serverless Bằng EFS Access Points — (U-PT1 Q14, U-PT1 Q29)
+- **Tình huống đề thi**: *"Doanh nghiệp xây dựng một kiến trúc vi dịch vụ xử lý dữ liệu di truyền học sử dụng các hàm AWS Lambda và container AWS Fargate chạy xuyên nhiều tài khoản AWS khác nhau. Các ứng dụng cần mount vào cùng một hệ thống tệp Amazon EFS dùng chung để đọc ghi dữ liệu. Yêu cầu giải pháp phải cưỡng chế danh tính người dùng POSIX cụ thể cho từng microservice và giới hạn mỗi ứng dụng chỉ được truy cập vào một thư mục gốc riêng biệt của nó (least privilege) mà không cần cấu hình người dùng thủ công trên hệ điều hành."*
+- **Các phương án bẫy**:
+  - ❌ *Cấu hình NFS Posix Permissions thủ công và mount trực tiếp qua IP*: Không thể kiểm soát trong môi trường serverless vì Lambda không có người dùng OS cục bộ; tiềm ẩn nguy cơ bảo mật nghiêm trọng.
+  - ❌ *Tạo riêng mỗi ứng dụng một EFS File System độc lập*: Không đáp ứng yêu cầu chia sẻ dữ liệu chung và làm đội chi phí duy trì nhiều file system.
+- **Giải pháp ĐÚNG**: Khởi tạo **Amazon EFS Access Points** kết hợp **IAM Client Authorization**.
+  - Mỗi Access Point cưỡng chế cố định một **POSIX User/Group ID (UID/GID)** và khóa chặt đường dẫn truy cập vào đúng **Root Directory Path** của ứng dụng đó (ví dụ: `/genomics/app1`).
+  - Gán IAM Policy cho Lambda Execution Role cho phép gọi quyền `elasticfilesystem:ClientMount` và `elasticfilesystem:ClientWrite` thông qua Access Point tương ứng.
+
+#### 🪤 Bẫy 17: Tự Động Hóa Vòng Đời Bản Chụp EBS Bằng Amazon Data Lifecycle Manager (DLM) — (CM-PT1 Q65)
+- **Tình huống đề thi**: *"Doanh nghiệp quản lý hàng trăm máy chủ Amazon EC2 với các ổ đĩa EBS. Quy định tuân thủ doanh nghiệp bắt buộc phải chụp snapshot hàng ngày cho toàn bộ các ổ đĩa production, lưu giữ bản chụp trong 30 ngày, tự động xóa các bản chụp cũ hơn 30 ngày, và định kỳ sao chép bản chụp sang một AWS Region thứ hai phục vụ Disaster Recovery. Đội ngũ muốn giải pháp tự động hóa hoàn toàn với ít nỗ lực vận hành và chi phí thấp nhất."*
+- **Các phương án bẫy**:
+  - ❌ *Viết hàm AWS Lambda chạy định kỳ bằng Amazon EventBridge*: Tốn công viết code, bảo trì script, xử lý lỗi phân trang API và quản lý vòng đời thủ công.
+  - ❌ *Sử dụng AWS Systems Manager State Manager*: SSM State Manager dùng để duy trì cấu hình máy chủ, không phải công cụ chuyên dụng để quản trị vòng đời snapshot theo lịch trình.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon Data Lifecycle Manager (Amazon DLM)**.
+  - Tạo chính sách **Snapshot Lifecycle Policy** dựa trên thẻ tài nguyên (**Tag-based Policy**, ví dụ: `Environment = Production`).
+  - DLM tự động hóa toàn diện 100%: Lập lịch chụp định kỳ (hàng ngày), áp dụng Retention Rules tự động dọn dẹp sau 30 ngày, kích hoạt Fast Snapshot Restore (FSR), và cấu hình sao chép xuyên Region (Cross-Region Copy) hoàn toàn miễn phí dịch vụ (chỉ trả tiền lưu trữ snapshot EBS).
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Lưu Trữ Khối & Tệp Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Tham chiếu đề thi |
 |:---|:---|:---|:---|
+| **Cưỡng chế POSIX UID/GID và thư mục gốc cho Lambda/Fargate EFS** | **Amazon EFS Access Points (+ IAM Client Auth)** | Mount EFS trực tiếp không Access Point (lỗi quyền root-squash) | `U-PT1 Q14`, `U-PT1 Q29` |
+| **Tự động chụp, lưu trữ 30 ngày và xóa snapshot EBS theo Tag** | **Amazon Data Lifecycle Manager (DLM)** | Viết script Lambda định kỳ (tốn công bảo trì code) | `CM-PT1 Q65` |
 | **Cụm EC2 ASG cần chia sẻ tệp tin tải lên xuyên nhiều AZ** | **Amazon EFS (POSIX NFSv4)** | Amazon EBS (EBS bị khóa trong 1 AZ duy nhất) | `TD-Set1 Q07` |
 | **Gắn 1 ổ đĩa block storage vào nhiều EC2 cùng lúc** | **EBS Multi-Attach (`io1`/`io2`, cùng 1 AZ)** | `gp3` (không hỗ trợ Multi-Attach) | `TD-Set1 Q10` |
 | **Tự động chuyển tệp EFS ít truy cập sang lớp lưu trữ rẻ** | **EFS Lifecycle Management $\rightarrow$ EFS IA / Archive** | Di chuyển thủ công qua S3 (phải sửa mã nguồn ứng dụng) | `TD-Set4 Q39` |
