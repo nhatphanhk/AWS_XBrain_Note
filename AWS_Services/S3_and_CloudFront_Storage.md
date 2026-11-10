@@ -389,7 +389,7 @@ flowchart TD
 #### 🪤 Bẫy 19: Lựa Chọn Lớp Lưu Trữ Cho Tệp Tin Tạm Thời Dưới 30 Ngày (S3 Standard vs Standard-IA) — (CM-PT1 Q55)
 - **Tình huống đề thi**: *"Hệ thống xử lý ảnh tạo ra hàng triệu tệp tin tạm thời (temporary staging files) trong quá trình render. Thời gian tồn tại của các tệp tin này biến động thất thường từ vài ngày đến 25 ngày và chắc chắn sẽ bị xóa trước ngày thứ 30. Lớp lưu trữ nào mang lại CHI PHÍ THẤP NHẤT?"*
 - **Các phương án bẫy**:
-  - ❌ *Sử dụng S3 Standard-IA hoặc S3 One Zone-IA*: Mặc dù đơn giá lưu trữ/GB/tháng của Standard-IA rẻ hơn S3 Standard (~$0.0125 vs $0.023), nhưng các lớp lưu trữ Infrequent Access áp dụng **Quy tắc thời hạn lưu trữ tối thiểu 30 ngày (30-day minimum storage commitment)**! Nếu bạn xóa tệp ở ngày thứ 10, AWS vẫn tính phí lưu trữ đủ 30 ngày cộng thêm phí truy xuất dữ liệu (Data Retrieval fee).
+  - ❌ *Sử dụng S3 Standard-IA hoặc S3 One Zone-IA*: Mặc dù đơn giá lưu trữ/GB/tháng của Standard-IA rẻ hơn S3 Standard (~\$0.0125 vs \$0.023), nhưng các lớp lưu trữ Infrequent Access áp dụng **Quy tắc thời hạn lưu trữ tối thiểu 30 ngày (30-day minimum storage commitment)**! Nếu bạn xóa tệp ở ngày thứ 10, AWS vẫn tính phí lưu trữ đủ 30 ngày cộng thêm phí truy xuất dữ liệu (Data Retrieval fee).
 - **Giải pháp ĐÚNG**: Giữ nguyên các tệp tin tạm thời trên **Amazon S3 Standard** và thiết lập Lifecycle Rule xóa tệp sau khi hoàn tất.
   - S3 Standard tính phí chính xác theo từng ngày và từng giờ lưu trữ thực tế mà KHÔNG có hạn mức thời gian lưu trữ tối thiểu và KHÔNG có phí truy xuất. Với tệp có vòng đời $< 30$ ngày, S3 Standard luôn rẻ hơn Standard-IA!
 
