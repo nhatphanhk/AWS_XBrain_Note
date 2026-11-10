@@ -83,7 +83,82 @@ flowchart LR
 
 ---
 
-### 4. AWS Database Migration Service (AWS DMS) & AWS SCT
+### 4. AWS Application Migration Service (AWS MGN) — Di Chuyển Máy Chủ Toàn Diện (Lift-and-Shift / Rehost)
+
+```mermaid
+flowchart LR
+    subgraph OnPrem[Hạ Tầng Nguồn: Physical / VMware / Hyper-V / Cloud Khác]
+        direction TB
+        SrcServer[Máy Chủ Nguồn\nWindows / Linux]
+        Agent[AWS Replication Agent]
+        SrcDisk[(Ổ đĩa máy chủ nguồn)]
+        SrcDisk --> Agent
+    end
+
+    subgraph AWSStaging[AWS Region Đích - Staging Area Subnet]
+        direction TB
+        StagingServer[Replication Server: t3.small]
+        LowCostEBS[(Low-cost EBS Volumes: gp3/st1)]
+        Agent -.->|TCP 1500 Encrypted TLS\nBlock-level continuous replication| StagingServer
+        StagingServer --> LowCostEBS
+    end
+
+    subgraph AWSProduction[VPC Đích: Chuyển Giao & Hoàn Tất]
+        direction TB
+        Template[EC2 Launch Template\nSubnet, SG, Instance Type, IAM]
+        TestEC2[Test Instance\nDiễn tập kiểm thử không gián đoạn]
+        CutoverEC2[Cutover Instance\nProduction chính thức - Downtime vài phút]
+        LowCostEBS --> Template
+        Template -->|Test Mode| TestEC2
+        Template -->|Cutover Mode| CutoverEC2
+    end
+```
+
+#### 4.1. Bản Chất Dịch Vụ & Vị Trí Trong Chiến Lược Di Chuyển
+- **Dịch vụ Rehost chủ lực**: **AWS Application Migration Service (AWS MGN)** là dịch vụ di chuyển máy chủ vật lý (Bare-metal) và máy ảo chính thức được AWS khuyến nghị hàng đầu cho chiến lược **Lift-and-Shift (Rehost)**.
+- **Lịch sử & Thay thế**:
+  - Kế thừa và phát triển từ nền tảng **CloudEndure Migration** (AWS mua lại năm 2019).
+  - Thay thế chính thức và toàn diện dịch vụ cũ **AWS Server Migration Service (SMS)** (đã chính thức bị khai tử/deprecated).
+- **Hỗ trợ đa nền tảng toàn diện**: Hỗ trợ di chuyển từ máy chủ vật lý On-Premises, cụm máy ảo VMware vSphere, Microsoft Hyper-V, KVM, Nutanix, hoặc từ các đám mây công cộng khác (Google Cloud Platform, Microsoft Azure, Oracle Cloud Infrastructure) sang máy chủ **Amazon EC2** native mà không làm gián đoạn hệ điều hành nguồn.
+
+#### 4.2. Vòng Đời Di Chuyển 4 Giai Đoạn Chuẩn Mực (Migration Lifecycle)
+1. **Giai đoạn 1: Cài đặt Agent & Đồng bộ dữ liệu ban đầu (Installation & Initial Sync)**:
+   - Cài đặt `AWS Replication Agent` trực tiếp lên từng máy chủ nguồn (hỗ trợ Windows Server và hầu hết các bản phân phối Linux lớn).
+   - **Không cần khởi động lại máy chủ (Non-disruptive)**: Ứng dụng production vẫn chạy bình thường.
+   - Agent đọc các block dữ liệu vật lý và truyền qua cổng **TCP 1500 (mã hóa TLS)** về máy chủ sao chép siêu nhỏ (`Replication Server - t3.small`) đặt trong **Staging Area Subnet** trên AWS.
+2. **Giai đoạn 2: Sao chép dữ liệu liên tục (Continuous Data Replication)**:
+   - Sau khi hoàn thành bản quét ban đầu (Initial sync 100%), Agent chuyển sang chế độ theo dõi và bắt các khối thay đổi (Block-level data changes) theo thời gian thực.
+   - Trạng thái máy chủ chuyển sang **Healthy / Continuous Data Replication**. Dữ liệu trên Staging EBS luôn tiệm cận với máy chủ nguồn (RPO tính bằng giây).
+3. **Giai đoạn 3: Khởi chạy máy chủ kiểm thử (Launch Test Instances)**:
+   - **Bắt buộc trước khi Cutover**: AWS MGN yêu cầu chạy kiểm thử để xác thực trước ngày chuyển đổi chính thức.
+   - MGN sử dụng **EC2 Launch Template (Test Template)** để tự động tạo máy chủ EC2 thử nghiệm trong một VPC đích tách biệt.
+   - Quá trình này **KHÔNG ảnh hưởng đến máy chủ nguồn** và **KHÔNG ngắt quãng luồng sao chép liên tục**. Kỹ sư kiểm tra tính tương thích, network, database connection và hiệu năng ứng dụng.
+4. **Giai đoạn 4: Chuyển giao chính thức & Hoàn tất (Cutover & Finalize)**:
+   - Đến cửa sổ bảo trì (Maintenance Window): Dừng ứng dụng/dịch vụ tại nguồn để đảm bảo không phát sinh giao dịch mới và nạp nốt các khối dữ liệu cuối cùng sang Staging Area.
+   - Khởi chạy máy chủ chuyển đổi chính thức (**Launch Cutover Instances**) bằng Cutover Launch Template (RTO chỉ tính bằng vài phút).
+   - Cập nhật Route 53 DNS hoặc Load Balancer để chuyển hướng người dùng sang hệ thống EC2 mới trên AWS.
+   - Sau khi hệ thống vận hành ổn định, nhấn **Finalize Cutover**: AWS MGN tự động ngắt kết nối với máy chủ nguồn, dừng tiến trình replication, giải phóng máy chủ Replication Server và xóa các ổ đĩa Staging EBS để dừng phát sinh chi phí.
+
+#### 4.3. Các Tính Năng Nâng Cao Cần Nhớ Trong Đề Thi SAA-C03
+- **Post-Launch Actions**: Tích hợp với **AWS Systems Manager (SSM) Automation** để tự động thực thi các tác vụ sau khi EC2 được khởi chạy (tự động cài SSM Agent, cài đặt CloudWatch Agent, cập nhật driver ảo hóa AWS, đổi hostname, gỡ cài đặt các phần mềm quản trị on-premise cũ).
+- **Staging Area Optimization**: Nhiều máy chủ nguồn có thể chia sẻ chung một Replication Server trong Staging Area Subnet, và sử dụng ổ đĩa EBS dung lượng thấp (gp3/st1) nhằm tiết kiệm chi phí tối đa trong giai đoạn đồng bộ.
+- **Tích hợp AWS Migration Hub**: Toàn bộ trạng thái của từng máy chủ (Replicating, Ready for testing, Test in progress, Ready for cutover, Cutover complete) được hiển thị tập trung trên giao diện AWS Migration Hub (**Single Pane of Glass**).
+- **Chính sách miễn phí**: AWS MGN cho phép sao chép miễn phí trong vòng **90 ngày** cho mỗi máy chủ nguồn (doanh nghiệp chỉ trả tiền cho tài nguyên Staging EBS và Replication Server t3.small phát sinh trong VPC AWS).
+
+#### 4.4. Bảng So Sánh Cốt Lõi: AWS MGN vs AWS DRS vs VM Import/Export
+
+| Tiêu chí | AWS Application Migration Service (MGN) | AWS Elastic Disaster Recovery (DRS) | VM Import/Export |
+| :--- | :--- | :--- | :--- |
+| **Mục đích sử dụng** | **Di chuyển máy chủ vĩnh viễn (One-way Migration)** lên AWS. | **Duy trì khả năng phục hồi thảm họa liên tục (Ongoing DR 24/7)**. | **Export/Import ảnh máy ảo thủ công (Offline file transfer)**. |
+| **Cơ chế sao chép** | Continuous block-level replication (TCP 1500 qua AWS Replication Agent). | Continuous block-level replication (TCP 1500 qua AWS Replication Agent). | Tạo snapshot VMDK/VHD/OVA, upload lên S3, gọi API `ec2-import-instance`. |
+| **Downtime khi chuyển đổi** | **Tối thiểu (Vài phút)**: Chỉ cần dừng app nguồn vài phút để sync nốt delta blocks. | **RTO tính bằng phút**: Tự động spin-up EC2 khi thảm họa xảy ra. | **Rất cao (Nhiều giờ đến nhiều ngày)**: Phải tắt máy ảo nguồn trước khi export để tránh mất dữ liệu. |
+| **Khả năng diễn tập** | Cho phép launch **Test Instance** không gián đoạn để xác thực trước khi Cutover. | Cho phép launch **DR Drill Instance** định kỳ để kiểm tra sẵn sàng DR. | Không có cơ chế diễn tập tự động; phải tự import thử nghiệm thủ công. |
+| **Khả năng quay về (Failback)** | **Không hỗ trợ Failback**: Là dịch vụ di chuyển 1 chiều. Sau khi Finalize là kết thúc. | **Hỗ trợ Failback 2 chiều**: Tự động sao chép ngược dữ liệu từ AWS về lại On-Premises khi DC phục hồi. | Phải dùng VM Export thủ công tải AMI về lại on-premise rất phức tạp. |
+| **Mô hình chi phí** | **Miễn phí 90 ngày đầu tiên** cho mỗi server di chuyển (chỉ trả phí Staging EBS/EC2). | **\$0.03 / giờ / server** duy trì bảo vệ liên tục + phí Staging EBS/EC2. | Miễn phí dịch vụ API (chỉ trả phí lưu trữ S3 và EBS/EC2 khi import). |
+
+---
+
+### 5. AWS Database Migration Service (AWS DMS) & AWS SCT
 
 - **Homogeneous Migration (Di chuyển đồng nhất)**: Chuyển giữa hai cơ sở dữ liệu cùng loại (ví dụ: Oracle sang Oracle, PostgreSQL sang Aurora PostgreSQL). Không cần thay đổi cấu trúc bảng.
 - **Heterogeneous Migration (Di chuyển không đồng nhất)**: Chuyển giữa hai cơ sở dữ liệu khác loại (ví dụ: Oracle sang Aurora PostgreSQL hoặc SQL Server sang MySQL). Bắt buộc phải sử dụng công cụ **AWS Schema Conversion Tool (AWS SCT)** để tự động chuyển đổi các câu lệnh DDL, bảng, views, stored procedures và triggers sang cú pháp của engine đích.
@@ -91,7 +166,7 @@ flowchart LR
 
 ---
 
-### 5. Chiến Lược Chuyển Dữ Liệu Dung Lượng Lớn (Snow Family & DataSync)
+### 6. Chiến Lược Chuyển Dữ Liệu Dung Lượng Lớn (Snow Family & DataSync)
 
 | Phương thức | Dung lượng tối ưu | Băng thông mạng yêu cầu | Kịch bản sử dụng chuẩn mực & Trạng thái 2026 |
 | :--- | :--- | :--- | :--- |
@@ -102,9 +177,9 @@ flowchart LR
 
 ---
 
-### 6. Khung Chiến Lược 7Rs Di Chuyển Lên Mây & Bộ Đôi Khảo Sát/Điều Phối (AWS Migration Hub, Application Discovery Service, Migration Evaluator)
+### 7. Khung Chiến Lược 7Rs Di Chuyển Lên Mây & Bộ Đôi Khảo Sát/Điều Phối (AWS Migration Hub, Application Discovery Service, Migration Evaluator)
 
-#### 6.1. Khung 7 Chiến Lược Di Chuyển Lên Đám Mây (The 7Rs of Cloud Migration)
+#### 7.1. Khung 7 Chiến Lược Di Chuyển Lên Đám Mây (The 7Rs of Cloud Migration)
 
 ```mermaid
 flowchart TD
@@ -130,7 +205,7 @@ flowchart TD
 
 ---
 
-#### 6.2. Bộ Đôi Khảo Sát & Lập Bản Đồ Phụ Thuộc: AWS Application Discovery Service & Migration Evaluator
+#### 7.2. Bộ Đôi Khảo Sát & Lập Bản Đồ Phụ Thuộc: AWS Application Discovery Service & Migration Evaluator
 
 ```mermaid
 flowchart LR
@@ -159,9 +234,9 @@ flowchart LR
 
 ---
 
-### 7. Quản Trị & Bảo Vệ Bản Sao Lưu Tập Trung Doanh Nghiệp: AWS Backup Vault Lock (WORM) & AWS Backup Audit Manager
+### 8. Quản Trị & Bảo Vệ Bản Sao Lưu Tập Trung Doanh Nghiệp: AWS Backup Vault Lock (WORM) & AWS Backup Audit Manager
 
-#### 7.1. AWS Backup Vault Lock — Ngăn Chặn Ransomware Tuyệt Đối với Chuẩn WORM
+#### 8.1. AWS Backup Vault Lock — Ngăn Chặn Ransomware Tuyệt Đối với Chuẩn WORM
 
 ```mermaid
 flowchart TD
@@ -183,7 +258,7 @@ flowchart TD
      - **KHÔNG THỂ xóa Backup Vault** khi bên trong vẫn còn điểm khôi phục (Recovery Points).
 - **Thời Gian Ân Hạn (Cooling-off Period)**: Khi cấu hình Compliance Mode, AWS bắt buộc thiết lập thời gian làm nguội từ **1 đến 72 giờ** (mặc định 72 giờ). Trong thời gian này, quản trị viên có thể kiểm tra và hủy bỏ cấu hình khóa. Khi đồng hồ đếm ngược kết thúc, chính sách khóa trở thành **bất khả biến vĩnh viễn (Permanent and irreversible)**.
 
-#### 7.2. AWS Backup Audit Manager — Tự Động Hóa Kiểm Toán & Tuân Thủ Sao Lưu
+#### 8.2. AWS Backup Audit Manager — Tự Động Hóa Kiểm Toán & Tuân Thủ Sao Lưu
 
 * **Vấn đề giải quyết**: Doanh nghiệp lớn sở hữu hàng trăm tài khoản AWS gặp khó khăn khi kiểm toán xem toàn bộ máy chủ EC2, cơ sở dữ liệu RDS, bảng DynamoDB có đang được sao lưu đúng quy định (hàng ngày, giữ 30 ngày, mã hóa KMS, sao chép sang Region thứ 2) hay không.
 * **Cơ chế hoạt động**:
