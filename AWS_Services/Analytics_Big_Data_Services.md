@@ -61,6 +61,7 @@ flowchart LR
 6. **Amazon Data Firehose (formerly Kinesis Firehose)**: Đường ống nạp dữ liệu Near Real-time (đệm tối thiểu 60s hoặc 1MB) hoàn toàn Serverless; tự động chuyển đổi định dạng (JSON sang Parquet/ORC) và đẩy thẳng vào **S3, Redshift, OpenSearch Service, Splunk, hoặc HTTP Endpoints** (*TD-Set3 Q46*).
 7. **Amazon Redshift & Redshift Spectrum**: Kho dữ liệu đám mây (Data Warehouse) lưu trữ theo cột (Columnar Storage), tối ưu cho các truy vấn phân tích phức tạp (OLAP). Nạp dữ liệu song song cực nhanh từ S3 qua lệnh `COPY`, và hỗ trợ **Redshift Spectrum** để join trực tiếp dữ liệu trong kho với các tệp tin trên S3 Data Lake mà không cần nạp vào ổ đĩa (*TD-Set1 Q28, TD-Set1 Q36*).
 8. **Amazon OpenSearch Service (formerly Elasticsearch)**: Dịch vụ tìm kiếm phân tích và hiển thị log thời gian thực (Logstash/Fluentbit/Firehose $\rightarrow$ OpenSearch $\rightarrow$ OpenSearch Dashboards), hỗ trợ tìm kiếm toàn văn bản (full-text search) và phát hiện bất thường (*TD-Set3 Q46, TD-Set6 Q56*).
+9. **Amazon QuickSight**: Dịch vụ Business Intelligence (BI) hoàn toàn Serverless, tự động co giãn phục vụ từ hàng chục đến hàng trăm ngàn người dùng xem dashboard phân tích. Tích hợp động cơ tính toán trong bộ nhớ **SPICE (Super-fast, Parallel, In-memory Calculation Engine)** giúp phản hồi biểu đồ chỉ trong mili-giây, hỗ trợ phân quyền chi tiết tới từng dòng (**Row-Level Security - RLS**) và từng cột (**Column-Level Security - CLS**), nhúng trực tiếp dashboard vào ứng dụng doanh nghiệp (Embedded Analytics) và tích hợp các tính năng AI/ML Insights (*TD-Set3 Q18, U-PT3 Q28, U-PT4 Q56*).
 
 ---
 
@@ -74,6 +75,8 @@ flowchart LR
   👉 *Giải pháp thay thế*: Sử dụng **Amazon Aurora** hoặc **Amazon DynamoDB**.
 * ❌ **Truy vấn lặp đi lặp lại hàng triệu lần mỗi ngày trên S3 bằng Athena**: Athena tính phí \$5.00 cho mỗi Terabyte dữ liệu quét qua đĩa (Scanned data).  
   👉 *Giải pháp thay thế*: Nạp dữ liệu vào **Amazon Redshift** hoặc **Amazon DynamoDB** / **ElastiCache**.
+* ❌ **Xây dựng Dashboard QuickSight kết nối trực tiếp (Direct Query) vào kho dữ liệu Redshift hoặc RDS production phục vụ hàng ngàn người dùng xem đồng thời**: Gây quá tải I/O và nghẽn CPU cho database backend, dẫn tới sập hệ thống giao dịch hoặc chậm trễ báo cáo.  
+  👉 *Giải pháp thay thế*: Nạp dữ liệu vào **động cơ SPICE của QuickSight** (lên lịch làm mới dữ liệu định kỳ) để phục vụ hàng ngàn người xem song song từ RAM mà hoàn toàn không chạm tới database backend (*U-PT3 Q28*).
 
 ---
 
@@ -238,6 +241,21 @@ flowchart TD
   - Tự động co giãn theo dung lượng đọc/ghi (chế độ On-Demand hoặc Provisioned Capacity).
   - Tự động sao chép dữ liệu trên 3 Availability Zones để đảm bảo tính sẵn sàng cao 99.999%.
   - Quản trị viên không bao giờ phải lo lắng về việc cấu hình cụm, vá lỗi OS, phân vùng lại hạt nhân hay bảo trì node Cassandra như khi tự cài trên EC2 (*TD-Set5 Q15*).
+
+### 8. Amazon QuickSight: Kiến Trúc Serverless Business Intelligence, Động Cơ SPICE & Bảo Mật Dữ Liệu (RLS/CLS)
+- **Tổng quan kiến trúc**: Amazon QuickSight là dịch vụ BI đám mây đầu tiên áp dụng mô hình Serverless hoàn toàn, co giãn tự động từ 10 đến 100,000+ người dùng mà không cần cung cấp hay quản trị máy chủ.
+- **Động cơ SPICE (Super-fast, Parallel, In-memory Calculation Engine)**:
+  - Lưu trữ dữ liệu dạng cột (columnar) hoàn toàn trên bộ nhớ RAM phân tán của AWS.
+  - Cho phép hàng ngàn người dùng tương tác, lọc (slicing & dicing), drill-down báo cáo đồng thời với độ trễ phản hồi tức thì dưới 1 giây.
+  - Cách ly hoàn toàn tầng trực quan hóa khỏi các hệ thống cơ sở dữ liệu nguồn, ngăn chặn nguy cơ làm sập cơ sở dữ liệu Production (*U-PT3 Q28*).
+  - Hỗ trợ lịch làm mới dữ liệu tự động (Scheduled Refresh) hàng giờ, hàng ngày hoặc kích hoạt qua API.
+- **Bảo mật và phân quyền chi tiết**:
+  - **Row-Level Security (RLS)**: Sử dụng tập dữ liệu phân quyền (Permissions Dataset) chứa ánh xạ giữa User/Group ARN và giá trị trường (ví dụ: `UserName` $\rightarrow$ `RegionCode`) để tự động lọc dữ liệu. Giám đốc từng khu vực chỉ nhìn thấy số liệu của khu vực mình trên cùng một dashboard dùng chung duy nhất (*TD-Set3 Q18*).
+  - **Column-Level Security (CLS)**: Phân quyền ẩn/hiện các cột dữ liệu nhạy cảm (như PII, thông tin thẻ, tỷ suất lợi nhuận) dựa trên nhóm người dùng.
+  - **VPC Interface Connection**: Tạo Elastic Network Interface (ENI) trong VPC Private Subnet, cho phép QuickSight truy xuất an toàn vào Amazon Redshift, Amazon RDS, Aurora hoặc cơ sở dữ liệu tự quản mà không cần mở cổng kết nối ra Internet (*CM-PT4 Q44*).
+- **Embedded Analytics & Generative BI**:
+  - Nhúng trực tiếp Dashboard hoặc Visuals vào ứng dụng web nội bộ hoặc cổng thông tin khách hàng thông qua AWS SDK / JavaScript SDK mà không cần người dùng cuối phải có tài khoản AWS riêng.
+  - Tích hợp tính năng AI/ML: Tự động phát hiện điểm dị biệt (Anomaly Detection), dự báo xu hướng (Forecasting), và tóm tắt số liệu bằng ngôn ngữ tự nhiên (Auto-narratives).
 
 ---
 
@@ -420,12 +438,43 @@ flowchart TD
   - Dữ liệu ấm (30–90 ngày): Tự động chuyển sang node **UltraWarm** lưu trữ trên S3 với bộ đệm bộ nhớ cục bộ, giảm tới **90% chi phí lưu trữ**.
   - Dữ liệu lạnh (> 90 ngày): Chuyển vào **Cold Storage** (lưu trên S3 detached) và chỉ gắn lại khi cần điều tra pháp y an ninh.
 
+#### 🪤 Bẫy 21: Bảo Vệ Kho Dữ Liệu Khi Hàng Ngàn Người Dùng Truy Cập Dashboard BI: QuickSight SPICE — (U-PT3 Q28)
+- **Tình huống đề thi**: *"Doanh nghiệp bán lẻ có hơn 5,000 nhân viên quản lý cửa hàng trên toàn quốc cùng truy cập vào một bảng điều khiển Business Intelligence vào 8 giờ sáng mỗi ngày để xem báo cáo doanh số ngày hôm trước. Hệ thống hiện tại dùng Direct Query từ công cụ BI vào cụm Amazon Redshift, dẫn đến việc cụm Redshift bị nghẽn CPU 100%, hàng loạt truy vấn bị timeout và hệ thống báo cáo bị sập. Giải pháp nào giải quyết triệt để vấn đề mà không cần nâng cấp gấp 5 lần cấu hình cụm Redshift?"*
+- **Các phương án bẫy**:
+  - ❌ *Tăng gấp đôi số node của cụm Amazon Redshift*: Rất tốn kém chi phí duy trì 24/7 chỉ để phục vụ đợt cao điểm ngắn vào đầu giờ sáng.
+  - ❌ *Cấu hình Redshift Concurrency Scaling*: Giúp giải quyết hàng đợi truy vấn nhưng chi phí phát sinh rất lớn khi có hàng ngàn user bấm refresh liên tục.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon QuickSight kết hợp động cơ SPICE (Super-fast, Parallel, In-memory Calculation Engine)** (`U-PT3 Q28`).
+  - Lên lịch nạp dữ liệu từ Amazon Redshift vào **SPICE** vào lúc 6:00 sáng (trước giờ làm việc).
+  - Toàn bộ 5,000 nhân viên cửa hàng truy cập dashboard sẽ đọc dữ liệu trực tiếp từ bộ nhớ RAM phân tán của SPICE.
+  - Cụm Amazon Redshift hoàn toàn không phải chịu bất kỳ truy vấn đọc nào trong suốt thời gian nhân viên xem báo cáo, triệt tiêu 100% nguy cơ quá tải và tiết kiệm tối đa chi phí.
+
+#### 🪤 Bẫy 22: Phân Quyền Báo Cáo Doanh Nghiệp Trên Cùng Một Dashboard Bằng Row-Level Security (RLS) — (TD-Set3 Q18)
+- **Tình huống đề thi**: *"Doanh nghiệp bảo hiểm triển khai báo cáo doanh thu trên Amazon QuickSight cho 100 giám đốc chi nhánh tỉnh/thành. Giám đốc chi nhánh Hà Nội chỉ được phép xem số liệu hợp đồng của Hà Nội, Giám đốc chi nhánh TP.HCM chỉ được phép xem số liệu của TP.HCM. Doanh nghiệp muốn quản trị tập trung, không muốn phải nhân bản tạo ra 100 dashboard riêng biệt cho từng người. Giải pháp kiến trúc nào tối ưu nhất?"*
+- **Các phương án bẫy**:
+  - ❌ *Tạo 100 Dashboard QuickSight độc lập cho 100 chi nhánh*: Tốn công sức quản trị, khi cần sửa đổi giao diện báo cáo phải cập nhật thủ công 100 lần.
+  - ❌ *Tạo 100 Database Views riêng biệt trong Redshift/RDS*: Gây rác schema cơ sở dữ liệu và khó bảo trì phân quyền.
+- **Giải pháp ĐÚNG**: Áp dụng **Row-Level Security (RLS)** trong Amazon QuickSight (`TD-Set3 Q18`).
+  - Tạo một tập dữ liệu phân quyền (Data-based RLS Dataset) chứa các cột: `UserName` (hoặc `GroupName`) và `BranchID`.
+  - Gắn tập dữ liệu phân quyền này vào Dataset chính của QuickSight.
+  - Khi bất kỳ giám đốc chi nhánh nào đăng nhập vào xem Dashboard chung, QuickSight sẽ tự động áp bộ lọc dữ liệu theo ngữ cảnh đăng nhập của họ, đảm bảo người dùng chỉ xem được các dòng dữ liệu thuộc phạm vi phụ trách của mình.
+
+#### 🪤 Bẫy 23: Kết Nối QuickSight Tới Cơ Sở Dữ Liệu Trong Private Subnet An Toàn — (CM-PT4 Q44)
+- **Tình huống đề thi**: *"Doanh nghiệp vận hành cụm kho dữ liệu Amazon Redshift hoặc cơ sở dữ liệu Amazon RDS PostgreSQL đặt hoàn toàn trong Private Subnet không có Internet Gateway. Quản trị viên cần kết nối Amazon QuickSight để xây dựng báo cáo phân tích nhưng không được phép mở cổng database ra Internet công cộng vì quy định an ninh."*
+- **Giải pháp ĐÚNG**: Cấu hình **Amazon QuickSight VPC Connection** (`CM-PT4 Q44`).
+  - Tạo một VPC Connection trong bảng điều khiển quản trị của QuickSight, chỉ định VPC, Private Subnets và Security Group tương ứng.
+  - QuickSight tự động tạo các Elastic Network Interfaces (ENIs) gắn trực tiếp vào Private Subnet của doanh nghiệp.
+  - Lưu lượng truy vấn giữa QuickSight và cơ sở dữ liệu hoàn toàn lưu chuyển qua mạng nội bộ AWS, không bao giờ lộ ra Internet công cộng.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định Công Nghệ Phân Tích Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
 |:---|:---|:---|:---:|
+| **Báo cáo BI phục vụ hàng ngàn người dùng không làm sập Redshift** | **Amazon QuickSight với SPICE Engine** | Direct Query vào Redshift (làm sập database backend) | `U-PT3 Q28` |
+| **Phân quyền xem dữ liệu động trên cùng một Dashboard BI** | **QuickSight Row-Level Security (RLS)** | Tạo nhiều dashboard riêng biệt (quá tải quản trị) | `TD-Set3 Q18` |
+| **Kết nối QuickSight tới Redshift trong Private Subnet an toàn** | **QuickSight VPC Interface Connection** | Mở Public IP cho Redshift (vi phạm an ninh mạng) | `CM-PT4 Q44` |
+| **Trực quan hóa dữ liệu BI hoàn toàn Serverless, tính phí theo phiên** | **Amazon QuickSight** | Tự dựng Tableau/PowerBI trên máy ảo EC2 | `TD-Set3 Q18` |
 | **Làm sạch, biến đổi dữ liệu thị giác No-Code cho Analyst/ML** | **AWS Glue DataBrew (Datasets + Recipes + Lineage)** | AWS Glue ETL Job (đòi hỏi kỹ năng code PySpark/Scala) | `TD-Set8 Q21`, `U-PT1 Q24` |
 | **Sổ cái tài chính bất biến tập trung, xác minh mật mã** | **Amazon QLDB (Append-only Journal + SHA-256)** | Managed Blockchain (dùng cho mạng lưới đa bên phi tập trung) | `TD-Set6 Q40` |
 | **Di chuyển Apache Cassandra giữ nguyên CQL, Serverless** | **Amazon Keyspaces (for Apache Cassandra)** | Tự cài Cassandra trên EC2 / DynamoDB (phải viết lại code) | `TD-Set5 Q15` |
@@ -564,6 +613,9 @@ sequenceDiagram
 - [ ] Phân biệt Amazon QLDB (sổ cái tập trung, bất biến, append-only journal, mật mã SHA-256) vs Amazon Managed Blockchain (phi tập trung, đa bên tham gia).
 - [ ] Di chuyển Cassandra lên Amazon Keyspaces giữ nguyên cú pháp CQL và driver mà không cần quản lý cụm.
 - [ ] Nắm vững phân tầng lưu trữ UltraWarm và Cold Storage trên Amazon OpenSearch Service để tối ưu 90% chi phí lưu trữ log dài hạn.
+- [ ] Hiểu rõ bài toán dùng **QuickSight SPICE** để phục vụ hàng ngàn người xem báo cáo cùng lúc mà không làm quá tải hoặc sập cơ sở dữ liệu Redshift/RDS backend (`U-PT3 Q28`).
+- [ ] Biết cách áp dụng **QuickSight Row-Level Security (RLS)** để phân quyền dữ liệu theo chi nhánh/người dùng trên cùng một Dashboard dùng chung (`TD-Set3 Q18`).
+- [ ] Nắm vững cách kết nối an toàn từ QuickSight tới Redshift/RDS trong Private Subnet qua **VPC Connection** (`CM-PT4 Q44`).
 
 ---
 
