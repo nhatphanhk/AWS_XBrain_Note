@@ -174,7 +174,7 @@ flowchart TD
 #### B. Các tính năng cao cấp & Cập nhật kiến trúc Aurora (Cập nhật 2026)
 
 1. **Amazon Aurora Serverless v2**:
-   - Tự động co giãn tài nguyên xử lý tính toán (đo bằng **Aurora Capacity Units - ACUs**, với $1 \text{ ACU} \approx 2 \text{ GiB RAM} + \text{vCPU tương ứng}$) chỉ trong **vài mili-giây** dựa trên tải thực tế của ứng dụng mà không gây đứt kết nối.
+   - Tự động co giãn tài nguyên xử lý tính toán (đo bằng **Aurora Capacity Units - ACUs**, với \$1 \text{ ACU} \approx 2 \text{ GiB RAM} + \text{vCPU tương ứng}$) chỉ trong **vài mili-giây** dựa trên tải thực tế của ứng dụng mà không gây đứt kết nối.
    - **Tính năng Scale về 0 ACU (Scale-to-Zero)**: Cho phép cấu hình mức sàn `Min ACU = 0`. Khi không có kết nối nào phát sinh (ví dụ ban đêm trên môi trường Dev/Test), Aurora Serverless v2 sẽ tự động tạm dừng tính toán (compute ngưng tính phí, chỉ tính phí lưu trữ storage). Khi có kết nối mới tới, thời gian đánh thức (**Cold Resume Latency**) thực tế mất khoảng **15 đến 25 giây** (ứng dụng client nên cấu hình Connection Timeout phù hợp hoặc kết hợp **RDS Proxy** để đệm hàng đợi kết nối, tránh phát sinh lỗi `Connection Timed Out`).
 2. **Amazon Aurora Global Database**:
    - Dành cho các hệ thống đa quốc gia hoặc yêu cầu khắc phục thảm họa xuyên lục địa (**Disaster Recovery**).
@@ -427,7 +427,7 @@ sequenceDiagram
 - **Tình huống đề thi**: *"Doanh nghiệp tự triển khai cụm cơ sở dữ liệu phân tán trên các máy chủ EC2 trải dài trên nhiều Availability Zones. Hóa đơn hàng tháng ghi nhận chi phí Data Transfer liên vùng rất cao. Làm sao để cắt giảm chi phí này?"*
 - **Nguyên nhân & Khắc phục**:
   - Nếu các máy chủ database kết nối và đồng bộ với nhau thông qua **Public IP** hoặc **Elastic IP (EIP)**, AWS sẽ định tuyến lưu lượng ra Internet gateway và tính cước theo biểu phí truyền dữ liệu Internet (cả chiều gửi và nhận).
-  - **Giải pháp ĐÚNG**: Luôn cấu hình cụm cơ sở dữ liệu giao tiếp và đồng bộ thông qua **Private IP Address** trong VPC. Chi phí truyền dữ liệu Cross-AZ qua Private IP rẻ hơn rất nhiều ($0.01/GB).
+  - **Giải pháp ĐÚNG**: Luôn cấu hình cụm cơ sở dữ liệu giao tiếp và đồng bộ thông qua **Private IP Address** trong VPC. Chi phí truyền dữ liệu Cross-AZ qua Private IP rẻ hơn rất nhiều (\$0.01/GB).
 
 #### 🪤 Bẫy 5: Quy Trình Mã Hóa Database RDS Đang Chạy Chưa Được Mã Hóa — (U-PT2 Q16)
 - **Bẫy bất biến**: Không thể bật mã hóa trực tiếp (in-place) trên một RDS Database đang tồn tại.
@@ -468,7 +468,7 @@ sequenceDiagram
 
 #### 🪤 Bẫy 10: Tải Bất Định Và Có Đợt Ngắt Quãng Về Không Dùng Aurora Serverless v2 — (TD-Set8 Q14)
 - **Tình huống đề thi**: *"Thay thế cơ sở dữ liệu on-premises MySQL có mức tiêu thụ bộ nhớ từ 2 đến 16 GiB, với mẫu lưu lượng thất thường có nhiều đợt tăng vọt và có những khoảng thời gian hoàn toàn không có tải bằng dịch vụ serverless tự co giãn."*
-- **Giải pháp ĐÚNG**: Cấu hình **Amazon Aurora Serverless v2** với năng lực tối thiểu **1 ACU** và tối đa **8 ACUs** ($1 \text{ ACU} \approx 2 \text{ GiB RAM}$). Aurora tự động scale mượt mà từng phân đoạn nhỏ trong mili-giây mà không làm gián đoạn kết nối.
+- **Giải pháp ĐÚNG**: Cấu hình **Amazon Aurora Serverless v2** với năng lực tối thiểu **1 ACU** và tối đa **8 ACUs** (\$1 \text{ ACU} \approx 2 \text{ GiB RAM}$). Aurora tự động scale mượt mà từng phân đoạn nhỏ trong mili-giây mà không làm gián đoạn kết nối.
 
 #### 🪤 Bẫy 11: Bản Chất Cơ Chế Failover Tự Động Của Amazon RDS Multi-AZ — (U-PT4 Q60)
 - **Tình huống đề thi**: *"Doanh nghiệp kích hoạt tính năng Multi-AZ cho cơ sở dữ liệu Amazon RDS PostgreSQL để đảm bảo tính sẵn sàng cao. Đội ngũ phát triển muốn biết điều gì sẽ xảy ra về mặt mạng khi máy chủ chính (Primary) gặp sự cố phần cứng và quá trình chuyển đổi dự phòng (Failover) diễn ra?"*
@@ -653,14 +653,14 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
 
 | Thành phần Dịch vụ | Cơ chế tính phí chi tiết (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
-| **RDS Instance Hours (Compute)** | • Tính theo từng giây hoạt động (tối thiểu 10 phút).<br>• Dòng chip **AWS Graviton (`db.m7g`, `db.r7g`) rẻ hơn ~20%** và hiệu năng cao hơn so với dòng x86 (`db.m6i`, `db.r6i`).<br>• **Multi-AZ Deployment**: **Nhân đôi (x2)** giá instance hour! | `db.t4g.medium`: ~$0.068/giờ.<br>`db.r7g.xlarge`: ~$0.476/giờ.<br>Bật Multi-AZ Instance: ~$0.952/giờ! | Bật tùy chọn Multi-AZ cho các môi trường thử nghiệm (Dev, QA, Staging) gây lãng phí 100% tiền máy chủ dự phòng. |
-| **RDS Storage (Dung lượng ổ đĩa)** | • **General Purpose SSD (`gp3`)**: **$0.115 / GiB / tháng** (bao gồm sẵn 3,000 IOPS và 125 MB/s miễn phí).<br>• **Provisioned IOPS SSD (`io2 Block Express`)**: $0.125 / GiB + $0.065 / IOPS / tháng. | 1,000 GiB `gp3`: $115/tháng.<br>1,000 GiB `io2` + 20,000 IOPS: **$1,425/tháng**! | Vẫn dùng ổ đĩa thế hệ cũ `gp2` (bị gắn chặt IOPS vào dung lượng đĩa) hoặc cấp phát thừa Provisioned IOPS trên `io2` khi không cần thiết. |
-| **RDS Backup Storage** | • **Miễn phí** dung lượng sao lưu bằng 100% tổng dung lượng database instance đang cấp phát.<br>• Dung lượng snapshot vượt hạn mức: **$0.095 / GiB / tháng**. | Miễn phí nếu chu kỳ lưu trữ (Retention Period) được đặt hợp lý. | Thiết lập retention period tối đa (35 ngày) cho các database có tần suất sửa đổi dữ liệu khổng lồ (churn rate cao), làm phình to dung lượng transaction logs trên S3. |
-| **Amazon Aurora Standard** | • **Compute Instance**: Tính theo giờ.<br>• **Dung lượng lưu trữ**: **$0.10 / GiB / tháng** (tự co giãn, chỉ tính dung lượng thực dùng).<br>• **Phí I/O Requests**: **$0.20 / 1 triệu requests I/O**. | Thích hợp cho ứng dụng có tỷ lệ đọc/ghi thấp hoặc trung bình. | **BẪY CHI PHÍ I/O NGUY HIỂM**: Các ứng dụng xử lý dữ liệu lớn (như sàn TMĐT, ví điện tử) phát sinh hàng tỷ lệnh I/O mỗi tháng, khiến hóa đơn I/O vượt xa tiền máy chủ! |
-| **Amazon Aurora I/O-Optimized** | • Tăng giá Compute Instance thêm **~30%**.<br>• Giá lưu trữ: **$0.225 / GiB / tháng**.<br>• **HOÀN TOÀN MIỄN PHÍ TRUY VẤN I/O ($0.00 / I/O Request)**! | Tối ưu tuyệt đối khi chi phí I/O chiếm vượt quá **25%** tổng hóa đơn của cụm Aurora Standard. | Triển khai Aurora I/O-Optimized cho các database ít truy cập (làm đội chi phí compute và storage một cách lãng phí). |
-| **Amazon Aurora Serverless v2** | • Tính theo **Aurora Capacity Unit (ACU)** tiêu thụ mỗi giờ: **~$0.12 / ACU / giờ**.<br>• Co giãn từ **0 ACU** đến 128 ACU. | Rất tiết kiệm cho hệ thống có lưu lượng biến thiên bất thường hoặc không hoạt động ban đêm. | Cấu hình mức sàn `Min ACU` quá cao trên môi trường Dev/Test thay vì đặt về `Min ACU = 0`. |
-| **Amazon RDS Proxy** | • Tính phí cố định: **$0.015 / vCPU-hour** của máy chủ RDS bên dưới.<br>• Máy chủ 4 vCPU = $0.06/giờ (~$43.20/tháng). | Chi phí rất nhỏ so với lợi ích chống nghẽn connection pool cho Lambda. | Bật RDS Proxy cho ứng dụng monolithic truyền thống vốn đã có sẵn connection pool nội bộ hoàn chỉnh. |
-| **ElastiCache for Valkey vs Redis** | • **Valkey Engine**: Rẻ hơn **33%** so với Redis trên cùng cấu hình node.<br>• **ElastiCache Serverless**: **$0.125 / GB-hour dữ liệu lưu trữ** + **$0.0034 / 1 triệu ECPUs** (ElastiCache Processing Units). | Giúp giảm tải 80% truy vấn đọc xuống database quan hệ. | Không đặt thời gian sống (TTL) cho cache key khiến dữ liệu rác chiếm trọn bộ nhớ RAM của node cache. |
+| **RDS Instance Hours (Compute)** | • Tính theo từng giây hoạt động (tối thiểu 10 phút).<br>• Dòng chip **AWS Graviton (`db.m7g`, `db.r7g`) rẻ hơn ~20%** và hiệu năng cao hơn so với dòng x86 (`db.m6i`, `db.r6i`).<br>• **Multi-AZ Deployment**: **Nhân đôi (x2)** giá instance hour! | `db.t4g.medium`: ~\$0.068/giờ.<br>`db.r7g.xlarge`: ~\$0.476/giờ.<br>Bật Multi-AZ Instance: ~\$0.952/giờ! | Bật tùy chọn Multi-AZ cho các môi trường thử nghiệm (Dev, QA, Staging) gây lãng phí 100% tiền máy chủ dự phòng. |
+| **RDS Storage (Dung lượng ổ đĩa)** | • **General Purpose SSD (`gp3`)**: **\$0.115 / GiB / tháng** (bao gồm sẵn 3,000 IOPS và 125 MB/s miễn phí).<br>• **Provisioned IOPS SSD (`io2 Block Express`)**: \$0.125 / GiB + \$0.065 / IOPS / tháng. | 1,000 GiB `gp3`: \$115/tháng.<br>1,000 GiB `io2` + 20,000 IOPS: **\$1,425/tháng**! | Vẫn dùng ổ đĩa thế hệ cũ `gp2` (bị gắn chặt IOPS vào dung lượng đĩa) hoặc cấp phát thừa Provisioned IOPS trên `io2` khi không cần thiết. |
+| **RDS Backup Storage** | • **Miễn phí** dung lượng sao lưu bằng 100% tổng dung lượng database instance đang cấp phát.<br>• Dung lượng snapshot vượt hạn mức: **\$0.095 / GiB / tháng**. | Miễn phí nếu chu kỳ lưu trữ (Retention Period) được đặt hợp lý. | Thiết lập retention period tối đa (35 ngày) cho các database có tần suất sửa đổi dữ liệu khổng lồ (churn rate cao), làm phình to dung lượng transaction logs trên S3. |
+| **Amazon Aurora Standard** | • **Compute Instance**: Tính theo giờ.<br>• **Dung lượng lưu trữ**: **\$0.10 / GiB / tháng** (tự co giãn, chỉ tính dung lượng thực dùng).<br>• **Phí I/O Requests**: **\$0.20 / 1 triệu requests I/O**. | Thích hợp cho ứng dụng có tỷ lệ đọc/ghi thấp hoặc trung bình. | **BẪY CHI PHÍ I/O NGUY HIỂM**: Các ứng dụng xử lý dữ liệu lớn (như sàn TMĐT, ví điện tử) phát sinh hàng tỷ lệnh I/O mỗi tháng, khiến hóa đơn I/O vượt xa tiền máy chủ! |
+| **Amazon Aurora I/O-Optimized** | • Tăng giá Compute Instance thêm **~30%**.<br>• Giá lưu trữ: **\$0.225 / GiB / tháng**.<br>• **HOÀN TOÀN MIỄN PHÍ TRUY VẤN I/O (\$0.00 / I/O Request)**! | Tối ưu tuyệt đối khi chi phí I/O chiếm vượt quá **25%** tổng hóa đơn của cụm Aurora Standard. | Triển khai Aurora I/O-Optimized cho các database ít truy cập (làm đội chi phí compute và storage một cách lãng phí). |
+| **Amazon Aurora Serverless v2** | • Tính theo **Aurora Capacity Unit (ACU)** tiêu thụ mỗi giờ: **~\$0.12 / ACU / giờ**.<br>• Co giãn từ **0 ACU** đến 128 ACU. | Rất tiết kiệm cho hệ thống có lưu lượng biến thiên bất thường hoặc không hoạt động ban đêm. | Cấu hình mức sàn `Min ACU` quá cao trên môi trường Dev/Test thay vì đặt về `Min ACU = 0`. |
+| **Amazon RDS Proxy** | • Tính phí cố định: **\$0.015 / vCPU-hour** của máy chủ RDS bên dưới.<br>• Máy chủ 4 vCPU = \$0.06/giờ (~\$43.20/tháng). | Chi phí rất nhỏ so với lợi ích chống nghẽn connection pool cho Lambda. | Bật RDS Proxy cho ứng dụng monolithic truyền thống vốn đã có sẵn connection pool nội bộ hoàn chỉnh. |
+| **ElastiCache for Valkey vs Redis** | • **Valkey Engine**: Rẻ hơn **33%** so với Redis trên cùng cấu hình node.<br>• **ElastiCache Serverless**: **\$0.125 / GB-hour dữ liệu lưu trữ** + **\$0.0034 / 1 triệu ECPUs** (ElastiCache Processing Units). | Giúp giảm tải 80% truy vấn đọc xuống database quan hệ. | Không đặt thời gian sống (TTL) cho cache key khiến dữ liệu rác chiếm trọn bộ nhớ RAM của node cache. |
 
 ---
 
@@ -668,16 +668,16 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
 
 #### Kịch bản 1: Đổi Cấu Hình Giữa Aurora Standard và Aurora I/O-Optimized Cho Hệ Thống Giao Dịch
 * **Bối cảnh thực tế**:
-  Một công ty tài chính công nghệ (Fintech) vận hành hệ thống thanh toán chạy trên **Aurora PostgreSQL** với 1 instance Primary `db.r7g.2xlarge` (8 vCPU, 64 GiB RAM, đơn giá $1.04/giờ) và lưu trữ 2,000 GiB dữ liệu. Do tần suất giao dịch quét chỉ mục liên tục, hệ thống phát sinh **6 tỷ lượt I/O requests** mỗi tháng.
+  Một công ty tài chính công nghệ (Fintech) vận hành hệ thống thanh toán chạy trên **Aurora PostgreSQL** với 1 instance Primary `db.r7g.2xlarge` (8 vCPU, 64 GiB RAM, đơn giá \$1.04/giờ) và lưu trữ 2,000 GiB dữ liệu. Do tần suất giao dịch quét chỉ mục liên tục, hệ thống phát sinh **6 tỷ lượt I/O requests** mỗi tháng.
 * **Định lượng chi phí trên Aurora Standard**:
   $$\text{Phí Compute} = 1.04\$ \times 720 \text{ giờ} = 748.80\$$$
   $$\text{Phí Storage} = 2,000 \text{ GiB} \times 0.10\$ = 200.00\$$$
   $$\text{Phí I/O Requests} = \frac{6,000,000,000}{1,000,000} \times 0.20\$ = \mathbf{1,200.00\$/\text{tháng}}$$
   $$\text{Tổng chi phí Aurora Standard} = 748.80\$ + 200.00\$ + 1,200.00\$ = \mathbf{2,148.80\$/\text{tháng}}$$
 * **Định lượng chi phí khi chuyển sang Aurora I/O-Optimized**:
-  - Đơn giá Compute tăng ~30%: $1.04\$ \times 1.30 = 1.352\$/\text{giờ}$.
-  - Đơn giá Storage tăng lên $0.225\$/\text{GiB}$.
-  - Phí I/O: **$0.00 (Hoàn toàn miễn phí)**.
+  - Đơn giá Compute tăng ~30%: \$1.04\$ \times 1.30 = 1.352\$/\text{giờ}$.
+  - Đơn giá Storage tăng lên \$0.225\$/\text{GiB}$.
+  - Phí I/O: **\$0.00 (Hoàn toàn miễn phí)**.
   $$\text{Phí Compute} = 1.352\$ \times 720 \text{ giờ} = 973.44\$$$
   $$\text{Phí Storage} = 2,000 \text{ GiB} \times 0.225\$ = 450.00\$$$
   $$\text{Phí I/O Requests} = \mathbf{0.00\$}$$
@@ -690,7 +690,7 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
 
 #### Kịch bản 2: Phân Tách Single-AZ Kèm Tự Động Tắt Bật Cho Môi Trường Dev/Test/Staging
 * **Bối cảnh thực tế**:
-  Đội ngũ phát triển sử dụng chung template Infrastructure as Code (Terraform) vô tình cấu hình `multi_az = true` cho cả 3 môi trường phát triển (Dev, QA, UAT) sử dụng máy chủ `db.m7g.xlarge` ($0.238/giờ; khi bật Multi-AZ thành $0.476/giờ) chạy liên tục 24/7 (720 giờ/tháng).
+  Đội ngũ phát triển sử dụng chung template Infrastructure as Code (Terraform) vô tình cấu hình `multi_az = true` cho cả 3 môi trường phát triển (Dev, QA, UAT) sử dụng máy chủ `db.m7g.xlarge` (\$0.238/giờ; khi bật Multi-AZ thành \$0.476/giờ) chạy liên tục 24/7 (720 giờ/tháng).
 * **Chi phí ban đầu**:
   $$\text{Chi phí 1 instance Multi-AZ} = 0.476\$ \times 720 = 342.72\$/\text{tháng}$$
   $$\text{Tổng chi phí 3 môi trường} = 3 \times 342.72\$ = \mathbf{1,028.16\$/\text{tháng}}$$
@@ -708,12 +708,12 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
 
 #### Kịch bản 3: Tích Hợp ElastiCache for Valkey Để Hạ Cỡ Cấu Hình RDS (Caching Tiering)
 * **Bối cảnh thực tế**:
-  Một trang web tin tức và thương mại điện tử có tỷ lệ đọc/ghi là 95:5 (95% là truy vấn `SELECT`). Do lượng bạn đọc quá đông, máy chủ RDS MySQL bị nghẽn CPU và doanh nghiệp phải nâng cấp lên cấu hình lớn **`db.r6i.4xlarge` (16 vCPU, 128 GiB RAM = $2.016/giờ)**.
+  Một trang web tin tức và thương mại điện tử có tỷ lệ đọc/ghi là 95:5 (95% là truy vấn `SELECT`). Do lượng bạn đọc quá đông, máy chủ RDS MySQL bị nghẽn CPU và doanh nghiệp phải nâng cấp lên cấu hình lớn **`db.r6i.4xlarge` (16 vCPU, 128 GiB RAM = \$2.016/giờ)**.
   $$\text{Chi phí RDS ban đầu} = 2.016\$ \times 720 = \mathbf{1,451.52\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
-  1. Triển khai một cụm **Amazon ElastiCache for Valkey** (`cache.m7g.large` = 2 vCPU, 6.38 GiB RAM = $0.096/giờ $\times$ 720 $\approx \mathbf{69.12\$/\text{tháng}}$ - rẻ hơn 33% so với Redis).
+  1. Triển khai một cụm **Amazon ElastiCache for Valkey** (`cache.m7g.large` = 2 vCPU, 6.38 GiB RAM = \$0.096/giờ $\times$ 720 $\approx \mathbf{69.12\$/\text{tháng}}$ - rẻ hơn 33% so với Redis).
   2. Áp dụng mô hình **Cache-Aside Pattern**: 90% truy vấn đọc được giải quyết trực tiếp tại Valkey Cache với độ trễ microsecond.
-  3. Tải CPU trên RDS MySQL giảm từ 90% xuống dưới 20%. Doanh nghiệp tự tin hạ cỡ instance RDS từ `db.r6i.4xlarge` xuống **`db.m7g.xlarge` (4 vCPU, 16 GiB RAM = $0.238/giờ)**:
+  3. Tải CPU trên RDS MySQL giảm từ 90% xuống dưới 20%. Doanh nghiệp tự tin hạ cỡ instance RDS từ `db.r6i.4xlarge` xuống **`db.m7g.xlarge` (4 vCPU, 16 GiB RAM = \$0.238/giờ)**:
      $$\text{Chi phí RDS sau hạ cấp} = 0.238\$ \times 720 = 171.36\$/\text{tháng}$$
      $$\text{Tổng chi phí kiến trúc mới} = 171.36\$ \text{ (RDS)} + 69.12\$ \text{ (Valkey)} = \mathbf{240.48\$/\text{tháng}}$$
 * **Kết quả tiết kiệm**:
@@ -724,15 +724,15 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
 
 #### Kịch bản 4: Sử Dụng Aurora Serverless v2 Với Tính Năng Scale-To-Zero Cho Ứng Dụng Nội Bộ
 * **Bối cảnh thực tế**:
-  Hệ thống phần mềm kế toán và phê duyệt nghỉ phép nội bộ doanh nghiệp chỉ phục vụ nhân viên từ 8h sáng đến 18h tối (10 tiếng/ngày, 22 ngày/tháng). Ban đêm và 2 ngày cuối tuần hoàn toàn không có ai truy cập. Doanh nghiệp trước đó duy trì một instance cố định `db.r7g.xlarge` ($0.476/giờ) chạy 24/7.
+  Hệ thống phần mềm kế toán và phê duyệt nghỉ phép nội bộ doanh nghiệp chỉ phục vụ nhân viên từ 8h sáng đến 18h tối (10 tiếng/ngày, 22 ngày/tháng). Ban đêm và 2 ngày cuối tuần hoàn toàn không có ai truy cập. Doanh nghiệp trước đó duy trì một instance cố định `db.r7g.xlarge` (\$0.476/giờ) chạy 24/7.
   $$\text{Chi phí máy chủ cố định} = 0.476\$ \times 720 = \mathbf{342.72\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
   - Chuyển sang sử dụng **Amazon Aurora Serverless v2** với cấu hình:
     - `Max ACU = 8` (xử lý thoải mái các đợt kết toán cuối tháng).
     - `Min ACU = 0` (Kích hoạt tính năng **Scale-to-Zero** tự động tạm dừng khi không có kết nối).
   - Định mức tiêu thụ thực tế:
-    - Giờ làm việc cao điểm (220 giờ/tháng): Tiêu thụ trung bình 2 ACU ($2 \times 0.12\$ = 0.24\$/\text{giờ}$).
-    - Ngoài giờ làm việc & cuối tuần (500 giờ/tháng): Co về **0 ACU ($0.00\$/\text{giờ}$)**.
+    - Giờ làm việc cao điểm (220 giờ/tháng): Tiêu thụ trung bình 2 ACU (\$2 \times 0.12\$ = 0.24\$/\text{giờ}$).
+    - Ngoài giờ làm việc & cuối tuần (500 giờ/tháng): Co về **0 ACU (\$0.00\$/\text{giờ}$)**.
 * **Chi phí sau tối ưu**:
   $$\text{Chi phí Compute Serverless} = 220 \text{ giờ} \times 0.24\$ + 500 \text{ giờ} \times 0.00\$ = \mathbf{52.80\$/\text{tháng}}$$
 * **Kết quả tiết kiệm**:
@@ -743,17 +743,17 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
 
 #### Kịch bản 5: Chuyển Đổi gp2 Sang gp3, Vi Xử Lý AWS Graviton và Mua Cam Kết Reserved Instances
 * **Bối cảnh thực tế**:
-  Một cơ sở dữ liệu sản xuất PostgreSQL đang chạy trên máy chủ Intel x86 thế hệ cũ **`db.m5.2xlarge` (8 vCPU, 32 GiB RAM = $0.768/giờ = $552.96/tháng)** với ổ cứng **3,000 GiB `gp2`** ($0.10/GiB = $300/tháng, bị ép nâng dung lượng để có 9,000 IOPS).
+  Một cơ sở dữ liệu sản xuất PostgreSQL đang chạy trên máy chủ Intel x86 thế hệ cũ **`db.m5.2xlarge` (8 vCPU, 32 GiB RAM = \$0.768/giờ = \$552.96/tháng)** với ổ cứng **3,000 GiB `gp2`** (\$0.10/GiB = \$300/tháng, bị ép nâng dung lượng để có 9,000 IOPS).
   $$\text{Tổng chi phí ban đầu} = 552.96\$ + 300.00\$ = \mathbf{852.96\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa toàn diện 3 bước**:
   1. **Chuyển đổi lưu trữ từ `gp2` sang `gp3`**:
-     - `gp3` có đơn giá $0.115/GiB nhưng tách rời hoàn toàn IOPS. Với 3,000 GiB, doanh nghiệp giữ nguyên 9,000 IOPS (3,000 IOPS miễn phí + 6,000 IOPS mua thêm với giá $0.005/IOPS):
+     - `gp3` có đơn giá \$0.115/GiB nhưng tách rời hoàn toàn IOPS. Với 3,000 GiB, doanh nghiệp giữ nguyên 9,000 IOPS (3,000 IOPS miễn phí + 6,000 IOPS mua thêm với giá \$0.005/IOPS):
      $$\text{Chi phí gp3} = (3,000 \times 0.115\$) + (6,000 \times 0.005\$) = 345.00\$ + 30.00\$ = \mathbf{375.00\$/\text{tháng}}$$
      *(Mặc dù dung lượng lớn giá hơi tăng nhẹ, nhưng hiệu năng throughput tăng từ 250 MB/s lên 500 MB/s ổn định)*.
   2. **Chuyển đổi máy chủ sang chip ARM AWS Graviton3 `db.m7g.2xlarge`**:
-     - Đơn giá On-Demand giảm xuống $0.476/giờ (tiết kiệm ngay ~38% so với `db.m5.2xlarge` mà hiệu năng lại cao hơn 25%).
+     - Đơn giá On-Demand giảm xuống \$0.476/giờ (tiết kiệm ngay ~38% so với `db.m5.2xlarge` mà hiệu năng lại cao hơn 25%).
   3. **Mua cam kết RDS Reserved Instance (RI) 3 năm (Partial Upfront)**:
-     - Nhận mức chiết khấu bổ sung ~60% trên đơn giá compute, đưa chi phí instance thực tế về chỉ còn khoảng **$0.19 / giờ ($136.80/tháng)**.
+     - Nhận mức chiết khấu bổ sung ~60% trên đơn giá compute, đưa chi phí instance thực tế về chỉ còn khoảng **\$0.19 / giờ (\$136.80/tháng)**.
 * **Tổng chi phí sau tối ưu**:
   $$\text{Tổng chi phí mới} = 136.80\$ \text{ (Compute RI)} + 375.00\$ \text{ (gp3 Storage)} = \mathbf{511.80\$/\text{tháng}}$$
 * **Kết quả tiết kiệm**:
@@ -787,7 +787,7 @@ Cơ sở dữ liệu đám mây thường chiếm từ 20% đến 40% tổng hó
 2. **Bản chất kiến trúc lưu trữ Amazon Aurora**:  
    Tách rời Compute và Storage; lưu trữ phân tán **6 bản sao trên 3 Availability Zones**; cơ chế Quorum **4/6 cho Ghi** và **3/6 cho Đọc**; tự động mở rộng dung lượng lên tới **256 TiB** mà không cần cấp phát trước.
 3. **Quy tắc FinOps I/O-Optimized**:  
-   Nếu chi phí truy vấn I/O trên cụm Aurora Standard vượt quá **25%** tổng hóa đơn, hãy chuyển đổi ngay sang **Aurora I/O-Optimized** để đưa chi phí I/O về **$0.00**.
+   Nếu chi phí truy vấn I/O trên cụm Aurora Standard vượt quá **25%** tổng hóa đơn, hãy chuyển đổi ngay sang **Aurora I/O-Optimized** để đưa chi phí I/O về **\$0.00**.
 4. **Cứu cánh Serverless với RDS Proxy**:  
    Bất kỳ kiến trúc nào kết hợp **AWS Lambda với RDS/Aurora** đều bắt buộc phải triển khai **Amazon RDS Proxy** để ngăn chặn thảm họa cạn kiệt kết nối (**Connection Storm**).
 5. **Quy trình mã hóa KMS cho Database đang chạy**:  

@@ -98,8 +98,8 @@ flowchart TD
 #### C. Cross-Zone Load Balancing (Cân bằng tải chéo vùng)
 * **Cơ chế hoạt động**: Mỗi node của Load Balancer sẽ phân phối lưu lượng đồng đều tới toàn bộ các máy chủ backend nằm ở **tất cả các Availability Zones**.
 * **So sánh trạng thái mặc định**:
-  - **Application Load Balancer (ALB)**: **MẶC ĐỊNH BẬT** và hoàn toàn **MIỄN PHÍ** cước truyền dữ liệu liên AZ ($0.00/GiB).
-  - **Network Load Balancer (NLB)**: **MẶC ĐỊNH TẮT**; nếu người dùng chủ động BẬT tính năng này trên NLB, AWS sẽ **tính phí cước Data Transfer Inter-AZ ($0.01/GiB)** cho mỗi chiều truyền nhận.
+  - **Application Load Balancer (ALB)**: **MẶC ĐỊNH BẬT** và hoàn toàn **MIỄN PHÍ** cước truyền dữ liệu liên AZ (\$0.00/GiB).
+  - **Network Load Balancer (NLB)**: **MẶC ĐỊNH TẮT**; nếu người dùng chủ động BẬT tính năng này trên NLB, AWS sẽ **tính phí cước Data Transfer Inter-AZ (\$0.01/GiB)** cho mỗi chiều truyền nhận.
 
 #### D. Quản lý kết nối & Xử lý chứng chỉ số (SSL Termination & SNI)
 * **SSL/TLS Termination**: ALB giải mã kết nối HTTPS ngay tại điểm tiếp nhận của Load Balancer, giúp giải phóng hoàn toàn gánh nặng tính toán CPU mật mã cho các máy chủ backend.
@@ -199,9 +199,9 @@ flowchart TD
 #### 🪤 Bẫy 2: Tính Toán Dung Lượng Dự Phòng Chịu Lỗi Khi Mất 1 AZ (N+1 Capacity Sizing) — (U-PT2 Q19, U-PT2 Q37)
 - **Tình huống đề thi**: *"Hệ thống yêu cầu bắt buộc phải duy trì tối thiểu 8 máy chủ hoạt động 100% công suất kể cả trong trường hợp xấu nhất là toàn bộ một Availability Zone bị sập. Cấu hình nào đáp ứng yêu cầu với CHI PHÍ THẤP NHẤT?"*
 - **Phân tích toán học kiến trúc**:
-  - **Phương án 2 AZs**: Mỗi AZ phải gánh $8 \text{ instances}$ (Tổng cộng = 16 instances). Khi 1 AZ sập, AZ còn lại còn đúng 8 instances -> Đạt yêu cầu nhưng tốn chi phí 16 máy.
-  - **Phương án 3 AZs**: Mỗi AZ chỉ cần bố trí **$4 \text{ instances}$** (Tổng cộng = 12 instances). Khi 1 AZ bất kỳ bị sập (mất 4 instances), 2 AZs còn lại vẫn có $4 + 4 = 8 \text{ instances}$ -> **Đạt 100% công suất**!
-  - **Kết luận**: Triển khai trên **3 AZs với 4 instances/AZ** tiết kiệm hơn phương án 2 AZs tới **25% chi phí phần cứng dự phòng** ($12 \text{ máy}$ so với $16 \text{ máy}$).
+  - **Phương án 2 AZs**: Mỗi AZ phải gánh \$8 \text{ instances}$ (Tổng cộng = 16 instances). Khi 1 AZ sập, AZ còn lại còn đúng 8 instances -> Đạt yêu cầu nhưng tốn chi phí 16 máy.
+  - **Phương án 3 AZs**: Mỗi AZ chỉ cần bố trí **\$4 \text{ instances}$** (Tổng cộng = 12 instances). Khi 1 AZ bất kỳ bị sập (mất 4 instances), 2 AZs còn lại vẫn có \$4 + 4 = 8 \text{ instances}$ -> **Đạt 100% công suất**!
+  - **Kết luận**: Triển khai trên **3 AZs với 4 instances/AZ** tiết kiệm hơn phương án 2 AZs tới **25% chi phí phần cứng dự phòng** (\$12 \text{ máy}$ so với \$16 \text{ máy}$).
 
 #### 🪤 Bẫy 3: Elastic Load Balancing KHÔNG PHẢI Là Dịch Vụ Toàn Cầu (ELB Is Regional) — (U-PT6 Q48)
 - **Tình huống đề thi**: *"Doanh nghiệp muốn sử dụng Elastic Load Balancing để cân bằng tải giữa các máy chủ Web đặt tại Region Singapore (ap-southeast-1) và Region Tokyo (ap-northeast-1)."*
@@ -233,7 +233,7 @@ flowchart TD
 - **Giải pháp ĐÚNG**: Bật tính năng **Sticky Sessions (Session Affinity)** trên Target Group của Application Load Balancer.
   - ALB sử dụng cookie (hoặc mã hóa cookie tùy chỉnh từ ứng dụng) để nhận diện người dùng và đảm bảo toàn bộ các HTTP requests tiếp theo của client đó luôn được chuyển hướng chính xác tới cùng một máy chủ backend ban đầu.
 
-#### 🪤 Bẫy 7: Chèn Tường Lửa Ảo Kiểm Tra Gói Tin Sâu L3/L4 Bằng Gateway Load Balancer (GWLB) — (CM-PT2 Q48, TD-Set6 Q28, TD-Set8 Q02)
+#### 🪤 Bẫy 7: Chèn Tường Lửa Ảo Kiểm Tra Gói Tin Sâu L3/L4 Bằng Gateway Load Balancer (GWLB) — (CM-PT2 Q48, TD-Set6 Q28)
 - **Tình huống đề thi**: *"Doanh nghiệp yêu cầu chèn cụm thiết bị tường lửa ảo của bên thứ 3 (Firewalls, IDS/IPS) để kiểm tra gói tin sâu cho toàn bộ luồng mạng ra vào VPC mà không làm đứt kết nối hay thay đổi IP header gốc."*
 - **Giải pháp ĐÚNG**: **Gateway Load Balancer (GWLB)**.
   - Hoạt động ở OSI Layer 3 (Network Layer), sử dụng giao thức **GENEVE (port UDP 6081)** để dẫn toàn bộ gói tin nguyên bản qua cụm firewall ảo và tự động kiểm tra sức khỏe, cân bằng tải giữa các firewall instances.
@@ -413,10 +413,10 @@ sequenceDiagram
 
 | Thành phần tính phí | Cơ chế tính phí chi tiết (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
-| **Application Load Balancer (ALB)** | • Cước cố định: Tính theo giờ hoạt động.<br>• **Cước LCU (Load Balancer Capacity Units)**: Tính theo chiều tài nguyên tiêu thụ cao nhất trong 4 chiều: New connections (25/s), Active connections (3,000/phút), Processed bytes (1 GB/giờ), Rule evaluations (1,000/s). | • Cố định: **$0.0225 / giờ** (~$16.20/tháng).<br>• LCU: **$0.008 / LCU-giờ**. | Tạo hàng chục ALB riêng lẻ cho từng dịch vụ nhỏ thay vì hợp nhất vào 1 ALB dùng chung Listener Rules. |
-| **Network Load Balancer (NLB)** | • Cước cố định: Tính theo giờ hoạt động.<br>• **Cước NLCU**: Đo lường 3 chiều: New connections (800/s), Active connections (100,000/phút), Processed bytes (1 GB/giờ). | • Cố định: **$0.0225 / giờ** (~$16.20/tháng).<br>• NLCU: **$0.006 / NLCU-giờ**. | Bật Cross-Zone Load Balancing trên NLB lưu lượng lớn phát sinh cước truyền dữ liệu xuyên AZ. |
-| **Auto Scaling Group (ASG)** | **HOÀN TOÀN MIỄN PHÍ ($0.00)**. | **$0.00** | Chỉ trả tiền cho các tài nguyên EC2 instances do ASG khởi chạy. Lãng phí xảy ra khi đặt ngưỡng scale-out quá nhạy. |
-| **Cross-Zone Data Transfer** | • **ALB**: Hoàn toàn **MIỄN PHÍ ($0.00/GB)**.<br>• **NLB**: Tính phí **$0.01 / GB** cho mỗi chiều truyền dữ liệu liên AZ khi bật Cross-Zone. | $0.01 / GB. | Vô tình bật Cross-Zone trên NLB xử lý hàng trăm Terabytes dữ liệu mỗi tháng. |
+| **Application Load Balancer (ALB)** | • Cước cố định: Tính theo giờ hoạt động.<br>• **Cước LCU (Load Balancer Capacity Units)**: Tính theo chiều tài nguyên tiêu thụ cao nhất trong 4 chiều: New connections (25/s), Active connections (3,000/phút), Processed bytes (1 GB/giờ), Rule evaluations (1,000/s). | • Cố định: **\$0.0225 / giờ** (~\$16.20/tháng).<br>• LCU: **\$0.008 / LCU-giờ**. | Tạo hàng chục ALB riêng lẻ cho từng dịch vụ nhỏ thay vì hợp nhất vào 1 ALB dùng chung Listener Rules. |
+| **Network Load Balancer (NLB)** | • Cước cố định: Tính theo giờ hoạt động.<br>• **Cước NLCU**: Đo lường 3 chiều: New connections (800/s), Active connections (100,000/phút), Processed bytes (1 GB/giờ). | • Cố định: **\$0.0225 / giờ** (~\$16.20/tháng).<br>• NLCU: **\$0.006 / NLCU-giờ**. | Bật Cross-Zone Load Balancing trên NLB lưu lượng lớn phát sinh cước truyền dữ liệu xuyên AZ. |
+| **Auto Scaling Group (ASG)** | **HOÀN TOÀN MIỄN PHÍ (\$0.00)**. | **\$0.00** | Chỉ trả tiền cho các tài nguyên EC2 instances do ASG khởi chạy. Lãng phí xảy ra khi đặt ngưỡng scale-out quá nhạy. |
+| **Cross-Zone Data Transfer** | • **ALB**: Hoàn toàn **MIỄN PHÍ (\$0.00/GB)**.<br>• **NLB**: Tính phí **\$0.01 / GB** cho mỗi chiều truyền dữ liệu liên AZ khi bật Cross-Zone. | \$0.01 / GB. | Vô tình bật Cross-Zone trên NLB xử lý hàng trăm Terabytes dữ liệu mỗi tháng. |
 
 ---
 
@@ -451,12 +451,12 @@ sequenceDiagram
 
 #### Kịch bản 3: Áp Dụng ASG Mixed Instances Policy Kết Hợp Spot và On-Demand Cho Worker Tier
 * **Bối cảnh thực tế**:
-  Một cụm máy chủ worker gồm 25 máy `c6i.xlarge` ($0.17/giờ) chạy liên tục 24/7 để xử lý hàng đợi background jobs. Ban đầu 100% đều sử dụng On-Demand.
+  Một cụm máy chủ worker gồm 25 máy `c6i.xlarge` (\$0.17/giờ) chạy liên tục 24/7 để xử lý hàng đợi background jobs. Ban đầu 100% đều sử dụng On-Demand.
   $$\text{Chi phí On-Demand ban đầu} = 25 \times 0.17\$ \times 720 \text{ giờ} = \mathbf{3,060.00\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
   - Cấu hình Auto Scaling Group sử dụng **Mixed Instances Policy**:
-    - **Base Capacity (On-Demand)**: Duy trì 5 máy nòng cốt ($5 \times 0.17\$ \times 720 = 612.00\$$).
-    - **Spot Percentage**: 80% cho 20 máy còn lại với mức chiết khấu trung bình 70% ($20 \times (0.17\$ \times 0.30) \times 720 = 734.40\$$).
+    - **Base Capacity (On-Demand)**: Duy trì 5 máy nòng cốt (\$5 \times 0.17\$ \times 720 = 612.00\$$).
+    - **Spot Percentage**: 80% cho 20 máy còn lại với mức chiết khấu trung bình 70% (\$20 \times (0.17\$ \times 0.30) \times 720 = 734.40\$$).
   $$\text{Tổng chi phí sau tối ưu} = 612.00\$ + 734.40\$ = \mathbf{1,346.40\$/\text{tháng}}$$
 * **Kết quả tiết kiệm**:
   $$\text{Số tiền tiết kiệm} = 3,060.00\$ - 1,346.40\$ = \mathbf{1,713.60\$/\text{tháng}} \quad (\approx \mathbf{20,563\$/\text{năm}})$$

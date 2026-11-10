@@ -184,80 +184,22 @@ flowchart TD
 
 ---
 
-## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
-### Kịch Bản: Mở Rộng Dung Lượng Tệp Cục Bộ Bằng Storage Gateway Cached Volume
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Kỹ Sư / Nhân Viên Mạng LAN
-    participant LocalDisk as Ổ Đĩa Cục Bộ Gateway (Local Cache SSD)
-    participant GW as AWS Storage Gateway (Cached Volume VM)
-    participant S3 as Amazon S3 Bucket (Đám Mây AWS)
-
-    Note over User,GW: Giao thức mạng cục bộ: iSCSI Block Storage
-    User->>GW: Gửi yêu cầu Đọc tệp bản vẽ CAD: read_block(LBA_5000)
-    GW->>LocalDisk: Kiểm tra xem khối dữ liệu đã có trong Cache chưa?
-    alt Cache Hit (Đã có sẵn trên ổ đĩa SSD cục bộ)
-        LocalDisk-->>GW: Trả về khối dữ liệu trong thời gian mạng LAN (< 1ms)
-        GW-->>User: Phản hồi dữ liệu tức thì cho kỹ sư!
-    else Cache Miss (Dữ liệu cũ chưa có trên cache)
-        GW->>S3: Tải khối dữ liệu qua kết nối AWS Direct Connect / VPN
-        S3-->>GW: Trả về khối dữ liệu từ S3
-        GW->>LocalDisk: Ghi khối dữ liệu vào SSD Cache phục vụ các lần đọc sau
-        GW-->>User: Trả dữ liệu về cho ứng dụng
-    end
-
-    Note over User,S3: Thao tác Ghi Dữ Liệu (Write-Through)
-    User->>GW: Ghi khối dữ liệu mới
-    GW->>LocalDisk: Ghi vào buffer cục bộ
-    GW-->>User: Xác nhận ghi thành công (Ghi cực nhanh)
-    GW->>S3: Đồng bộ bất đồng bộ khối dữ liệu mới lên Amazon S3 ở chế độ nền!
-```
+### 2.5. AWS Transfer Family: Cổng Truyền Tệp An Toàn SFTP, FTPS & FTP Không Máy Chủ
+- **AWS Transfer Family** cung cấp giao thức truyền tệp tiêu chuẩn công nghiệp (**SFTP, FTPS, FTP, AS2**) trực tiếp vào bộ lưu trữ đám mây AWS:
+  1. **Tích hợp bộ lưu trữ gốc**: Lưu trữ dữ liệu trực tiếp vào **Amazon S3** hoặc **Amazon EFS** mà người dùng và ứng dụng đối tác bên ngoài không cần thay đổi client SFTP quen thuộc (U-PT3 Q52).
+  2. **Quản trị xác thực linh hoạt**:
+     - *Service-managed*: Quản lý danh sách người dùng và SSH public keys trực tiếp trên AWS Transfer Family.
+     - *Microsoft Active Directory*: Tích hợp với Active Directory doanh nghiệp qua AWS Directory Service.
+     - *Custom IdP qua AWS Lambda*: Tích hợp với bất kỳ hệ thống IdP nào (Okta, Auth0, REST API nội bộ).
+  3. **Kết nối mạng an toàn (VPC Endpoints)**: Hỗ trợ triển khai SFTP endpoint ở chế độ **VPC (Internal)** kết hợp với **AWS PrivateLink** $\rightarrow$ Các máy chủ đối tác hoặc On-Premises có thể truyền file qua AWS Direct Connect / Site-to-Site VPN an toàn mà không đi qua Internet công cộng (U-PT4 Q40).
+  4. **Managed Workflows**: Tự động kích hoạt chuỗi xử lý sau khi tải tệp lên (quét mã độc, nén/giải nén, gắn tag S3, gọi Step Functions).
 
 ---
 
-## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
-| Dịch vụ liên kết | Phương thức tích hợp | Mục đích kỹ thuật & Kịch bản thực tế |
-| :--- | :--- | :--- |
-| **Amazon S3** | Data Repository Association (FSx for Lustre) | Đọc trực tiếp tập dữ liệu khổng lồ từ S3 vào cụm tính toán HPC và tự động ghi ngược kết quả ra S3. |
-| **AWS Directory Service** | Microsoft Active Directory Domain Join | Cho phép FSx for Windows và Storage Gateway xác thực người dùng doanh nghiệp qua Kerberos và quản lý quyền tệp bằng Windows ACLs. |
-| **AWS DataSync** | DataSync Task | **(U-PT3 Q62)**: Tự động di chuyển hàng chục Terabytes tệp tin từ hệ thống NAS On-Premises lên FSx hoặc EFS với tốc độ tăng tốc mạng gấp 10 lần. |
-| **AWS Backup** | Centralized Backup Plan | Quản lý lịch trình chụp snapshot tự động, thiết lập chính sách lưu giữ và khóa bản sao lưu (**Vault Lock Compliance**) cho toàn bộ hệ thống tệp FSx. |
-| **AWS Direct Connect / VPN** | Hybrid Network Link | Cung cấp đường truyền riêng tư, băng thông cao, độ trễ thấp để các máy ảo Storage Gateway tại chỗ giao tiếp với hạ tầng lưu trữ AWS. |
-
----
-
-## 5. FinOps & Chiến Lược Tối Ưu Chi Phí (Cost Optimization)
-
-### 1. Phép tính so sánh: FSx for Windows Ổ SSD vs Ổ HDD kết hợp Data Deduplication
-* **Tình huống thực tế**:
-  Một doanh nghiệp cần lưu trữ **50 TB** tài liệu chia sẻ văn phòng và thư mục cá nhân người dùng (Home directories). Tốc độ truy cập trung bình, dữ liệu có mức độ trùng lặp cao (nhiều bản sao tài liệu giống nhau).
-* **Phương án 1: Cấp phát ổ SSD không bật tính năng khử trùng lặp**:
-  - Đơn giá lưu trữ SSD: $\sim 0.13\$/\text{GB/tháng}$.
-  - Chi phí lưu trữ = $50,000 \text{ GB} \times 0.13\$ = \mathbf{6,500.00\$/\text{tháng}}$.
-* **Phương án 2: Chuyển sang ổ HDD kết hợp bật Data Deduplication (Tỷ lệ tiết kiệm 50%)**:
-  - Dung lượng thực tế sau khử trùng lặp: $50 \text{ TB} \times 50\% = \mathbf{25 \text{ TB}}$.
-  - Đơn giá lưu trữ HDD: $\sim 0.025\$/\text{GB/tháng}$.
-  - Chi phí lưu trữ HDD = $25,000 \text{ GB} \times 0.025\$ = \mathbf{625.00\$/\text{tháng}}$.
-  - Cấp phát thêm một lượng nhỏ bộ đệm SSD Cache để tăng tốc: $\sim 100\$/\text{tháng}$.
-  - 👉 **Tổng chi phí mới $\approx 725.00\$/\text{tháng}$ (Tiết kiệm gần 89% ngân sách hàng tháng)!**
-
----
-
-## 6. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
-
-| Tình huống sự cố | Nguyên nhân cốt lõi | Phương pháp điều tra | Giải pháp xử lý |
-| :--- | :--- | :--- | :--- |
-| **Storage Gateway File Gateway báo lỗi không thể upload tệp lên S3** | 1. IAM Role của Gateway thiếu quyền `s3:PutObject`.<br>2. S3 Bucket bật mã hóa KMS nhưng Gateway không có quyền `kms:GenerateDataKey`. | Kiểm tra CloudWatch Logs của Storage Gateway và CloudTrail Event `PutObject` tìm lỗi `AccessDenied`. | 1. Cập nhật IAM Role gắn trên Gateway cấp quyền đầy đủ trên Bucket ARN.<br>2. Cấp quyền `kms:Decrypt` và `kms:GenerateDataKey` trên KMS Key Policy. |
-| **Người dùng mạng LAN truy cập Storage Gateway bị chậm bất thường** | Dung lượng bộ nhớ đệm cục bộ (**Local Cache Disk**) bị đầy, dẫn đến tỷ lệ **Cache Miss** cao (Gateway phải liên tục tải dữ liệu từ S3 qua mạng Internet). | Kiểm tra metric CloudWatch `CachePercentDirty` và `CachePercentUsed`. | Tăng thêm ổ đĩa cứng SSD vật lý làm Local Cache cho máy ảo Storage Gateway tại chỗ. |
-| **Không thể gia nhập (Join) FSx for Windows vào Active Directory** | Cấu hình sai DNS IP trong VPC DHCP Option Sets hoặc Security Group chặn các cổng Kerberos/LDAP (Port 53, 88, 389, 445). | Kiểm tra nhật ký tạo hệ thống tệp trong AWS Console; kiểm tra kết nối mạng từ VPC tới máy chủ Domain Controller (DC). | 1. Mở các cổng cần thiết trên Security Group của FSx và máy chủ Active Directory.<br>2. Đảm bảo VPC Route Table có đường truyền tới Domain Controllers. |
-
----
-
-## 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
 
 #### 1. Di Chuyển Hệ Thống Chia Sẻ Tệp Tin Windows Doanh Nghiệp Không Sửa Ứng Dụng — (U-PT1 Q64, U-PT2 Q10, U-PT2 Q61)
 - **Tình huống thi**: Doanh nghiệp vận hành cụm máy chủ chia sẻ tệp Windows Server tại chỗ, phục vụ ứng dụng chỉnh sửa video và phần mềm kế toán ERP. Hệ thống sử dụng giao thức SMB, phân quyền thư mục theo NTFS ACLs, tích hợp Active Directory và dùng kiến trúc **DFS Namespaces**. Doanh nghiệp muốn di chuyển lên AWS với yêu cầu giữ nguyên toàn bộ kiến trúc phân quyền và đường dẫn mạng của người dùng.
@@ -301,7 +243,11 @@ sequenceDiagram
 
 ---
 
-## 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+---
+
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
 
 #### 🪤 Bẫy 1: Chọn Hệ Thống Tệp Cho Ứng Dụng Windows: Amazon EFS vs Amazon FSx for Windows — (U-PT2 Q10, U-PT3 Q04)
 - **Tình huống đề thi**: *"Ứng dụng doanh nghiệp chạy trên máy chủ Windows Server yêu cầu hệ thống tệp tin dùng chung qua giao thức SMB, hỗ trợ phân quyền NTFS và tích hợp Microsoft Active Directory."*
@@ -347,6 +293,28 @@ sequenceDiagram
 
 ---
 
+
+
+
+#### 🪤 Bẫy 5: Triển Khai Lưu Trữ Lai Tại Chi Nhánh Không Có Máy Chủ Ảo: Storage Gateway Hardware Appliance — (TD-Set5 Q55)
+- **Tình huống đề thi**: *"Doanh nghiệp bán lẻ có hàng trăm cửa hàng chi nhánh nhỏ. Mỗi chi nhánh cần một giải pháp lưu trữ tệp cục bộ có bộ đệm (local cache) đồng bộ với Amazon S3. Tuy nhiên tại các chi nhánh này hoàn toàn không có máy chủ ảo hóa VMware ESXi hay Microsoft Hyper-V, và nhân viên tại chỗ không có kỹ năng quản trị IT. Giải pháp nào tối ưu nhất?"*
+- **Các phương án bẫy**:
+  - ❌ *Yêu cầu chi nhánh mua máy chủ Dell/HP và cài đặt VMware vSphere*: Tốn chi phí bản quyền phần mềm ảo hóa đắt đỏ và tăng gánh nặng bảo trì IT tại từng điểm bán lẻ.
+  - ❌ *Gắn ổ cứng ngoài USB và dùng script sync thủ công*: Không tự động hóa, dễ mất dữ liệu và thiếu cơ chế cache thông minh.
+- **Giải pháp ĐÚNG**: Mua và triển khai **AWS Storage Gateway Hardware Appliance** (TD-Set5 Q55).
+  - Thiết bị phần cứng vật lý chuyên dụng (1U/2U server) do chính AWS cung cấp, đã được cài đặt sẵn phần mềm Storage Gateway.
+  - Chỉ cần cắm điện, kết nối cáp mạng LAN/Internet và kích hoạt qua AWS Management Console trong vài phút.
+  - Tự động hoạt động như một S3 File Gateway với ổ SSD local cache gắn sẵn, không cần bất kỳ hạ tầng máy ảo nào tại chi nhánh.
+
+#### 🪤 Bẫy 6: Tăng Tốc Tính Toán Song Song HPC Bằng FSx for Lustre Kết Hợp Elastic Fabric Adapter (EFA) — (CM-PT4 Q30)
+- **Tình huống đề thi**: *"Một dự án mô phỏng động lực học chất lưu khí động học (Computational Fluid Dynamics - CFD) chạy trên cụm hàng trăm máy ảo EC2 c5n/p4d. Cụm máy chủ tính toán cần trao đổi thông điệp qua chuẩn MPI (Message Passing Interface) với băng thông mạng tối đa và đọc ghi đồng thời vào hệ thống tệp dùng chung với độ trễ microsecond. Lựa chọn kiến trúc nào?"*
+- **Giải pháp ĐÚNG**: Kết hợp **EC2 Instances có gắn thẻ mạng Elastic Fabric Adapter (EFA)** với **Amazon FSx for Lustre** (CM-PT4 Q30).
+  - EFA cung cấp cơ chế OS-bypass (bỏ qua kernel Linux), cho phép các tác vụ MPI giao tiếp trực tiếp với phần cứng thẻ mạng với độ trễ cực thấp và độ biến thiên (jitter) tối thiểu.
+  - FSx for Lustre cung cấp hệ thống tệp song song chuẩn POSIX, liên kết trực tiếp với Amazon S3 để nạp tập dữ liệu ban đầu và ghi kết quả tính toán mô phỏng.
+
+---
+
+
 ### 📊 III. Ma Trận Quyết Định Công Nghệ Lưu Trữ Nhanh (Exam Decision Matrix)
 
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Đề thi thực chứng |
@@ -354,11 +322,12 @@ sequenceDiagram
 | **Local Cache NFS/SMB độ trễ thấp cho On-Premises lên S3** | **AWS Storage Gateway - S3 File Gateway** | EFS qua VPN (độ trễ WAN cao, thiếu local cache) | U-PT4 Q44 |
 | **Di chuyển dữ liệu lớn lên S3 và duy trì truy cập hybrid** | **AWS DataSync (nạp data) + S3 File Gateway (truy cập)** | Copy thủ công (chậm, không có local cache) | U-PT4 Q07 |
 | **Chia sẻ tệp cho Windows, giao thức SMB, Microsoft Active Directory** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ Linux NFS) | U-PT1 Q64, TD-Set1 Q52 |
-| **Chia sẻ tệp cho Windows, giao thức SMB, Microsoft Active Directory** | **Amazon FSx for Windows File Server** | Amazon EFS (chỉ hỗ trợ Linux NFS) | U-PT1 Q64, TD-Set1 Q52 |
 | **Gom nhiều file system Windows thành 1 đường dẫn chia sẻ** | **FSx for Windows với DFS Namespaces** | LVM stripe trên EC2 (khó quản trị, không HA) | TD-Set1 Q55 |
 | **Lưu trữ khối (Block Storage) độ trễ thấp trải rộng Multi-AZ** | **FSx for NetApp ONTAP (iSCSI Protocol)** | Amazon EBS (EBS bị giới hạn trong 1 AZ duy nhất) | TD-Set1 Q10, TD-Set8 Q18 |
-| **Tính toán HPC, Machine Learning, kết nối S3 hai chiều, sub-millisecond** | **Amazon FSx for Lustre** | Amazon EFS (băng thông và IOPS thấp hơn Lustre) | TD-Set1 Q34 |
+| **Tính toán HPC, Machine Learning, kết nối S3 hai chiều, sub-millisecond** | **Amazon FSx for Lustre kết hợp EFA** | Amazon EFS (băng thông và IOPS thấp hơn Lustre) | TD-Set1 Q34, CM-PT4 Q30 |
 | **Di chuyển thiết bị lưu trữ NetApp tại chỗ lên AWS giữ nguyên SnapMirror** | **Amazon FSx for NetApp ONTAP** | FSx for Windows (không hỗ trợ tính năng NetApp ONTAP) | U-PT3 Q18 |
+| **Truyền tệp SFTP/FTPS không máy chủ vào thẳng S3/EFS qua PrivateLink** | **AWS Transfer Family (VPC Endpoint Mode)** | Tự dựng SFTP Server trên EC2 (tốn công quản trị) | U-PT3 Q52, U-PT4 Q40 |
+| **Lưu trữ lai tại văn phòng không có hạ tầng máy chủ ảo (No Hypervisor)** | **AWS Storage Gateway Hardware Appliance** | Virtual Appliance (yêu cầu VMware/Hyper-V) | TD-Set5 Q55 |
 | **Di chuyển nhanh hàng chục/trăm TB tệp từ NAS lên S3/Glacier tự động** | **AWS DataSync** | Chạy lệnh rsync thủ công (chậm, tốn công vận hành) | TD-Set2 Q18, TD-Set2 Q28 |
 | **Ứng dụng On-Premises cần ghi dữ liệu trực tiếp vào S3 qua NFS/SMB** | **AWS Storage Gateway - S3 File Gateway** | Volume Gateway (chỉ hỗ trợ giao thức khối iSCSI) | U-PT1 Q21, TD-Set1 Q20 |
 | **Mở rộng dung lượng lưu trữ cục bộ giá rẻ, dữ liệu chính nằm trên S3** | **Storage Gateway - Cached Volumes** | Stored Volumes (yêu cầu toàn bộ dữ liệu nằm ở local) | U-PT3 Q60 |
@@ -368,7 +337,113 @@ sequenceDiagram
 
 ---
 
-## 7. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+
+### Kịch Bản: Mở Rộng Dung Lượng Tệp Cục Bộ Bằng Storage Gateway Cached Volume
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Kỹ Sư / Nhân Viên Mạng LAN
+    participant LocalDisk as Ổ Đĩa Cục Bộ Gateway (Local Cache SSD)
+    participant GW as AWS Storage Gateway (Cached Volume VM)
+    participant S3 as Amazon S3 Bucket (Đám Mây AWS)
+
+    Note over User,GW: Giao thức mạng cục bộ: iSCSI Block Storage
+    User->>GW: Gửi yêu cầu Đọc tệp bản vẽ CAD: read_block(LBA_5000)
+    GW->>LocalDisk: Kiểm tra xem khối dữ liệu đã có trong Cache chưa?
+    alt Cache Hit (Đã có sẵn trên ổ đĩa SSD cục bộ)
+        LocalDisk-->>GW: Trả về khối dữ liệu trong thời gian mạng LAN (< 1ms)
+        GW-->>User: Phản hồi dữ liệu tức thì cho kỹ sư!
+    else Cache Miss (Dữ liệu cũ chưa có trên cache)
+        GW->>S3: Tải khối dữ liệu qua kết nối AWS Direct Connect / VPN
+        S3-->>GW: Trả về khối dữ liệu từ S3
+        GW->>LocalDisk: Ghi khối dữ liệu vào SSD Cache phục vụ các lần đọc sau
+        GW-->>User: Trả dữ liệu về cho ứng dụng
+    end
+
+    Note over User,S3: Thao tác Ghi Dữ Liệu (Write-Through)
+    User->>GW: Ghi khối dữ liệu mới
+    GW->>LocalDisk: Ghi vào buffer cục bộ
+    GW-->>User: Xác nhận ghi thành công (Ghi cực nhanh)
+    GW->>S3: Đồng bộ bất đồng bộ khối dữ liệu mới lên Amazon S3 ở chế độ nền!
+```
+
+---
+
+
+---
+
+
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+
+| Dịch vụ liên kết | Phương thức tích hợp | Mục đích kỹ thuật & Kịch bản thực tế |
+| :--- | :--- | :--- |
+| **Amazon S3** | Data Repository Association (FSx for Lustre) | Đọc trực tiếp tập dữ liệu khổng lồ từ S3 vào cụm tính toán HPC và tự động ghi ngược kết quả ra S3. |
+| **AWS Directory Service** | Microsoft Active Directory Domain Join | Cho phép FSx for Windows và Storage Gateway xác thực người dùng doanh nghiệp qua Kerberos và quản lý quyền tệp bằng Windows ACLs. |
+| **AWS DataSync** | DataSync Task | **(U-PT3 Q62)**: Tự động di chuyển hàng chục Terabytes tệp tin từ hệ thống NAS On-Premises lên FSx hoặc EFS với tốc độ tăng tốc mạng gấp 10 lần. |
+| **AWS Backup** | Centralized Backup Plan | Quản lý lịch trình chụp snapshot tự động, thiết lập chính sách lưu giữ và khóa bản sao lưu (**Vault Lock Compliance**) cho toàn bộ hệ thống tệp FSx. |
+| **AWS Direct Connect / VPN** | Hybrid Network Link | Cung cấp đường truyền riêng tư, băng thông cao, độ trễ thấp để các máy ảo Storage Gateway tại chỗ giao tiếp với hạ tầng lưu trữ AWS. |
+
+---
+
+
+---
+
+
+## 5. Bảng So Sánh Toàn Bộ Các Giải Pháp Lưu Trữ Chuyên Biệt & Lai (Ecosystem Comparison)
+
+| Dịch vụ | Giao thức hỗ trợ | Khách hàng mục tiêu | Bộ nhớ đệm cục bộ (Local Cache) | Tính năng nổi bật | Đề thi thực chứng |
+|:---|:---|:---|:---:|:---|:---:|
+| **FSx for Windows File Server** | **SMB (2.0 - 3.1.1)** | Windows Server, Active Directory, SQL Server, IIS | Không (Cloud Native) | **NTFS ACLs, DFS Namespaces, Data Deduplication, Shadow Copies** | U-PT1 Q64, TD-Set1 Q52 |
+| **FSx for Lustre** | **POSIX** | Linux HPC, Big Data, ML Training (GPU clusters) | Không | **Liên kết trực tiếp hai chiều S3, độ trễ < 1ms, hàng trăm GB/s** | TD-Set1 Q34, CM-PT4 Q30 |
+| **FSx for NetApp ONTAP** | **NFS, SMB, iSCSI** | Doanh nghiệp dùng NetApp, Multi-protocol, Block HA | Không | **Multi-AZ iSCSI Block Storage, SnapMirror, Deduplication, Tiering** | TD-Set1 Q10, TD-Set8 Q18 |
+| **FSx for OpenZFS** | **NFS** | Linux workloads cần snapshot mili-giây, zfs send/recv | Không | **Hàng trăm nghìn IOPS, chi phí thấp cho Linux app** | Chuẩn AWS |
+| **S3 File Gateway** | **NFS, SMB** | On-Premises cần local cache đọc/ghi S3 | **Có (Local SSD)** | **Ánh xạ 1:1 tệp sang S3 Object, áp dụng S3 Lifecycle Rules** | U-PT4 Q44, TD-Set1 Q20 |
+| **Volume Gateway (Cached)** | **iSCSI Block** | On-Premises cần mở rộng ổ đĩa cục bộ giá rẻ | **Có (Local SSD)** | **Dữ liệu chính lưu trên S3, snapshot tự động lên EBS Snapshot** | U-PT3 Q60 |
+| **Tape Gateway (VTL)** | **iSCSI VTL** | Doanh nghiệp muốn bỏ băng từ vật lý tape drive | **Có** | **Tương thích Veeam/Backup Exec, lưu trữ Glacier Deep Archive** | U-PT3 Q57 |
+| **AWS Transfer Family** | **SFTP, FTPS, FTP, AS2** | Khách hàng/đối tác bên ngoài truyền file | Không (Serverless) | **Ghi thẳng vào S3/EFS, Managed Workflows, VPC Endpoint** | U-PT3 Q52, U-PT4 Q40 |
+
+---
+
+
+## 6. FinOps & Chiến Lược Tối Ưu Chi Phí (Cost Optimization)
+
+### 1. Phép tính so sánh: FSx for Windows Ổ SSD vs Ổ HDD kết hợp Data Deduplication
+* **Tình huống thực tế**:
+  Một doanh nghiệp cần lưu trữ **50 TB** tài liệu chia sẻ văn phòng và thư mục cá nhân người dùng (Home directories). Tốc độ truy cập trung bình, dữ liệu có mức độ trùng lặp cao (nhiều bản sao tài liệu giống nhau).
+* **Phương án 1: Cấp phát ổ SSD không bật tính năng khử trùng lặp**:
+  - Đơn giá lưu trữ SSD: $\sim 0.13\$/\text{GB/tháng}$.
+  - Chi phí lưu trữ = \$50,000 \text{ GB} \times 0.13\$ = \mathbf{6,500.00\$/\text{tháng}}$.
+* **Phương án 2: Chuyển sang ổ HDD kết hợp bật Data Deduplication (Tỷ lệ tiết kiệm 50%)**:
+  - Dung lượng thực tế sau khử trùng lặp: \$50 \text{ TB} \times 50\% = \mathbf{25 \text{ TB}}$.
+  - Đơn giá lưu trữ HDD: $\sim 0.025\$/\text{GB/tháng}$.
+  - Chi phí lưu trữ HDD = \$25,000 \text{ GB} \times 0.025\$ = \mathbf{625.00\$/\text{tháng}}$.
+  - Cấp phát thêm một lượng nhỏ bộ đệm SSD Cache để tăng tốc: $\sim 100\$/\text{tháng}$.
+  - 👉 **Tổng chi phí mới $\approx 725.00\$/\text{tháng}$ (Tiết kiệm gần 89% ngân sách hàng tháng)!**
+
+---
+
+
+---
+
+
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+
+| Tình huống sự cố | Nguyên nhân cốt lõi | Phương pháp điều tra | Giải pháp xử lý |
+| :--- | :--- | :--- | :--- |
+| **Storage Gateway File Gateway báo lỗi không thể upload tệp lên S3** | 1. IAM Role của Gateway thiếu quyền `s3:PutObject`.<br>2. S3 Bucket bật mã hóa KMS nhưng Gateway không có quyền `kms:GenerateDataKey`. | Kiểm tra CloudWatch Logs của Storage Gateway và CloudTrail Event `PutObject` tìm lỗi `AccessDenied`. | 1. Cập nhật IAM Role gắn trên Gateway cấp quyền đầy đủ trên Bucket ARN.<br>2. Cấp quyền `kms:Decrypt` và `kms:GenerateDataKey` trên KMS Key Policy. |
+| **Người dùng mạng LAN truy cập Storage Gateway bị chậm bất thường** | Dung lượng bộ nhớ đệm cục bộ (**Local Cache Disk**) bị đầy, dẫn đến tỷ lệ **Cache Miss** cao (Gateway phải liên tục tải dữ liệu từ S3 qua mạng Internet). | Kiểm tra metric CloudWatch `CachePercentDirty` và `CachePercentUsed`. | Tăng thêm ổ đĩa cứng SSD vật lý làm Local Cache cho máy ảo Storage Gateway tại chỗ. |
+| **Không thể gia nhập (Join) FSx for Windows vào Active Directory** | Cấu hình sai DNS IP trong VPC DHCP Option Sets hoặc Security Group chặn các cổng Kerberos/LDAP (Port 53, 88, 389, 445). | Kiểm tra nhật ký tạo hệ thống tệp trong AWS Console; kiểm tra kết nối mạng từ VPC tới máy chủ Domain Controller (DC). | 1. Mở các cổng cần thiết trên Security Group của FSx và máy chủ Active Directory.<br>2. Đảm bảo VPC Route Table có đường truyền tới Domain Controllers. |
+
+---
+
+
+---
+
+
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của FSx & Storage Gateway
 1. **Windows SMB là đất diễn của FSx for Windows**: Cứ thấy đề bài nhắc đến *Windows*, *SMB*, *Active Directory*, *NTFS*, *DFS* $\rightarrow$ Lập tức chọn FSx for Windows File Server (Không bao giờ chọn EFS!).
@@ -387,4 +462,3 @@ sequenceDiagram
 - 📖 [Tài Liệu Chuyên Sâu: Di Chuyển & Phục Hồi Thảm Họa (DR & Migration)](./Disaster_Recovery_Migration.md)
 - 📖 [Cẩm Nang Từ Vựng Giải Mã Đề Thi](../EXAM_VOCABULARY.md)
 - 📖 [Bảng Thuật Ngữ Kỹ Thuật Đám Mây](../GLOSSARY.md)
-

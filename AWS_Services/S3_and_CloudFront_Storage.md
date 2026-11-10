@@ -70,11 +70,11 @@ flowchart TD
 | **S3 Standard** | 99.999999999% (11 số 9) | 99.99% | Đa AZs ($\ge$ 3 AZ) | Không áp dụng | **0$ (Miễn phí)** | Dữ liệu nóng truy cập thường xuyên, website tĩnh, CDN origin. |
 | **S3 Express One Zone** | 99.999999999% | 99.95% | **Duy nhất 1 AZ** | Không áp dụng | **0$ (Miễn phí)** | **Nhanh hơn gấp 10 lần**, độ trễ mili-giây một chữ số; dành cho AI/ML Training, Apache Spark, truy vấn tài chính cao tần. |
 | **S3 Intelligent-Tiering** | 99.999999999% | 99.9% | Đa AZs ($\ge$ 3 AZ) | Không áp dụng | **0$ (Miễn phí)** | **Không rõ quy luật truy cập**: Tự động chuyển tầng giữa Frequent, Infrequent, Archive Instant mà không lo phí truy xuất phạt. |
-| **S3 Standard-IA** | 99.999999999% | 99.9% | Đa AZs ($\ge$ 3 AZ) | **30 ngày** | **$0.01 / GiB** | Dữ liệu ít truy cập nhưng khi cần phải tải về ngay lập tức (Sao lưu Disaster Recovery). |
-| **S3 One Zone-IA** | 99.999999999% | 99.5% | **Duy nhất 1 AZ** | **30 ngày** | **$0.01 / GiB** | Bản sao lưu phụ có thể tái tạo lại được; rủi ro mất dữ liệu nếu AZ đó gặp thảm họa. |
-| **S3 Glacier Instant Retrieval** | 99.999999999% | 99.9% | Đa AZs ($\ge$ 3 AZ) | **90 ngày** | **$0.03 / GiB** | Dữ liệu lưu trữ y tế, hồ sơ khách hàng chỉ truy cập 1 lần mỗi quý nhưng cần lấy lại trong **mili-giây**. |
+| **S3 Standard-IA** | 99.999999999% | 99.9% | Đa AZs ($\ge$ 3 AZ) | **30 ngày** | **\$0.01 / GiB** | Dữ liệu ít truy cập nhưng khi cần phải tải về ngay lập tức (Sao lưu Disaster Recovery). |
+| **S3 One Zone-IA** | 99.999999999% | 99.5% | **Duy nhất 1 AZ** | **30 ngày** | **\$0.01 / GiB** | Bản sao lưu phụ có thể tái tạo lại được; rủi ro mất dữ liệu nếu AZ đó gặp thảm họa. |
+| **S3 Glacier Instant Retrieval** | 99.999999999% | 99.9% | Đa AZs ($\ge$ 3 AZ) | **90 ngày** | **\$0.03 / GiB** | Dữ liệu lưu trữ y tế, hồ sơ khách hàng chỉ truy cập 1 lần mỗi quý nhưng cần lấy lại trong **mili-giây**. |
 | **S3 Glacier Flexible Retrieval** | 99.999999999% | 99.99% | Đa AZs ($\ge$ 3 AZ) | **90 ngày** | Có phí (Trừ Bulk) | Lưu trữ dài hạn: Expedited (1–5 phút), Standard (3–5 giờ), Bulk (5–12 giờ miễn phí). |
-| **S3 Glacier Deep Archive** | 99.999999999% | 99.99% | Đa AZs ($\ge$ 3 AZ) | **180 ngày** | Có phí | Lưu trữ tuân thủ pháp lý 7–10 năm; giá rẻ nhất thế giới (< $1/TB/tháng). Thời gian rút dữ liệu từ 12 đến 48 giờ. |
+| **S3 Glacier Deep Archive** | 99.999999999% | 99.99% | Đa AZs ($\ge$ 3 AZ) | **180 ngày** | Có phí | Lưu trữ tuân thủ pháp lý 7–10 năm; giá rẻ nhất thế giới (< \$1/TB/tháng). Thời gian rút dữ liệu từ 12 đến 48 giờ. |
 
 ---
 
@@ -168,7 +168,7 @@ flowchart TD
 - **Giải pháp tối ưu chuẩn AWS**:
   - Bật tính năng **Amazon S3 Transfer Acceleration (S3TA)** trên bucket: Tận dụng hơn 400+ Edge Locations toàn cầu của Amazon CloudFront. Dữ liệu từ client được định tuyến vào Edge gần nhất qua Internet ngắn, sau đó đi thẳng tới S3 bucket qua mạng trục cáp quang riêng tốc độ cao của AWS.
   - Kết hợp sử dụng **Multipart Upload**: Chia nhỏ tệp tin thành nhiều phần (parts) và tải lên song song đồng thời. Bắt buộc đối với tệp tin $> 5 \text{ GB}$ và khuyến nghị sử dụng cho bất kỳ tệp tin nào $> 100 \text{ MB}$.
-  - **Quy tắc tính cước đặc biệt của S3TA**: Nếu tính năng S3TA không giúp tăng tốc độ truyền tải nhanh hơn so với Internet công cộng thông thường cho lượt truyền đó, **AWS sẽ hoàn toàn MIỄN PHÍ ($0.00)** cước phí Transfer Acceleration!
+  - **Quy tắc tính cước đặc biệt của S3TA**: Nếu tính năng S3TA không giúp tăng tốc độ truyền tải nhanh hơn so với Internet công cộng thông thường cho lượt truyền đó, **AWS sẽ hoàn toàn MIỄN PHÍ (\$0.00)** cước phí Transfer Acceleration!
 
 #### 2. Vượt Qua Giới Hạn Tốc Độ API (Throttling 503 SlowDown) Bằng Tiền Tố (Custom Prefixes)
 - **Tình huống thi**: Ứng dụng phân tích dữ liệu lớn đọc/ghi hàng chục ngàn yêu cầu mỗi giây vào cùng một S3 bucket và liên tục bị lỗi `HTTP 503 SlowDown`.
@@ -177,7 +177,7 @@ flowchart TD
   - Mỗi Prefix hỗ trợ tối đa:
     - **3,500 yêu cầu PUT / COPY / POST / DELETE mỗi giây**.
     - **5,500 yêu cầu GET / HEAD mỗi giây**.
-  - **Giải pháp chuẩn**: Phân chia dữ liệu vào **nhiều Prefixes khác nhau** (ví dụ: chia theo `/folder1/`, `/folder2/`, hoặc băm hash MD5). Nếu chia dữ liệu ra 10 prefixes, throughput tổng thể của bucket sẽ tăng lên $10 \times 5,500 = 55,000 \text{ GET requests/s}$!
+  - **Giải pháp chuẩn**: Phân chia dữ liệu vào **nhiều Prefixes khác nhau** (ví dụ: chia theo `/folder1/`, `/folder2/`, hoặc băm hash MD5). Nếu chia dữ liệu ra 10 prefixes, throughput tổng thể của bucket sẽ tăng lên \$10 \times 5,500 = 55,000 \text{ GET requests/s}$!
 
 #### 3. Chống Ghi Đè & Chống Xóa Vĩnh Viễn Bằng S3 Object Lock Legal Hold
 - **Tình huống thi**: Doanh nghiệp cần chuyển dữ liệu từ On-Premises lên S3 và phải đảm bảo dữ liệu không thể bị sửa đổi hoặc ghi đè vô thời hạn (indefinitely) để phục vụ điều tra pháp lý hoặc kiểm toán.
@@ -223,7 +223,7 @@ flowchart TD
 - **Tình huống đề thi**: *"Doanh nghiệp cần lưu trữ dữ liệu y tế sau 30 ngày để tối ưu chi phí. Dữ liệu hiếm khi được đọc (vài tháng một lần), nhưng khi có ca cấp cứu thì bác sĩ bắt buộc phải truy xuất được tệp tin NGAY LẬP TỨC TRONG VÀI MILI-GIÂY (millisecond retrieval). Chọn tầng lưu trữ nào?"*
 - **Các phương án bẫy**:
   - ❌ *Chọn S3 Glacier Flexible Retrieval*: Thời gian lấy dữ liệu mất từ 1 đến 5 phút (Expedited) hoặc 3 đến 5 giờ (Standard) -> Bác sĩ không thể chờ đợi.
-  - ❌ *Chọn S3 Standard-IA*: Chi phí lưu trữ đắt hơn Glacier Instant Retrieval gần 3 lần ($0.0125/GB so với $0.004/GB).
+  - ❌ *Chọn S3 Standard-IA*: Chi phí lưu trữ đắt hơn Glacier Instant Retrieval gần 3 lần (\$0.0125/GB so với \$0.004/GB).
 - **Giải pháp ĐÚNG**: **S3 Glacier Instant Retrieval**.
   - Cung cấp tốc độ truy xuất mili-giây giống như S3 Standard.
   - Tiết kiệm tới 68% chi phí lưu trữ so với S3 Standard-IA.
@@ -246,7 +246,7 @@ flowchart TD
 - **Mẫu kiến trúc chuẩn 3 giai đoạn**:
   1. **Giai đoạn 1 (0 – 30 ngày)**: **S3 Standard** (dữ liệu được các Glue ETL Jobs đọc/ghi hàng ngày với hiệu năng cao nhất).
   2. **Giai đoạn 2 (30 ngày – 5 năm)**: **S3 Standard-IA** (dữ liệu thô ít khi truy vấn, tiết kiệm chi phí, đáp ứng truy xuất nhanh khi kiểm toán đột xuất).
-  3. **Giai đoạn 3 (Sau 5 năm)**: **S3 Glacier Flexible / Deep Archive** (lưu trữ tuân thủ pháp lý với chi phí rẻ nhất $0.00099/GB).
+  3. **Giai đoạn 3 (Sau 5 năm)**: **S3 Glacier Flexible / Deep Archive** (lưu trữ tuân thủ pháp lý với chi phí rẻ nhất \$0.00099/GB).
 
 #### 🪤 Bẫy 5: S3 Object Lock Compliance Mode với Retention Period Cố Định — (CM-PT2 Q22, CM-PT1 Q01)
 - **Tình huống đề thi**: *"Doanh nghiệp tài chính cần lưu trữ hồ sơ giao dịch trong đúng thời hạn 1 năm. Quy định pháp lý yêu cầu hồ sơ TUYỆT ĐỐI KHÔNG ĐƯỢC XÓA HOẶC GHI ĐÈ trong 1 năm này, kể cả bởi quản trị viên cấp cao nhất hay tài khoản Root, nhưng hồ sơ vẫn phải đọc được bình thường."*
@@ -365,10 +365,10 @@ flowchart TD
 |:---|:---|:---|:---:|
 | **Dữ liệu đọc/ghi thường xuyên, độ trễ millisecond** | **S3 Standard** | Các lớp IA/Glacier (tốn phí per-request) | CM-PT1 Q55 |
 | **Khắc phục lỗi S3 HTTP 503 Slow Down khi tải cao** | **Phân tán Key trên nhiều Custom Prefixes** | Tăng Service Quota (S3 prefix limit là kiến trúc cố định) | U-PT1 Q15 |
-| **Mẫu truy cập không rõ hoặc biến động liên tục** | **S3 Intelligent-Tiering** | S3 Standard (bỏ lỡ cơ hội tự động giảm giá) | TD-Set1 Q23, U-PT4 Q26 |
+| **Mẫu truy cập không rõ hoặc biến động liên tục** | **S3 Intelligent-Tiering** | S3 Standard (bỏ lỡ cơ hội tự động giảm giá) | TD-Set1 Q31, U-PT4 Q26 |
 | **Dữ liệu ít đọc, cần lấy ngay tức thì (< 1s)** | **S3 Glacier Instant Retrieval** | Glacier Flexible (mất từ vài phút đến vài giờ) | CM-PT1 Q46 |
 | **Dữ liệu sao lưu lâu năm, chấp nhận chờ 3-5 giờ** | **S3 Glacier Flexible Retrieval** | Glacier Deep Archive (chờ 12 giờ) | TD-Set1 Q40 |
-| **Lưu trữ tuân thủ 7-10 năm, rẻ nhất thị trường** | **S3 Glacier Deep Archive** | Glacier Flexible (đắt hơn gấp 3 lần) | TD-Set1 Q37, TD-Set2 Q28 |
+| **Lưu trữ tuân thủ 7-10 năm, rẻ nhất thị trường** | **S3 Glacier Deep Archive** | Glacier Flexible (đắt hơn gấp 3 lần) | TD-Set3 Q32, TD-Set2 Q28 |
 | **Dữ liệu phụ tái tạo được, tiết kiệm chi phí** | **S3 One Zone-IA** | Standard-IA (One Zone-IA rẻ hơn 20%) | CM-PT2 Q01 |
 | **Thời gian lưu trữ tối thiểu trước khi sang Standard-IA** | **Bắt buộc tối thiểu 30 ngày trong S3 Standard** | Cấu hình < 30 ngày (bị AWS từ chối/tính phạt) | U-PT4 Q24 |
 | **Cắt giảm tới 99% chi phí gọi API KMS cho S3** | **Kích hoạt S3 Bucket Keys (SSE-KMS)** | Chuyển SSE-S3 (mất kiểm soát audit khóa KMS) | U-PT4 Q65 |
@@ -435,7 +435,7 @@ flowchart TD
     EdgeCompute[Điện Toán Tại Điểm Biên - CloudFront Edge Compute] --> CFF[CloudFront Functions\nSiêu nhẹ, Siêu tốc tại hơn 600+ PoPs]
     EdgeCompute --> LEdge[Lambda@Edge\nĐầy đủ tính năng tại Regional Edge Caches]
 
-    CFF --> CFF_Props[Ngôn ngữ: JavaScript\nThời gian chạy: < 1 mili-giây\nRAM: 2 MB\nChi phí: Cực rẻ $0.10/1M reqs\nUse case: URL Rewrite, Header Manipulation, Token Validation]
+    CFF --> CFF_Props[Ngôn ngữ: JavaScript\nThời gian chạy: < 1 mili-giây\nRAM: 2 MB\nChi phí: Cực rẻ \$0.10/1M reqs\nUse case: URL Rewrite, Header Manipulation, Token Validation]
     LEdge --> LEdge_Props[Ngôn ngữ: Node.js, Python\nThời gian chạy: Lên tới 30 giây\nRAM: Lên tới 10,000 MB\nTruy cập mạng: Được phép gọi API ngoài/DB\nUse case: Server-Side Rendering, Image Resizing, Auth phức tạp]
 ```
 
@@ -473,13 +473,13 @@ flowchart TD
 
 | Thành phần tính phí | Cơ chế tính phí (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
-| **S3 Standard Storage** | • **$0.023 / GiB / tháng** ($23 / TB).<br>• Miễn phí truy xuất dữ liệu (Data Retrieval = $0.00). | PUT/POST: $0.005 / 1,000 reqs.<br>GET: $0.0004 / 1,000 reqs. | Lưu trữ dữ liệu lịch sử ít truy cập trên S3 Standard qua nhiều năm. |
-| **S3 Intelligent-Tiering** | • Tự động chuyển tầng ($0.023 $\rightarrow$ $0.0125 $\rightarrow$ $0.004 $\rightarrow$ $0.00099).<br>• Phí giám sát: **$0.0025 / 1,000 objects / tháng**. | Miễn phí truy xuất 100%. | Áp dụng Intelligent-Tiering cho hàng chục triệu tệp tin có kích thước siêu nhỏ (< 128 KB). |
-| **S3 Standard-IA** | • **$0.0125 / GiB / tháng** (Giảm 45%).<br>• **Phí truy xuất: $0.01 / GiB**. | Yêu cầu lưu tối thiểu **30 ngày** và tính dung lượng tối thiểu **128 KB/file**. | Chuyển các file 5–10 KB sang IA khiến dung lượng tính tiền bị thổi phồng lên 128 KB! |
-| **S3 Glacier Deep Archive** | • **$0.00099 / GiB / tháng** (< $1 / TB / tháng - Rẻ nhất thế giới). | Tối thiểu lưu **180 ngày**.<br>Rút dữ liệu: 12 – 48 giờ. | Xóa file trước 180 ngày vẫn bị tính đủ tiền lưu trữ 180 ngày. |
-| **Dữ liệu Multipart dở dang** | • **Tính nguyên giá S3 Standard ($0.023/GiB)** cho các phần dở dang (Incomplete Parts). | Ẩn hoàn toàn trong danh sách file thông thường! | Không cài đặt Lifecycle Rule `AbortIncompleteMultipartUpload`, mất hàng ngàn USD tiền rác! |
-| **Amazon CloudFront DTO** | • Phí truyền tải ra Internet: ~$0.085/GB.<br>• **Truy xuất dữ liệu từ AWS Origin (S3/ALB) tới CloudFront: HOÀN TOÀN MIỄN PHÍ ($0.00)**. | 1 TB DTO đầu tiên mỗi tháng miễn phí vĩnh viễn. | Người dùng tải file trực tiếp từ S3 ra Internet thay vì đi qua CloudFront (S3 DTO đắt hơn). |
-| **CloudFront Invalidation** | • **1,000 paths đầu tiên mỗi tháng miễn phí**.<br>• Sau đó: **$0.005 cho mỗi path**. | Invalidate `/*` chỉ tính là 1 path duy nhất. | CI/CD script invalidate từng file riêng lẻ (10,000 files = $45/lần deploy!). |
+| **S3 Standard Storage** | • **\$0.023 / GiB / tháng** (\$23 / TB).<br>• Miễn phí truy xuất dữ liệu (Data Retrieval = \$0.00). | PUT/POST: \$0.005 / 1,000 reqs.<br>GET: \$0.0004 / 1,000 reqs. | Lưu trữ dữ liệu lịch sử ít truy cập trên S3 Standard qua nhiều năm. |
+| **S3 Intelligent-Tiering** | • Tự động chuyển tầng (\$0.023 $\rightarrow$ \$0.0125 $\rightarrow$ \$0.004 $\rightarrow$ \$0.00099).<br>• Phí giám sát: **\$0.0025 / 1,000 objects / tháng**. | Miễn phí truy xuất 100%. | Áp dụng Intelligent-Tiering cho hàng chục triệu tệp tin có kích thước siêu nhỏ (< 128 KB). |
+| **S3 Standard-IA** | • **\$0.0125 / GiB / tháng** (Giảm 45%).<br>• **Phí truy xuất: \$0.01 / GiB**. | Yêu cầu lưu tối thiểu **30 ngày** và tính dung lượng tối thiểu **128 KB/file**. | Chuyển các file 5–10 KB sang IA khiến dung lượng tính tiền bị thổi phồng lên 128 KB! |
+| **S3 Glacier Deep Archive** | • **\$0.00099 / GiB / tháng** (< \$1 / TB / tháng - Rẻ nhất thế giới). | Tối thiểu lưu **180 ngày**.<br>Rút dữ liệu: 12 – 48 giờ. | Xóa file trước 180 ngày vẫn bị tính đủ tiền lưu trữ 180 ngày. |
+| **Dữ liệu Multipart dở dang** | • **Tính nguyên giá S3 Standard (\$0.023/GiB)** cho các phần dở dang (Incomplete Parts). | Ẩn hoàn toàn trong danh sách file thông thường! | Không cài đặt Lifecycle Rule `AbortIncompleteMultipartUpload`, mất hàng ngàn USD tiền rác! |
+| **Amazon CloudFront DTO** | • Phí truyền tải ra Internet: ~\$0.085/GB.<br>• **Truy xuất dữ liệu từ AWS Origin (S3/ALB) tới CloudFront: HOÀN TOÀN MIỄN PHÍ (\$0.00)**. | 1 TB DTO đầu tiên mỗi tháng miễn phí vĩnh viễn. | Người dùng tải file trực tiếp từ S3 ra Internet thay vì đi qua CloudFront (S3 DTO đắt hơn). |
+| **CloudFront Invalidation** | • **1,000 paths đầu tiên mỗi tháng miễn phí**.<br>• Sau đó: **\$0.005 cho mỗi path**. | Invalidate `/*` chỉ tính là 1 path duy nhất. | CI/CD script invalidate từng file riêng lẻ (10,000 files = \$45/lần deploy!). |
 
 ---
 
@@ -505,10 +505,10 @@ flowchart TD
   $$\text{Chi phí S3 Standard ban đầu} = 200,000 \text{ GiB} \times 0.023\$ = \mathbf{4,600.00\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
   - Áp dụng **S3 Intelligent-Tiering** cho toàn bộ bucket. Phân bổ dữ liệu thực tế sau 90 ngày:
-    - 40 TB ở tầng Frequent Access: $40,000 \times 0.023\$ = 920.00\$$
-    - 60 TB ở tầng Infrequent Access (sau 30 ngày): $60,000 \times 0.0125\$ = 750.00\$$
-    - 100 TB ở tầng Archive Instant Access (sau 90 ngày): $100,000 \times 0.004\$ = 400.00\$$
-    - Phí giám sát tự động cho 10 triệu objects: $10,000 \times 0.0025\$ = 25.00\$$
+    - 40 TB ở tầng Frequent Access: \$40,000 \times 0.023\$ = 920.00\$$
+    - 60 TB ở tầng Infrequent Access (sau 30 ngày): \$60,000 \times 0.0125\$ = 750.00\$$
+    - 100 TB ở tầng Archive Instant Access (sau 90 ngày): \$100,000 \times 0.004\$ = 400.00\$$
+    - Phí giám sát tự động cho 10 triệu objects: \$10,000 \times 0.0025\$ = 25.00\$$
   $$\text{Tổng chi phí sau tối ưu} = 920\$ + 750\$ + 400\$ + 25\$ = \mathbf{2,095.00\$/\text{tháng}}$$
 * **Kết quả tiết kiệm**:
   $$\text{Số tiền tiết kiệm} = 4,600.00\$ - 2,095.00\$ = \mathbf{2,505.00\$/\text{tháng}} \quad (\approx \mathbf{30,060\$/\text{năm}})$$
@@ -543,9 +543,9 @@ flowchart TD
   $$\text{Tổng chi phí ban đầu} = \mathbf{5,460.00\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
   - Triển khai **Amazon CloudFront** đứng trước S3 kết hợp **Origin Access Control (OAC)**:
-    1. Lưu lượng truyền từ S3 sang CloudFront là **$0.00 (Hoàn toàn miễn phí)**.
+    1. Lưu lượng truyền từ S3 sang CloudFront là **\$0.00 (Hoàn toàn miễn phí)**.
     2. Tỷ lệ trúng bộ nhớ đệm (Cache Hit Ratio) đạt 85%, chỉ 9 TB phải quay về S3.
-    3. Đăng ký **CloudFront Security Savings Bundle** nhận chiết khấu 30% trên đơn giá DTO ra Internet ($0.085 $\rightarrow$ $0.0595/GiB).
+    3. Đăng ký **CloudFront Security Savings Bundle** nhận chiết khấu 30% trên đơn giá DTO ra Internet (\$0.085 $\rightarrow$ \$0.0595/GiB).
   $$\text{Phí CloudFront DTO (60 TB)} = 60,000 \times 0.0595\$ = 3,570.00\$$$
   $$\text{Phí S3 GET Requests sau giảm tải 85%} = 22,500 \times 0.0004\$ = 9.00\$$$
   $$\text{Tổng chi phí sau tối ưu} = 3,570.00\$ + 9.00\$ = \mathbf{3,579.00\$/\text{tháng}}$$
@@ -564,7 +564,7 @@ flowchart TD
 * **Chiến lược tối ưu hóa**:
   - Áp dụng kỹ thuật **Content-based Hash Naming** trong Webpack/Vite (ví dụ: `main.d41d8c.js`). Khi có code mới, tên file tự thay đổi, CloudFront tự động kéo file mới.
   - Script deploy CI/CD chỉ gửi duy nhất 1 lệnh invalidate cho file HTML gốc: `aws cloudfront create-invalidation --distribution-id XXX --paths /index.html`.
-  - Toàn bộ 150 lần deploy chỉ tiêu tốn 150 paths, nằm trọn vẹn trong **1,000 paths miễn phí hàng tháng của AWS ($0.00)**.
+  - Toàn bộ 150 lần deploy chỉ tiêu tốn 150 paths, nằm trọn vẹn trong **1,000 paths miễn phí hàng tháng của AWS (\$0.00)**.
 * **Kết quả tiết kiệm**:
   $$\text{Số tiền tiết kiệm} = \mathbf{5,250.00\$/\text{tháng}} \quad (\approx \mathbf{63,000\$/\text{năm}})$$
   **Loại bỏ 100% chi phí phát sinh xóa cache lãng phí**.

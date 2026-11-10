@@ -61,7 +61,7 @@ flowchart TD
 | :--- | :--- | :--- | :--- |
 | **Giao thức** | HTTP/1.1, HTTP/2 | HTTP/1.1 | WebSocket (Hai chiều - Duplex) |
 | **Độ trễ (Latency)** | **Cực thấp (Siêu nhẹ)** | Trung bình | Thời gian thực (Persistent connection) |
-| **Chi phí** | **Rẻ hơn 71%** ($1.00 / 1 triệu reqs) | Đắt hơn ($3.50 / 1 triệu reqs) | Tính theo phút kết nối + tin nhắn |
+| **Chi phí** | **Rẻ hơn 71%** (\$1.00 / 1 triệu reqs) | Đắt hơn (\$3.50 / 1 triệu reqs) | Tính theo phút kết nối + tin nhắn |
 | **Xác thực (Auth)** | OIDC, OAuth 2.0, Lambda Authorizer | Cognito User Pools, Lambda, IAM, API Keys | IAM, Cognito, Lambda Authorizer |
 | **Tích hợp AWS WAF** | **Hỗ trợ đầy đủ** (Cập nhật mới) | **Hỗ trợ đầy đủ** | Chưa hỗ trợ trực tiếp |
 | **API Caching tích hợp** | ❌ Không hỗ trợ tích hợp |  **Có hỗ trợ** (Cụm Cache riêng) | ❌ Không |
@@ -145,7 +145,7 @@ classDiagram
 | **Thời gian chạy tối đa** | **Lên tới 1 năm** (Thích hợp cho quy trình dài hạn, có bước duyệt thủ công) | **Tối đa 5 phút** (Thích hợp xử lý dữ liệu streaming, IoT) |
 | **Tốc độ thực thi** | Tối đa ~2,000 executions/giây | **Hơn 100,000 executions/giây** (High throughput) |
 | **Cam kết thực thi** | **Exactly-once** (Chính xác một lần - Không bị chạy trùng lặp) | **At-least-once** (Bất đồng bộ) hoặc **At-most-once** (Đồng bộ) |
-| **Mô hình tính giá** | Tính trên **từng bước chuyển trạng thái (State Transition)** ($0.025 / 1,000 transitions) | Tính trên **số lượng thực thi + thời gian chạy (GB-giây)** giống Lambda |
+| **Mô hình tính giá** | Tính trên **từng bước chuyển trạng thái (State Transition)** (\$0.025 / 1,000 transitions) | Tính trên **số lượng thực thi + thời gian chạy (GB-giây)** giống Lambda |
 | **Lịch sử thực thi** | Lưu trữ toàn bộ lịch sử trạng thái trong **90 ngày** trên Console | Xuất logs trực tiếp sang **CloudWatch Logs** (không lưu console) |
 | **Trường hợp áp dụng** | Xử lý đơn hàng thương mại điện tử, luồng phê duyệt nghỉ phép của nhân sự, ETL batch. | Xử lý luồng clickstream, ingest dữ liệu IoT từ Kinesis, biến đổi dữ liệu API tốc độ cao. |
 
@@ -159,94 +159,13 @@ classDiagram
 
 ---
 
-## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
-### Kịch Bản: Quy Trình Đăng Nhập, Gọi API Đơn Hàng & Điều Phối Bằng Step Functions
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Khách Hàng (App)
-    participant Cognito as Amazon Cognito User Pool
-    participant APIGW as Amazon API Gateway (REST)
-    participant SF as AWS Step Functions (Standard)
-    participant Inventory as Lambda: Kiểm Tra Kho
-    participant Payment as Lambda: Trừ Tiền Thẻ
-    participant DB as Amazon DynamoDB
-
-    Note over User,Cognito: Bước 1: Xác Thực Định Danh
-    User->>Cognito: Gửi Username + Password
-    Cognito-->>User: Trả về JWT Access Token & ID Token
-
-    Note over User,APIGW: Bước 2: Đặt Hàng Qua API Gateway
-    User->>APIGW: POST /orders (Header: Bearer JWT Token)
-    APIGW->>APIGW: Cognito Authorizer kiểm tra chữ ký JWT Token
-    APIGW->>SF: Khởi chạy State Machine: StartExecution(OrderID)
-    APIGW-->>User: HTTP 202 Accepted (Kèm ExecutionARN)
-
-    Note over SF,Payment: Bước 3: Điều Phối Saga Pattern
-    SF->>Inventory: Task 1: Khóa sản phẩm trong kho
-    Inventory-->>SF: Xác nhận: Đã khóa hàng thành công
-    SF->>Payment: Task 2: Tiến hành thanh toán qua Payment Gateway
-    alt Thanh toán Thành công
-        Payment-->>SF: Trả về PaymentStatus: SUCCESS
-        SF->>DB: Task 3: Ghi đơn hàng trạng thái COMPLETED
-        SF-->>User: Thông báo đơn hàng hoàn tất qua WebSocket / SNS
-    else Thanh toán Thất bại (Catch / Compensation)
-        Payment-->>SF: Báo lỗi InsufficientFunds (Thẻ không đủ tiền)
-        SF->>Inventory: Compensation Task: Mở khóa hoàn trả hàng về kho!
-        SF->>DB: Cập nhật trạng thái ORDER_FAILED
-    end
-```
 
 ---
 
-## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
 
-| Dịch vụ liên kết | Phương thức tích hợp | Mục đích kỹ thuật & Kịch bản thực tế |
-| :--- | :--- | :--- |
-| **AWS WAF** | Gắn Web ACL trực tiếp vào API Gateway Stage | Chống các cuộc tấn công tầng ứng dụng (SQL Injection, Cross-Site Scripting XSS, Rate-limiting theo IP). |
-| **Amazon CloudFront** | Đặt CloudFront Distribution phía trước Regional API Gateway | Tùy chỉnh tên miền riêng với chứng chỉ SSL đa vùng, áp dụng chính sách Edge caching chuyên sâu và giảm chi phí truyền dữ liệu. |
-| **Amazon EventBridge** | **API Gateway Service Integration Trực Tiếp** | Bỏ qua hàm Lambda trung gian: Đẩy trực tiếp request JSON từ API Gateway vào EventBridge Event Bus để xử lý bất đồng bộ. |
-| **AWS Lambda** | Lambda Proxy Integration | Phương thức phổ biến nhất: Toàn bộ thông tin request (headers, query params, body) được gói nguyên vẹn thành JSON gửi tới Lambda. |
-| **AWS X-Ray** | X-Ray Active Tracing | Phân tích độ trễ xuyên suốt từ API Gateway qua các microservices và hàm Lambda để tìm nút thắt cổ chai (**Bottleneck**). |
-| **Amazon SQS / SNS** | API Gateway Service Direct Integration | Đưa các yêu cầu ghi dữ liệu tải cao vào hàng đợi SQS để san phẳng đỉnh tải (**Load Leveling**) với độ trễ thấp nhất. |
-
----
-
-## 5. FinOps & Chiến Lược Tối Ưu Chi Phí (Cost Optimization)
-
-### 1. Phép tính so sánh: HTTP API vs REST API
-* **Tình huống thực tế**:
-  Một ứng dụng Fintech nhận 50 triệu yêu cầu API mỗi tháng. Yêu cầu chỉ cần xác thực bằng JWT Token và gọi các hàm Lambda xử lý nghiệp vụ, không cần tính năng API Caching hay WTL transformation.
-* **Phương án 1: Sử dụng REST API**:
-  - Đơn giá: $3.50 cho mỗi 1 triệu requests đầu tiên.
-  - Chi phí = $50 \times 3.50\$ = \mathbf{175.00\$/\text{tháng}}$.
-* **Phương án 2: Chuyển đổi sang HTTP API**:
-  - Đơn giá: $1.00 cho mỗi 1 triệu requests (cho 300 triệu đầu tiên).
-  - Chi phí = $50 \times 1.00\$ = \mathbf{50.00\$/\text{tháng}}$.
-  - 👉 **Tiết kiệm ngay $125/tháng (giảm 71.4% chi phí API Gateway)**!
-
-### 2. Tối Ưu Hóa Chi Phí Xử Lý: Direct Service Integration Bỏ Qua Lambda
-* Thay vì luồng truyền thống: `API Gateway -> Lambda -> EventBridge / SQS`  
-  (Bạn phải trả tiền: Phí gọi API Gateway + Phí thời gian chạy Lambda GB-giây + Phí EventBridge).
-* Thiết lập **Direct AWS Service Integration**: `API Gateway -> EventBridge`  
-  (Loại bỏ hoàn toàn chi phí chạy của Lambda, giảm thiểu độ trễ từ 50ms xuống còn dưới 10ms, loại bỏ rủi ro dính lỗi Cold Start của Lambda!).
-
----
-
-## 6. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
-
-| Mã lỗi / Hiện tượng | Nguyên nhân cốt lõi | Các bước điều tra | Giải pháp xử lý triệt để |
-| :--- | :--- | :--- | :--- |
-| **`HTTP 429 Too Many Requests`** | Lưu lượng vượt quá Steady-state Rate Limit hoặc Burst Limit đã thiết lập trên Stage hoặc Usage Plan. | Kiểm tra metric CloudWatch `4XXError` và `ExecutionError`. Xem log CloudWatch của API Gateway. | 1. Yêu cầu AWS tăng Soft Limit tài khoản nếu tải hợp lệ.<br>2. Cấu hình Client áp dụng thuật toán **Exponential Backoff with Jitter**.<br>3. Bật API Gateway Cache để giảm tải cho backend. |
-| **`HTTP 504 Gateway Timeout`** | Backend (Lambda function hoặc máy chủ HTTP) mất hơn **29 giây** để phản hồi. | Kiểm tra CloudWatch Logs của Lambda; xem execution duration của hàm backend. | 1. **29 giây là Hard Limit không thể tăng của API Gateway**.<br>2. Chuyển kiến trúc sang bất đồng bộ: API Gateway trả về `HTTP 202 Accepted` ngay lập tức và đẩy task vào SQS hoặc Step Functions. |
-| **Lỗi `CORS (Cross-Origin Resource Sharing)` trên trình duyệt** | Trình duyệt gửi request `OPTIONS` (Preflight request) nhưng API Gateway không cấu hình trả về các Headers CORS cần thiết. | Mở DevTools trên trình duyệt, tab Console kiểm tra thông báo: *"No 'Access-Control-Allow-Origin' header is present on the requested resource"*. | 1. Bật tính năng **Enable CORS** trên tài nguyên API Gateway.<br>2. Nếu dùng Lambda Proxy Integration, code Lambda **BẮT BUỘC** phải tự chèn header `Access-Control-Allow-Origin: '*'` vào đối tượng JSON phản hồi. |
-| **`HTTP 403 Forbidden: Missing Authentication Token`** | 1. Gọi sai URL endpoint hoặc sai phương thức HTTP (ví dụ: route chỉ có POST nhưng client gọi GET).<br>2. API yêu cầu API Key nhưng client không truyền header `x-api-key`. | So sánh chính xác Path và HTTP Method trong URL client gọi với định nghĩa trong API Gateway Console. | 1. Kiểm tra lại routing và URL path.<br>2. Nếu endpoint yêu cầu bảo vệ bằng IAM, client phải ký request bằng SigV4. |
-
----
-
-## 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
+### 🏛️ I. Các Kịch Bản Kiến Trúc Chuẩn (Best Practice Scenarios)
 
 #### 1. Xây Dựng Hệ Thống API Tài Chính Lưu Lượng Cao, Độ Trễ Cực Thấp — (CM-PT1 Q10, CM-PT5 Q60)
 - **Tình huống thi**: Ngân hàng xây dựng hệ thống API phục vụ ứng dụng Mobile Banking. Yêu cầu xử lý hàng chục nghìn giao dịch mỗi giây, xác thực token JWT chuẩn OAuth 2.0, bảo mật cao nhất và tối ưu chi phí vận hành.
@@ -314,7 +233,11 @@ sequenceDiagram
 
 ---
 
-## 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
+
+---
+
+
+### 🪤 II. Các Bẫy Thi Tinh Vi & Phân Tích Phương Án Sai (Exam Traps & Distractors)
 
 #### 🪤 Bẫy 1: Bảo Vệ API Gateway Khỏi SQLi và XSS: AWS Shield vs AWS WAF — (CM-PT3 Q12)
 - **Tình huống đề thi**: *"Doanh nghiệp công khai các REST API trên API Gateway cho bên thứ 3 truy cập. Yêu cầu bảo vệ API khỏi các mối đe dọa SQL Injection và Cross-Site Scripting (XSS) với chi phí vận hành thấp nhất."*
@@ -358,27 +281,195 @@ sequenceDiagram
 
 ---
 
-## 📊 III. Ma Trận Quyết Định Công Nghệ Nhanh (Exam Decision Matrix)
 
-| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Nguồn thực chứng |
-|:---|:---|:---|:---|
-| **Cần xây dựng REST API giá rẻ nhất, chỉ cần xác thực JWT đơn giản** | **API Gateway HTTP API** | REST API (đắt hơn gấp 3 lần, tính năng thừa) | Chuẩn AWS |
-| **Cần bán gói API cho đối tác thứ 3 với giới hạn quota theo khách hàng** | **API Gateway REST API + Usage Plans & API Keys** | HTTP API (không hỗ trợ Usage Plans và API Keys) | Chuẩn AWS |
-| **Bảo vệ REST API khỏi tấn công SQL Injection và XSS** | **AWS WAF gắn vào API Gateway** | AWS Shield (chỉ chống DDoS L3/L4, không chống SQLi/XSS) | `TD-Set1 Q16` |
-| **Đăng ký, đăng nhập người dùng, hỗ trợ Adaptive Risk-based MFA** | **Amazon Cognito User Pools** | Cognito Identity Pools (chỉ phân quyền, không lưu user) | `TD-Set8 Q01` |
-| **Cho phép Mobile App upload file trực tiếp lên S3 không qua server** | **Cognito Identity Pools (Cấp quyền IAM tạm thời)** | Tạo tài khoản IAM cứng trong code app (Lỗ hổng bảo mật nghiêm trọng) | `TD-Set8 Q01`, `TD-Set3 Q16` |
-| **Quy trình nghiệp vụ xử lý dài ngày (lên tới 1 năm), có bước duyệt thủ công** | **AWS Step Functions Standard Workflows** | Express Workflows (chỉ chạy tối đa 5 phút) | `TD-Set2 Q09`, `TD-Set2 Q13` |
-| **Xử lý luồng sự kiện IoT / Streaming tốc độ > 50,000 req/s, chạy dưới 5 phút** | **AWS Step Functions Express Workflows** | Standard Workflows (bị giới hạn tốc độ và tốn chi phí transition) | `TD-Set5 Q13` |
-| **Đẩy dữ liệu từ API Gateway vào EventBridge với chi phí và độ trễ thấp nhất** | **Direct Service Integration (Không dùng Lambda)** | Viết Lambda trung gian (tốn tiền chạy compute, tăng latency) | `TD-Set2 Q09` |
-| **Truy cập API nội bộ từ EC2 trong VPC an toàn không qua Internet** | **Private API Gateway + Interface VPC Endpoint** | NAT Gateway (tốn phí truyền dữ liệu, lưu lượng đi ra ngoài) | `TD-Set1 Q33` |
-| **Bảo vệ backend khỏi spike tải đột biến khi ra mắt sản phẩm** | **API Gateway Throttling & Burst Limits** | Mở rộng unconstrained (làm sập backend database) | `TD-Set1 Q14` |
-| **Kiểm thử phiên bản API mới với tỷ lệ % lưu lượng thực tế** | **API Gateway Canary Release Deployment** | Deploy thẳng lên Prod (rủi ro downtime toàn bộ) | `TD-Set1 Q19` |
-| **Custom domain name cho Regional API Gateway** | **ACM Certificate tại cùng Region + Route 53 Alias** | ACM Certificate tại `us-east-1` (chỉ dùng cho Edge-Optimized) | `TD-Set4 Q12` |
-| **Chạy container web/API với ít công sức quản trị nhất, không cấu hình VPC** | **AWS App Runner** | Amazon ECS Fargate (vẫn phải tự cấu hình VPC, ALB, Target Groups) | `TD-Set2 Q55`, `TD-Set5 Q33` |
+
+#### 🪤 Bẫy 8: Chặn / Cho Phép Dải Địa Chỉ IP Truy Cập API Gateway Bằng Resource Policy — (U-PT2 Q24)
+- **Tình huống đề thi**: *"Doanh nghiệp xây dựng REST API trên Amazon API Gateway để các chi nhánh văn phòng truy cập. Để tăng cường bảo mật, Giám đốc CNTT yêu cầu chỉ cho phép các máy tính có địa chỉ IP công cộng thuộc dải CIDR của các văn phòng công ty (203.0.113.0/24) được phép gọi API, mọi truy cập từ địa chỉ IP khác phải bị chặn ngay lập tức. Giải pháp nào đơn giản và tối ưu nhất?"*
+- **Các phương án bẫy**:
+  - ❌ *Tạo AWS WAF gắn vào API Gateway*: Hoạt động được nhưng phát sinh thêm chi phí duy trì WebACL và rule evaluation.
+  - ❌ *Viết code trong Lambda Authorizer để kiểm tra event.requestContext.identity.sourceIp*: Tốn chi phí thực thi Lambda cho mỗi request bị từ chối và tăng độ trễ.
+- **Giải pháp ĐÚNG**: Cấu hình **API Gateway Resource Policy** (U-PT2 Q24).
+  - Sử dụng điều kiện ws:SourceIp với IpAddress (Allowlist) hoặc NotIpAddress (Denylist) trực tiếp trong Resource Policy của REST API.
+  - API Gateway tự động đánh giá và từ chối các request không hợp lệ ngay tại cổng biên mà không tốn chi phí thực thi backend.
+
+#### 🪤 Bẫy 9: Xác Thực Người Dùng Tập Trung Trên Application Load Balancer Với Cognito — (U-PT2 Q14)
+- **Tình huống đề thi**: *"Doanh nghiệp có cụm microservices chạy sau Application Load Balancer (ALB). Để bảo vệ các API này, công ty muốn người dùng phải đăng nhập bằng tài khoản doanh nghiệp hoặc mạng xã hội trước khi gửi request. Đội ngũ phát triển đề xuất viết thêm module xác thực JWT trong mã nguồn của từng service."*
+- **Giải pháp ĐÚNG**: Cấu hình **Authenticate Action trên ALB Listener Rules tích hợp Amazon Cognito User Pools** (U-PT2 Q14).
+  - ALB tự động chuyển hướng người dùng chưa đăng nhập tới Hosted UI của Cognito để xác thực.
+  - Sau khi xác thực thành công, ALB nhận JWT token, xác minh chữ ký và chuyển tiếp request an toàn tới target group kèm theo các HTTP headers chứa thông tin định danh (x-amzn-oidc-identity, x-amzn-oidc-data).
+  - Giảm tải 100% công sức lập trình và bảo mật xác thực ở tầng ứng dụng backend.
+
+#### 🪤 Bẫy 10: Tải Tệp Lên S3 Từ Ứng Dụng Di Động: Cognito Identity Pools vs S3 Presigned URL — (U-PT6 Q39)
+- **Tình huống đề thi**: *"Ứng dụng di động chia sẻ ảnh có hàng triệu người dùng cần tải ảnh trực tiếp lên Amazon S3. Ứng dụng yêu cầu người dùng phải được phân quyền chi tiết (mỗi người chỉ được ghi vào thư mục riêng của mình s3://bucket/users//*). Giải pháp nào đáp ứng chuẩn bảo mật của AWS?"*
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon Cognito Identity Pools (Federated Identities)** (U-PT6 Q39).
+  - Sau khi người dùng đăng nhập qua User Pool hoặc mạng xã hội, ứng dụng gửi ID Token tới Identity Pool để nhận **AWS Temporary Security Credentials (IAM STS)**.
+  - IAM Role gán cho authenticated users sử dụng biến thay thế biến ngữ cảnh ${cognito-identity.amazonaws.com:sub} trong Resource ARN.
+  - Ứng dụng di động dùng credentials này để gọi trực tiếp AWS SDK tải file lên S3, hoàn toàn không cần server trung gian.
+
+#### 🪤 Bẫy 11: Khi Nào KHÔNG Nên Sử Dụng Amazon Cognito? — (TD-Set1 Q24, TD-Set4 Q02)
+- **Các kịch bản đề thi đánh lừa**:
+  - ❌ *Giao tiếp Machine-to-Machine nội bộ hoặc giữa các microservices*: Không dùng Cognito User Pools; giải pháp chuẩn là **Mutual TLS (mTLS)** hoặc **AWS IAM Authentication (SigV4)**.
+  - ❌ *Nhân viên nội bộ công ty đã có hệ thống Microsoft Active Directory / Okta*: Không nên tạo mới tài khoản trong Cognito User Pool; giải pháp chuẩn là sử dụng **AWS IAM Identity Center (AWS SSO)** tích hợp qua SAML 2.0 / OIDC.
+  - ❌ *Ứng dụng chỉ cần bảo vệ API bằng danh sách IP hoặc khóa API đơn giản*: Dùng **API Gateway Resource Policy** hoặc **API Keys / Usage Plans**, không cần dựng cụm Cognito phức tạp.
 
 ---
 
-## 7. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
+
+### 📊 III. Ma Trận Quyết Định Công Nghệ Nhanh (Exam Decision Matrix)
+
+| Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Tham chiếu đề thi |
+|:---|:---|:---|:---|
+| **Xây dựng REST API giá rẻ nhất, chỉ cần xác thực JWT đơn giản** | **API Gateway HTTP API** | REST API (đắt hơn gấp 3 lần, tính năng thừa) | Chuẩn AWS |
+| **Cần bán gói API cho đối tác thứ 3 với giới hạn quota theo khách hàng** | **API Gateway REST API + Usage Plans & API Keys** | HTTP API (không hỗ trợ Usage Plans và API Keys) | Chuẩn AWS |
+| **Bảo vệ REST API khỏi tấn công SQL Injection và XSS** | **AWS WAF gắn vào API Gateway** | AWS Shield (chỉ chống DDoS L3/L4, không chống SQLi/XSS) | TD-Set1 Q16 |
+| **Giới hạn quyền gọi API Gateway theo dải IP công cộng cụ thể** | **API Gateway Resource Policy (ws:SourceIp)** | Dùng AWS WAF (tốn phí) hoặc Lambda Authorizer (tốn compute) | U-PT2 Q24 |
+| **Đăng ký, đăng nhập người dùng, hỗ trợ Adaptive Risk-based MFA** | **Amazon Cognito User Pools** | Cognito Identity Pools (chỉ phân quyền, không lưu user) | TD-Set8 Q01 |
+| **Xác thực người dùng Web/App tại ALB không cần viết code backend** | **ALB Listener Rule Authenticate với Cognito User Pool** | Viết middleware trong backend microservice | U-PT2 Q14 |
+| **Cho phép Mobile App upload file trực tiếp lên S3 không qua server** | **Cognito Identity Pools (Cấp quyền IAM tạm thời)** | Tạo tài khoản IAM cứng trong code app (Lỗ hổng bảo mật nghiêm trọng) | TD-Set8 Q01, TD-Set3 Q16, U-PT6 Q39 |
+| **Ứng dụng Mobile cần GraphQL, Subscriptions thời gian thực & Offline Sync** | **AWS AppSync + Amplify DataStore** | Tự dựng Apollo GraphQL trên EC2/ECS | TD-Set3 Q16, TD-Set5 Q05, TD-Set5 Q08 |
+| **Quy trình nghiệp vụ xử lý dài ngày (lên tới 1 năm), có bước duyệt thủ công** | **AWS Step Functions Standard Workflows** | Express Workflows (chỉ chạy tối đa 5 phút) | TD-Set2 Q09, TD-Set2 Q13 |
+| **Xử lý luồng sự kiện IoT / Streaming tốc độ > 50,000 req/s, chạy dưới 5 phút** | **AWS Step Functions Express Workflows** | Standard Workflows (bị giới hạn tốc độ và tốn chi phí transition) | TD-Set5 Q13, CM-PT4 Q49 |
+| **Đẩy dữ liệu từ API Gateway vào EventBridge với chi phí và độ trễ thấp nhất** | **Direct Service Integration (Không dùng Lambda)** | Viết Lambda trung gian (tốn tiền chạy compute, tăng latency) | TD-Set2 Q09, CM-PT5 Q20 |
+| **Truy cập API nội bộ từ EC2 trong VPC an toàn không qua Internet** | **Private API Gateway + Interface VPC Endpoint** | NAT Gateway (tốn phí truyền dữ liệu, lưu lượng đi ra ngoài) | TD-Set1 Q33 |
+| **Bảo vệ backend khỏi spike tải đột biến khi ra mắt sản phẩm** | **API Gateway Throttling & Burst Limits** | Mở rộng unconstrained (làm sập backend database) | TD-Set1 Q14, TD-Set1 Q39 |
+| **Kiểm thử phiên bản API mới với tỷ lệ % lưu lượng thực tế** | **API Gateway Canary Release Deployment** | Deploy thẳng lên Prod (rủi ro downtime toàn bộ) | TD-Set1 Q19 |
+| **Custom domain name cho Regional API Gateway** | **ACM Certificate tại cùng Region + Route 53 Alias** | ACM Certificate tại us-east-1 (chỉ dùng cho Edge-Optimized) | TD-Set4 Q12 |
+
+---
+
+
+## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
+
+### Kịch Bản: Quy Trình Đăng Nhập, Gọi API Đơn Hàng & Điều Phối Bằng Step Functions
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Khách Hàng (App)
+    participant Cognito as Amazon Cognito User Pool
+    participant APIGW as Amazon API Gateway (REST)
+    participant SF as AWS Step Functions (Standard)
+    participant Inventory as Lambda: Kiểm Tra Kho
+    participant Payment as Lambda: Trừ Tiền Thẻ
+    participant DB as Amazon DynamoDB
+
+    Note over User,Cognito: Bước 1: Xác Thực Định Danh
+    User->>Cognito: Gửi Username + Password
+    Cognito-->>User: Trả về JWT Access Token & ID Token
+
+    Note over User,APIGW: Bước 2: Đặt Hàng Qua API Gateway
+    User->>APIGW: POST /orders (Header: Bearer JWT Token)
+    APIGW->>APIGW: Cognito Authorizer kiểm tra chữ ký JWT Token
+    APIGW->>SF: Khởi chạy State Machine: StartExecution(OrderID)
+    APIGW-->>User: HTTP 202 Accepted (Kèm ExecutionARN)
+
+    Note over SF,Payment: Bước 3: Điều Phối Saga Pattern
+    SF->>Inventory: Task 1: Khóa sản phẩm trong kho
+    Inventory-->>SF: Xác nhận: Đã khóa hàng thành công
+    SF->>Payment: Task 2: Tiến hành thanh toán qua Payment Gateway
+    alt Thanh toán Thành công
+        Payment-->>SF: Trả về PaymentStatus: SUCCESS
+        SF->>DB: Task 3: Ghi đơn hàng trạng thái COMPLETED
+        SF-->>User: Thông báo đơn hàng hoàn tất qua WebSocket / SNS
+    else Thanh toán Thất bại (Catch / Compensation)
+        Payment-->>SF: Báo lỗi InsufficientFunds (Thẻ không đủ tiền)
+        SF->>Inventory: Compensation Task: Mở khóa hoàn trả hàng về kho!
+        SF->>DB: Cập nhật trạng thái ORDER_FAILED
+    end
+```
+
+---
+
+
+---
+
+
+## 4. Bảng Tích Hợp với Các Dịch Vụ AWS Khác (Integration Table)
+
+| Dịch vụ liên kết | Phương thức tích hợp | Mục đích kỹ thuật & Kịch bản thực tế |
+| :--- | :--- | :--- |
+| **AWS WAF** | Gắn Web ACL trực tiếp vào API Gateway Stage | Chống các cuộc tấn công tầng ứng dụng (SQL Injection, Cross-Site Scripting XSS, Rate-limiting theo IP). |
+| **Amazon CloudFront** | Đặt CloudFront Distribution phía trước Regional API Gateway | Tùy chỉnh tên miền riêng với chứng chỉ SSL đa vùng, áp dụng chính sách Edge caching chuyên sâu và giảm chi phí truyền dữ liệu. |
+| **Amazon EventBridge** | **API Gateway Service Integration Trực Tiếp** | Bỏ qua hàm Lambda trung gian: Đẩy trực tiếp request JSON từ API Gateway vào EventBridge Event Bus để xử lý bất đồng bộ. |
+| **AWS Lambda** | Lambda Proxy Integration | Phương thức phổ biến nhất: Toàn bộ thông tin request (headers, query params, body) được gói nguyên vẹn thành JSON gửi tới Lambda. |
+| **AWS X-Ray** | X-Ray Active Tracing | Phân tích độ trễ xuyên suốt từ API Gateway qua các microservices và hàm Lambda để tìm nút thắt cổ chai (**Bottleneck**). |
+| **Amazon SQS / SNS** | API Gateway Service Direct Integration | Đưa các yêu cầu ghi dữ liệu tải cao vào hàng đợi SQS để san phẳng đỉnh tải (**Load Leveling**) với độ trễ thấp nhất. |
+
+---
+
+
+---
+
+
+## 5. Bảng So Sánh Toàn Diện Các Giải Pháp Trong Hệ Sinh Thái AWS (Ecosystem Comparison)
+
+### 5.1. So Sánh Các Công Nghệ Xây Dựng API Trên AWS
+| Tiêu chí | API Gateway HTTP API | API Gateway REST API | WebSocket API | AWS AppSync (GraphQL) |
+|:---|:---|:---|:---|:---|
+| **Kiến trúc dữ liệu** | RESTful / HTTP | RESTful / HTTP | Hai chiều liên tục (Duplex) | **GraphQL** (Single Endpoint) |
+| **Độ trễ** | Rất thấp (~10ms) | Trung bình (~30ms) | Cực thấp (Persistent TCP) | Thấp |
+| **Chi phí** | **Rẻ nhất** (~\$1.00/1M) | Cao hơn (~\$3.50/1M) | ~\$1.00/1M + phí kết nối | ~\$4.00/1M query/mutate |
+| **Tính năng cao cấp** | JWT Authorizer, OIDC | WAF, Cache, Usage Plans, mTLS | Real-time push, Frame routing | **Offline Sync, Subscriptions** |
+| **Data Fetching** | Fixed Payload | Fixed Payload | Custom Frame | **Declarative (Chính xác trường cần)** |
+| **Nguồn dữ liệu hỗ trợ** | Lambda, HTTP, ALB, NLB | Lambda, HTTP, AWS Services | Lambda, HTTP, AWS Services | **DynamoDB, Aurora, OpenSearch, Lambda** |
+| **Đề thi thực chứng** | CM-PT1 Q10, TD-Set1 Q19 | TD-Set1 Q16, TD-Set4 Q12 | TD-Set2 Q51 | TD-Set3 Q16, TD-Set5 Q05 |
+
+### 5.2. So Sánh AWS Step Functions: Standard vs Express Workflows
+| Tiêu chí | Standard Workflows | Express Workflows |
+|:---|:---|:---|
+| **Thời gian chạy tối đa** | **Lên tới 1 năm (365 ngày)** | **Tối đa 5 phút (300 giây)** |
+| **Mô hình thực thi** | **Exactly-once** (Chính xác duy nhất 1 lần) | **At-least-once** (hoặc At-most-once) |
+| **Tốc độ thực thi** | Hơn 2,000 executions/giây | **Hơn 100,000 executions/giây** |
+| **Mô hình tính phí** | **Số lượt chuyển trạng thái (State Transitions)** | **Thời gian chạy (Duration) & Bộ nhớ (Memory)** |
+| **Lịch sử thực thi** | Chi tiết từng bước trên Console/API (lưu 90 ngày) | Ghi log vào **Amazon CloudWatch Logs** |
+| **Tạm dừng đợi con người** | Hỗ trợ Task Token (.waitForTaskToken), Approval | ❌ Không hỗ trợ |
+| **Use Case điển hình** | Xử lý đơn hàng, thanh toán, ETL dài hạn, duyệt đơn | Xử lý sự kiện IoT, Streaming, chuyển đổi dữ liệu tốc độ cao |
+| **Đề thi thực chứng** | TD-Set2 Q09, CM-PT1 Q06 | TD-Set5 Q13, CM-PT4 Q49 |
+
+---
+
+
+## 6. FinOps & Chiến Lược Tối Ưu Chi Phí (Cost Optimization)
+
+### 1. Phép tính so sánh: HTTP API vs REST API
+* **Tình huống thực tế**:
+  Một ứng dụng Fintech nhận 50 triệu yêu cầu API mỗi tháng. Yêu cầu chỉ cần xác thực bằng JWT Token và gọi các hàm Lambda xử lý nghiệp vụ, không cần tính năng API Caching hay WTL transformation.
+* **Phương án 1: Sử dụng REST API**:
+  - Đơn giá: \$3.50 cho mỗi 1 triệu requests đầu tiên.
+  - Chi phí = \$50 \times 3.50\$ = \mathbf{175.00\$/\text{tháng}}$.
+* **Phương án 2: Chuyển đổi sang HTTP API**:
+  - Đơn giá: \$1.00 cho mỗi 1 triệu requests (cho 300 triệu đầu tiên).
+  - Chi phí = \$50 \times 1.00\$ = \mathbf{50.00\$/\text{tháng}}$.
+  - 👉 **Tiết kiệm ngay \$125/tháng (giảm 71.4% chi phí API Gateway)**!
+
+### 2. Tối Ưu Hóa Chi Phí Xử Lý: Direct Service Integration Bỏ Qua Lambda
+* Thay vì luồng truyền thống: `API Gateway -> Lambda -> EventBridge / SQS`  
+  (Bạn phải trả tiền: Phí gọi API Gateway + Phí thời gian chạy Lambda GB-giây + Phí EventBridge).
+* Thiết lập **Direct AWS Service Integration**: `API Gateway -> EventBridge`  
+  (Loại bỏ hoàn toàn chi phí chạy của Lambda, giảm thiểu độ trễ từ 50ms xuống còn dưới 10ms, loại bỏ rủi ro dính lỗi Cold Start của Lambda!).
+
+---
+
+
+---
+
+
+## 7. Khắc Phục Sự Cố Thực Tế (Troubleshooting Guide)
+
+| Mã lỗi / Hiện tượng | Nguyên nhân cốt lõi | Các bước điều tra | Giải pháp xử lý triệt để |
+| :--- | :--- | :--- | :--- |
+| **`HTTP 429 Too Many Requests`** | Lưu lượng vượt quá Steady-state Rate Limit hoặc Burst Limit đã thiết lập trên Stage hoặc Usage Plan. | Kiểm tra metric CloudWatch `4XXError` và `ExecutionError`. Xem log CloudWatch của API Gateway. | 1. Yêu cầu AWS tăng Soft Limit tài khoản nếu tải hợp lệ.<br>2. Cấu hình Client áp dụng thuật toán **Exponential Backoff with Jitter**.<br>3. Bật API Gateway Cache để giảm tải cho backend. |
+| **`HTTP 504 Gateway Timeout`** | Backend (Lambda function hoặc máy chủ HTTP) mất hơn **29 giây** để phản hồi. | Kiểm tra CloudWatch Logs của Lambda; xem execution duration của hàm backend. | 1. **29 giây là Hard Limit không thể tăng của API Gateway**.<br>2. Chuyển kiến trúc sang bất đồng bộ: API Gateway trả về `HTTP 202 Accepted` ngay lập tức và đẩy task vào SQS hoặc Step Functions. |
+| **Lỗi `CORS (Cross-Origin Resource Sharing)` trên trình duyệt** | Trình duyệt gửi request `OPTIONS` (Preflight request) nhưng API Gateway không cấu hình trả về các Headers CORS cần thiết. | Mở DevTools trên trình duyệt, tab Console kiểm tra thông báo: *"No 'Access-Control-Allow-Origin' header is present on the requested resource"*. | 1. Bật tính năng **Enable CORS** trên tài nguyên API Gateway.<br>2. Nếu dùng Lambda Proxy Integration, code Lambda **BẮT BUỘC** phải tự chèn header `Access-Control-Allow-Origin: '*'` vào đối tượng JSON phản hồi. |
+| **`HTTP 403 Forbidden: Missing Authentication Token`** | 1. Gọi sai URL endpoint hoặc sai phương thức HTTP (ví dụ: route chỉ có POST nhưng client gọi GET).<br>2. API yêu cầu API Key nhưng client không truyền header `x-api-key`. | So sánh chính xác Path và HTTP Method trong URL client gọi với định nghĩa trong API Gateway Console. | 1. Kiểm tra lại routing và URL path.<br>2. Nếu endpoint yêu cầu bảo vệ bằng IAM, client phải ký request bằng SigV4. |
+
+---
+
+
+---
+
+
+## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Serverless Integration
 1. **HTTP API cho Microservices, REST API cho Enterprise SaaS**: Khi cần API siêu nhanh, giá rẻ, chuẩn OIDC $\rightarrow$ Chọn HTTP API. Khi cần WAF, Caching, Usage Plans, Request Transformation $\rightarrow$ Chọn REST API.
@@ -397,4 +488,3 @@ sequenceDiagram
 - 📖 [Tài Liệu Chuyên Sâu: Amazon DynamoDB NoSQL](./DynamoDB_NoSQL_Databases.md)
 - 📖 [Cẩm Nang Từ Vựng Giải Mã Đề Thi](../EXAM_VOCABULARY.md)
 - 📖 [Bảng Thuật Ngữ Kỹ Thuật Đám Mây](../GLOSSARY.md)
-

@@ -117,7 +117,7 @@ flowchart LR
    - **Baseline miễn phí**: Mặc định cung cấp sẵn **3,000 IOPS** và **125 MB/s throughput** hoàn toàn miễn phí ở bất kỳ kích thước ổ đĩa nào (từ 1 GiB tới 64 TiB).
    - Có thể mở rộng độc lập lên tới **16,000 IOPS** và **1,000 MB/s** mà không cần phải mua thêm dung lượng đĩa thừa.
 2. **General Purpose SSD (`gp2` - Thế hệ cũ [Legacy / Tránh dùng])**:
-   - Hiệu năng IOPS bị gắn chặt vào dung lượng: $3 \text{ IOPS} / 1 \text{ GiB}$. Để có 9,000 IOPS, bắt buộc phải tạo ổ đĩa 3,000 GiB (lãng phí tiền dung lượng).
+   - Hiệu năng IOPS bị gắn chặt vào dung lượng: \$3 \text{ IOPS} / 1 \text{ GiB}$. Để có 9,000 IOPS, bắt buộc phải tạo ổ đĩa 3,000 GiB (lãng phí tiền dung lượng).
    - Cơ chế Burst IOPS lên 3,000 bằng bình chứa I/O Credits; khi hết credit hiệu năng bị sập về baseline. Khuyến nghị nâng cấp 100% sang `gp3`.
 3. **Provisioned IOPS SSD (`io2 Block Express`)**:
    - Dành riêng cho các hệ thống phần mềm thương mại lõi (Oracle RAC, SAP HANA, Microsoft SQL Server).
@@ -128,7 +128,7 @@ flowchart LR
 4. **Throughput Optimized HDD (`st1`)**:
    - Tối ưu cho dữ liệu tuần tự đọc/ghi liên tục (MapReduce, Kafka, Log Processing, ETL jobs). Tối đa 500 MB/s và 500 IOPS.
 5. **Cold HDD (`sc1`)**:
-   - Chi phí rẻ nhất trong các dòng EBS ($0.015/GiB/tháng), dành cho dữ liệu lịch sử ít truy cập, sao lưu dạng file nén.
+   - Chi phí rẻ nhất trong các dòng EBS (\$0.015/GiB/tháng), dành cho dữ liệu lịch sử ít truy cập, sao lưu dạng file nén.
 
 ---
 
@@ -156,7 +156,7 @@ sequenceDiagram
 * **Cơ chế Snapshot Incremental (Sao lưu gia tăng)**: Bản snapshot đầu tiên lưu toàn bộ block dữ liệu; các bản tiếp theo chỉ lưu các block dữ liệu **đã thay đổi** kể từ lần chụp trước, giúp tiết kiệm chi phí tối đa.
 * **EBS Snapshot Archive**: Bậc lưu trữ giá siêu rẻ (giảm 75% chi phí so với Standard Snapshot) cho các bản snapshot cần lưu giữ từ 90 ngày trở lên để tuân thủ pháp lý.
 * **Recycle Bin for Snapshots**: Thùng rác bảo vệ chống lại việc nhân viên vô tình xóa nhầm snapshot quan trọng; cho phép khôi phục lại trong khoảng thời gian Retention cài đặt trước.
-* **Fast Snapshot Restore (FSR)**: Loại bỏ độ trễ khởi động chậm (Lazy Loading) khi khôi phục volume từ snapshot; volume được cấp phát đầy đủ 100% hiệu năng I/O tức thì (tính phí $0.75/giờ/AZ).
+* **Fast Snapshot Restore (FSR)**: Loại bỏ độ trễ khởi động chậm (Lazy Loading) khi khôi phục volume từ snapshot; volume được cấp phát đầy đủ 100% hiệu năng I/O tức thì (tính phí \$0.75/giờ/AZ).
 
 ---
 
@@ -167,7 +167,7 @@ sequenceDiagram
 * **Quản lý vòng đời lưu trữ (EFS Lifecycle Management)**:
   - **EFS Standard**: Phục vụ các tệp tin truy cập thường xuyên (Hot Data).
   - **EFS Infrequent Access (EFS IA)**: Rẻ hơn **91%** so với Standard; tự động chuyển file sau 7, 14, 30 hoặc 90 ngày không có lượt truy cập.
-  - **EFS Archive**: Rẻ hơn **97%** so với Standard ($0.008/GiB/tháng), tối ưu cho các tệp tin lưu trữ dài hạn chỉ đọc vài lần mỗi năm.
+  - **EFS Archive**: Rẻ hơn **97%** so với Standard (\$0.008/GiB/tháng), tối ưu cho các tệp tin lưu trữ dài hạn chỉ đọc vài lần mỗi năm.
 
 ---
 
@@ -231,7 +231,7 @@ sequenceDiagram
 - **Tình huống đề thi**: *"Doanh nghiệp sử dụng Amazon EFS để lưu trữ tệp tin chia sẻ giữa các máy chủ. Hơn 80% tệp tin sau 30 ngày hầu như không còn được truy cập nữa. Cần tối ưu chi phí lưu trữ với nỗ lực vận hành thấp nhất mà không làm thay đổi cấu trúc thư mục hay đường dẫn tệp của ứng dụng."*
 - **Giải pháp ĐÚNG**: Kích hoạt **EFS Lifecycle Management** (`TD-Set4 Q39`).
   - Cấu hình chính sách tự động chuyển tệp tin sang tầng **EFS Infrequent Access (EFS IA)** hoặc **EFS Archive** sau chu kỳ không truy cập (ví dụ: 30 ngày) (`TD-Set4 Q39`).
-  - Chi phí lưu trữ giảm từ $0.30/GB xuống chỉ còn **$0.025/GiB/tháng** (tiết kiệm ~92%).
+  - Chi phí lưu trữ giảm từ \$0.30/GB xuống chỉ còn **\$0.025/GiB/tháng** (tiết kiệm ~92%).
   - Đường dẫn tệp tin trên hệ điều hành Linux vẫn giữ nguyên, trong suốt hoàn toàn với ứng dụng.
 
 #### 🪤 Bẫy 3: Đặc Tính Vòng Đời Của EC2 Ephemeral Instance Store — (TD-Set6 Q57, U-PT6 Q50)
@@ -439,15 +439,15 @@ flowchart TD
 
 | Thành phần tính phí | Cơ chế tính phí (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
-| **EBS General Purpose (`gp2`)** | • $0.10 / GiB / tháng.<br>• IOPS bị gắn chặt với dung lượng (3 IOPS/GiB). | Đắt hơn gp3 tới 20%. | Vẫn dùng `gp2` theo thói quen cũ khiến chi phí bị đội cao vô ích. |
-| **EBS General Purpose (`gp3`)** | • **$0.08 / GiB / tháng** (Rẻ hơn gp2 20%).<br>• Miễn phí 3,000 IOPS và 125 MB/s.<br>• Mua thêm: $0.005/IOPS và $0.04/(MB/s). | **Chuẩn mực tối ưu nhất cho 95% workloads**. | Cấp phát thừa Throughput khi ứng dụng không có nhu cầu đọc tuần tự lớn. |
-| **EBS Provisioned IOPS (`io2`)** | • Dung lượng: $0.125 / GiB / tháng.<br>• Phí IOPS: **$0.065 / IOPS cấp phát / tháng**. | Cấp 20,000 IOPS = $1,300/tháng riêng tiền IOPS! | Chọn `io2` cho các database thông thường thay vì tối ưu hóa chỉ mục trên `gp3`. |
-| **Ổ đĩa mồ côi (Unattached EBS)** | • Tính nguyên giá 100% theo dung lượng ngay cả khi không gắn vào máy ảo nào. | $0.08 – $0.125 / GiB / tháng. | Xóa máy ảo EC2 nhưng quên bật cờ `DeleteOnTermination` khiến ổ đĩa bị bỏ quên tích tiền hàng tháng. |
-| **EBS Snapshots** | • Standard: $0.05 / GiB / tháng.<br>• Archive: **$0.0125 / GiB / tháng** (Giảm 75%). | Cơ chế Incremental giúp tiết kiệm dữ liệu. | Duy trì snapshot hàng ngày trong nhiều năm mà không chuyển sang tầng Archive. |
-| **Fast Snapshot Restore (FSR)** | • Tính phí cố định: **$0.75 / giờ / AZ** cho mỗi snapshot bật FSR! | ~$540 / tháng / AZ cho 1 snapshot! | Bật FSR trên nhiều AZ rồi quên tắt sau khi khôi phục xong. |
-| **Amazon EFS Standard** | • **$0.30 / GiB / tháng** (Multi-AZ).<br>• One Zone: $0.16 / GiB / tháng. | Đắt gấp gần 4 lần so với EBS gp3. | Lưu trữ toàn bộ dữ liệu tĩnh hoặc file nén trong EFS Standard mà không cấu hình Lifecycle. |
-| **Amazon EFS Infrequent Access (IA)** | • **$0.025 / GiB / tháng** (Giảm 91%).<br>• Phí đọc file: $0.01 / GiB truy xuất. | Cực rẻ cho tệp tin ít truy cập sau 30 ngày. | Truy xuất đọc đi đọc lại liên tục trên tầng IA sẽ làm tăng cước Request Read. |
-| **Amazon EFS Archive** | • **$0.008 / GiB / tháng** (Giảm 97% so với Standard). | Phù hợp cho tệp tin tuân thủ chỉ đọc vài lần/năm. | Lưu trữ tệp tin nóng (Hot data) trên tầng Archive. |
+| **EBS General Purpose (`gp2`)** | • \$0.10 / GiB / tháng.<br>• IOPS bị gắn chặt với dung lượng (3 IOPS/GiB). | Đắt hơn gp3 tới 20%. | Vẫn dùng `gp2` theo thói quen cũ khiến chi phí bị đội cao vô ích. |
+| **EBS General Purpose (`gp3`)** | • **\$0.08 / GiB / tháng** (Rẻ hơn gp2 20%).<br>• Miễn phí 3,000 IOPS và 125 MB/s.<br>• Mua thêm: \$0.005/IOPS và \$0.04/(MB/s). | **Chuẩn mực tối ưu nhất cho 95% workloads**. | Cấp phát thừa Throughput khi ứng dụng không có nhu cầu đọc tuần tự lớn. |
+| **EBS Provisioned IOPS (`io2`)** | • Dung lượng: \$0.125 / GiB / tháng.<br>• Phí IOPS: **\$0.065 / IOPS cấp phát / tháng**. | Cấp 20,000 IOPS = \$1,300/tháng riêng tiền IOPS! | Chọn `io2` cho các database thông thường thay vì tối ưu hóa chỉ mục trên `gp3`. |
+| **Ổ đĩa mồ côi (Unattached EBS)** | • Tính nguyên giá 100% theo dung lượng ngay cả khi không gắn vào máy ảo nào. | \$0.08 – \$0.125 / GiB / tháng. | Xóa máy ảo EC2 nhưng quên bật cờ `DeleteOnTermination` khiến ổ đĩa bị bỏ quên tích tiền hàng tháng. |
+| **EBS Snapshots** | • Standard: \$0.05 / GiB / tháng.<br>• Archive: **\$0.0125 / GiB / tháng** (Giảm 75%). | Cơ chế Incremental giúp tiết kiệm dữ liệu. | Duy trì snapshot hàng ngày trong nhiều năm mà không chuyển sang tầng Archive. |
+| **Fast Snapshot Restore (FSR)** | • Tính phí cố định: **\$0.75 / giờ / AZ** cho mỗi snapshot bật FSR! | ~\$540 / tháng / AZ cho 1 snapshot! | Bật FSR trên nhiều AZ rồi quên tắt sau khi khôi phục xong. |
+| **Amazon EFS Standard** | • **\$0.30 / GiB / tháng** (Multi-AZ).<br>• One Zone: \$0.16 / GiB / tháng. | Đắt gấp gần 4 lần so với EBS gp3. | Lưu trữ toàn bộ dữ liệu tĩnh hoặc file nén trong EFS Standard mà không cấu hình Lifecycle. |
+| **Amazon EFS Infrequent Access (IA)** | • **\$0.025 / GiB / tháng** (Giảm 91%).<br>• Phí đọc file: \$0.01 / GiB truy xuất. | Cực rẻ cho tệp tin ít truy cập sau 30 ngày. | Truy xuất đọc đi đọc lại liên tục trên tầng IA sẽ làm tăng cước Request Read. |
+| **Amazon EFS Archive** | • **\$0.008 / GiB / tháng** (Giảm 97% so với Standard). | Phù hợp cho tệp tin tuân thủ chỉ đọc vài lần/năm. | Lưu trữ tệp tin nóng (Hot data) trên tầng Archive. |
 
 ---
 
@@ -491,7 +491,7 @@ flowchart TD
 * **Chiến lược tối ưu hóa**:
   - Viết script tự động thông qua **Amazon EventBridge + AWS Lambda**:
     1. Quét toàn bộ volume có trạng thái `available` kéo dài hơn 7 ngày.
-    2. Tự động chụp 1 bản EBS Snapshot cuối cùng để lưu trữ an toàn (phí snapshot chỉ $0.05/GiB cho block thực dùng).
+    2. Tự động chụp 1 bản EBS Snapshot cuối cùng để lưu trữ an toàn (phí snapshot chỉ \$0.05/GiB cho block thực dùng).
     3. Gọi API `DeleteVolume` để xóa bỏ hoàn toàn 60 ổ đĩa mồ côi.
 * **Kết quả tiết kiệm**:
   $$\text{Số tiền tiết kiệm} = \mathbf{1,500.00\$/\text{tháng}} \quad (\approx \mathbf{18,000\$/\text{năm}})$$
@@ -521,7 +521,7 @@ flowchart TD
   Theo quy định ngân hàng, doanh nghiệp phải lưu trữ các bản snapshot sao lưu định kỳ hàng tháng trong thời hạn 5 năm. Hiện tại đang duy trì 30,000 GiB dữ liệu snapshot trên tầng Standard.
   $$\text{Chi phí Snapshot Standard ban đầu} = 30,000 \text{ GiB} \times 0.05\$ = \mathbf{1,500.00\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
-  - Sử dụng **Amazon Data Lifecycle Manager (DLM)** tự động lưu trữ các bản Full Snapshot có tuổi thọ trên 90 ngày sang tầng **EBS Snapshot Archive** với đơn giá chỉ $0.0125/GiB/tháng.
+  - Sử dụng **Amazon Data Lifecycle Manager (DLM)** tự động lưu trữ các bản Full Snapshot có tuổi thọ trên 90 ngày sang tầng **EBS Snapshot Archive** với đơn giá chỉ \$0.0125/GiB/tháng.
   $$\text{Chi phí Snapshot Archive sau chuyển đổi} = 30,000 \text{ GiB} \times 0.0125\$ = \mathbf{375.00\$/\text{tháng}}$$
 * **Kết quả tiết kiệm**:
   $$\text{Số tiền tiết kiệm} = 1,500.00\$ - 375.00\$ = \mathbf{1,125.00\$/\text{tháng}} \quad (\approx \mathbf{13,500\$/\text{năm}})$$

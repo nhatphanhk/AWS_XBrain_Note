@@ -1,4 +1,4 @@
-# Tài Liệu Học Tập Chuyên Sâu: Amazon EC2 (Elastic Compute Cloud) & Kiến Trúc Máy Chủ Ảo Đám Mây
+﻿# Tài Liệu Học Tập Chuyên Sâu: Amazon EC2 (Elastic Compute Cloud) & Kiến Trúc Máy Chủ Ảo Đám Mây
 
 > **Tài liệu chuẩn hóa kiến trúc đám mây**: Hướng dẫn toàn diện theo tiêu chuẩn Principal AWS Solutions Architect & Senior Cloud DevOps Engineer (Cập nhật phiên bản kiến trúc mới nhất 2026).  
 > **Ngôn ngữ**: Tiếng Việt chuyên ngành (Bảo lưu toàn bộ thuật ngữ chuyên ngành tiếng Anh chuẩn AWS).  
@@ -42,7 +42,7 @@ flowchart TD
 * ❌ **Lưu trữ dữ liệu phi cấu trúc lớn tĩnh (Web Assets, Backups, Videos)**: Sử dụng EC2 đính kèm ổ đĩa EBS để làm file server chia sẻ ảnh/video sẽ tốn chi phí lưu trữ khối đắt đỏ và nghẽn băng thông instance.  
   👉 *Giải pháp thay thế*: Chuyển sang **Amazon S3** (Object Storage rẻ hơn, độ bền 11 số 9) kết hợp **Amazon CloudFront**.
 * ❌ **Ứng dụng web/blog đơn giản, ngân sách cố định cho doanh nghiệp nhỏ**: Cấu hình EC2 + ALB + VPC quá phức tạp cho các trang web WordPress nhỏ.  
-  👉 *Giải pháp thay thế*: Sử dụng **Amazon Lightsail** (gói trọn gói máy chủ, đĩa, IP và băng thông chỉ từ $3.50/tháng).
+  👉 *Giải pháp thay thế*: Sử dụng **Amazon Lightsail** (gói trọn gói máy chủ, đĩa, IP và băng thông chỉ từ \$1.50/tháng).
 
 ---
 
@@ -112,7 +112,7 @@ flowchart LR
 * **Public IPv4**: Cấp phát động từ pool chung của AWS khi bật tùy chọn `Auto-assign Public IP`.  
   ⚠️ **ĐIỂM SỐNG CÒN TRONG VẬN HÀNH & THI CỬ**: Khi bạn **Stop** máy ảo và **Start** lại, địa chỉ Public IPv4 sẽ **BỊ THU HỒI VÀ THAY ĐỔI THÀNH ĐỊA CHỈ MỚI**.
 * **Elastic IP (EIP)**: Địa chỉ IPv4 tĩnh công khai cố định do tài khoản của bạn sở hữu; không thay đổi khi Stop/Start. Có thể tháo rời và gán lại tức thì sang instance khác để khắc phục sự cố.  
-  ⚠️ **Cập nhật tính phí 2024–2026**: AWS tính phí **$0.005/giờ/IP** (~$3.65/tháng) cho **MỌI địa chỉ Public IPv4** (kể cả đang gắn vào máy ảo EC2 đang chạy lẫn EIP để nhàn rỗi).
+  ⚠️ **Cập nhật tính phí 2024–2026**: AWS tính phí **\$1.005/giờ/IP** (~\$1.65/tháng) cho **MỌI địa chỉ Public IPv4** (kể cả đang gắn vào máy ảo EC2 đang chạy lẫn EIP để nhàn rỗi).
 
 #### B. EC2 Placement Groups (Nhóm Đặt Vị Trí Máy Chủ Vật Lý)
 
@@ -170,7 +170,7 @@ flowchart TD
 * Khi **Stop** thông thường: Dữ liệu trên RAM bị xóa sạch; khi Start lại phải boot lại toàn bộ OS và nạp lại ứng dụng vào RAM (tốn từ 1–3 phút).
 * Khi **Hibernate** (*TD-Set3 Q52*): Trạng thái bộ nhớ RAM được ghi tức thời vào ổ đĩa **EBS Root Volume**. Khi Start lại, nội dung RAM được nạp ngược lại, ứng dụng tiếp tục xử lý ngay tại trạng thái trước đó chỉ trong vài giây.
   - *Ứng dụng thực tiễn trong đề thi*: Các ứng dụng Windows Server kết nối FSx hoặc cơ sở dữ liệu mất từ 5 đến 10 phút để khởi động lại dịch vụ; doanh nghiệp muốn tắt máy ngoài giờ để tiết kiệm chi phí tính toán nhưng yêu cầu khi bật lại phải sẵn sàng tức thì $\rightarrow$ Bật **EC2 Hibernation**.
-* *Điều kiện kỹ thuật bắt buộc*: Ổ đĩa Root EBS **phải được mã hóa (KMS Encrypted)**; dung lượng trống của EBS Root phải lớn hơn dung lượng RAM; hỗ trợ các dòng máy có dung lượng RAM dưới 150 GiB.
+* *Điều kiện kỹ thuật bắt buộc*: Ổ đĩa Root EBS **phải được mã hóa (KMS Encrypted)**; máy ảo dùng Instance Store **không thể** Hibernate; dung lượng trống của EBS Root phải lớn hơn dung lượng RAM; hỗ trợ các dòng máy có dung lượng RAM dưới 150 GiB; thời gian ngủ đông có thể duy trì tối đa lên tới **60 ngày**.
 
 ---
 
@@ -260,6 +260,8 @@ flowchart TD
 - **Giải pháp ĐÚNG**: Tạo một **Amazon CloudWatch Alarm** theo dõi metric **`StatusCheckFailed_System`** và gán hành động **EC2 Auto-Recovery**.
   - Khi phát hiện phần cứng sập, CloudWatch Alarm tự động chuyển máy ảo sang một host vật lý mới lành lặn trong cùng Availability Zone.
   - Giữ nguyên hoàn toàn địa chỉ IP riêng (Private IP), IP công khai / Elastic IP, các ổ đĩa EBS đính kèm và Instance ID!
+  - *Đặc điểm mạng sống còn (U-PT3 Q27)*: Instance sau khi Auto-Recovery vẫn giữ nguyên Instance ID, Private IP, Elastic IP, **và nếu đã có Public IPv4 tự động cấp phát, nó vẫn giữ nguyên chính xác Public IPv4 đó**!
+  - *Lưu ý về Instance Store (U-PT3 Q41)*: Máy ảo dùng Instance Store **KHÔNG** hỗ trợ EC2 Auto-Recovery; với máy ảo Instance Store cần tự phục hồi, phải đặt sau Auto Scaling Group (Min=1, Max=1, Desired=1).
 
 #### 🪤 Bẫy 8: Tải Công Việc Định Kỳ Cùng Khung Giờ: Scheduled Scaling vs Target Tracking — (CM-PT6 Q35)
 - **Tình huống đề thi**: *"Ứng dụng chấm công của doanh nghiệp ghi nhận lưu lượng truy cập tăng vọt đột ngột vào đúng 8h30 đến 9h00 sáng mỗi ngày làm việc và giảm mạnh sau 17h30. Nhân viên phàn nàn hệ thống bị chậm trong 10 phút đầu mỗi buổi sáng. Cần giải pháp co giãn tự động tối ưu."*
@@ -346,6 +348,80 @@ flowchart TD
   - ❌ *Chạy 100% On-Demand*: Chi phí quá đắt đỏ cho lượng tài nguyên nền chạy 24/7.
 - **Giải pháp ĐÚNG**: Sử dụng **Reserved Instances (hoặc Savings Plans)** cho mức tải nền baseline cố định (tiết kiệm tới 72%), kết hợp cấu hình **Auto Scaling Group sử dụng EC2 Spot Instances** để tự động co giãn giải quyết các đợt spikes lưu lượng đột biến (tiết kiệm tới 90%).
 
+#### 🪤 Bẫy 19: Quy Tắc Tính Phí Theo Trạng Thái Máy Ảo EC2 & Hibernation vs Reserved Instances — (TD-Set3 Q24, TD-Set4 Q52)
+- **Tình huống đề thi**: *"Doanh nghiệp muốn tối ưu hóa chi phí vận hành máy chủ và cần xác định chính xác thời điểm nào EC2 phát sinh chi phí tính toán (compute) và lưu trữ (storage) khi thực hiện dừng hoặc tắt máy ảo."*
+- **Các quy tắc tính phí sống còn cần nhớ**:
+  1. **Trạng thái Stopping thông thường**: Không bị tính phí compute khi đang chuyển sang stopped. Nhưng **khi chuẩn bị Hibernate (TD-Set4 Q52)**: Máy ảo On-Demand **VẪN BỊ TÍNH PHÍ COMPUTE** trong suốt thời gian hệ điều hành ghi nội dung RAM vào ổ đĩa EBS root!
+  2. **Trạng thái Stopped**: Không bị tính phí compute của EC2 instance, nhưng **VẪN BỊ TÍNH PHÍ** dung lượng của các ổ đĩa **Amazon EBS đính kèm** và phí địa chỉ **Elastic IP không sử dụng** (nếu không gắn vào máy đang chạy).
+  3. **Reserved Instances (RIs) (TD-Set3 Q24)**: Cam kết hợp đồng 1 năm hoặc 3 năm. Bạn **VẪN BỊ TÍNH PHÍ SUỐT THỜI GIAN CAM KẾT KỂ CẢ KHI INSTANCE ĐÃ BỊ TERMINATED**!
+
+#### 🪤 Bẫy 20: Thanh Lý Standard Reserved Instances Bằng AWS Reserved Instance Marketplace — (TD-Set3 Q17, TD-Set6 Q31)
+- **Tình huống đề thi**: *"Một ứng dụng chạy trên cụm EC2 sử dụng Standard Reserved Instances kỳ hạn 3 năm. Do thay đổi chiến lược kinh doanh sau 1 năm, toàn bộ ứng dụng bị ngưng hoạt động vĩnh viễn. Làm thế nào để ngừng phát sinh chi phí cho 2 năm còn lại và thu hồi vốn?"*
+- **Các phương án bẫy**:
+  - ❌ *Gửi yêu cầu hoàn tiền tới AWS Support*: AWS không hoàn trả tiền cho Reserved Instances đã cam kết.
+  - ❌ *Chuyển đổi Standard RI sang loại khác*: Standard RI không thể chuyển đổi linh hoạt sang instance family khác (chỉ Convertible RI mới làm được).
+- **Giải pháp ĐÚNG (TD-Set3 Q17, TD-Set6 Q31)**:
+  - Chụp EBS snapshot lưu trữ dữ liệu nếu cần, sau đó **Terminate toàn bộ các máy ảo EC2 ngay lập tức** (để tránh phát sinh phí On-Demand khi hợp đồng hết hạn).
+  - Đăng ký và **rao bán các gói Standard Reserved Instances còn lại trên AWS Reserved Instance Marketplace** để thu hồi chi phí cho thời gian chưa sử dụng.
+
+#### 🪤 Bẫy 21: Vòng Đời Spot Request, Persistent Spot Request & CreateFleet API — (U-PT3 Q15, U-PT6 Q05, U-PT6 Q16, CM-PT1 Q62)
+- **Tình huống đề thi**: *"Kỹ sư hủy một Spot Request đang hoạt động nhưng ngạc nhiên khi thấy các máy ảo Spot vẫn tiếp tục chạy và phát sinh chi phí. Tại sao?"*
+- **Nguyên lý cốt lõi (U-PT3 Q15)**:
+  - **Hủy (Cancel) một Spot Request chỉ ngăn chặn việc tạo thêm máy mới, KHÔNG BAO GIỜ tự động Terminate các Spot Instances đang chạy**! Bạn phải tự tay terminate các Spot instances đó.
+  - **One-time vs Persistent Spot Request (U-PT6 Q16)**: Spot Request dạng *one-time* sẽ đóng lại ngay khi instance được cấp phát. Dạng *persistent* sẽ tự động mở lại khi instance bị gián đoạn hoặc bị Stop; chỉ hỗ trợ với máy ảo **EBS-backed** (cho phép Stop/Start Spot instance).
+  - **API CreateFleet (CM-PT1 Q62)**: Sử dụng EC2 CreateFleet (kiểu equest, instant hoặc maintain) kết hợp lưu checkpoint lên **Amazon EFS** để chạy các tác vụ tính toán phân tán chịu lỗi với chi phí thấp nhất.
+
+#### 🪤 Bẫy 22: Dedicated Instances vs Dedicated Hosts — Bẫy Chi Phí Ngược Cho Hardware Isolation — (U-PT2 Q06, U-PT6 Q01)
+- **Tình huống đề thi**: *"Doanh nghiệp tài chính cần tuân thủ tiêu chuẩn an ninh nghiêm ngặt, yêu cầu máy chủ ứng dụng phải chạy trên phần cứng vật lý chuyên dụng hoàn toàn cô lập (single-tenant hardware isolation), không dùng chung server vật lý với khách hàng khác. Ứng dụng không dùng bản quyền phần mềm theo socket/core. Giải pháp nào tối ưu chi phí nhất?"*
+- **Bẫy thi**: Rất nhiều người chọn Dedicated Hosts vì nghĩ nó bảo mật hơn $\rightarrow$ **SAI VỀ MẶT FINOPS**.
+- **Giải pháp ĐÚNG (U-PT2 Q06, U-PT6 Q01)**: Chọn **Dedicated Instances**.
+  - Đảm bảo 100% phần cứng vật lý không bị chia sẻ với tài khoản AWS khác (đáp ứng đúng tiêu chuẩn kiểm toán).
+  - Chi phí rẻ hơn đáng kể so với Dedicated Hosts vì không phải trả tiền thuê nguyên cả một server vật lý khổng lồ.
+
+#### 🪤 Bẫy 23: Chuyển Đổi Dự Phòng Mạng Nhanh Bằng Secondary ENI (eth1) — (TD-Set2 Q38)
+- **Tình huống đề thi**: *"Một máy ảo EC2 đóng vai trò license server nội bộ hoặc network gateway có một địa chỉ IP nội bộ tĩnh (Private IPv4) được các ứng dụng khác trỏ tới. Khi máy chủ này gặp sự cố, cần chuyển đổi sang máy chủ dự phòng trong vài giây mà không cần cấu hình lại IP trên các client."*
+- **Bản chất kỹ thuật (TD-Set2 Q38)**:
+  - Cạc mạng chính (eth0) gắn liền với vòng đời của instance, không thể tháo rời (detach).
+  - **Giải pháp ĐÚNG**: Tạo một cạc mạng phụ **Secondary ENI (eth1)**, gán địa chỉ Private IP tĩnh đó lên eth1. Khi máy chính gặp sự cố, viết script hoặc automation để **Detach eth1 từ máy cũ và Attach sang máy dự phòng**.
+
+#### 🪤 Bẫy 24: Bản Sao AMI Liên Vùng, Quy Tắc Mã Hóa & Chia Sẻ Xuyên Tài Khoản — (U-PT1 Q51, U-PT3 Q01, CM-PT4 Q48, CM-PT6 Q49)
+- **Quy tắc thi cử bất biến về AMI**:
+  1. **Phạm vi tài nguyên (U-PT1 Q51)**: Khi tạo 1 AMI tại us-east-1, sao chép sang us-west-2 và khởi chạy 1 EC2 instance từ AMI đó tại us-west-2 $\rightarrow$ Tại us-west-2 sẽ tồn tại: **1 EC2 Instance, 1 AMI, và 1 EBS Snapshot**!
+  2. **Quy tắc mã hóa khi copy (U-PT3 Q01)**: Có thể copy snapshot/AMI không mã hóa thành bản mã hóa; nhưng **KHÔNG THỂ copy snapshot/AMI đã mã hóa thành bản không mã hóa**.
+  3. **Chia sẻ AMI mã hóa xuyên tài khoản / OU (CM-PT4 Q48)**: Bắt buộc phải (1) Cấp quyền LaunchPermission cho Account ID/OU mục tiêu, VÀ (2) **Chia sẻ Customer Managed KMS Key (CMK)** dùng để mã hóa snapshot trong Key Policy (bản sao lưu dùng AWS Managed Key ws/ebs không thể chia sẻ xuyên tài khoản).
+
+#### 🪤 Bẫy 25: Đồng Bộ Vị Trí Vật Lý Availability Zone Bằng AZ ID — (U-PT3 Q11)
+- **Tình huống đề thi**: *"Doanh nghiệp có 2 tài khoản AWS (Account A và Account B) cần triển khai cụm ứng dụng giao tiếp với nhau qua VPC Peering yêu cầu độ trễ dưới 1ms. Kỹ sư khởi tạo máy tại subnet có tên us-west-2a ở cả 2 tài khoản nhưng độ trễ đo được lại lên tới 2-3ms."*
+- **Nguyên nhân cốt lõi (U-PT3 Q11)**:
+  - AWS tự động xáo trộn và ánh xạ ngẫu nhiên tên vùng sẵn sàng (AZ Name như us-west-2a) cho từng tài khoản để phân bổ tải đều trên các trung tâm dữ liệu. Do đó, us-west-2a của Account A có thể là us-west-2b hoặc us-west-2c của Account B!
+- **Giải pháp ĐÚNG**: Luôn đối chiếu và sử dụng **Availability Zone ID (AZ ID, ví dụ usw2-az1)** để đảm bảo máy ảo ở cả 2 tài khoản nằm trên cùng một trung tâm dữ liệu vật lý.
+
+#### 🪤 Bẫy 26: Giới Hạn Hạn Ngạch vCPU On-Demand & Tác Động Stop/Start Với Instance Store — (TD-Set3 Q39, TD-Set3 Q31, TD-Set5 Q12)
+- **Giới hạn vCPU On-Demand (TD-Set3 Q39)**: EC2 không giới hạn số lượng instance cứng mà quản lý theo **hạn ngạch số lượng vCPU tối đa theo từng dòng máy** (ví dụ: Running On-Demand Standard instances vCPU limit). Khi launch máy bị báo lỗi limit, phải gửi yêu cầu tăng hạn ngạch qua **AWS Service Quotas** (TD-Set5 Q12).
+- **Tác động của Stop/Start với Instance Store (TD-Set3 Q31)**: Nếu máy ảo EBS-backed có gắn thêm ổ đĩa phụ Instance Store, khi thực hiện lệnh **Stop** rồi **Start**: (1) Toàn bộ dữ liệu trên Instance Store bị xóa sạch vĩnh viễn, (2) Máy ảo được chuyển sang một host vật lý mới, và (3) Địa chỉ Elastic IP vẫn giữ nguyên.
+
+#### 🪤 Bẫy 27: HPC Networking: Enhanced Networking ENA/VF vs EFA Misuse — (TD-Set3 Q37, TD-Set4 Q56, TD-Set5 Q54, TD-Set6 Q51, CM-PT4 Q30, CM-PT5 Q13, U-PT1 Q07)
+- **Enhanced Networking ENA (TD-Set5 Q54, TD-Set6 Q51, CM-PT5 Q13)**: Cung cấp cơ chế ảo hóa SR-IOV trực tiếp, đem lại **packets per second (PPS) cao hơn, jitter mạng thấp hơn và độ trễ ổn định hơn**.
+- **Hiểu lầm về EFA (TD-Set3 Q37)**: Gắn nhiều Elastic Fabric Adapter (EFA) **KHÔNG** làm tăng tổng băng thông vượt quá giới hạn phần cứng của instance, và EFA không dùng để phòng chống DDoS.
+
+#### 🪤 Bẫy 28: Điện Toán Lai & Vùng Biên: AWS Local Zones, AWS Wavelength và AWS Outposts — (TD-Set2 Q62, TD-Set5 Q36, CM-PT4 Q20, CM-PT5 Q34, CM-PT6 Q11, U-PT1 Q65)
+- **AWS Local Zones (CM-PT6 Q11)**: Mở rộng VPC của bạn tới các đô thị lớn gần người dùng cuối (ví dụ: Los Angeles, Dallas, Amsterdam) để đạt độ trễ < 10ms cho ứng dụng streaming, video rendering hoặc tuân thủ quy định dữ liệu địa phương.
+- **AWS Wavelength (TD-Set5 Q36)**: Đặt hạ tầng AWS bên trong **mạng 5G của các nhà mạng viễn thông** (Verizon, Vodafone, KDDI...) giúp các thiết bị di động 5G kết nối tới server với độ trễ single-digit millisecond mà không cần đi vòng qua Internet công cộng.
+- **AWS Outposts (CM-PT4 Q20, CM-PT5 Q34, U-PT1 Q65, TD-Set2 Q62)**: Tủ rack phần cứng AWS đặt trực tiếp tại trung tâm dữ liệu tại chỗ (On-Premises) của khách hàng để chạy các dịch vụ AWS cục bộ (EC2, ECS, EKS, RDS, EMR) phục vụ xử lý thời gian thực siêu nhanh hoặc quy định dữ liệu nghiêm ngặt.
+
+#### 🪤 Bẫy 29: Nền Tảng PaaS AWS Elastic Beanstalk Kiến Trúc Lưu Trữ & Log — (TD-Set1 Q09, TD-Set6 Q02, TD-Set6 Q10)
+- **Kiến trúc Elastic Beanstalk (TD-Set1 Q09, TD-Set6 Q02)**: Nền tảng triển khai nhanh ứng dụng web (.NET, Java, Node.js, Python, Docker) tự động quản lý ELB, ASG, EC2 và RDS.
+- **Lưu trữ dữ liệu trong Beanstalk (TD-Set6 Q10)**: Mã nguồn ứng dụng (Application Versions) được lưu trữ trên **Amazon S3**; các file nhật ký (Log files) được lưu tạm cục bộ trên EC2 hoặc tự động xoay vòng lên **Amazon S3** và truyền trực tiếp về **Amazon CloudWatch Logs**.
+
+#### 🪤 Bẫy 30: AWS Compute Optimizer Cho 4 Loại Tài Nguyên & Danh Mục Savings Plans — (CM-PT2 Q55, CM-PT3 Q05, CM-PT3 Q23, CM-PT4 Q18, CM-PT5 Q36, U-PT2 Q50, U-PT2 Q63, U-PT6 Q06, U-PT6 Q49)
+- **AWS Compute Optimizer (CM-PT3 Q23, CM-PT4 Q18, U-PT2 Q50, U-PT2 Q63)**: Dùng machine learning phân tích CloudWatch metrics để tối ưu hóa **4 nhóm tài nguyên**: (1) EC2 instances, (2) Auto Scaling groups, (3) **Amazon EBS volumes** (gp2 $\rightarrow$ gp3 - CM-PT3 Q23), và (4) **AWS Lambda functions / ECS tasks trên Fargate** (CM-PT4 Q18).
+- **Phân biệt danh mục Savings Plans (CM-PT3 Q05, U-PT6 Q06)**: **Compute Savings Plans** bao phủ **EC2, Fargate và Lambda**; nhưng **KHÔNG bao phủ Amazon SageMaker** (phải mua riêng **SageMaker Savings Plans**).
+- **Theo dõi độ phủ Savings Plans (CM-PT5 Q36, U-PT6 Q49)**: Thiết lập **Savings Plans coverage budget** trong **AWS Budgets** để cảnh báo khi tỷ lệ bao phủ tụt dưới 80%; bật **Discount Sharing** trong tài khoản quản trị Organizations để chia sẻ giảm giá cho tất cả tài khoản con (CM-PT2 Q55).
+
+#### 🪤 Bẫy 31: CloudFormation CreationPolicy + cfn-signal & Quản Lý Bản Quyền Với AWS License Manager — (TD-Set3 Q27, TD-Set4 Q57)
+- **CloudFormation CreationPolicy (TD-Set3 Q27)**: Ngăn CloudFormation đánh dấu EC2 hoàn thành trước khi User Data script cài đặt xong phần mềm; User Data phải gửi tín hiệu cfn-signal thành công về stack.
+- **AWS License Manager (TD-Set4 Q57)**: Quản lý bản quyền theo vCPU/Socket cho EC2/Dedicated Hosts; bật tùy chọn **"Enforce license limit"** để tự động chặn việc khởi tạo thêm máy ảo khi đã dùng hết số lượng bản quyền.
+
 ---
 
 ### 📊 III. Ma Trận Quyết Định EC2 & Tính Toán Nhanh (Exam Decision Matrix)
@@ -372,12 +448,23 @@ flowchart TD
 | **Tải nền 24/7 cố định + Tải đỉnh đột biến** | **RI/Savings Plans (nền) + Spot trong ASG (đỉnh)** | Dùng 100% On-Demand hoặc 100% Spot | U-PT4 Q36 |
 | **Tự động tắt máy chủ Dev ngoài giờ làm việc** | **AWS Instance Scheduler** | Viết script cron thủ công trên EC2 | TD-Set2 Q19 |
 | **Cụm EMR chạy Spot tự động chọn AZ có capacity** | **EMR Instance Fleets (đa Subnet/Instance Types)** | Instance Groups (bị khóa vào 1 AZ cố định) | CM-PT2 Q26 |
+| **Tính phí On-Demand khi chuẩn bị Hibernate** | **Bị tính phí Compute bình thường** | Miễn phí (chỉ miễn phí khi Stop thông thường) | TD-Set4 Q52 |
+| **Thanh lý Standard Reserved Instances không dùng** | **Bán trên AWS Reserved Instance Marketplace** | Yêu cầu AWS Support hoàn tiền (bị từ chối) | TD-Set3 Q17, TD-Set6 Q31 |
+| **Hủy Spot Request đang hoạt động** | **Chỉ đóng Request, KHÔNG tắt máy đang chạy** | Tự động tắt máy (phải terminate thủ công) | U-PT3 Q15 |
+| **Tự động phục hồi máy Spot khi có dung lượng** | **Persistent Spot Request (trên ổ EBS-backed)** | One-time Spot Request (bị đóng vĩnh viễn) | U-PT6 Q16 |
+| **Chỉ cần cách ly phần cứng (Single-Tenant), không cần Core** | **EC2 Dedicated Instances** | Dedicated Hosts (chi phí đắt hơn nhiều) | U-PT2 Q06, U-PT6 Q01 |
+| **Chuyển đổi dự phòng Private IP tĩnh nhanh chóng** | **Gán IP vào Secondary ENI (eth1) rồi di chuyển** | Gán vào Primary ENI (eth0 không thể gỡ ra) | TD-Set2 Q38 |
+| **Tài nguyên tạo ra khi copy AMI sang Region mới** | **1 EC2 + 1 AMI + 1 EBS Snapshot tại Region đích** | Chỉ có 1 AMI duy nhất | U-PT1 Q51 |
+| **Đồng bộ vị trí vật lý AZ giữa các tài khoản AWS** | **Sử dụng AZ ID (ví dụ usw2-az1)** | Sử dụng AZ Name (bị xáo trộn ngẫu nhiên) | U-PT3 Q11 |
+| **Chạy ứng dụng độ trễ < 10ms tại thành phố lớn** | **AWS Local Zones** | Khởi chạy tại AWS Region xa xôi | CM-PT6 Q11 |
+| **Kết nối mạng 5G viễn thông độ trễ thấp nhất** | **AWS Wavelength Zones** | Đi vòng qua Internet công cộng | TD-Set5 Q36 |
+| **Hạ tầng AWS vật lý đặt tại On-Premises** | **AWS Outposts** | Tự dựng máy chủ VMware/Hyper-V | TD-Set2 Q62, CM-PT4 Q20 |
+| **Tối ưu hóa EBS volumes và Lambda memory bằng ML** | **AWS Compute Optimizer** | AWS Trusted Advisor (chỉ hỗ trợ EC2/RDS cơ bản) | CM-PT3 Q23, CM-PT4 Q18 |
+| **Chặn khởi tạo máy ảo khi hết bản quyền phần mềm** | **AWS License Manager (Enforce license limit)** | IAM Policy (khó kiểm soát số lượng core động) | TD-Set4 Q57 |
+| **Chờ User Data chạy xong mới tạo xong CloudFormation** | **CreationPolicy kết hợp cfn-signal** | WaitCondition (cách tiếp cận cũ, tốn cấu hình) | TD-Set3 Q27 |
 
----
 
----
-
----
+------
 
 ## 3. Kiến Trúc Thực Tế và Luồng Vận Hành (Production Architecture & Workflow)
 
@@ -476,7 +563,7 @@ sequenceDiagram
 | **Kiểm soát hệ điều hành** | **Toàn quyền (Root / SSH / Kernel access)** | ❌ Hoàn toàn trừu tượng hóa, không thể can thiệp OS | ❌ Chỉ kiểm soát Container runtime, AWS quản lý OS host |  Có quyền Root/SSH cơ bản |
 | **Thời gian khởi động** | **1 – 3 phút** (Boot toàn bộ OS) | **Mili-giây đến vài giây** (Cold start) | **30 – 60 giây** (Kéo image và nạp task) | **1 – 2 phút** |
 | **Thời gian chạy tối đa** | **Không giới hạn (24/7 liên tục)** | **Tối đa 15 phút** cho mỗi lần thực thi | **Không giới hạn** | **Không giới hạn** |
-| **Cơ chế thanh toán** | Tính theo giây chạy máy ảo + EBS storage | Tính theo số lần gọi + Dung lượng RAM $\times$ thời gian chạy (mili-giây) | Tính theo vCPU và RAM cấp phát cho Container theo giây | Gói cước trọn gói cố định hàng tháng ($3.50, $5, $10...) |
+| **Cơ chế thanh toán** | Tính theo giây chạy máy ảo + EBS storage | Tính theo số lần gọi + Dung lượng RAM $\times$ thời gian chạy (mili-giây) | Tính theo vCPU và RAM cấp phát cho Container theo giây | Gói cước trọn gói cố định hàng tháng (\$1.50, \$1, \$10...) |
 | **Kịch bản sử dụng chuẩn** | Ứng dụng monolithic phức tạp, phần mềm thương mại kế thừa, can thiệp OS sâu | API microservices không trạng thái, xử lý ảnh, webhook, cronjobs tự động | Hệ thống microservices quy mô lớn, containerized APIs, Kubernetes chuẩn | Website doanh nghiệp nhỏ, blog WordPress cá nhân, môi trường học tập |
 
 ---
@@ -491,11 +578,11 @@ sequenceDiagram
 
 | Thành phần tính phí | Cơ chế tính phí (Pricing Dimensions) | Mức phí tham chiếu điển hình (US-East-1) | Bẫy chi phí nghiêm trọng (Cost Pitfalls) |
 | :--- | :--- | :--- | :--- |
-| **On-Demand Instance Hours** | • Tính theo từng giây máy chạy (tối thiểu 60 giây đầu tiên).<br>• Dòng chip **AWS Graviton (`m7g`, `c7g`) rẻ hơn ~20%** so với x86 (`m6i`, `c6i`). | `t4g.medium`: ~$0.0336/giờ.<br>`m7g.xlarge`: ~$0.1632/giờ.<br>`m6i.xlarge`: ~$0.192/giờ. | Duy trì máy ảo On-Demand chạy 24/7 liên tục qua nhiều năm thay vì mua Savings Plans. |
+| **On-Demand Instance Hours** | • Tính theo từng giây máy chạy (tối thiểu 60 giây đầu tiên).<br>• Dòng chip **AWS Graviton (`m7g`, `c7g`) rẻ hơn ~20%** so với x86 (`m6i`, `c6i`). | `t4g.medium`: ~\$1.0336/giờ.<br>`m7g.xlarge`: ~\$1.1632/giờ.<br>`m6i.xlarge`: ~\$1.192/giờ. | Duy trì máy ảo On-Demand chạy 24/7 liên tục qua nhiều năm thay vì mua Savings Plans. |
 | **Compute Savings Plans** | • Cam kết chi tiêu tính bằng **USD/giờ** trong 1 hoặc 3 năm.<br>• Tự động áp dụng xuyên suốt: EC2, Fargate, Lambda. | Giảm tới **66%** so với On-Demand. | Mua cam kết vượt quá mức tải sàn (Baseline Workload) tối thiểu của hệ thống. |
 | **Spot Instances** | • Tận dụng tài nguyên nhàn rỗi còn thừa của AWS.<br>• Bị thu hồi với thông báo trước 2 phút khi nhu cầu thị trường tăng. | Giảm tới **70% – 90%** so với On-Demand. | Dùng Spot cho cơ sở dữ liệu quan trọng hoặc các ứng dụng Stateful không thể chịu ngắt quãng. |
-| **Địa chỉ Public IPv4** | • Áp dụng từ 2024–2026: AWS tính phí **$0.005 / giờ / IP** cho TẤT CẢ các Public IPv4 (cả đang gắn vào EC2 lẫn nhàn rỗi). | ~$3.65 / tháng cho mỗi Public IP. | Bật `Auto-assign Public IP` tràn lan cho hàng trăm máy ảo backend nằm trong Public Subnet thay vì để trong Private Subnet. |
-| **Lưu trữ Amazon EBS đính kèm** | • Tính phí theo GB dung lượng ổ đĩa, IOPS và Throughput cấp phát (ngay cả khi EC2 đang ở trạng thái **Stopped**). | `gp3`: $0.08 / GiB / tháng.<br>`io2`: $0.125 / GiB + $0.065 / IOPS. | Xóa máy ảo EC2 nhưng quên bỏ chọn tùy chọn `DeleteOnTermination = true`, khiến ổ cứng EBS vô chủ (Orphaned EBS) vẫn âm thầm tính tiền hàng tháng. |
+| **Địa chỉ Public IPv4** | • Áp dụng từ 2024–2026: AWS tính phí **\$1.005 / giờ / IP** cho TẤT CẢ các Public IPv4 (cả đang gắn vào EC2 lẫn nhàn rỗi). | ~\$1.65 / tháng cho mỗi Public IP. | Bật `Auto-assign Public IP` tràn lan cho hàng trăm máy ảo backend nằm trong Public Subnet thay vì để trong Private Subnet. |
+| **Lưu trữ Amazon EBS đính kèm** | • Tính phí theo GB dung lượng ổ đĩa, IOPS và Throughput cấp phát (ngay cả khi EC2 đang ở trạng thái **Stopped**). | `gp3`: \$1.08 / GiB / tháng.<br>`io2`: \$1.125 / GiB + \$1.065 / IOPS. | Xóa máy ảo EC2 nhưng quên bỏ chọn tùy chọn `DeleteOnTermination = true`, khiến ổ cứng EBS vô chủ (Orphaned EBS) vẫn âm thầm tính tiền hàng tháng. |
 
 ---
 
@@ -503,7 +590,7 @@ sequenceDiagram
 
 #### Kịch bản 1: Tối Ưu Chi Phí Ứng Dụng Web Kết Hợp Savings Plans và Spot trong ASG
 * **Bối cảnh thực tế**:
-  Hệ thống thương mại điện tử vận hành cụm 20 máy chủ `m6i.xlarge` (Intel x86 = $0.192/giờ) chạy liên tục làm tải nền (Baseline). Vào khung giờ vàng khuyến mãi, hệ thống mở rộng thêm 20 máy nữa (Peak Workload - trung bình 6 giờ/ngày $\times$ 30 ngày = 180 giờ/tháng). Ban đầu toàn bộ 100% đều chạy On-Demand.
+  Hệ thống thương mại điện tử vận hành cụm 20 máy chủ `m6i.xlarge` (Intel x86 = \$1.192/giờ) chạy liên tục làm tải nền (Baseline). Vào khung giờ vàng khuyến mãi, hệ thống mở rộng thêm 20 máy nữa (Peak Workload - trung bình 6 giờ/ngày $\times$ 30 ngày = 180 giờ/tháng). Ban đầu toàn bộ 100% đều chạy On-Demand.
 * **Chi phí ban đầu**:
   $$\text{Tải nền (20 máy 24/7)} = 20 \times 0.192\$ \times 720 \text{ giờ} = 2,764.80\$$$
   $$\text{Tải cao điểm (20 máy 180 giờ)} = 20 \times 0.192\$ \times 180 \text{ giờ} = 691.20\$$$
@@ -524,11 +611,11 @@ sequenceDiagram
 
 #### Kịch bản 2: Di Chuyển Kiến Trúc Sang Vi Xử Lý ARM AWS Graviton3
 * **Bối cảnh thực tế**:
-  Doanh nghiệp vận hành 40 microservices viết bằng Node.js, Python, Golang chạy trên máy chủ Intel `c6i.xlarge` (4 vCPU, 8 GiB RAM = $0.17/giờ).
+  Doanh nghiệp vận hành 40 microservices viết bằng Node.js, Python, Golang chạy trên máy chủ Intel `c6i.xlarge` (4 vCPU, 8 GiB RAM = \$1.17/giờ).
   $$\text{Chi phí Intel ban đầu} = 40 \times 0.17\$ \times 720 = \mathbf{4,896.00\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
   1. Re-build Docker container sang kiến trúc đa nền tảng (`linux/arm64`).
-  2. Chuyển đổi toàn bộ sang máy ảo **`c7g.xlarge` (AWS Graviton3 ARM)** với giá chỉ **$0.145/giờ**:
+  2. Chuyển đổi toàn bộ sang máy ảo **`c7g.xlarge` (AWS Graviton3 ARM)** với giá chỉ **\$1.145/giờ**:
   3. Nhờ hiệu năng của Graviton3 cao hơn 25%, số lượng máy chủ cần thiết để xử lý cùng lượng tải giảm từ 40 máy xuống còn **32 máy**:
   $$\text{Chi phí Graviton thực tế} = 32 \times 0.145\$ \times 720 = \mathbf{3,340.80\$/\text{tháng}}$$
 * **Kết quả tiết kiệm**:
@@ -539,10 +626,10 @@ sequenceDiagram
 
 #### Kịch bản 3: Định Cỡ Tải Chuẩn Xác (Right-Sizing Với AWS Compute Optimizer)
 * **Bối cảnh thực tế**:
-  Nhóm kỹ sư cấp phát dư dả 10 máy chủ `m5.2xlarge` (8 vCPU, 32 GiB RAM = $0.384/giờ) cho các dịch vụ nội bộ. Dữ liệu giám sát CloudWatch trong 30 ngày cho thấy mức tiêu thụ CPU thực tế trung bình chỉ **4%** và RAM tiêu thụ dưới **6 GiB**.
+  Nhóm kỹ sư cấp phát dư dả 10 máy chủ `m5.2xlarge` (8 vCPU, 32 GiB RAM = \$1.384/giờ) cho các dịch vụ nội bộ. Dữ liệu giám sát CloudWatch trong 30 ngày cho thấy mức tiêu thụ CPU thực tế trung bình chỉ **4%** và RAM tiêu thụ dưới **6 GiB**.
   $$\text{Chi phí 10 máy dư tải} = 10 \times 0.384\$ \times 720 = \mathbf{2,764.80\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
-  - Dựa trên khuyến nghị của **AWS Compute Optimizer**, hạ cấp máy chủ xuống dòng **`t4g.large` (2 vCPU, 8 GiB RAM = $0.0672/giờ)**.
+  - Dựa trên khuyến nghị của **AWS Compute Optimizer**, hạ cấp máy chủ xuống dòng **`t4g.large` (2 vCPU, 8 GiB RAM = \$1.0672/giờ)**.
   $$\text{Chi phí sau hạ cấp} = 10 \times 0.0672\$ \times 720 = \mathbf{483.84\$/\text{tháng}}$$
 * **Kết quả tiết kiệm**:
   $$\text{Số tiền tiết kiệm} = 2,764.80\$ - 483.84\$ = \mathbf{2,280.96\$/\text{tháng}} \quad (\approx \mathbf{27,371\$/\text{năm}})$$
@@ -552,7 +639,7 @@ sequenceDiagram
 
 #### Kịch bản 4: Tự Động Hóa Lịch Trình Tắt/Bật Môi Trường Dev/QA Bằng Instance Scheduler
 * **Bối cảnh thực tế**:
-  Doanh nghiệp duy trì 25 máy ảo `t3.xlarge` ($0.1664/giờ) phục vụ môi trường Dev và QA. Đội ngũ lập trình viên chỉ làm việc 10 giờ/ngày (từ 08:00 đến 18:00) từ thứ Hai đến thứ Sáu (khoảng 220 giờ/tháng). Tuy nhiên, 25 máy này bị để chạy liên tục 24/7 (720 giờ/tháng).
+  Doanh nghiệp duy trì 25 máy ảo `t3.xlarge` (\$1.1664/giờ) phục vụ môi trường Dev và QA. Đội ngũ lập trình viên chỉ làm việc 10 giờ/ngày (từ 08:00 đến 18:00) từ thứ Hai đến thứ Sáu (khoảng 220 giờ/tháng). Tuy nhiên, 25 máy này bị để chạy liên tục 24/7 (720 giờ/tháng).
   $$\text{Chi phí chạy 24/7} = 25 \times 0.1664\$ \times 720 = \mathbf{2,995.20\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
   - Triển khai **AWS Instance Scheduler** (sử dụng Amazon EventBridge và Lambda): tự động Stop máy ảo vào lúc 18:30 và Start lại vào lúc 07:30 các ngày làm việc, tắt hoàn toàn vào thứ Bảy và Chủ Nhật.
@@ -565,7 +652,7 @@ sequenceDiagram
 
 #### Kịch bản 5: Thu Hồi Địa Chỉ Public IPv4 và Dọn Dẹp Ổ Đĩa EBS Vô Chủ (Orphaned EBS)
 * **Bối cảnh thực tế**:
-  Một tài khoản AWS có 50 máy ảo backend nằm trong Public Subnet được bật cờ `Auto-assign Public IP` ($0.005/giờ/IP). Ngoài ra, sau nhiều lần xóa máy ảo EC2 mà không bật cờ `DeleteOnTermination`, tài khoản còn tồn đọng **40 ổ đĩa EBS gp2 vô chủ** (mỗi ổ 100 GiB = 4,000 GiB) đang bị bỏ quên.
+  Một tài khoản AWS có 50 máy ảo backend nằm trong Public Subnet được bật cờ `Auto-assign Public IP` (\$1.005/giờ/IP). Ngoài ra, sau nhiều lần xóa máy ảo EC2 mà không bật cờ `DeleteOnTermination`, tài khoản còn tồn đọng **40 ổ đĩa EBS gp2 vô chủ** (mỗi ổ 100 GiB = 4,000 GiB) đang bị bỏ quên.
   $$\text{Chi phí Public IPv4 lãng phí} = 50 \times 0.005\$ \times 720 = 180.00\$/\text{tháng}$$
   $$\text{Chi phí EBS vô chủ lãng phí} = 4,000 \text{ GiB} \times 0.10\$ = 400.00\$/\text{tháng}$$
   $$\text{Tổng lãng phí thụ động} = 180.00\$ + 400.00\$ = \mathbf{580.00\$/\text{tháng}}$$
@@ -589,14 +676,13 @@ sequenceDiagram
 | **CPU máy ảo duy trì 100% nhưng ứng dụng bị treo (CPU Throttling trên dòng `t3/t4g`)** | Máy ảo dòng Burstable (`t3`, `t4g`) cạn kiệt số lượng **CPU Credits**, khiến hiệu năng CPU bị bóp nghẹt về mức cơ sở (Baseline Performance). | Xem metric CloudWatch **`CPUCreditBalance`** (bằng 0) và **`CPUSurplusCreditCharged`**. | 1. Nâng cấp instance sang dòng có CPU chuyên dụng như `c7g` hoặc `m7g`.<br>2. Bật chế độ **T2/T3 Unlimited** để cho phép máy vượt ngưỡng baseline (chấp nhận phụ phí). | Đặt CloudWatch Alarm cảnh báo khi `CPUCreditBalance < 50` để chủ động xử lý trước khi hệ thống bị chậm. |
 | **Lỗi `No space left on device` khi cài đặt phần mềm** | Ổ đĩa Root EBS bị đầy 100% do file log ứng dụng phình to hoặc Docker images không được dọn dẹp. | Chạy lệnh `df -h` kiểm tra dung lượng từng phân vùng ổ đĩa. | 1. Tăng dung lượng ổ đĩa EBS trực tiếp trên Console (Elastic Volumes) từ 20 GiB lên 50 GiB.<br>2. Chạy lệnh mở rộng phân vùng: `growpart /dev/xvda 1` và `xfs_growfs -d /` (hoặc `resize2fs`). | Cấu hình log rotation (`logrotate`) và đẩy log lên Amazon CloudWatch Logs thay vì lưu trữ cục bộ. |
 
----
 
 ---
 
 ## 8. Tóm Tắt và Danh Mục Kiểm Tra Kiến Thức (Summary & Learning Checklist)
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Amazon EC2 (Golden Rules)
-1. **Quản lý địa chỉ IP chuẩn xác**: Public IP của EC2 sẽ thay đổi sau mỗi lần Stop/Start; chỉ sử dụng **Elastic IP** khi thực sự cần IP tĩnh công khai (lưu ý phí $0.005/giờ/IP).
+1. **Quản lý địa chỉ IP chuẩn xác**: Public IP của EC2 sẽ thay đổi sau mỗi lần Stop/Start; chỉ sử dụng **Elastic IP** khi thực sự cần IP tĩnh công khai (lưu ý phí \$1.005/giờ/IP).
 2. **Quy tắc chọn Placement Group**:  
    - Cần độ trễ mạng < 1ms cho HPC $\rightarrow$ **Cluster Placement Group** (cùng 1 rack trong 1 AZ).  
    - Cần chịu lỗi tối đa cho Quorum/Database $\rightarrow$ **Spread Placement Group** (khác rack, tối đa 7 máy/AZ).  
@@ -611,6 +697,22 @@ sequenceDiagram
    Ưu tiên lựa chọn các dòng máy chip ARM Graviton3/4 (`m7g`, `c7g`, `r7g`) để đạt tỷ lệ giá/hiệu năng tốt hơn tới 40% so với x86.
 7. **Tự động phục hồi lỗi phần cứng**:  
    Luôn cấu hình CloudWatch Alarm theo dõi metric `StatusCheckFailed_System` kết hợp hành động **EC2 Auto-Recovery** để hệ thống tự chuyển sang máy chủ vật lý mới khi phần cứng AWS gặp sự cố.
+
+---
+
+### Danh Mục Kiểm Tra Năng Lực Cốt Lõi (Learning Checklist)
+- [ ] Phân biệt chính xác Dedicated Hosts (kiểm soát socket/core, BYOL) và Dedicated Instances (single-tenant hardware isolation, tối ưu chi phí hơn khi không cần kiểm soát core).
+- [ ] Nắm vững hành vi tính phí của EC2: On-Demand bị tính phí khi stopping để Hibernate; khi stopped vẫn tính phí EBS/EIP; Reserved Instances tính phí suốt thời hạn hợp đồng kể cả khi máy đã 	erminated.
+- [ ] Biết cách rao bán Reserved Instances không còn nhu cầu trên AWS Reserved Instance Marketplace sau khi terminate EC2.
+- [ ] Hiểu rõ vòng đời Spot: Hủy Spot Request không tự ngắt Spot instances đang chạy; chỉ có Persistent Spot Request (trên ổ EBS) mới tự động khởi động lại instance khi có dung lượng.
+- [ ] Nắm chắc quy tắc kế thừa Tenancy: VPC Tenancy = Dedicated luôn ghi đè mọi Launch Template về Dedicated Instance.
+- [ ] Phân biệt ENA (lên tới 100 Gbps, đi qua kernel stack) và EFA (OS-Bypass, chuyên cho MPI/NCCL độ trễ microsecond trong HPC).
+- [ ] Sử dụng secondary ENI (eth1) để failover IP nội bộ tĩnh giữa các EC2 instances.
+- [ ] Hiểu rõ phạm vi Regional của AMI: Sao chép AMI sang Region mới tạo ra 1 AMI + 1 EBS Snapshot; chia sẻ AMI mã hóa cần cấp quyền LaunchPermission và chia sẻ KMS CMK.
+- [ ] Dùng AZ ID (ví dụ usw2-az1) để đồng bộ vị trí vật lý của Availability Zone giữa các tài khoản AWS khác nhau.
+- [ ] Nhận biết sự khác biệt giữa AWS Outposts (on-premise rack), AWS Local Zones (thành phố lớn gần người dùng), và AWS Wavelength (mạng 5G viễn thông).
+- [ ] Hiểu kiến trúc lưu trữ của Elastic Beanstalk (mã nguồn trên S3, log xoay vòng lên S3 hoặc CloudWatch Logs).
+- [ ] Nắm rõ 4 loại tài nguyên được hỗ trợ bởi AWS Compute Optimizer (EC2, ASG, EBS, Lambda/Fargate) và phạm vi của Compute Savings Plans vs SageMaker Savings Plans.
 
 ---
 
