@@ -1,6 +1,6 @@
-# 10 — ⚠️ TRAPS: Top 30 Cặp Khái Niệm Dễ Nhầm Lẫn
+# 10 — ⚠️ TRAPS: Top 40 Cặp Khái Niệm Dễ Nhầm Lẫn Trong Phòng Thi
 
-> Mỗi cặp: **Tình huống đề bài → Vì sao chọn A không phải B → Móc nhớ**
+> Mỗi cặp: **Tình huống đề bài → Vì sao chọn A không phải B → Móc nhớ thần chú**
 
 ---
 
@@ -364,7 +364,126 @@
 
 ---
 
-## 📌 MASTER CHECKLIST — Trước Khi Nhấn Submit
+## 🟣 COMPUTE, SECURITY & NETWORK TRAPS BỔ SUNG
+
+### TRAP 31: ECS Task Role vs Task Execution Role
+| | ECS Task Role | ECS Task Execution Role |
+|:---|:---|:---|
+| Đối tượng nhận quyền | **Mã nguồn ứng dụng bên trong container** | **ECS Agent bên dưới máy chủ** |
+| Ví dụ quyền hạn | Đọc/ghi S3, query DynamoDB, publish SNS | Kéo Docker image từ ECR, ghi CloudWatch Logs |
+| Keyword đề bài | "Application code needs to access DynamoDB" | "Container cannot pull private image from ECR" |
+
+**💡 Móc nhớ**: _"**Task Role** = Role của **App**. **Execution Role** = Role của **Agent thực thi** (kéo image, ghi log)."_
+
+---
+
+### TRAP 32: ECS/EKS Anywhere vs AWS Outposts
+| | ECS / EKS Anywhere | AWS Outposts |
+|:---|:---|:---|
+| Phần cứng | **Tận dụng máy chủ/VM có sẵn của khách hàng** | **Thuê trọn Rack phần cứng máy chủ của AWS** |
+| Chi phí phần cứng AWS | ❌ Không tốn tiền phần cứng AWS | 💰 Chi phí thuê phần cứng AWS cao |
+| Dịch vụ chạy được | Chỉ chạy Container (ECS/EKS) | Chạy EC2, EBS, S3 on Outposts, RDS, ECS, EKS |
+| Keyword đề bài | "Run containers on existing customer hardware" | "AWS-managed hardware installed in customer data center" |
+
+**💡 Móc nhớ**: _"**Anywhere** = Dùng phần mềm AWS trên **máy của mình**. **Outposts** = Chở cả **tủ server AWS** về nhà mình."_
+
+---
+
+### TRAP 33: S3 Replication (CRR) — Bẫy Dữ Liệu Cũ & Chuỗi Nhân Bản
+| Tình Huống | Sự Thật Kỹ Thuật | Cách Xử Lý Đúng |
+|:---|:---|:---|
+| Bật CRR cho bucket đã có sẵn 10 TB data | **Mặc định CHỈ replicate object MỚI** | Dùng **S3 Batch Replication** để sync dữ liệu cũ |
+| Replication chuỗi A $\rightarrow$ B và B $\rightarrow$ C | Dữ liệu từ A sang B **KHÔNG tự động sang C** | Phải cấu hình replication riêng từ A sang C |
+| Điều kiện tiên quyết | Bắt buộc bật **S3 Versioning ở CẢ 2 BUCKET** | Thiếu versioning ở đích = lỗi cấu hình |
+
+**💡 Móc nhớ**: _"CRR chỉ nhìn về tương lai (object mới); muốn chép quá khứ phải gọi **Batch Replication**."_
+
+---
+
+### TRAP 34: S3 SSE-KMS Quota Throttle vs S3 Bucket Key
+| | Tăng KMS Quota | Bật S3 Bucket Key |
+|:---|:---|:---|
+| Bản chất | Yêu cầu AWS tăng hạn mức gọi KMS API | Tạo khóa trung gian cấp bucket, giảm 99% call KMS |
+| Chi phí | Vẫn tốn tiền gọi KMS API từng object | **Giảm 99% chi phí KMS call** |
+| Khuyến nghị của AWS | Tạm thời | **Chuẩn mực tối ưu tốt nhất** |
+
+**💡 Móc nhớ**: _"S3 gọi KMS nhiều bị nghẽn (Throttle HTTP 429) $\rightarrow$ Bật ngay **S3 Bucket Key** (không cần đổi khóa sang SSE-S3)."_
+
+---
+
+### TRAP 35: CloudFront Functions vs Lambda@Edge
+| Tiêu Chí | CloudFront Functions | Lambda@Edge |
+|:---|:---|:---|
+| Thời gian chạy tối đa | **< 1 mili-giây** | 5 giây (Viewer) / 30 giây (Origin) |
+| Ngôn ngữ hỗ trợ | **Chỉ JavaScript** | Node.js và Python |
+| Truy cập mạng ngoài | ❌ **KHÔNG ĐƯỢC PHÉP** | ✅ Gọi API ngoài, query database thoải mái |
+| Truy cập Body request | ❌ Không đọc được body | ✅ Đọc và sửa đổi body thoải mái |
+| Vị trí triển khai | Hàng trăm Edge Locations | Vài chục Regional Edge Caches (tạo ở `us-east-1`) |
+| Use cases | Rewrite URL, thêm HTTP security header | Resize ảnh động, A/B testing phức tạp, xác thực DB |
+
+**💡 Móc nhớ**: _"**CF Functions** = Siêu nhẹ (<1ms, không mạng, rẻ). **Lambda@Edge** = Nặng đô (có mạng, đọc body, tính toán lâu)."_
+
+---
+
+### TRAP 36: Route 53 Geolocation vs Latency-Based Routing
+| Tình Huống Đề Bài | Geolocation Routing | Latency-Based Routing |
+|:---|:---|:---|
+| Bản chất định tuyến | Dựa trên **vị trí địa lý của USER (Quốc gia/Lục địa)** | Dựa trên **độ trễ mạng thấp nhất tới Region** |
+| Tuân thủ pháp lý (GDPR ở Châu Âu) | ✅ **BẮT BUỘC CHỌN (User EU $\rightarrow$ Server EU)** | ❌ Sai (vì mạng đổi có thể route sang US) |
+| Tối ưu tốc độ thuần túy | Có thể không phải nhanh nhất | ✅ **BẮT BUỘC CHỌN CHO HIỆU NĂNG** |
+
+**💡 Móc nhớ**: _"Đề bài có chữ **'tuân thủ pháp luật / luật bản quyền / ngôn ngữ'** $\rightarrow$ Luôn chọn **Geolocation**, không bao giờ chọn Latency!"_
+
+---
+
+### TRAP 37: AWS WAF vs AWS Network Firewall
+| | AWS WAF | AWS Network Firewall |
+|:---|:---|:---|
+| Tầng bảo vệ | **Layer 7 (HTTP/HTTPS)** | **Layer 3 đến Layer 7 (Toàn bộ VPC)** |
+| Vị trí triển khai | Gắn trên CloudFront, ALB, API Gateway | Đặt trong **Firewall Subnet** của VPC |
+| Loại tấn công ngăn chặn | SQL Injection, XSS, HTTP Flood, Bot crawling | Kiểm tra sâu gói tin (DPI), Suricata IPS, lọc tên miền FQDN |
+| Gắn vào NLB được không? | ❌ **TUYỆT ĐỐI KHÔNG GẮN ĐƯỢC NLB** | ✅ Bảo vệ toàn bộ lưu lượng qua VPC |
+
+**💡 Móc nhớ**: _"**WAF** = Soát vé Web (chặn SQLi, XSS). **Network Firewall** = Kiểm soát biên phòng toàn thành phố VPC."_
+
+---
+
+### TRAP 38: Step Functions Standard vs Express
+| | Standard Workflow | Express Workflow |
+|:---|:---|:---|
+| Thời gian chạy tối đa | **Lên tới 1 năm** | **Tối đa 5 phút** |
+| Độ tin cậy thực thi | **Exactly-once** | At-least-once |
+| Tính năng chờ người duyệt | ✅ **Có (`waitForTaskToken`)** | ❌ Không |
+| Tính phí theo | Số lần chuyển trạng thái (**State transitions**) | Thời gian chạy và RAM (**GB-seconds**) |
+| Thông lượng xử lý | Thấp (< 2,000/s) | **Cực cao (> 100,000/s cho IoT / Streaming)** |
+
+**💡 Móc nhớ**: _"**Standard** = Chạy lâu, cần người duyệt. **Express** = Nhanh như chớp (< 5 phút), thông lượng khủng."_
+
+---
+
+### TRAP 39: Kinesis Video Streams vs Kinesis Data Streams
+| | Kinesis Video Streams (KVS) | Kinesis Data Streams (KDS) |
+|:---|:---|:---|
+| Định dạng dữ liệu | **Luồng Video, Audio, WebRTC** | **Các bản ghi dữ liệu (Records, JSON, Logs, Clickstream)** |
+| Nguồn phát | Camera an ninh, drone, smartphone | Máy chủ ứng dụng, IoT telemetry, web logs |
+| Tích hợp AI | **Amazon Rekognition Video** | Apache Flink, AWS Lambda |
+
+**💡 Móc nhớ**: _"Đề có camera, drone gửi video về cloud $\rightarrow$ Luôn chọn **Kinesis Video Streams** (không chọn Data Streams)."_
+
+---
+
+### TRAP 40: Cost Allocation Tags — Kích Hoạt Trong Console
+| Hành Động | Kết Quả |
+|:---|:---|
+| Gắn tag `Project = Alpha` lên 100 EC2 instances | Tag đã tồn tại trên tài nguyên nhưng **CHƯA XUẤT HIỆN TRONG HÓA ĐƠN** |
+| Vào Billing Console $\rightarrow$ Bấm **Activate Cost Allocation Tag** | Tag chính thức được theo dõi trong Cost Explorer, Budgets và CUR |
+| Tính chất thời gian | **KHÔNG CÓ HIỆU LỰC HỒI TỐ (Chỉ áp dụng cho chi phí phát sinh sau khi kích hoạt)** |
+
+**💡 Móc nhớ**: _"Gắn tag thôi chưa đủ, **phải kích hoạt trong Billing Console** thì kế toán mới nhìn thấy tiền!"_
+
+---
+
+## 📌 MASTER CHECKLIST — Trước Khi Nhấn Submit (40 Quy Tắc Vàng)
 
 ```
 □ "without changing app code" + Linux  → EFS (NFS)
@@ -375,8 +494,10 @@
 □ Active-active multi-region    → DynamoDB Global Tables (không phải Aurora Global)
 □ Strict order + exactly-once   → SQS FIFO (không phải Standard)
 □ Pilot Light DR                → EC2 = ZERO (không phải scaled-down)
+□ Warm Standby DR               → EC2 = Scaled-down fleet running 24/7
 □ "detect brute-force/mining"   → GuardDuty (không phải Inspector)
 □ "scan CVE vulnerabilities"    → Inspector (không phải GuardDuty)
+□ "discover PII in S3"          → Macie (không phải GuardDuty/Inspector)
 □ "nobody deletes even root"    → Compliance Mode (không phải Governance)
 □ Static Anycast IP hoặc UDP    → Global Accelerator (không phải CloudFront)
 □ Zone Apex (example.com)       → Alias Record (không phải CNAME)
@@ -387,4 +508,22 @@
 □ "CIS benchmark score"         → Security Hub (không phải Config)
 □ "BYOL license per socket/core" → Dedicated Hosts (không phải Dedicated Instances)
 □ "capacity reservation"        → Zonal RI (không phải Savings Plans)
+□ ECS App code access DB        → Task Role (không phải Task Execution Role)
+□ ECS Agent pull ECR image      → Task Execution Role
+□ S3 replication data có sẵn    → S3 Batch Replication (CRR chỉ replicate data mới)
+□ S3 KMS throttling             → Bật S3 Bucket Key (giảm 99% KMS call)
+□ Edge compute < 1ms, no network→ CloudFront Functions (không phải Lambda@Edge)
+□ Route user theo luật EU/GDPR  → Route 53 Geolocation (không phải Latency)
+□ Chặn SQLi / XSS trên web app  → AWS WAF (không gắn được NLB)
+□ Kiểm tra sâu gói tin VPC, IPS → AWS Network Firewall (Firewall subnet)
+□ Workflow có human approval    → Step Functions Standard (không phải Express)
+□ Stream video từ camera an ninh→ Kinesis Video Streams (không phải Data Streams)
+□ Gắn tag chi phí nhưng ko thấy → Phải Activate trong Billing Console (không hồi tố)
+□ Truy cập S3 từ private subnet → Gateway VPC Endpoint (Miễn phí, thay NAT GW)
+□ Scale EC2 theo SQS backlog    → ApproximateNumberOfMessagesVisible / Instances
+□ Chạy batch job dài > 15 phút  → AWS Batch hoặc ECS Fargate (Lambda bị giới hạn 15m)
+□ API Gateway timeout           → 29 giây (vượt quá phải dùng async SQS)
+□ DynamoDB item lớn > 400 KB    → Lưu S3, DynamoDB chỉ lưu pointer/metadata
+□ Phục hồi máy chủ EC2 lỗi HW   → CloudWatch Alarm + EC2 Recover (giữ nguyên IP, EBS)
+□ Shell EC2 không mở port 22    → SSM Session Manager (không cần Bastion)
 ```
