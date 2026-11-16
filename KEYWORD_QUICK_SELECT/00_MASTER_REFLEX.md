@@ -1,6 +1,8 @@
 # ⚡ 00 — MASTER REFLEX TABLE: Từ Khóa → Đáp Án Chuẩn (< 60 Giây)
 
 > **Cách dùng**: Nhấn `Ctrl + F` tìm từ khóa trong đề bài $\rightarrow$ Đọc ✅ **CHỌN** $\rightarrow$ Đọc 💡 **VÌ SAO / MÓC NHỚ** để hiểu bản chất $\rightarrow$ Gạch bỏ ❌ **BẪY (DISTRACTORS)**.
+>
+> 🆕 **Lưu ý cập nhật (11/2026)**: Một số con số/dịch vụ đã thay đổi so với tài liệu luyện thi cũ (SQS & Lambda async 1 MiB, Kinesis record 10 MiB, S3 object 50 TB, gp3 80,000 IOPS, Snowball Edge/Migration Hub ngừng nhận khách mới, Pinpoint đã ngừng hỗ trợ...). Xem bảng tổng hợp tại [`15_SERVICE_UPDATES_2024_2026.md`](./15_SERVICE_UPDATES_2024_2026.md). Đề thi có thể vẫn dùng số liệu cũ — khi đáp án chỉ khớp với số liệu cũ, hãy chọn theo logic kiến trúc của câu hỏi.
 
 ---
 
@@ -11,7 +13,7 @@
 | **"without opening SSH port 22"** / "no Bastion Host" | **SSM Session Manager** | Dùng TLS qua AWS API — không mở inbound port nào, log audit vào S3/CloudWatch. | ~~Bastion Host~~ (phải mở port 22) |
 | **"HPC / MPI / NCCL inter-node latency"** | **EFA** + Cluster Placement Group | EFA có **OS-bypass** bỏ qua kernel Linux $\rightarrow$ độ trễ microsecond. ENA không có OS-bypass. | ~~ENA~~ |
 | **"Cluster Placement Group — Insufficient capacity error"** | **Stop ALL → Start ALL cùng lúc** | Rack vật lý hết chỗ $\rightarrow$ Stop toàn bộ để AWS tìm rack mới đủ chỗ cho cả cụm. | ~~Terminate~~ ~~thêm từng instance~~ |
-| **"lowest network latency between instances"** | **Cluster Placement Group** | Cluster = cùng 1 rack vật lý, 1 AZ $\rightarrow$ 100 Gbps, < 1ms. | ~~Spread~~ ~~Partition~~ |
+| **"lowest network latency between instances"** | **Cluster Placement Group** | Cluster = các instance đặt sát nhau trên phần cứng gần nhau trong 1 AZ $\rightarrow$ độ trễ thấp nhất, băng thông cao (tới 10 Gbps cho 1 luồng TCP, nên bật Enhanced Networking). Rủi ro: hỏng phần cứng có thể ảnh hưởng cả cụm. | ~~Spread~~ ~~Partition~~ |
 | **"critical instances, max fault tolerance, different racks"** | **Spread Placement Group** (≤ 7/AZ) | Spread = mỗi instance 1 rack riêng biệt (nguồn điện + switch riêng). | ~~Cluster~~ |
 | **"HDFS / Kafka / Cassandra topology-aware"** | **Partition Placement Group** | Partition = nhóm rack theo phân vùng, app biết rack để phân tán replica. | ~~Cluster~~ ~~Spread~~ |
 | **"license per socket/core (SQL Server, Oracle BYOL)"** | **Dedicated Hosts** | Thuê cả máy vật lý, thấy socket/core/host ID $\rightarrow$ đáp ứng BYOL license. | ~~Dedicated Instances~~ |
@@ -45,7 +47,7 @@
 | **"on-prem volume: data mostly on-prem, async snapshot"** | **Volume Gateway — Stored Volumes** | Data chính ở tại chỗ (on-prem), snapshot async lên S3. | ~~Cached Volumes~~ |
 | **"on-prem volume: data mostly on S3, local cache"** | **Volume Gateway — Cached Volumes** | Data chính trên S3, chỉ giữ cache phần hay dùng tại chỗ. | ~~Stored Volumes~~ |
 | **"external partners upload via SFTP to S3"** | **AWS Transfer Family** | Endpoint SFTP/FTPS/FTP/AS2 managed đổ thẳng file vào S3/EFS, giữ nguyên script. | ~~DataSync~~ |
-| **"50–100 TB migrate, slow internet taking > 1 week"** | **Snowball Edge Storage Optimized** | Ship thiết bị vật lý 80–210 TB nạp dữ liệu offline khi mạng quá chậm. | ~~DataSync qua mạng~~ |
+| **"50–100 TB migrate, slow internet taking > 1 week"** | **Snowball Edge Storage Optimized** | Ship thiết bị vật lý 80–210 TB nạp dữ liệu offline khi mạng quá chậm. ⚠️ Từ 07/11/2025 Snowball Edge **không nhận khách hàng mới** (khách cũ vẫn dùng); AWS gợi ý DataSync (+ Direct Connect) hoặc **AWS Data Transfer Terminal**. Đề SAA-C03 vẫn có thể hỏi Snowball. | ~~DataSync qua mạng~~ |
 | **"single-digit ms S3 latency, ML/AI training, 1 AZ"** | **S3 Express One Zone** | Nhanh gấp 10 lần Standard (single-digit ms), Directory Bucket trong 1 AZ. | ~~S3 Standard~~ |
 | **"temporary files deleted after 10 days, cheapest"** | **S3 Standard** | Standard-IA phạt tiền tối thiểu 30 ngày lưu trữ dù xóa sớm. File < 30d dùng Standard. | ~~S3 Standard-IA~~ |
 | **"unpredictable access pattern, zero retrieval fees"** | **S3 Intelligent-Tiering** | Tự động chuyển tầng Frequent $\rightarrow$ Infrequent $\rightarrow$ Archive, không phí phạt retrieval. | ~~Standard-IA~~ |
@@ -54,8 +56,8 @@
 | **"WORM compliance, nobody deletes even root"** | **S3 Object Lock (Compliance Mode)** | Không một ai xóa được kể cả Root AWS; Governance mode admin vẫn bypass được. | ~~Governance Mode~~ |
 | **"replicate existing objects in S3 bucket"** | **S3 Batch Replication** | CRR mặc định chỉ replicate object mới; dữ liệu có sẵn phải dùng Batch Replication. | ~~CRR alone~~ |
 | **"high-volume S3 requests causing KMS throttling"** | **S3 Bucket Key** | Giảm tới 99% số lần gọi API tới KMS, tiết kiệm chi phí và hết nghẽn quota. | ~~Tăng KMS Quota~~ |
-| **"query specific columns directly from S3 CSV/Parquet"**| **S3 Select** | Lọc dữ liệu tại tầng S3 bằng SQL trước khi trả về app, giảm 80% băng thông mạng. | ~~Amazon Athena~~ |
-| **"shared block storage, same AZ, 16 EC2 instances"** | **EBS io2 Block Express Multi-Attach** | Gắn 1 volume vào tối đa 16 EC2 cùng AZ; app cần cluster file system. | ~~EFS~~ |
+| **"query specific columns directly from S3 CSV/Parquet"**| **S3 Select** | Lọc dữ liệu tại tầng S3 bằng SQL trước khi trả về app, giảm lượng dữ liệu truyền về. ⚠️ S3 Select **không còn mở cho khách hàng mới** (từ 2024) — AWS khuyến nghị dùng **Athena** hoặc S3 byte-range fetch. | ~~Amazon Athena~~ (khi đề chỉ lọc 1 object) |
+| **"shared block storage, same AZ, 16 EC2 instances"** | **EBS io1/io2 Multi-Attach** | Gắn 1 volume io1/io2 vào tối đa 16 instance **Nitro** cùng AZ; app phải dùng cluster-aware file system. | ~~EFS~~ ~~gp3~~ |
 | **"eliminate EBS snapshot lazy-loading latency"** | **Fast Snapshot Restore (FSR)** | Khởi tạo volume từ snapshot có ngay 100% hiệu năng, không bị trễ lần đọc đầu. | ~~Pre-warm bằng dd~~ |
 
 ---
@@ -64,27 +66,27 @@
 
 | Từ Khóa Trong Đề Thi | ✅ CHỌN | 💡 Vì Sao / Móc Nhớ | ❌ KHÔNG CHỌN |
 |:---|:---|:---|:---|
-| **"Lambda connects to RDS, too many connections"** | **Amazon RDS Proxy** | Connection pooling gom cụm kết nối, giảm 90% tải DB, giảm 66% thời gian failover. | ~~Direct Connection~~ |
+| **"Lambda connects to RDS, too many connections"** | **Amazon RDS Proxy** | Connection pooling gom cụm kết nối (giảm số kết nối mở tới DB), giảm tới 66% thời gian failover, hỗ trợ IAM auth + Secrets Manager. | ~~Direct Connection~~ |
 | **"Oracle/SQL Server requires OS root / sysadmin"** | **Amazon RDS Custom** | Có quyền OS + SSH/SSM để cài agent/driver tùy biến, tắt automation khi sửa. | ~~RDS thường~~ |
 | **"RDS HA, standby readable, fast failover ~35s"** | **RDS Multi-AZ DB Cluster** | 1 Writer + 2 Readable Standbys trên 3 AZ, failover < 35s, đọc được từ standby. | ~~Multi-AZ Instance~~ (standby ko đọc được) |
 | **"scale read traffic, async replicas, cross-region"** | **RDS Read Replicas** | Tối đa 15 replica, async, cùng Region free data transfer, promote làm DR. | ~~Multi-AZ~~ (sync, chuyên HA) |
 | **"rewind MySQL DB without restore from backup"** | **Aurora Backtrack** | Tua ngược DB về thời điểm cũ trong vài giây, không cần restore cluster mới. | ~~Restore Snapshot~~ |
 | **"instant zero-cost DB copy for testing"** | **Aurora Clone (Copy-on-write)** | Tạo bản sao test tức thì, không tốn thêm storage cho dữ liệu chưa đổi. | ~~Snapshot + Restore~~ |
-| **"unpredictable spiky relational workload"** | **Aurora Serverless v2** | Tự scale ACU theo giây, có Data API gọi SQL qua HTTPS không giữ connection. | ~~Aurora Provisioned~~ |
-| **"cross-region DR for relational DB, RPO ~1s, RTO < 1m"**| **Aurora Global Database** | Replicate tầng storage < 1s, 1 primary + 10 secondary, có Write Forwarding. | ~~RDS Cross-Region Replica~~ |
+| **"unpredictable spiky relational workload"** | **Aurora Serverless v2** | Tự scale ACU theo tải (0.5 ACU/bước; bản mới hỗ trợ **auto-pause về 0 ACU**, tối đa 256 ACU MySQL / 384 ACU PostgreSQL), có Data API gọi SQL qua HTTPS. | ~~Aurora Provisioned~~ |
+| **"cross-region DR for relational DB, RPO ~1s, RTO < 1m"**| **Aurora Global Database** | Replicate tầng storage, độ trễ thường < 1s; 1 primary + tối đa **10 secondary Region** (tăng từ 5 vào 05/2025); có Write Forwarding. | ~~RDS Cross-Region Replica~~ |
 | **"microsecond DynamoDB reads, NO code change"** | **DynamoDB Accelerator (DAX)** | Cache in-memory chuyên cho DynamoDB, cùng API, microsecond latency. | ~~ElastiCache~~ (phải sửa code) |
-| **"multi-region active-active read AND write"** | **DynamoDB Global Tables** | Tất cả Region đều nhận WRITE, replicate < 1s, last-writer-wins. | ~~Aurora Global~~ (1 writer) |
-| **"recover DynamoDB to specific second in 35 days"** | **DynamoDB PITR** | Continuous backup, restore về bất kỳ giây nào ra bảng mới. | ~~On-Demand Backup~~ |
+| **"multi-region active-active read AND write"** | **DynamoDB Global Tables** | Tất cả Region đều nhận WRITE. Mặc định: eventual consistency, replicate thường < 1s, last-writer-wins. Từ 06/2025 có chế độ **Multi-Region Strong Consistency (MRSC)** cho RPO = 0 (đúng 3 Region). | ~~Aurora Global~~ (1 writer) |
+| **"recover DynamoDB to specific second in 35 days"** | **DynamoDB PITR** | Continuous backup, restore về bất kỳ giây nào (cửa sổ cấu hình 1–35 ngày) ra **bảng mới**. | ~~On-Demand Backup~~ |
 | **"trigger Lambda on DynamoDB item update/delete"** | **DynamoDB Streams** | Changelog 24 giờ của các bản ghi, kích hoạt Lambda phản ứng sự kiện (CDC). | ~~S3 Event~~ |
 | **"automatically delete expired items without cost"** | **DynamoDB TTL** | Xóa item tự động theo timestamp, hoàn toàn miễn phí, không tốn WCU. | ~~Viết Lambda cron quét~~ |
 | **"DynamoDB item size > 400 KB"** | **Lưu file S3 + DynamoDB lưu pointer** | Giới hạn cứng của DynamoDB item là 400 KB. | ~~Tăng item size~~ |
 | **"in-memory cache, pub/sub, sorted sets leaderboard"** | **Amazon ElastiCache (Redis / Valkey)** | Đa cấu trúc dữ liệu, Multi-AZ auto failover, AOF persistence. | ~~Memcached~~ |
 | **"multi-threaded simple in-memory cache"** | **Amazon ElastiCache (Memcached)** | Thuần key-value, đa luồng CPU, scale ngang dễ dàng, không persistence. | ~~Redis~~ |
-| **"Redis speed but needs durable primary database"** | **Amazon MemoryDB for Redis** | Redis-compatible nhưng durable Multi-AZ transactional log làm DB chính. | ~~ElastiCache~~ (chỉ làm cache) |
-| **"MongoDB compatible document store", "JSON"** | **Amazon DocumentDB** | 100% Mongo wire protocol, storage Aurora tự scale 128 TB. | ~~DynamoDB~~ |
+| **"Redis speed but needs durable primary database"** | **Amazon MemoryDB** (Valkey / Redis OSS) | Tương thích Redis/Valkey nhưng lưu bền qua Multi-AZ transactional log → dùng làm DB chính. | ~~ElastiCache~~ (chỉ làm cache) |
+| **"MongoDB compatible document store", "JSON"** | **Amazon DocumentDB** | Tương thích MongoDB API/driver (không phải 100% tính năng MongoDB), storage tách rời tự scale tới 128 TiB. | ~~DynamoDB~~ |
 | **"social network / fraud detection / graph queries"** | **Amazon Neptune** | Graph DB tối ưu cho Gremlin/openCypher, quan hệ chằng chịt nhiều bước. | ~~RDS~~ ~~DynamoDB~~ |
 | **"Apache Cassandra migration without managing servers"** | **Amazon Keyspaces** | Serverless Cassandra, 100% CQL compatible, không quản lý cụm. | ~~DynamoDB~~ |
-| **"IoT time-series, sensor telemetry billions/sec"** | **Amazon Timestream** | Time-series DB serverless: tự phân tầng In-Memory $\rightarrow$ Magnetic store. | ~~RDS~~ |
+| **"IoT time-series, sensor telemetry billions/sec"** | **Amazon Timestream** | Time-series DB serverless: tự phân tầng In-Memory $\rightarrow$ Magnetic store. ⚠️ Timestream **for LiveAnalytics** đóng với khách mới từ 20/06/2025 → khách mới dùng **Timestream for InfluxDB**. | ~~RDS~~ |
 
 ---
 
@@ -105,7 +107,7 @@
 | **"quick secure encrypted tunnel over internet, backup DX"**| **AWS Site-to-Site VPN** | Thiết lập vài phút, mã hóa IPsec qua internet, 2 tunnels HA, 1.25 Gbps/tunnel. | ~~Direct Connect~~ |
 | **"connect multiple branch offices to AWS hub"** | **AWS VPN CloudHub** | Nhiều CGW chi nhánh nối về 1 VGW theo hub-and-spoke, dùng BGP. | ~~TGW~~ (nếu đề nhấn VGW) |
 | **"static Anycast IPs, UDP/TCP, bypass DNS cache"** | **AWS Global Accelerator** | 2 Anycast IP tĩnh, đưa traffic vào mạng AWS tại edge gần nhất, failover < 1m. | ~~CloudFront~~ (chỉ HTTP, có cache) |
-| **"global CDN edge caching, HTTP/HTTPS, WAF"** | **Amazon CloudFront** | CDN Layer 7, cache tại 450+ Edge Locations, HTTPS cert tạo ở `us-east-1`. | ~~Global Accelerator~~ |
+| **"global CDN edge caching, HTTP/HTTPS, WAF"** | **Amazon CloudFront** | CDN Layer 7, cache tại hàng trăm PoP (Edge Locations + Regional Edge Caches) toàn cầu; cert ACM cho CloudFront phải tạo ở `us-east-1`. | ~~Global Accelerator~~ |
 | **"secure S3 bucket so only CloudFront can read files"**| **Origin Access Control (OAC)** | OAC thay thế OAI cũ + Bucket Policy chặn truy cập trực tiếp S3. | ~~OAI~~ |
 | **"edge compute < 1ms, rewrite URL, no network call"** | **CloudFront Functions** | JavaScript, < 1ms, viewer request/response, cực rẻ, không gọi mạng ngoài. | ~~Lambda@Edge~~ |
 | **"edge compute up to 30s, dynamic resize, network call"**| **Lambda@Edge** | Node/Python, chạy cả 4 event, gọi được API ngoài, tạo ở `us-east-1`. | ~~CloudFront Functions~~ |
@@ -121,7 +123,7 @@
 
 | Từ Khóa Trong Đề Thi | ✅ CHỌN | 💡 Vì Sao / Móc Nhớ | ❌ KHÔNG CHỌN |
 |:---|:---|:---|:---|
-| **"EC2 access AWS APIs without hardcoded keys"** | **IAM Role (Instance Profile)** | STS cấp temporary credentials, tự rotate mỗi giờ, không lưu key trên máy. | ~~Access Key trong code~~ |
+| **"EC2 access AWS APIs without hardcoded keys"** | **IAM Role (Instance Profile)** | STS cấp temporary credentials qua Instance Metadata (IMDSv2), tự động rotate trước khi hết hạn, không lưu key trên máy. | ~~Access Key trong code~~ |
 | **"cross-account access using temporary credentials"** | **IAM Role with Trust Policy (`sts:AssumeRole`)**| Account A assume role ở Account B qua STS token. Không share IAM user key. | ~~Chia sẻ Access Key~~ |
 | **"prevent confused deputy attack for third-party"** | **External ID** | Bắt buộc cấu hình khi cấp quyền cho bên thứ 3 assume role vào account mình. | ~~Secret Key~~ |
 | **"org-wide guardrail, deny action across all accounts"**| **Service Control Policies (SCP)** | Phủ quyết cả Root của Member Account. Không áp dụng cho Management Account. | ~~Permission Boundaries~~ |
@@ -130,10 +132,10 @@
 | **"existing on-prem AD, do not replicate passwords"** | **AD Connector** | Proxy chuyển tiếp xác thực về on-prem AD, không lưu password trên AWS. | ~~Managed Microsoft AD~~ |
 | **"full AD on AWS, 2-way trust with on-prem"** | **AWS Managed Microsoft AD** | AD thật trên AWS, Multi-AZ, hỗ trợ trust 2 chiều, FSx Windows, RDS SQL Server. | ~~AD Connector~~ ~~Simple AD~~ |
 | **"data > 4 KB encryption with KMS"** | **Envelope Encryption (`GenerateDataKey`)** | KMS chỉ mã hóa trực tiếp $\le$ 4 KB. Lớn hơn dùng Plaintext Data Key tự mã hóa. | ~~KMS Encrypt API~~ |
-| **"dedicated hardware HSM, FIPS 140-2 Level 3, own keys"**| **AWS CloudHSM** | Single-tenant phần cứng riêng, khách tự quản key, AWS không thể khôi phục. | ~~AWS KMS~~ |
+| **"dedicated hardware HSM, FIPS 140-2 Level 3, own keys"**| **AWS CloudHSM** | Single-tenant phần cứng riêng, khách tự quản key, AWS không thể khôi phục. Lưu ý: KMS nay cũng đạt FIPS 140-3 Level 3, CloudHSM `hsm2m.medium` đạt FIPS 140-3 L3 → điểm phân biệt thật sự là **single-tenant + khách độc quyền kiểm soát key**. | ~~AWS KMS~~ |
 | **"auto-rotate database passwords without downtime"** | **AWS Secrets Manager** | Rotation tự động bằng Lambda (2 nhãn CURRENT/PENDING), tích hợp sẵn RDS. | ~~SSM Parameter Store~~ |
 | **"store configuration parameters, non-secret, free"** | **SSM Parameter Store (Standard)** | Miễn phí cho Standard tier, lưu URL, AMI ID, biến môi trường. Không tự rotate. | ~~Secrets Manager~~ |
-| **"public SSL certificate auto-renew free for ALB/CF"** | **AWS Certificate Manager (ACM)** | Miễn phí, auto renew. Cert cho CloudFront bắt buộc tạo ở `us-east-1`. Không export. | ~~Import Cert~~ |
+| **"public SSL certificate auto-renew free for ALB/CF"** | **AWS Certificate Manager (ACM)** | Cert public tích hợp ALB/CloudFront/API GW miễn phí, auto renew. Cert cho CloudFront bắt buộc tạo ở `us-east-1`. Mặc định không export private key (từ 06/2025 có tùy chọn **exportable public certificate** có phí để dùng trên EC2/on-prem). | ~~Import Cert~~ |
 | **"block SQL injection, XSS, rate-limit HTTP requests"** | **AWS WAF** | Layer 7 firewall, gắn ALB, CloudFront, APIGW, AppSync. KHÔNG GẮN ĐƯỢC NLB. | ~~Network Firewall~~ |
 | **"DDoS mitigation L3/4 with financial protection"** | **AWS Shield Advanced** | Bảo vệ L3/4/7, đội SRT 24/7, bồi thường chi phí scale do bị tấn công DDoS. | ~~Shield Standard~~ (free basic) |
 | **"VPC inspection, FQDN domain filtering outbound"** | **AWS Network Firewall** | Stateful L3-L7 firewall, Suricata IPS, lọc domain FQDN, đặt tại Firewall Subnet. | ~~Security Group~~ ~~WAF~~ |
@@ -144,7 +146,7 @@
 | **"central dashboard for security compliance score (CIS)"**| **AWS Security Hub** | Tổng hợp findings GuardDuty, Inspector, Macie, Config theo chuẩn ASFF, chấm điểm. | ~~Config alone~~ |
 | **"share VPC subnets or Transit Gateway across accounts"**| **AWS Resource Access Manager (RAM)** | Chia sẻ tài nguyên trong Organization không cần tạo trùng lặp. | ~~VPC Peering~~ |
 | **"download official AWS compliance reports (SOC, PCI)"**| **AWS Artifact** | Tải báo cáo kiểm toán của chính AWS và ký thỏa thuận HIPAA BAA. | ~~Audit Manager~~ |
-| **"continuous compliance auditing and evidence collection"**| **AWS Audit Manager** | Tự động thu thập bằng chứng từ tài nguyên của bạn phục vụ kiểm toán viên. | ~~AWS Artifact~~ |
+| **"continuous compliance auditing and evidence collection"**| **AWS Audit Manager** | Tự động thu thập bằng chứng từ tài nguyên của bạn phục vụ kiểm toán viên. (Ghi chú: Audit Manager chuyển sang maintenance, không nhận khách mới từ 30/04/2026.) | ~~AWS Artifact~~ |
 | **"user registration, social login, JWT token for app"**| **Amazon Cognito User Pools** | Xác thực người dùng (Authentication), cấp JWT token cho API Gateway/ALB. | ~~Identity Pools~~ |
 | **"exchange user token for temporary AWS credentials"** | **Amazon Cognito Identity Pools** | Phân quyền (Authorization), đổi token lấy STS credentials truy cập thẳng S3. | ~~User Pools~~ |
 
@@ -166,7 +168,7 @@
 | **"query S3 data lake from existing Redshift cluster"** | **Redshift Spectrum** | Cụm Redshift query thẳng file S3 qua Glue Data Catalog không cần load data. | ~~Athena~~ |
 | **"serverless ETL, schema discovery, data catalog"** | **AWS Glue** | Crawlers tự suy schema, Data Catalog làm từ điển chung, Spark ETL jobs. | ~~EMR~~ |
 | **"visual no-code data preparation for business analysts"**| **AWS Glue DataBrew** | 250+ phép biến đổi trực quan kéo thả, làm sạch dữ liệu không cần code. | ~~Glue ETL Jobs~~ |
-| **"petabyte big data cluster, cheap Spot task nodes"** | **Amazon EMR** | Cụm Hadoop/Spark. Task nodes không lưu HDFS $\rightarrow$ dùng Spot tiết kiệm 80%. | ~~Glue~~ |
+| **"petabyte big data cluster, cheap Spot task nodes"** | **Amazon EMR** | Cụm Hadoop/Spark. Task nodes không lưu HDFS $\rightarrow$ dùng Spot (giảm tới 90% so với On-Demand). | ~~Glue~~ |
 | **"data warehouse, OLAP queries, MPP columnar storage"** | **Amazon Redshift** | Kho dữ liệu phân tích BI, lưu trữ theo cột, Concurrency Scaling. | ~~RDS Aurora~~ |
 | **"enforce column-level and row-level security on S3"** | **AWS Lake Formation** | Phân quyền hạt mịn cấp bảng, cột, dòng cho Athena/Redshift, LF-Tags. | ~~IAM S3 alone~~ |
 | **"full-text search, log analytics dashboard, Kibana"** | **Amazon OpenSearch Service** | Tìm kiếm toàn văn, log analytics, UltraWarm lưu trữ rẻ, vector search k-NN. | ~~Athena~~ |
@@ -179,9 +181,9 @@
 | **"detect objects, faces, inappropriate content in images"**| **Amazon Rekognition** | Thị giác máy tính nhận diện khuôn mặt, vật thể, kiểm duyệt nội dung ảnh/video. | ~~Textract~~ |
 | **"speech-to-text", "call center transcription"** | **Amazon Transcribe** | Chuyển giọng nói thành văn bản, tự động che PII, nhận diện người nói. | ~~Polly~~ |
 | **"text-to-speech", "read articles aloud"** | **Amazon Polly** | Chuyển văn bản thành giọng đọc tự nhiên, Neural TTS, SSML tags. | ~~Transcribe~~ |
-| **"intelligent enterprise search answering natural questions"**| **Amazon Kendra** | Tìm kiếm tài liệu nội bộ (SharePoint, S3) bằng câu hỏi ngôn ngữ tự nhiên. | ~~OpenSearch~~ |
+| **"intelligent enterprise search answering natural questions"**| **Amazon Kendra** | Tìm kiếm tài liệu nội bộ (SharePoint, S3) bằng câu hỏi ngôn ngữ tự nhiên. (Ghi chú: Kendra chuyển sang maintenance, không nhận khách mới từ 30/07/2026; giải pháp RAG mới thường dùng Bedrock Knowledge Bases.) | ~~OpenSearch~~ |
 | **"train custom machine learning models from scratch"** | **Amazon SageMaker AI** | Nền tảng ML toàn diện cho data scientists, Managed Spot training giảm 90%. | ~~Bedrock~~ |
-| **"human review for low confidence ML predictions"** | **Amazon Augmented AI (A2I)** | Đưa kết quả ML điểm tin cậy thấp cho con người duyệt lại (human-in-the-loop).| ~~SageMaker Ground Truth~~|
+| **"human review for low confidence ML predictions"** | **Amazon Augmented AI (A2I)** | Đưa kết quả ML điểm tin cậy thấp cho con người duyệt lại (human-in-the-loop). (Ghi chú: A2I & Ground Truth thuộc nhóm tính năng SageMaker AI chuyển sang maintenance từ 30/07/2026.) | ~~SageMaker Ground Truth~~ (gán nhãn dữ liệu huấn luyện)|
 
 ---
 
@@ -192,7 +194,7 @@
 | **"rehost physical servers, VMware, Hyper-V to EC2"** | **AWS Application Migration Service (MGN)**| Replicate block-level liên tục (TCP 1500) vào Staging Area, cutover vài phút. | ~~DMS~~ ~~SMS~~ |
 | **"homogeneous database migration without code changes"**| **AWS Database Migration Service (DMS)**| Nguồn vẫn chạy bình thường, Full Load + CDC đồng bộ liên tục, downtime tối thiểu. | ~~SCT~~ (không cần) |
 | **"heterogeneous database migration (Oracle to Aurora)"**| **AWS SCT + AWS DMS** | SCT chuyển đổi Schema và Stored Procedures; DMS di chuyển dữ liệu. | ~~DMS only~~ |
-| **"survey on-prem servers and network dependency mapping"**| **AWS Application Discovery Service (Agent)**| Cài agent lên OS thu thập cấu hình thực tế và vẽ bản đồ kết nối mạng giữa các server. | ~~Agentless~~ (ko có network map) |
+| **"survey on-prem servers and network dependency mapping"**| **AWS Application Discovery Service (Agent)**| Cài agent lên OS thu thập cấu hình thực tế và vẽ bản đồ kết nối mạng giữa các server. (Ghi chú: ADS & Migration Hub không nhận khách mới từ 07/11/2025; AWS định hướng sang **AWS Transform**.) | ~~Agentless~~ (ko có network map) |
 | **"single dashboard to track migration across tools"** | **AWS Migration Hub** | "Single pane of glass" theo dõi tiến độ MGN, DMS, DataSync gom theo ứng dụng. | ~~Discovery Service~~ |
 | **"disaster recovery for servers, RPO seconds, RTO minutes"**| **AWS Elastic Disaster Recovery (DRS)**| Replicate mức khối đĩa liên tục vào Staging Area giá rẻ, failback về on-prem được. | ~~AWS Backup~~ |
 | **"DR strategy: DB running, compute fleet 0 instances"**| **Pilot Light** | Chỉ có Database chạy 24/7. Máy chủ EC2 = 0 (tắt ngúm). Khi có sự cố mới boot EC2. | ~~Warm Standby~~ |
@@ -232,14 +234,14 @@
 | **"in-browser terminal with pre-installed AWS CLI"** | **AWS CloudShell** | Terminal trên console web, có sẵn credential, 1 GB persistent storage. | ~~Cloud9~~ |
 | **"define infrastructure using programming languages (TS/Python)"**| **AWS CDK** | Viết code hướng đối tượng, lệnh `cdk synth` biên dịch thành CloudFormation. | ~~CloudFormation YAML~~ |
 | **"simplified serverless framework, local Lambda testing"**| **AWS SAM** | Cú pháp mở rộng serverless, SAM CLI test Lambda cục bộ qua Docker. | ~~CDK~~ |
-| **"convert video stored in S3 for VOD, HLS/DASH, DRM"** | **AWS Elemental MediaConvert** | Chuyển mã video file-based chất lượng broadcast, thay thế Elastic Transcoder. | ~~Elastic Transcoder~~ |
+| **"convert video stored in S3 for VOD, HLS/DASH, DRM"** | **AWS Elemental MediaConvert** | Chuyển mã video file-based chất lượng broadcast, thay thế Elastic Transcoder (đã ngừng hoạt động 13/11/2025). | ~~Elastic Transcoder~~ |
 | **"stream video/audio from cameras, Rekognition Video"** | **Amazon Kinesis Video Streams** | Hấp thụ video từ hàng triệu thiết bị camera/drone, WebRTC 2 chiều. | ~~Kinesis Data Streams~~ |
 | **"interactive live streaming, Twitch tech, latency < 5s"**| **Amazon IVS** | Livestream tương tác độ trễ cực thấp (< 5s), có chat và timed metadata poll. | ~~MediaLive~~ |
 | **"broadcast live video encoding, sports TV events"** | **AWS Elemental MediaLive + MediaPackage**| MediaLive mã hóa trực tiếp $\rightarrow$ MediaPackage đóng gói DRM/time-shift $\rightarrow$ CloudFront. | ~~IVS~~ |
 | **"frontend developer, build full-stack web/mobile, CI/CD"**| **AWS Amplify** | Dựng full-stack (Next.js, React, Flutter) kèm auth, API, DB, hosting từ Git. | ~~S3 + CloudFront~~ |
 | **"test mobile application on real physical devices"** | **AWS Device Farm** | Test app trên hàng trăm điện thoại thật trên cloud, không dùng emulator. | ~~Simulator~~ |
 | **"maps, vehicle tracking, route calculation, geofence"** | **Amazon Location Service** | Tích hợp bản đồ Esri/HERE, tính tuyến đường, bắn sự kiện khi ra/vào geofence. | ~~Route 53 Geolocation~~ |
-| **"marketing campaigns, customer segmentation, analytics"**| **Amazon Pinpoint** | Tiếp thị đa kênh (Email, SMS, Push), phân khúc người dùng, đo tỷ lệ mở/click. | ~~Amazon SES~~ ~~SNS~~ |
+| **"marketing campaigns, customer segmentation, analytics"**| **Amazon Pinpoint** (đáp án trong đề cũ) | Tiếp thị đa kênh (Email, SMS, Push), phân khúc người dùng, đo tỷ lệ mở/click. ⚠️ Pinpoint **đã ngừng hỗ trợ 30/10/2026**: SMS/voice/push chuyển sang **AWS End User Messaging**, email sang **Amazon SES**, campaign/journey sang **Amazon Connect**. | ~~Amazon SES~~ ~~SNS~~ |
 | **"continuous compliance auditing of configuration changes"**| **AWS Config** | Ghi lịch sử cấu hình, đánh giá theo rule, tự động sửa qua SSM Automation. | ~~CloudTrail~~ |
 | **"deploy infrastructure across multiple accounts/regions"**| **CloudFormation StackSets** | Triển khai 1 template ra hàng trăm account và region từ 1 tài khoản admin. | ~~Nested Stacks~~ |
 | **"protect database from deletion when CFN stack deleted"**| **DeletionPolicy: Retain / Snapshot** | Giữ lại tài nguyên hoặc chụp snapshot trước khi xóa stack CloudFormation. | ~~Stack Policy~~ |
@@ -257,17 +259,21 @@
 |:---|:---|:---|
 | **AWS Lambda** | **Thời gian chạy tối đa: 15 phút** | Đề bài chạy job 20 phút hay vài giờ $\rightarrow$ **Gạch bỏ Lambda** (chọn Batch/Fargate). |
 | **AWS Lambda** | **Bộ nhớ RAM: 128 MB đến 10 GB** | CPU tự động tăng tỷ lệ thuận theo RAM được cấp phát. |
-| **AWS Lambda** | **Payload: 6 MB đồng bộ / 256 KB bất đồng bộ** | Đề bài gửi file 50 MB qua API Gateway vào Lambda $\rightarrow$ **Gạch bỏ** (phải qua S3). |
-| **AWS Lambda** | **Concurrency mặc định: 1,000 / Region** | Vượt quá bị lỗi `HTTP 429`. Dùng Provisioned Concurrency để xóa Cold Start. |
-| **Amazon API Gateway** | **Timeout tối đa: 29 giây** | Tác vụ xử lý backend mất > 29s $\rightarrow$ **Bị timeout** (phải chuyển sang async với SQS). |
-| **Amazon API Gateway** | **Throttling mặc định: 10,000 req/s** | Vượt quá trả về `HTTP 429 Too Many Requests`. |
-| **Amazon SQS** | **Kích thước tin nhắn: 256 KB** | Tin nhắn > 256 KB (tới 2 GB) $\rightarrow$ Dùng **SQS Extended Client Library** qua S3. |
+| **AWS Lambda** | **Payload: 6 MB đồng bộ / 1 MB bất đồng bộ** (async tăng từ 256 KB lên 1 MB vào 10/2025) | Đề bài gửi file 50 MB qua API Gateway vào Lambda $\rightarrow$ **Gạch bỏ** (phải upload S3, dùng pre-signed URL). |
+| **AWS Lambda** | **Concurrency mặc định: 1,000 / Region** (soft limit, xin tăng được) | Vượt quá bị throttle (`TooManyRequestsException`, HTTP 429). Dùng Provisioned Concurrency / SnapStart để giảm Cold Start. |
+| **Amazon API Gateway** | **Timeout tích hợp mặc định: 29 giây** | Tác vụ backend mất > 29s $\rightarrow$ thiết kế async (SQS/Step Functions, trả 202). Từ 06/2024, REST API **Regional/Private** có thể xin tăng timeout > 29s (đánh đổi giảm throttle quota); HTTP API tối đa 30s. |
+| **Amazon API Gateway** | **Throttling mặc định: 10,000 req/s, burst 5,000 / account / Region** | Vượt quá trả về `HTTP 429 Too Many Requests`. |
+| **Amazon SQS** | **Kích thước tin nhắn: 1 MiB** (tăng từ 256 KiB vào 08/2025) | Tin nhắn > 1 MiB (tới 2 GB) $\rightarrow$ Dùng **SQS Extended Client Library** lưu payload trên S3. *Đề cũ ghi 256 KB.* |
 | **Amazon SQS** | **Thời gian lưu trữ: 4 ngày (tối đa 14 ngày)** | Quá 14 ngày không xử lý sẽ bị xóa vĩnh viễn khỏi hàng đợi. |
 | **Amazon SQS** | **Visibility Timeout tối đa: 12 giờ** | Mặc định 30 giây. Lambda kết hợp SQS nên đặt Visibility Timeout $\ge$ 6x Lambda timeout. |
 | **Amazon DynamoDB** | **Kích thước 1 Item tối đa: 400 KB** | File lớn > 400 KB $\rightarrow$ Lưu S3, DynamoDB chỉ lưu pointer/URL metadata. |
 | **Amazon DynamoDB** | **Phục hồi theo thời gian (PITR): 35 ngày** | Cho phép khôi phục bảng về bất kỳ giây nào trong 35 ngày qua ra bảng mới. |
 | **AWS Step Functions** | **Standard Workflow: Tối đa 1 năm** | Hỗ trợ human approval (`waitForTaskToken`), tính tiền theo state transition. |
 | **AWS Step Functions** | **Express Workflow: Tối đa 5 phút** | Xử lý IoT/streaming thông lượng cực cao, tính tiền theo GB-giây. |
-| **Kinesis Data Streams** | **Kích thước bản ghi (Record): Tối đa 1 MB** | Cần message lớn hơn tới 10 MB $\rightarrow$ Chọn **Amazon MSK (Kafka)**. |
+| **Kinesis Data Streams** | **Kích thước bản ghi (Record): mặc định 1 MiB, cấu hình tới 10 MiB** (từ 10/2025) | Đề cũ: "message > 1 MB tới 10 MB" $\rightarrow$ **Amazon MSK (Kafka)**. Hiện KDS cũng cho phép 10 MiB nhưng throughput/shard không đổi, AWS khuyến nghị bản ghi lớn chỉ chiếm ~1–2%. |
 | **Kinesis Data Streams** | **Lưu trữ: 24 giờ (tối đa 365 ngày)** | Có thể tua lại và phát lại (Replay) stream bất kỳ lúc nào. |
-| **Kinesis Data Streams** | **Công suất 1 Shard: 1 MB/s vào / 2 MB/s ra** | Tối đa 1,000 records/s vào. Vượt quá bị lỗi `ProvisionedThroughputExceeded`. |
+| **Kinesis Data Streams** | **Công suất 1 Shard: 1 MB/s vào / 2 MB/s ra** | Tối đa 1,000 records/s vào. Vượt quá bị lỗi `ProvisionedThroughputExceeded`. Enhanced Fan-Out: 2 MB/s riêng cho mỗi consumer/shard. |
+| **AWS Lambda** | **Ổ tạm `/tmp`: 512 MB – 10 GB; package: 50 MB (zip upload) / 250 MB (giải nén) / 10 GB (container image)** | Thư viện quá lớn $\rightarrow$ đóng gói **container image** hoặc dùng Lambda Layers. |
+| **Amazon SQS FIFO** | **300 msg/s/API (không batch), 3,000 msg/s (batch 10)**; High-throughput FIFO cao hơn nhiều | Cần thứ tự + thông lượng lớn $\rightarrow$ bật High Throughput mode, chia nhiều `MessageGroupId`. |
+| **Amazon EventBridge** | **Payload sự kiện: tối đa 1 MB** (tăng từ 256 KB vào 10/2025); tối đa 5 target / rule | Payload lớn $\rightarrow$ lưu S3, event chỉ chứa pointer (claim-check pattern). |
+| **Amazon S3** | **Object tối đa 50 TB** (từ 12/2025, trước là 5 TB); 1 PUT tối đa 5 GB | File > 5 GB bắt buộc **Multipart Upload** (khuyến nghị từ 100 MB). |

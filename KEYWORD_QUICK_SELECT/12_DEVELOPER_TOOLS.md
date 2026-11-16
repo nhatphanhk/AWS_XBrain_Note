@@ -44,12 +44,15 @@ flowchart LR
 - **Service Map**: Biểu đồ trực quan hiển thị mối quan hệ phụ thuộc giữa các dịch vụ, đo độ trễ trung bình, và tô màu đỏ/vàng cho các service đang gặp lỗi (4xx Client Error, 5xx Server Error, Throttle).
 - **Cài Đặt**:
   - AWS Lambda: Chỉ cần bấm nút bật **Active Tracing**.
-  - Amazon EC2 / ECS: Bắt buộc phải chạy **X-Ray Daemon** (hoặc AWS Distro for OpenTelemetry - ADOT) và gắn IAM Role cấp quyền ghi log cho daemon.
+  - Amazon EC2 / ECS: Chạy **X-Ray Daemon** (đáp án kinh điển trong đề) hoặc collector **OpenTelemetry (ADOT / CloudWatch agent)** và gắn IAM Role có quyền `xray:PutTraceSegments`.
+  - ⚠️ **Cập nhật**: X-Ray SDK và X-Ray Daemon vào **maintenance mode từ 25/02/2026**, hết hỗ trợ **25/02/2027**. AWS khuyến nghị instrument bằng **OpenTelemetry** và thu thập bằng CloudWatch agent / OpenTelemetry Collector; dịch vụ X-Ray (console, service map) vẫn tiếp tục hoạt động.
 - **Sampling Rules**: Cấu hình tỷ lệ lấy mẫu (VD: chỉ trace 5% tổng số request) để kiểm soát và tiết kiệm chi phí giám sát.
 
 ---
 
 ## 🚀 QUY TRÌNH CI/CD CHUẨN MỰC TRÊN AWS
+
+> 📝 *AWS CodeCommit*: từng ngừng nhận khách mới (07/2024) nhưng **đã trở lại General Availability từ 24/11/2025** — có thể dùng CodeCommit hoặc GitHub/GitLab/Bitbucket (qua CodeConnections) làm Source.
 
 ```
 [Mã nguồn] ───────────────> [Biên dịch & Test] ───────────────> [Triển khai]
@@ -114,7 +117,7 @@ AWS CodeCommit / GitHub      AWS CodeBuild                      AWS CodeDeploy
 
 | Tín Hiệu Đề Thi (Trigger Keywords) | ✅ Đáp Án Chuẩn |
 |:---|:---|
-| "trace requests across microservices", "find performance bottleneck", "service map" | **AWS X-Ray** |
+| "trace requests across microservices", "find performance bottleneck", "service map" | **AWS X-Ray** (instrument bằng X-Ray SDK — đề cũ — hoặc OpenTelemetry/ADOT) |
 | "orchestrate CI/CD pipeline", "automated release workflow", "manual approval step" | **AWS CodePipeline** |
 | "serverless build service", "replace Jenkins", "build Docker image", "buildspec.yml" | **AWS CodeBuild** |
 | "deploy applications to EC2/Lambda", "canary deployment with auto rollback", "appspec.yml" | **AWS CodeDeploy** |

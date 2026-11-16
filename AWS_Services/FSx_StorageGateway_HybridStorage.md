@@ -75,7 +75,7 @@ flowchart TD
 | Loại Storage Gateway | Giao thức phía On-Premises | Cơ chế lưu trữ phía AWS | Trường hợp sử dụng tối ưu trong đề thi |
 | :--- | :--- | :--- | :--- |
 | **Amazon S3 File Gateway** | **NFS (v3, v4.1)** & **SMB (2.0, 3.0)** | Lưu trữ trực tiếp dưới dạng **S3 Objects** (1 file = 1 object trong S3 bucket). Có local cache. | **(U-PT1 Q21, U-PT3 Q57)**: Cung cấp giao thức chia sẻ tệp NFS/SMB cho ứng dụng tại chỗ ghi trực tiếp vào S3 Data Lake; tích hợp S3 Lifecycle. |
-| **Amazon FSx File Gateway** | **SMB (v2, v3)** | Đóng vai trò là **Bộ đệm tệp cục bộ (Local Cache)** cho **FSx for Windows File Server**. | Chi nhánh văn phòng ở xa cần truy cập hệ thống tệp FSx for Windows trên AWS với độ trễ mạng LAN mà không tốn băng thông đường truyền. |
+| **Amazon FSx File Gateway** | **SMB (v2, v3)** | Đóng vai trò là **Bộ đệm tệp cục bộ (Local Cache)** cho **FSx for Windows File Server**. | Chi nhánh văn phòng ở xa cần truy cập hệ thống tệp FSx for Windows trên AWS với độ trễ mạng LAN mà không tốn băng thông đường truyền. ⚠️ **Không nhận khách mới từ 28/10/2024** — AWS khuyến nghị client kết nối thẳng FSx for Windows (SMB đã có cache phía client) hoặc dùng FSx for NetApp ONTAP FlexCache khi cần cache tại chỗ. |
 | **Volume Gateway - Cached Volumes** | **iSCSI Block Storage** | **Dữ liệu chính lưu trên Amazon S3**; chỉ lưu dữ liệu thường xuyên đọc (**Frequently Accessed**) trên ổ đĩa cục bộ. | **(U-PT3 Q60)**: Mở rộng dung lượng lưu trữ cục bộ với chi phí thấp; giải phóng ổ cứng SAN/NAS đắt đỏ tại chỗ. |
 | **Volume Gateway - Stored Volumes** | **iSCSI Block Storage** | **Toàn bộ dữ liệu chính lưu trên ổ đĩa cục bộ (On-Prem)**; tự động sao lưu bất đồng bộ định kỳ thành **EBS Snapshots** trên S3. | Yêu cầu toàn bộ dữ liệu phải nằm tại chỗ để đạt độ trễ cực thấp; cần cơ chế sao lưu dự phòng thảm họa (DR) lên AWS với RPO thấp. |
 | **Tape Gateway (VTL)** | **iSCSI VTL** (Virtual Tape Library) | Giả lập thư viện băng từ ảo; lưu trữ trên **S3 Glacier Flexible** và **S3 Glacier Deep Archive**. | Thay thế toàn bộ hệ thống băng từ vật lý tốn kém; tích hợp trực tiếp với phần mềm sao lưu doanh nghiệp sẵn có (Veeam, Backup Exec). |
@@ -174,6 +174,8 @@ flowchart TD
 ---
 
 ### 2.4. Họ Thiết Bị Di Chuyển Dữ Liệu Ngoại Tuyến: AWS Snow Family
+
+> ⚠️ **Trạng thái 11/2026**: Snowmobile đã ngừng (03/2024), Snowcone đã ngừng cung cấp (2024), **Snowball Edge không nhận khách hàng mới từ 07/11/2025** (khách đang dùng không bị ảnh hưởng). Khách mới: **AWS DataSync** (có thể kết hợp Direct Connect hosted connection tạm thời), **AWS Data Transfer Terminal** (mang thiết bị lưu trữ tới địa điểm AWS để upload tốc độ cao) hoặc giải pháp Partner; edge compute → **AWS Outposts**. Bảng dưới giữ lại vì đề SAA-C03 vẫn có thể hỏi.
 
 | Thiết bị Snow | Dung lượng khả dụng | Năng lực tính toán (Compute) | Kịch bản sử dụng chuẩn |
 | :--- | :--- | :--- | :--- |

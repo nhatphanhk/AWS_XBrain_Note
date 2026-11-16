@@ -38,14 +38,14 @@ flowchart LR
 
     subgraph PayloadLimits[Giới Hạn Payload Dữ Liệu]
         Sync[Gọi Đồng Bộ Synchronous: 6 MB]
-        Async[Gọi Bất Đồng Bộ Asynchronous: 256 KB]
+        Async[Gọi Bất Đồng Bộ Asynchronous: 1 MB - từ 10/2025, trước là 256 KB]
     end
 ```
 
 - **Thời gian thực thi tối đa (Execution Timeout)**: **Tối đa 15 phút (900 giây)** cho một lần gọi. Không dùng Lambda cho các tác vụ phân tích batch kéo dài hàng giờ (chuyển sang AWS Fargate hoặc AWS Batch).
 - **Cấp phát bộ nhớ RAM**: Từ **128 MB đến 10 GB**. Khi tăng RAM, AWS tự động tăng tuyến tính sức mạnh vCPU (tại 1,769 MB RAM, Lambda được cấp chính xác 1 vCPU đầy đủ).
 - **Ổ đĩa tạm thời (`/tmp`)**: Khởi tạo từ 512 MB lên tới 10 GB, có thể dùng để giải nén model AI hoặc cache dữ liệu lớn trong cùng một môi trường thực thi.
-- **Payload Limits**: 6 MB cho gọi đồng bộ (qua API Gateway / SDK invoke) và 256 KB cho gọi bất đồng bộ (qua SNS / S3 / EventBridge).
+- **Payload Limits**: 6 MB cho gọi đồng bộ (qua API Gateway / SDK invoke) và **1 MB** cho gọi bất đồng bộ (qua SNS / S3 / EventBridge) — tăng từ 256 KB vào 10/2025 (tài liệu/đề cũ ghi 256 KB). Phần payload async vượt 256 KB được tính thêm 1 request cho mỗi khối 64 KB.
 
 ---
 
@@ -60,7 +60,7 @@ flowchart LR
 - **Provisioned Concurrency**:
   - Khởi tạo và "làm ấm" sẵn một số lượng môi trường thực thi cố định 24/7.
   - **Triệt tiêu hoàn toàn độ trễ Cold Start**, đảm bảo thời gian phản hồi ở mức 2 chữ số millisecond cho các workload nhạy cảm về độ trễ (như API tài chính, giao dịch chứng khoán, hoặc containerized Java microservices) (`TD-Set1 Q39`, `TD-Set8 Q09`).
-- **Lambda SnapStart (cho Java 11/17/21)**: Chụp snapshot toàn bộ trạng thái bộ nhớ MicroVM sau khi hoàn tất init và cache lại; khi có request, Lambda khôi phục tức thời từ snapshot, giảm độ trễ khởi động tới **90%** mà không mất thêm chi phí duy trì.
+- **Lambda SnapStart (Java 11+; từ 11/2024 thêm Python và .NET)**: Chụp snapshot toàn bộ trạng thái bộ nhớ MicroVM sau khi hoàn tất init và cache lại; khi có request, Lambda khôi phục tức thời từ snapshot, giảm độ trễ khởi động tới **90%** mà không mất thêm chi phí duy trì.
 - **Lambda Function URLs**:
   - Cung cấp một điểm cuối HTTPS chuyên dụng (Dedicated HTTPS Endpoint) trỏ trực tiếp vào hàm Lambda mà **KHÔNG CẦN tạo Amazon API Gateway hay Application Load Balancer** (`TD-Set2 Q56`, `TD-Set6 Q43`).
   - Hỗ trợ loại xác thực `AWS_IAM` (bảo vệ nội bộ) hoặc `NONE` (công khai internet) kết hợp CORS. Rất tối ưu chi phí và tinh gọn cho các kịch bản tiếp nhận **Webhook từ bên thứ ba** (như GitHub, Stripe, hoặc dịch vụ y tế gửi JSON payload) (`TD-Set6 Q43`).
@@ -296,9 +296,9 @@ flowchart TD
 - **Quy tắc phân biệt 2 giải pháp Cold Start sống còn**:
   1. **Khi đề bài là ứng dụng Java & yêu cầu chi phí tối ưu nhất (hoặc giải pháp miễn phí)** $\rightarrow$ Chọn **AWS Lambda SnapStart** (`TD-Set8 Q09`, `CM-PT5 Q63`).
      - SnapStart nạp JVM và thực thi toàn bộ code khởi tạo, sau đó chụp một snapshot microVM lưu vào bộ nhớ cache đa tầng. Khi có invocation mới, Lambda khôi phục từ snapshot chỉ mất dưới 200ms.
-     - Tính năng này **hoàn toàn MIỄN PHÍ**, không phát sinh chi phí duy trì 24/7!
+     - Với runtime **Java**, tính năng này **không tính thêm phí**, không phát sinh chi phí duy trì 24/7! (Từ 11/2024 SnapStart hỗ trợ thêm **Python và .NET** — với hai runtime này có tính phí cache và khôi phục snapshot.)
      - *Lưu ý an ninh*: Cần dùng **CRaC (Coordinated Restore at Checkpoint) Pre-Snapshot Hook** để tránh trùng lặp các giá trị ngẫu nhiên hoặc UUID khởi tạo trước snapshot (`CM-PT1 Q27`).
-  2. **Khi đề bài dùng ngôn ngữ khác (Python, Node.js, Go, Container Images) hoặc đề bài không có phương án SnapStart** $\rightarrow$ Chọn **Provisioned Concurrency** (`CM-PT4 Q18`, `U-PT3 Q43`).
+  2. **Khi đề bài dùng ngôn ngữ SnapStart không hỗ trợ (Node.js, Go/custom runtime, Container Images) hoặc đề bài không có phương án SnapStart** $\rightarrow$ Chọn **Provisioned Concurrency** (`CM-PT4 Q18`, `U-PT3 Q43`). *(Đề cũ xếp cả Python vào nhóm này vì trước 11/2024 SnapStart chỉ hỗ trợ Java.)*
      - AWS duy trì sẵn một số lượng execution environments ấm 24/7.
      - Có tính phí duy trì concurrency theo giờ (\$0.015 / GB-giờ) kể cả khi không có traffic.
 
@@ -375,7 +375,7 @@ flowchart TD
 
 #### 🪤 Bẫy 20: Amazon S3 Object Lambda Tự Động Che Giấu Dữ Liệu Nhạy Cảm (PII Redaction) — (TD-Set3 Q36, CM-PT5 Q04)
 - **Tình huống đề thi**: *"Doanh nghiệp lưu trữ hàng triệu tài liệu chứa thông tin nhận dạng cá nhân (PII, số CCCD, thẻ tín dụng) trên S3. Các bộ phận khác nhau (Marketing, Analytics, Customer Support) cần truy cập cùng một tập dữ liệu nhưng các trường nhạy cảm phải được tự động che giấu (redacted) tùy theo quyền của từng bộ phận mà KHÔNG ĐƯỢC TẠO THÊM BẢN SAO BUCKET MỚI."*
-- **Giải pháp ĐÚNG**: Sử dụng **Amazon S3 Object Lambda** (`TD-Set3 Q36`, `CM-PT5 Q04`).
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon S3 Object Lambda** (`TD-Set3 Q36`, `CM-PT5 Q04`). ⚠️ *Cập nhật*: S3 Object Lambda không nhận khách hàng mới từ 07/11/2025 (khách cũ vẫn dùng).
   - Khởi tạo S3 Object Lambda Access Point liên kết với một hàm AWS Lambda.
   - Mỗi khi client gọi API `GetObject`, hàm Lambda sẽ chặn cuộc gọi (intercept), thực hiện che giấu PII hoặc chuyển đổi định dạng JSON/CSV ngay trong bộ nhớ và trả về cho client mà không làm thay đổi object gốc trên S3.
 
@@ -397,7 +397,7 @@ flowchart TD
 | Tình huống / Yêu cầu trong đề thi | Giải pháp chuẩn AWS | Giải pháp bị loại & Lý do | Tham chiếu đề thi |
 |:---|:---|:---|:---|
 | **Giảm Cold Start Java trên Lambda chi phí tối ưu nhất** | **AWS Lambda SnapStart (CRaC API - Miễn phí)** | Provisioned Concurrency (phát sinh chi phí duy trì 24/7) | `TD-Set8 Q09`, `CM-PT5 Q63` |
-| **Triệt tiêu Cold Start cho Node.js/Python/Container** | **Lambda Provisioned Concurrency** | SnapStart (chỉ hỗ trợ runtime Java và một số môi trường cụ thể) | `CM-PT4 Q18`, `U-PT3 Q43` |
+| **Triệt tiêu Cold Start cho Node.js/Python/Container** | **Lambda Provisioned Concurrency** | SnapStart (chỉ hỗ trợ Java, Python, .NET — **không hỗ trợ Node.js** và container image) | `CM-PT4 Q18`, `U-PT3 Q43` |
 | **Lỗi cạn kiệt IP khi Lambda kết nối Private Subnet** | **Mở rộng Subnet lên `/24` đa AZ (`EC2ThrottledException`)** | Tăng RAM Lambda (không sinh thêm IP mạng) | `TD-Set3 Q59` |
 | **Tự động che giấu thông tin nhạy cảm PII khi đọc S3** | **Amazon S3 Object Lambda Access Point** | Nhân bản dữ liệu sang bucket mới (tốn chi phí và khó đồng bộ) | `TD-Set3 Q36`, `CM-PT5 Q04` |
 | **Xác thực JWT / Xử lý ảnh động tại biên mạng CDN** | **Lambda@Edge** (Viewer/Origin Request/Response) | CloudFront Functions (không hỗ trợ gọi mạng ngoài / đọc body) | `TD-Set1 Q60`, `CM-PT3 Q19` |
@@ -583,7 +583,7 @@ sequenceDiagram
 ---
 
 ### Danh Mục Kiểm Tra Năng Lực (Learning Checklist)
-- [ ] Tôi nắm vững các giới hạn kỹ thuật của Lambda (Timeout 15m, RAM 128MB-10GB, Payload 6MB/256KB).
+- [ ] Tôi nắm vững các giới hạn kỹ thuật của Lambda (Timeout 15m, RAM 128MB-10GB, Payload 6MB đồng bộ / 1MB bất đồng bộ — đề cũ: 256KB).
 - [ ] Tôi hiểu rõ sự khác biệt giữa Reserved Concurrency và Provisioned Concurrency.
 - [ ] Tôi biết cách cấu hình Lambda trong VPC với Private Subnet và NAT Gateway để kết nối cả DB nội bộ và Internet.
 - [ ] Tôi phân biệt được trường hợp sử dụng tối ưu giữa API Gateway HTTP API và REST API.

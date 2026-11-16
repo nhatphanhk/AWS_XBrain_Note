@@ -7,18 +7,18 @@
 | Dịch Vụ AWS | Bản Chất Kỹ Thuật (What is it?) | Sinh Ra Để Làm Gì (Core Job)? | 💡 Móc Nhớ Thần Chú |
 |:---|:---|:---|:---|
 | **Amazon RDS** | Cơ sở dữ liệu quan hệ được quản lý (MySQL, PostgreSQL, Oracle, SQL Server, MariaDB, Db2). | Tự động hóa cài đặt, vá lỗi, sao lưu, Multi-AZ failover cho cơ sở dữ liệu giao dịch truyền thống (OLTP). | *"Thuê DBA của AWS: Mình lo code tạo bảng, AWS lo backup, patching và failover."* |
-| **Amazon Aurora** | RDBMS thế hệ mới của AWS, tương thích MySQL (nhanh gấp 5 lần) và PostgreSQL (nhanh gấp 3 lần). | Tách rời Compute và Storage. Tầng lưu trữ tự nhân bản **6 bản sao trên 3 AZ**, auto-repair và co giãn tới 128 TB. | *"Đỉnh cao cơ sở dữ liệu AWS: Nhanh như xe đua F1, bền vững 6 bản sao 3 AZ."* |
+| **Amazon Aurora** | RDBMS thế hệ mới của AWS, tương thích MySQL (AWS công bố tới 5× throughput MySQL chuẩn) và PostgreSQL (tới 3×). | Tách rời Compute và Storage. Tầng lưu trữ tự nhân bản **6 bản sao trên 3 AZ**, auto-repair và tự co giãn tới **256 TiB** (phiên bản mới, trước là 128 TiB). | *"Đỉnh cao cơ sở dữ liệu AWS: Nhanh như xe đua F1, bền vững 6 bản sao 3 AZ."* |
 | **Amazon RDS Proxy** | Bộ gom cụm kết nối (Connection Pooler) managed, serverless đứng trước RDS và Aurora. | Giảm tải CPU/RAM cho DB khi hàng ngàn Lambda cùng kết nối, giảm thời gian failover tới **66%**, quản lý mật khẩu qua Secrets Manager. | *"Bảo vệ cổng gác: Gom khách thành từng đoàn vào gặp giám đốc, không cho chen lấn làm sập cửa."* |
-| **Amazon RDS Custom** | Dịch vụ RDS cho Oracle và SQL Server nhưng **cho phép quyền truy cập root vào Hệ điều hành (OS)**. | Chạy ứng dụng legacy cần cài thêm agent, driver tùy biến hoặc cấu hình OS chuyên sâu mà vẫn muốn tính năng tự động của RDS. | *"RDS mở khóa cửa sau: Cho phép chủ nhà tự sửa đường ống nước bên trong căn hộ."* |
+| **Amazon RDS Custom** | Dịch vụ RDS cho Oracle và SQL Server nhưng **cho phép quyền truy cập root vào Hệ điều hành (OS)**. | Chạy ứng dụng legacy cần cài thêm agent, driver tùy biến hoặc cấu hình OS chuyên sâu mà vẫn muốn tính năng tự động của RDS. ⚠️ *RDS Custom for Oracle* đang ở giai đoạn sunset, kết thúc hỗ trợ 31/03/2027. | *"RDS mở khóa cửa sau: Cho phép chủ nhà tự sửa đường ống nước bên trong căn hộ."* |
 | **Amazon DynamoDB** | Cơ sở dữ liệu phi quan hệ NoSQL (Key-Value & Document) serverless, độ trễ ổn định **dưới 10ms ở mọi quy mô**. | Phục vụ ứng dụng web quy mô Internet (hàng triệu request/giây): giỏ hàng e-commerce, user session, gaming profile. | *"Tủ khóa điện tử vô tận: Có khóa (Key) là mở ra xem ngay trong 2 mili-giây."* |
 | **DynamoDB Accelerator (DAX)** | Cụm bộ nhớ đệm In-Memory chuyên dụng đứng trước Amazon DynamoDB. | Tăng tốc độ đọc dữ liệu từ vài mili-giây xuống **vài micro-giây**, tương thích 100% API DynamoDB mà không sửa mã nguồn ứng dụng. | *"Bộ tăng áp turbo cho DynamoDB: Đạp ga là bay với tốc độ microsecond."* |
 | **Amazon ElastiCache** | Dịch vụ bộ nhớ đệm In-Memory (Redis OSS / Valkey hoặc Memcached) được quản lý toàn diện. | Giảm tải đọc 90% cho RDS/Aurora, tăng tốc thời gian phản hồi ứng dụng xuống dưới 1 mili-giây (hỗ trợ session, pub/sub, leaderboard). | *"Bàn làm việc cạnh tủ hồ sơ: Tài liệu hay dùng để sẵn trên bàn, đỡ phải đi lục tủ."* |
-| **Amazon MemoryDB for Redis** | Cơ sở dữ liệu chính (Primary DB) tương thích Redis nhưng có **độ bền dữ liệu Multi-AZ transactional**. | Dùng làm cơ sở dữ liệu chính siêu tốc cho microservices thay vì chỉ làm cache tạm như ElastiCache. | *"Redis biến thành database chính: Vừa nhanh như chớp vừa không sợ mất dữ liệu."* |
-| **Amazon DocumentDB** | Cơ sở dữ liệu tài liệu NoSQL được quản lý, tương thích 100% mã nguồn mở **MongoDB**. | Chạy các ứng dụng JSON schema linh hoạt quy mô lớn mà không cần tự quản lý cụm MongoDB (lưu trữ tự nở tới 128 TB). | *"MongoDB chuẩn AWS: Tương thích 100% code Mongo, lưu trữ tự nở tới 128 TB."* |
+| **Amazon MemoryDB** | Cơ sở dữ liệu chính (Primary DB) in-memory tương thích **Valkey / Redis OSS** nhưng có **độ bền dữ liệu Multi-AZ transactional log**. | Dùng làm cơ sở dữ liệu chính siêu tốc cho microservices thay vì chỉ làm cache tạm như ElastiCache. | *"Redis biến thành database chính: Vừa nhanh như chớp vừa không sợ mất dữ liệu."* |
+| **Amazon DocumentDB** | Cơ sở dữ liệu tài liệu NoSQL được quản lý, **tương thích MongoDB API** (dùng được driver/tool MongoDB; không phải mọi tính năng MongoDB đều hỗ trợ). | Chạy các ứng dụng JSON schema linh hoạt quy mô lớn mà không cần tự quản lý cụm MongoDB (lưu trữ tự nở tới 128 TiB). | *"MongoDB chuẩn AWS: Giữ driver Mongo, lưu trữ tự nở tới 128 TiB."* |
 | **Amazon Neptune** | Cơ sở dữ liệu đồ thị (**Graph Database**) tối ưu hóa các câu truy vấn quan hệ chéo sâu (Gremlin/openCypher). | Giải quyết bài toán mạng xã hội ("bạn của bạn"), phát hiện gian lận thẻ tín dụng, cây phân cấp tổ chức. | *"Bản đồ mạng lưới quan hệ: Tìm đường đi giữa các đầu mối trong chớp mắt."* |
 | **Amazon Keyspaces** | Cơ sở dữ liệu Apache Cassandra serverless, tương thích 100% ngôn ngữ truy vấn **CQL**. | Di chuyển cụm Cassandra On-Prem lên mây không cần đổi mã nguồn, tự động co giãn On-Demand. | *"Cassandra không máy chủ: Giữ nguyên code CQL, không lo bảo trì node cụm."* |
-| **Amazon Timestream** | Cơ sở dữ liệu chuỗi thời gian (**Time-series**) serverless cho cảm biến IoT và viễn thông. | Lưu và phân tích hàng tỷ sự kiện cảm biến mỗi ngày, tự động chuyển từ In-Memory sang Magnetic storage. | *"Đồng hồ đo cảm biến: Tự động gom sự kiện theo dòng thời gian, chi phí rẻ."* |
-| **Amazon QLDB** | Cơ sở dữ liệu sổ cái tập trung bất biến (**Immutable Ledger**), chứng minh bằng mã hóa Merkle Tree SHA-256. | Lưu trữ nhật ký kế toán tài chính, lịch sử giao dịch minh bạch không thể bị sửa hay xóa. *(Lưu ý: Đã end-of-support 07/2025, AWS khuyến nghị Aurora Postgres; vẫn có trong đề cũ)*. | *"Sổ cái khắc trên đá: Mọi dòng nhật ký ghi vào là vĩnh viễn không thể tẩy xóa."* |
+| **Amazon Timestream** | Cơ sở dữ liệu chuỗi thời gian (**Time-series**) cho cảm biến IoT, DevOps metrics. Gồm 2 engine: *Timestream for LiveAnalytics* (serverless, đóng với khách mới từ 20/06/2025) và *Timestream for InfluxDB* (managed InfluxDB, lựa chọn cho khách mới). | Lưu và phân tích hàng tỷ sự kiện cảm biến mỗi ngày, LiveAnalytics tự động chuyển từ Memory store sang Magnetic store. | *"Đồng hồ đo cảm biến: Tự động gom sự kiện theo dòng thời gian, chi phí rẻ."* |
+| **Amazon QLDB** | Cơ sở dữ liệu sổ cái tập trung bất biến (**Immutable Ledger**), chứng minh bằng mã hóa Merkle Tree SHA-256. | Lưu trữ nhật ký kế toán tài chính, lịch sử giao dịch minh bạch không thể bị sửa hay xóa. *(Lưu ý: Đã end-of-support 31/07/2025, AWS khuyến nghị Aurora PostgreSQL; vẫn có trong đề cũ)*. | *"Sổ cái khắc trên đá: Mọi dòng nhật ký ghi vào là vĩnh viễn không thể tẩy xóa."* |
 
 ---
 
@@ -28,7 +28,7 @@
 - **DB Subnet Group**: Tập hợp các subnet nằm ở **ít nhất 2 Availability Zones** trong cùng 1 Region. Bắt buộc đặt trong **Private Subnet** để bảo mật.
 - **Parameter Group**: Quản lý các tham số cấu hình của Database Engine (VD: `max_connections`, `innodb_buffer_pool_size`, `rds.force_ssl`).
 - **Option Group**: Bật các tính năng bổ sung đặc thù của hãng (VD: Oracle OEM, Microsoft SQL Server Native Backup & Restore to S3).
-- **Storage Auto Scaling**: Tự động tăng dung lượng đĩa khi dung lượng trống $\le 10\%$. Cấu hình `Max Storage Threshold` để khống chế chi phí tối đa.
+- **Storage Auto Scaling**: Tự động tăng dung lượng đĩa khi dung lượng trống $< 10\%$ kéo dài ≥ 5 phút và đã qua ≥ 6 giờ kể từ lần thay đổi trước. Cấu hình `Max Storage Threshold` để khống chế chi phí tối đa.
 - **Giám Sát & Tinh Chỉnh**:
   - `CloudWatch Logs`: Xuất các file error log, slow query log, audit log.
   - `Enhanced Monitoring`: Thu thập thông số hiệu năng chuyên sâu cấp Hệ điều hành (OS) của máy ảo (CPU, RAM chi tiết theo từng tiến trình/process).
@@ -72,7 +72,7 @@
 ## 🌟 AMAZON AURORA — ĐỈNH CAO CƠ SỞ DỮ LIỆU QUAN HỆ AWS
 
 ```
-Aurora Architecture = Compute Nodes (EC2-like) + Distributed Storage Volume (10GB - 128TB)
+Aurora Architecture = Compute Nodes (EC2-like) + Distributed Storage Volume (tự tăng theo bước 10 GiB, tối đa 128 TiB; 256 TiB với phiên bản engine mới)
 Lưu trữ: 6 bản sao trải rộng trên 3 Availability Zones (2 bản / AZ)
 Khả năng chịu lỗi: 
   - Ghi (Write): Chịu mất 2 bản sao (cần 4/6 bản đồng thuận)
@@ -87,18 +87,20 @@ Khả năng chịu lỗi:
   - `Writer Endpoint`: Luôn trỏ tới Primary DB instance hiện tại (nhận Read/Write).
   - `Reader Endpoint`: Tự động cân bằng tải (Load Balancing) cho tất cả các Aurora Replicas (chỉ nhận Read).
   - `Custom Endpoint`: Gom nhóm các Replica có kích thước cấu hình riêng biệt (VD: tạo custom endpoint gom 2 máy Replica RAM khủng chuyên phục vụ báo cáo BI/Analytics).
-- **Aurora Backtrack**: Cho phép "tua ngược" cơ sở dữ liệu về thời điểm trước đó vài phút/giờ chỉ trong vài giây mà **hoàn toàn không cần restore snapshot** (hỗ trợ MySQL).
+- **Aurora Backtrack**: Cho phép "tua ngược" cơ sở dữ liệu về thời điểm trước đó (cửa sổ tối đa 72 giờ) ngay trên cluster hiện tại mà **không cần restore snapshot ra cluster mới** (**chỉ Aurora MySQL**, phải bật khi tạo/restore cluster).
 - **Aurora Cloning**: Cơ chế **Copy-on-write** tạo bản sao DB để thử nghiệm cực nhanh, không tốn thêm chi phí lưu trữ cho đến khi dữ liệu mới được ghi vào.
 - **Aurora ML**: Cho phép chạy trực tiếp các câu query SQL gọi mô hình Machine Learning từ Amazon SageMaker hoặc Amazon Comprehend.
 
-### 2. Aurora Serverless v2
-- Tự động co giãn năng lực tính toán theo đơn vị **ACU (Aurora Capacity Unit, 1 ACU $\approx$ 2 GB RAM)** chỉ trong một phần giây theo tải thực tế.
+### 2. Aurora Serverless v2 (AWS nay gọi là "Aurora Serverless")
+- Tự động co giãn năng lực tính toán theo đơn vị **ACU (Aurora Capacity Unit, 1 ACU $\approx$ 2 GiB RAM)** theo bước 0.5 ACU, theo tải thực tế.
+- Dải capacity (phiên bản engine mới): **0 ACU (auto-pause khi không có kết nối) tới 256 ACU (Aurora MySQL) / 384 ACU (Aurora PostgreSQL)**. Phiên bản cũ: tối thiểu 0.5 ACU, tối đa 128 ACU.
 - Hỗ trợ đầy đủ **Multi-AZ, Read Replicas, và Aurora Global Database**.
 - Có thể chạy kết hợp giữa các instance cố định (Provisioned) và Serverless v2 trong cùng một Aurora Cluster.
 - **Data API**: Cung cấp giao thức truy vấn SQL thông qua HTTPS endpoint an toàn, không cần duy trì kết nối persistent $\rightarrow$ Hoàn hảo cho ứng dụng phi máy chủ AWS Lambda.
 
 ### 3. Aurora Global Database (Đa Vùng Toàn Cầu)
-- Bao gồm **1 Primary Region (chấp nhận Read & Write)** và tối đa **10 Secondary Regions (chỉ phục vụ Read)**.
+- Bao gồm **1 Primary Region (chấp nhận Read & Write)** và tối đa **10 Secondary Regions (chỉ phục vụ Read)** — tăng từ 5 lên 10 vào 05/2025 (đề/khóa học cũ ghi 5).
+- **Switchover** (chuyển vai có kế hoạch, không mất dữ liệu) vs **Failover** (khi Region chính sự cố, có thể mất dữ liệu trong khoảng replication lag).
 - Tốc độ sao chép ở tầng lưu trữ chuyên biệt với độ trễ **dưới 1 giây**.
 - Chỉ số phục hồi thảm họa: **RPO $\approx$ 1 giây, RTO < 1 phút**.
 - Mỗi Secondary Region có thể mở rộng tối đa **16 Aurora Replicas**.
@@ -134,15 +136,17 @@ Khả năng chịu lỗi:
   - Vượt quá hạn ngạch $\rightarrow$ Lỗi `ProvisionedThroughputExceededException` $\rightarrow$ Khắc phục bằng Exponential Backoff retry, thêm cache DAX, hoặc đổi Partition Key phân tán đều hơn để tránh **Hot Partition**.
 - **On-Demand Mode**:
   - Trả tiền theo từng request thực tế. Tự động scale tức thì mà không cần ước lượng capacity. Phù hợp tải biến động khó lường, ứng dụng mới khởi nghiệp.
-  - Có thể chuyển đổi giữa Provisioned và On-Demand **1 lần mỗi 24 giờ**.
+  - Chuyển từ Provisioned sang On-Demand tối đa **4 lần trong 24 giờ** (tăng từ 1 lần vào 08/2025); chuyển ngược On-Demand → Provisioned thì không giới hạn.
 - **DynamoDB Standard-IA Table Class**: Giảm tới 60% chi phí lưu trữ cho các bảng ít khi đọc/ghi nhưng cần giữ dữ liệu dài hạn.
 
 ### 4. DynamoDB Streams & Global Tables
 - **DynamoDB Streams**: Ghi lại dòng thời gian các sự kiện thay đổi (Insert, Update, Delete) của các item theo thứ tự trong vòng **24 giờ**. Thường kích hoạt **AWS Lambda** (VD: gửi email chào mừng, đồng bộ sang OpenSearch).
   - View Types: `KEYS_ONLY`, `NEW_IMAGE`, `OLD_IMAGE`, `NEW_AND_OLD_IMAGES`.
-- **DynamoDB Global Tables**: Cung cấp kiến trúc **Active-Active Multi-Region**. Mọi Region đều có thể nhận cả ĐỌC và GHI với độ trễ sao chép dưới 1 giây. Xử lý xung đột theo nguyên tắc **Last-Writer-Wins (dựa trên timestamp)**. Bắt buộc phải bật DynamoDB Streams trước khi cấu hình.
-- **TTL (Time to Live)**: Tự động xóa các bản ghi đã hết hạn dựa trên thuộc tính timestamp mà **hoàn toàn MIỄN PHÍ, không tốn WCU**.
-- **Export to S3**: Xuất dữ liệu bảng sang S3 ở định dạng JSON hoặc Parquet để truy vấn phân tích bằng Amazon Athena mà **không tiêu tốn bất kỳ RCU nào của bảng**.
+- **DynamoDB Global Tables**: Cung cấp kiến trúc **Active-Active Multi-Region**. Mọi Region đều có thể nhận cả ĐỌC và GHI.
+  - *Multi-Region Eventual Consistency (mặc định)*: độ trễ sao chép thường dưới 1 giây, xung đột xử lý theo **Last-Writer-Wins**. Dùng DynamoDB Streams làm nền (phiên bản 2019.11.21 tự bật Streams khi thêm replica).
+  - *Multi-Region Strong Consistency (MRSC, GA 06/2025)*: đọc strongly consistent ở mọi Region, **RPO = 0**; yêu cầu đúng 3 Region (3 replica hoặc 2 replica + 1 witness), không hỗ trợ transaction, TTL, LSI; chọn chế độ lúc tạo và không đổi được.
+- **TTL (Time to Live)**: Tự động xóa các bản ghi đã hết hạn dựa trên thuộc tính timestamp (epoch giây) mà **hoàn toàn MIỄN PHÍ, không tốn WCU**; việc xóa diễn ra trong vài ngày sau khi hết hạn (không tức thì).
+- **Export to S3**: Xuất dữ liệu bảng sang S3 ở định dạng **DynamoDB JSON hoặc Amazon Ion** (yêu cầu bật PITR; hỗ trợ full hoặc incremental export) để truy vấn bằng Athena/Glue mà **không tiêu tốn RCU của bảng**. Cần Parquet $\rightarrow$ chuyển đổi tiếp bằng Glue. Ngược lại có **Import from S3** (CSV, DynamoDB JSON, Ion) tạo bảng mới.
 
 ---
 
@@ -153,10 +157,11 @@ Khả năng chịu lỗi:
 | **Cấu trúc dữ liệu** | Đa dạng: Strings, Hashes, Lists, Sets, **Sorted Sets (Leaderboards)**, Bitmaps | Chỉ có Key-Value chuỗi đơn giản |
 | **Tính bền vững (Persistence)** | ✅ **CÓ** (Ghi log AOF và chụp Snapshot RDB) | ❌ **KHÔNG** (Mất điện là mất sạch dữ liệu) |
 | **Tính sẵn sàng cao (HA)** | ✅ **Multi-AZ với tính năng tự động Failover** | ❌ Không có HA, không có replication |
-| **Đọc phân tán (Read Replicas)** | ✅ Hỗ trợ tối đa nhiều bản sao chỉ đọc | ❌ Không hỗ trợ |
-| **Kiến trúc xử lý** | Single-threaded core (nhanh, tối ưu bộ nhớ) | **Multi-threaded** (tận dụng tối đa nhiều CPU cores) |
-| **Phân mảnh (Sharding)** | Hỗ trợ Redis Cluster | Hỗ trợ chia node ngang |
-| **Bảo mật** | Hỗ trợ Redis AUTH token, IAM Authentication, mã hóa TLS | Chỉ hỗ trợ SASL |
+| **Đọc phân tán (Read Replicas)** | ✅ Tối đa 5 replica / shard | ❌ Không hỗ trợ |
+| **Kiến trúc xử lý** | Xử lý lệnh chủ yếu single-threaded (ElastiCache có Enhanced I/O để tận dụng nhiều core cho mạng) | **Multi-threaded** (tận dụng tối đa nhiều CPU cores) |
+| **Phân mảnh (Sharding)** | Hỗ trợ Cluster Mode (nhiều shard) | Hỗ trợ chia node ngang |
+| **Bảo mật** | Hỗ trợ AUTH token, RBAC user groups, IAM Authentication, mã hóa TLS & at-rest | SASL, mã hóa in-transit (phiên bản mới) |
+| **Serverless** | ✅ ElastiCache Serverless (Valkey/Redis OSS) | ✅ ElastiCache Serverless (Memcached) |
 
 > 💡 **Chiến Lược Caching**:
 > - **Lazy Loading (Cache-Aside)**: Ứng dụng hỏi cache trước $\rightarrow$ Nếu Cache Miss $\rightarrow$ Đọc từ DB $\rightarrow$ Ghi vào Cache. Ưu điểm: Chỉ cache dữ liệu được hỏi; Nhược điểm: Dữ liệu có thể bị cũ (cần đặt TTL).
@@ -171,8 +176,8 @@ Khả năng chịu lỗi:
 | **Amazon DocumentDB** | Document (JSON) | Tương thích **MongoDB** | "MongoDB migration", "JSON documents", "content management", "scale storage up to 128 TB". |
 | **Amazon Neptune** | Graph Database | Gremlin, openCypher, SPARQL | "social network (friends of friends)", "fraud detection rings", "knowledge graph", "relationship queries". |
 | **Amazon Keyspaces** | Wide-Column | Apache Cassandra (**CQL**) | "Cassandra migration without managing clusters", "CQL compatible", "serverless wide-column store". |
-| **Amazon Timestream** | Time-series | SQL mở rộng | "IoT telemetry", "DevOps monitoring", "stock prices", "time-series analysis", "in-memory + magnetic tiers". |
-| **Amazon MemoryDB** | In-memory Primary DB | Redis compatible | "microsecond reads, single-digit ms writes", "Redis as primary database", "Multi-AZ transactional log". |
+| **Amazon Timestream** | Time-series | SQL (LiveAnalytics) / InfluxQL, SQL (InfluxDB) | "IoT telemetry", "DevOps monitoring", "stock prices", "time-series analysis", "in-memory + magnetic tiers". (LiveAnalytics đóng với khách mới từ 06/2025.) |
+| **Amazon MemoryDB** | In-memory Primary DB | Valkey / Redis OSS compatible | "microsecond reads, single-digit ms writes", "Redis as primary database", "Multi-AZ transactional log". |
 | **Amazon QLDB** | Cryptographic Ledger | PartiQL (SQL-like) | "centralized immutable ledger", "SHA-256 cryptographic verification", "financial audit history". *(End of support 07/2025)*. |
 
 ---
@@ -192,11 +197,13 @@ Khả năng chịu lỗi:
 | "NoSQL", "single-digit ms at any scale", "key-value", "user shopping cart/session" | **Amazon DynamoDB** |
 | "microsecond read latency for DynamoDB", "no code change cache" | **DynamoDB Accelerator (DAX)** |
 | "multi-region active-active read and write", "last-writer-wins" | **DynamoDB Global Tables** |
+| "multi-region, strongly consistent reads, zero RPO NoSQL" | **DynamoDB Global Tables — Multi-Region Strong Consistency (MRSC)** |
+| "export DynamoDB table to S3 for analytics without consuming RCU" | **DynamoDB Export to S3 (cần bật PITR)** |
 | "trigger Lambda on DynamoDB item update/delete", "CDC event stream" | **DynamoDB Streams** |
 | "automatically delete expired items without cost" | **DynamoDB TTL** |
 | "in-memory cache", "sub-ms latency", "session store", "leaderboards" | **Amazon ElastiCache (Redis)** |
 | "multi-threaded simple in-memory cache", "horizontal scale" | **Amazon ElastiCache (Memcached)** |
-| "Redis speed but needs durable primary database" | **Amazon MemoryDB for Redis** |
+| "Redis speed but needs durable primary database" | **Amazon MemoryDB** |
 | "MongoDB compatible document store", "JSON catalog" | **Amazon DocumentDB** |
 | "social graph", "fraud ring detection", "Gremlin/openCypher" | **Amazon Neptune** |
 | "Apache Cassandra migration without managing servers", "CQL" | **Amazon Keyspaces** |

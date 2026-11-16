@@ -394,6 +394,8 @@ Khi lượng dữ liệu cần di chuyển quá lớn (TB → PB) mà băng thô
 
 ### 8.2 Phân Loại Thiết Bị Snow Family
 
+> ⚠️ **Trạng thái 11/2026**: Snowmobile đã ngừng (03/2024), Snowcone đã ngừng cung cấp, **Snowball Edge không nhận khách hàng mới từ 07/11/2025**. Khách mới: DataSync (+ Direct Connect), **AWS Data Transfer Terminal**, Partner. Sơ đồ và bảng dưới phản ánh đáp án của đề SAA-C03 hiện hành.
+
 ```mermaid
 flowchart TD
     Snow[AWS Snow Family] --> Snowcone

@@ -328,7 +328,7 @@ Dưới đây là bảng phân biệt toàn diện giữa các công cụ tự �
 | **Giai đoạn vòng đời** | **Day 0 & Day 1 (Provisioning)** | **Day 0 & Day 1 (Provisioning)** | **Day 0 & Day 1 (Provisioning)** | **Day 2 (Operations & Patching)** | Day 1 & Day 2 (App lifecycle) | Day 1 (Self-service provisioning) | Day 1 & Day 2 (Configuration) |
 | **Phạm vi quản lý** | Toàn bộ tài nguyên đám mây AWS | Biên dịch ra CloudFormation template | Đa đám mây (AWS, Azure, GCP) | Hệ điều hành bên trong EC2/On-Prem | Cụm web app (ALB, ASG, EC2, RDS) | Các mẫu CloudFormation được phê duyệt | Cụm máy chủ chuyên dụng (Chef Stacks) |
 | **Truy cập máy chủ** | Không (Chỉ tạo máy) | Không (Chỉ tạo máy) | Không (Chỉ tạo máy) | **Session Manager (Không cần Port 22)** | SSH truyền thống qua key pair | Dựa trên sản phẩm được tạo | SSH / Chef client |
-| **Mô hình tính phí** | **Miễn phí $0.00** (Chỉ trả tiền tài nguyên tạo ra) | Miễn phí (Chỉ trả tiền tài nguyên tạo ra) | Miễn phí tool (trả phí Terraform Cloud) | Đa số tính năng cốt lõi **Miễn phí $0.00** | Miễn phí (Chỉ trả tiền tài nguyên tạo ra) | Miễn phí (Chỉ trả tiền tài nguyên tạo ra) | Không tính phí thêm cho OpsWorks Stacks |
+| **Mô hình tính phí** | **Miễn phí $0.00** (Chỉ trả tiền tài nguyên tạo ra) | Miễn phí (Chỉ trả tiền tài nguyên tạo ra) | Miễn phí tool (trả phí Terraform Cloud) | Đa số tính năng cốt lõi **Miễn phí $0.00** | Miễn phí (Chỉ trả tiền tài nguyên tạo ra) | Miễn phí (Chỉ trả tiền tài nguyên tạo ra) | Không tính phí thêm cho OpsWorks Stacks (⚠️ AWS OpsWorks đã ngừng hoàn toàn từ 05/2024) |
 
 ---
 

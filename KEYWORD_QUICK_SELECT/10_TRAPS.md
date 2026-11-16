@@ -94,10 +94,10 @@
 |:---|:---|
 | 2–3 VPC, CIDR không trùng | VPC Peering |
 | Nhiều VPC (hub-and-spoke) | Transit Gateway |
-| CIDR **trùng lặp** | **PrivateLink** (duy nhất hoạt động) |
+| CIDR **trùng lặp** | **PrivateLink** (đáp án chuẩn khi chỉ cần expose service); cần NAT giữa 2 mạng trùng IP $\rightarrow$ **Private NAT Gateway** |
 | Expose service cho VPC khác | PrivateLink (NLB backend) |
 
-**💡 Móc nhớ**: _"VPC Peering = không scale (N² connections). TGW = hub trung tâm. **Overlapping CIDR → luôn PrivateLink**, vì Peering và TGW reject CIDR conflict."_
+**💡 Móc nhớ**: _"VPC Peering = không scale (N² connections). TGW = hub trung tâm. **Overlapping CIDR → nghĩ ngay PrivateLink**, vì Peering không tạo được và TGW không định tuyến được giữa 2 CIDR trùng."_
 
 ---
 
@@ -140,7 +140,7 @@
 | | DynamoDB Global Tables | Aurora Global Database |
 |:---|:---|:---|
 | **Write pattern** | **Active-Active** (mọi region write) | **Active-Passive** (1 region write) |
-| Conflict resolution | Last-writer-wins | N/A (chỉ 1 writer) |
+| Conflict resolution | Last-writer-wins (chế độ mặc định); có thêm chế độ MRSC strong consistency (06/2025) | N/A (chỉ 1 writer; Write Forwarding chỉ chuyển tiếp về primary) |
 | Replication | DynamoDB Streams | Storage-level |
 | Dùng khi | "users write locally ở mọi region" | "1 primary + cross-region DR/reads" |
 
@@ -235,9 +235,9 @@
 ### TRAP 20: Backup Vault Lock — Governance vs Compliance
 | | Governance | Compliance |
 |:---|:---|:---|
-| Root có xóa được? | ✅ Với quyền đặc biệt | ❌ Không ai xóa được |
-| Cooling-off period | Có | 1–72 giờ |
-| Dùng khi | Nội bộ muốn kiểm soát nhẹ | Ransomware, pháp lý WORM |
+| Root có xóa được? | ✅ User/role có đủ quyền IAM có thể gỡ lock | ❌ Không ai xóa được (sau khi hết grace time) |
+| Grace time (cooling-off) | Không có | **Tối thiểu 72 giờ** — trong thời gian này còn sửa/xóa lock được; hết hạn thì khóa vĩnh viễn |
+| Dùng khi | Nội bộ muốn kiểm soát nhẹ, thử nghiệm cấu hình | Ransomware, pháp lý WORM (SEC 17a-4, CFTC, FINRA) |
 
 **💡 Móc nhớ**: _"**Compliance** = tuân thủ tuyệt đối = không ai thoát. **Governance** = quản trị = admin vẫn có thể gỡ nếu cần."_
 
@@ -248,7 +248,7 @@
 ### TRAP 21: SQS FIFO vs Standard
 | | Standard | FIFO |
 |:---|:---|:---|
-| Throughput | **Unlimited** | 300–3,000 msg/s |
+| Throughput | **Unlimited** | 300 msg/s (3,000 với batching); High Throughput FIFO cao hơn nhiều |
 | Ordering | Best-effort (không đảm bảo) | **Strict First-In-First-Out** |
 | Delivery | At-least-once (có thể duplicate) | **Exactly-once** |
 | Dùng khi | "decouple, unlimited scale" | "bank transaction, order state machine" |
@@ -310,8 +310,9 @@
 | | ENA | EFA |
 |:---|:---|:---|
 | OS-bypass | ❌ | ✅ |
-| MPI/NCCL | ❌ Không tương thích | ✅ Yêu cầu EFA |
-| Bandwidth | Up to 100 Gbps | Up to 400 Gbps |
+| MPI/NCCL | ❌ Không có OS-bypass cho MPI/NCCL | ✅ Yêu cầu EFA (chỉ trên instance type hỗ trợ) |
+| Bandwidth | Tùy instance (tới 100 Gbps+ trên instance lớn) | Tùy instance; instance GPU/HPC cao cấp có tổng băng thông EFA rất lớn (VD `p5` tới 3,200 Gbps) |
+| Phạm vi | Mọi traffic IP | OS-bypass chỉ trong cùng subnet/AZ; vẫn hoạt động như ENA cho traffic IP thường |
 
 **💡 Móc nhớ**: _"**EFA** = **E**FA cho **F**abric **A**dapter HPC = bypass kernel. **ENA** = **E**thernet **N**ormal **A**dapter = TCP/IP thông thường. MPI → phải EFA."_
 
@@ -356,11 +357,12 @@
 ### TRAP 30: AWS Config vs Security Hub vs Trusted Advisor
 | | Config | Security Hub | Trusted Advisor |
 |:---|:---|:---|:---|
-| Chức năng | Compliance rules + auto-remediate | Aggregate findings + CIS score | 5-pillar best practice checks |
-| Input | Resource states | GuardDuty, Inspector, Macie, Config | CloudWatch, IAM, service quotas |
-| Keyword | "compliance check", "auto-remediate" | "CIS benchmark", "posture score" | "best practices", "5 pillars" |
+| Chức năng | Compliance rules + auto-remediate | Aggregate findings + CIS score | Best-practice checks theo **6 nhóm: Cost Optimization, Performance, Security, Fault Tolerance, Service Limits, Operational Excellence** |
+| Input | Resource states | GuardDuty, Inspector, Macie, Config | Cấu hình & mức sử dụng tài khoản (CloudWatch, IAM, service quotas) |
+| Keyword | "compliance check", "auto-remediate" | "CIS benchmark", "posture score" | "best practices recommendations", "service quota check", "idle resources" |
+| Lưu ý | — | — | Gói Basic/Developer chỉ có bộ check cơ bản (security cơ bản + service quotas); **đầy đủ check cần gói Business/Enterprise Support** |
 
-**💡 Móc nhớ**: _"**Config** = cảnh sát tự động sửa vi phạm. **Security Hub** = tổng chỉ huy tổng hợp báo cáo. **Trusted Advisor** = cố vấn tham mưu 5 lĩnh vực."_
+**💡 Móc nhớ**: _"**Config** = cảnh sát tự động sửa vi phạm. **Security Hub** = tổng chỉ huy tổng hợp báo cáo. **Trusted Advisor** = cố vấn tham mưu 6 lĩnh vực (gói support càng cao càng nhiều check)."_
 
 ---
 
@@ -407,7 +409,7 @@
 | Chi phí | Vẫn tốn tiền gọi KMS API từng object | **Giảm 99% chi phí KMS call** |
 | Khuyến nghị của AWS | Tạm thời | **Chuẩn mực tối ưu tốt nhất** |
 
-**💡 Móc nhớ**: _"S3 gọi KMS nhiều bị nghẽn (Throttle HTTP 429) $\rightarrow$ Bật ngay **S3 Bucket Key** (không cần đổi khóa sang SSE-S3)."_
+**💡 Móc nhớ**: _"S3 gọi KMS nhiều bị nghẽn (`ThrottlingException` từ KMS) $\rightarrow$ Bật ngay **S3 Bucket Key** (không cần đổi khóa sang SSE-S3)."_
 
 ---
 
@@ -489,7 +491,7 @@
 □ "without changing app code" + Linux  → EFS (NFS)
 □ "without changing app code" + Windows → FSx for Windows (SMB)
 □ "without changing app code" + DynamoDB → DAX (không phải ElastiCache)
-□ Overlapping CIDR              → PrivateLink (không phải VPC Peering)
+□ Overlapping CIDR              → PrivateLink / Private NAT GW (không phải VPC Peering)
 □ File vòng đời < 30 ngày       → S3 Standard (không phải Standard-IA)
 □ Active-active multi-region    → DynamoDB Global Tables (không phải Aurora Global)
 □ Strict order + exactly-once   → SQS FIFO (không phải Standard)
@@ -522,7 +524,8 @@
 □ Truy cập S3 từ private subnet → Gateway VPC Endpoint (Miễn phí, thay NAT GW)
 □ Scale EC2 theo SQS backlog    → ApproximateNumberOfMessagesVisible / Instances
 □ Chạy batch job dài > 15 phút  → AWS Batch hoặc ECS Fargate (Lambda bị giới hạn 15m)
-□ API Gateway timeout           → 29 giây (vượt quá phải dùng async SQS)
+□ API Gateway timeout           → 29 giây mặc định (vượt quá → async SQS/Step Functions; REST Regional/Private xin tăng được)
+□ SQS / Lambda async payload    → 1 MiB (đề cũ ghi 256 KB) — lớn hơn → S3 + pointer
 □ DynamoDB item lớn > 400 KB    → Lưu S3, DynamoDB chỉ lưu pointer/metadata
 □ Phục hồi máy chủ EC2 lỗi HW   → CloudWatch Alarm + EC2 Recover (giữ nguyên IP, EBS)
 □ Shell EC2 không mở port 22    → SSM Session Manager (không cần Bastion)

@@ -8,15 +8,15 @@
 |:---|:---|:---|:---|
 | **Amazon VPC** | Mạng riêng ảo biệt lập logic (Virtual Network) cấp độ Region cho tài khoản AWS của bạn. | Toàn quyền kiểm soát cấu trúc mạng: dải CIDR, chia Public/Private Subnets, Route Tables, Internet/NAT Gateways. | *"Mảnh đất có hàng rào kiên cố: Tự phân chia phòng khách (Public) và phòng ngủ (Private)."* |
 | **AWS Transit Gateway (TGW)** | Thiết bị định tuyến đám mây trung tâm (Cloud Router) theo mô hình hình sao (Hub-and-Spoke). | Kết nối hàng ngàn VPC và mạng On-Premises về một điểm duy nhất, hỗ trợ Transitive Routing và IP Multicast. | *"Vòng xuyến giao thông trung tâm: Mọi ngả đường VPC đều đổ về một đầu mối điều phối."* |
-| **AWS PrivateLink** | Công nghệ kết nối mạng riêng tư an toàn qua card mạng ảo ENI có IP riêng trong subnet. | Truy cập các dịch vụ AWS hoặc SaaS mà không đi ra Internet công cộng; **giải pháp duy nhất kết nối VPC trùng IP (Overlapping CIDR)**. | *"Đường hầm bí mật: Đi ngầm dưới lòng đất đến thẳng nhà đối tác, không cần biết số nhà."* |
+| **AWS PrivateLink** | Công nghệ kết nối mạng riêng tư an toàn qua card mạng ảo ENI có IP riêng trong subnet. | Truy cập các dịch vụ AWS hoặc SaaS mà không đi ra Internet công cộng; **giải pháp chuẩn để expose service giữa các VPC trùng IP (Overlapping CIDR)** (phương án khác: Private NAT Gateway). | *"Đường hầm bí mật: Đi ngầm dưới lòng đất đến thẳng nhà đối tác, không cần biết số nhà."* |
 | **Application Load Balancer (ALB)** | Bộ cân bằng tải Layer 7 (HTTP/HTTPS/gRPC/WebSocket). | Định tuyến thông minh theo URL path (`/api`), host header, query string, tích hợp WAF và xác thực người dùng Cognito/OIDC. | *"Lễ tân khách sạn: Đọc bảng tên và hướng dẫn khách lên đúng số phòng tương ứng."* |
 | **Network Load Balancer (NLB)** | Bộ cân bằng tải Layer 4 (TCP/UDP/TLS) hiệu năng siêu cao, độ trễ microsecond. | Xử lý hàng triệu request/s, cung cấp **địa chỉ IP tĩnh (Elastic IP)** cố định cho firewall whitelist; làm backend cho PrivateLink. | *"Trạm thu phí tự động cao tốc: Xe phóng qua hàng triệu chiếc/giây không cần phanh."* |
 | **Gateway Load Balancer (GWLB)** | Bộ cân bằng tải Layer 3 + Layer 4 tích hợp thiết bị an ninh mạng ảo của bên thứ ba. | Chèn các cụm tường lửa (Palo Alto, Fortinet) vào luồng mạng một cách trong suốt bằng giao thức GENEVE (port 6081). | *"Trạm kiểm soát an ninh sân bay: Soi chiếu toàn bộ hành lý rồi trả lại nguyên vẹn luồng đi."* |
 | **AWS Global Accelerator** | Dịch vụ tăng tốc mạng Layer 4 bằng **2 địa chỉ Anycast IP tĩnh** trên mạng trục cáp quang riêng AWS. | Hỗ trợ TCP/UDP, bỏ qua bộ nhớ đệm DNS của client/ISP, chuyển hướng tức thì (< 1 phút) cho gaming, VoIP, IoT toàn cầu. | *"Đường sắt cao tốc chuyên dụng: Vào ga gần nhất là phóng thẳng tuyến riêng, bỏ qua kẹt xe DNS."* |
-| **Amazon CloudFront** | Mạng phân phối nội dung toàn cầu (CDN) Layer 7 với hàng trăm điểm biên (Edge Locations). | Lưu cache nội dung tĩnh (ảnh, video) và tăng tốc nội dung động, hấp thụ 90% tải và phòng thủ DDoS tại biên với WAF. | *"Chuỗi cửa hàng tiện lợi ven đường: Mua hàng ngay đầu ngõ, không cần lặn lội về kho tổng S3."* |
+| **Amazon CloudFront** | Mạng phân phối nội dung toàn cầu (CDN) Layer 7 với hàng trăm điểm biên (Edge Locations). | Lưu cache nội dung tĩnh (ảnh, video) và tăng tốc nội dung động, giảm tải cho origin và phòng thủ DDoS tại biên (Shield Standard tích hợp sẵn, gắn thêm WAF). | *"Chuỗi cửa hàng tiện lợi ven đường: Mua hàng ngay đầu ngõ, không cần lặn lội về kho tổng S3."* |
 | **Amazon Route 53** | Dịch vụ phân giải tên miền (DNS) độ sẵn sàng 100% SLA và quản lý định tuyến lưu lượng. | Dịch tên miền thành IP với các chính sách thông minh: Geolocation, Geoproximity, Latency, Failover, Weighted. | *"Tổng đài chuyển hướng cuộc gọi thông minh: Nhìn người gọi từ đâu để nối máy tới chi nhánh tốt nhất."* |
 | **Route 53 Resolver** | Cầu nối phân giải DNS lai (Hybrid DNS) giữa On-Premises và AWS VPC. | Cho phép on-prem giải mã tên miền private trong VPC (Inbound) và VPC giải mã tên miền nội bộ công ty (Outbound). | *"Phiên dịch viên song ngữ: Chuyển ngữ tên miền giữa mạng công ty và đám mây AWS."* |
-| **AWS Direct Connect (DX)** | Tuyến cáp vật lý chuyên dụng riêng biệt từ On-Premises đến AWS qua đối tác viễn thông. | Đường truyền mạng cực lớn (1G–100Gbps), độ trễ ổn định, bảo mật cao không đi qua mạng Internet công cộng. | *"Đường dây điện thoại nóng bảo mật: Cáp quang kéo thẳng từ phòng sếp sang cơ quan đối tác."* |
+| **AWS Direct Connect (DX)** | Tuyến cáp vật lý chuyên dụng riêng biệt từ On-Premises đến AWS qua đối tác viễn thông. | Đường truyền mạng lớn (Dedicated 1/10/100/400 Gbps; Hosted 50 Mbps – 25 Gbps), độ trễ ổn định, không đi qua mạng Internet công cộng. | *"Đường dây điện thoại nóng bảo mật: Cáp quang kéo thẳng từ phòng sếp sang cơ quan đối tác."* |
 | **AWS Site-to-Site VPN** | Đường hầm mạng riêng ảo mã hóa IPsec qua Internet công cộng giữa On-Prem và AWS (2 tunnels HA). | Triển khai kết nối an toàn nhanh chóng trong vài phút, chi phí thấp hoặc làm kênh dự phòng (backup) cho Direct Connect. | *"Hầm chui an toàn qua phố đông: Xe bọc thép chạy qua đường phố công cộng có bảo vệ hộ tống."* |
 | **AWS VPN CloudHub** | Kiến trúc kết nối nhiều chi nhánh văn phòng với nhau qua 1 Virtual Private Gateway (VGW). | Kết nối các văn phòng chi nhánh theo mô hình hub-and-spoke giá rẻ sử dụng giao thức BGP. | *"Tổng đài bưu điện liên tỉnh: Các chi nhánh gửi thư qua bưu điện trung tâm để giao cho nhau."* |
 | **AWS Client VPN** | Dịch vụ OpenVPN được quản lý cho máy tính cá nhân của nhân viên làm việc từ xa. | Cho phép nhân viên kết nối an toàn vào tài nguyên private trong VPC từ laptop ở nhà (hỗ trợ Split-tunnel). | *"Thẻ bài vào cổng từ xa: Nhân viên ở nhà quẹt thẻ là vào thẳng mạng nội bộ công ty."* |
@@ -28,7 +28,7 @@
 
 ### 1. Quy Tắc Dải Mạng & Subnet Math
 - **Phạm vi VPC**: Cấp độ Region, bao phủ toàn bộ các Availability Zones trong Region đó.
-- **Kích thước CIDR block**: Từ `/16` (65,536 địa chỉ IP) đến `/28` (16 địa chỉ IP).
+- **Kích thước CIDR block (IPv4)**: Từ `/16` (65,536 địa chỉ IP) đến `/28` (16 địa chỉ IP). Có thể thêm CIDR phụ (mặc định tối đa 5 CIDR IPv4/VPC, xin tăng được). IPv6: VPC nhận khối `/56`, subnet `/64`.
 - **Dải IP nội bộ RFC 1918**: `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`.
 - **Subnet là ZONAL**: 1 Subnet chỉ nằm trong duy nhất 1 Availability Zone.
 - ⚠️ **AWS giữ lại 5 địa chỉ IP trong mỗi Subnet**:
@@ -39,7 +39,7 @@
   - `.255`: Network broadcast address (AWS không hỗ trợ broadcast, nhưng vẫn giữ).
 - 🧮 **Bài Toán Thi Hay Gặp**:  
   Đề bài yêu cầu: *"Cần một subnet chứa tối thiểu **29 địa chỉ IP khả dụng** cho máy chủ"* $\rightarrow$ Dải `/27` có 32 IP, trừ 5 IP của AWS chỉ còn $32 - 5 = 27$ IP (**KHÔNG ĐỦ**) $\rightarrow$ **Bắt buộc phải chọn dải `/26`** ($64 - 5 = 59$ IP).
-- **Elastic IP (EIP)**: Địa chỉ IPv4 tĩnh public. Mọi địa chỉ IPv4 public đều tính phí theo giờ; EIP tạo ra nhưng không gắn vào instance đang chạy sẽ bị tính phí phạt.
+- **Elastic IP (EIP)**: Địa chỉ IPv4 tĩnh public. Từ 01/02/2024 **mọi địa chỉ IPv4 public** (kể cả EIP đang gắn, IP public tự cấp) đều tính phí theo giờ ($0.005/IP/giờ); EIP không dùng vẫn bị tính phí $\rightarrow$ release EIP thừa, cân nhắc IPv6.
 - **Cờ DNS VPC**: Bắt buộc bật cả `enableDnsSupport` và `enableDnsHostnames` khi dùng VPC Interface Endpoints hoặc Route 53 Private Hosted Zones.
 - **VPC Sharing (AWS RAM)**: Cho phép chia sẻ Subnet giữa nhiều tài khoản AWS trong cùng Organization để dùng chung tài nguyên mạng mà không cần Peering.
 
@@ -86,7 +86,8 @@
 | **Thứ tự xét duyệt quy tắc** | Xét duyệt toàn bộ các rules đồng thời | **Xét duyệt theo số thứ tự (từ nhỏ đến lớn, khớp là dừng)** |
 | **Chặn một IP cụ thể** | ❌ **KHÔNG THỂ CHẶN 1 IP CỤ THỂ** | ✅ **CHẶN ĐƯỢC 1 IP HOẶC DẢI IP BẰNG RULE DENY** |
 | **Dải cổng chiều về (Return)**| Tự động mở | Bắt buộc phải mở **Ephemeral Ports (1024–65535)** ở chiều về |
-| **Tham chiếu (Referencing)** | **Có thể tham chiếu SG khác làm Source** (cùng Region) | Chỉ cấu hình được dải CIDR IP |
+| **Tham chiếu (Referencing)** | **Có thể tham chiếu SG khác làm Source** (cùng VPC, VPC peering cùng Region, hoặc qua Transit Gateway cùng Region) | Chỉ cấu hình được dải CIDR IP |
+| **Mặc định** | SG mới: chặn toàn bộ inbound, cho phép toàn bộ outbound | NACL mặc định: cho phép tất cả; NACL tự tạo mới: chặn tất cả |
 
 > 💡 **Móc nhớ quy tắc**:  
 > - Đề bài: *"Phát hiện 1 địa chỉ IP độc hại đang tấn công vào hệ thống, chặn ngay lập tức"* $\rightarrow$ Chọn **NACL (Rule Deny)** hoặc **AWS WAF**.  
@@ -112,9 +113,10 @@ flowchart TD
 |:---|:---|:---|:---|
 | **Mô hình kiến trúc** | Điểm - Điểm (Point-to-Point 1-1) | Hình sao trung tâm (Hub-and-Spoke) | Cung cấp dịch vụ riêng lẻ (Service-based) |
 | **Định tuyến bắc cầu (Transitive)** | ❌ **KHÔNG** (A nối B, B nối C thì A không qua được C) | ✅ **CÓ** (Định tuyến thông suốt qua TGW) | Không áp dụng (chỉ gọi 1 service) |
-| **Trùng lặp dải IP (Overlapping CIDR)** | ❌ **BỊ LỖI (Không cho phép)** | ❌ **BỊ LỖI (Không cho phép)** | ✅ **HOẠT ĐỘNG HOÀN HẢO** |
-| **Chi phí** | **Không tính phí giờ** (chỉ tính phí data transfer) | Tính phí theo attachment-giờ + phí GB | Tính phí theo endpoint-giờ + phí GB |
-| **Khả năng mở rộng** | Kém khi quy mô lớn ($N(N-1)/2$ kết nối) | **Hàng ngàn VPC và mạng On-prem** | Hàng chục ngàn VPC khách hàng |
+| **Trùng lặp dải IP (Overlapping CIDR)** | ❌ **BỊ LỖI (Không cho phép)** | ❌ **Không định tuyến được giữa CIDR trùng** | ✅ **HOẠT ĐỘNG HOÀN HẢO** |
+| **Chi phí** | **Không tính phí giờ**; data transfer cùng AZ miễn phí, khác AZ tính phí | Tính phí theo attachment-giờ + phí GB xử lý | Tính phí theo endpoint-giờ + phí GB |
+| **Khả năng mở rộng** | Kém khi quy mô lớn ($N(N-1)/2$ kết nối) | **Hàng ngàn VPC (tới 5,000 attachments) và mạng On-prem** | Hàng chục ngàn VPC khách hàng |
+| **Inter-Region** | ✅ Hỗ trợ (Inter-Region Peering) | ✅ TGW Peering giữa các Region | ✅ PrivateLink hỗ trợ kết nối cross-Region tới endpoint service (từ 11/2024) |
 | **Hỗ trợ IP Multicast** | ❌ Không | ✅ **DUY NHẤT HỖ TRỢ TRÊN AWS** | ❌ Không |
 
 ---
@@ -141,7 +143,7 @@ flowchart TD
 |:---|:---|:---|
 | **Bản chất đường truyền** | Cáp vật lý chuyên dụng riêng biệt qua đối tác | Đường hầm mã hóa IPsec qua Internet công cộng |
 | **Độ trễ & Tính ổn định** | **Cực kỳ ổn định, độ trễ thấp và dự đoán được** | Độ trễ phụ thuộc vào tình trạng mạng Internet |
-| **Băng thông** | Lớn (1 Gbps, 10 Gbps, 100 Gbps, 400 Gbps) | Tối đa **1.25 Gbps trên mỗi tunnel** |
+| **Băng thông** | Dedicated: 1, 10, 100, 400 Gbps; Hosted (qua Partner): 50 Mbps – 25 Gbps | Tối đa **1.25 Gbps trên mỗi tunnel** (dùng ECMP qua Transit Gateway để cộng dồn băng thông nhiều tunnel) |
 | **Thời gian thiết lập** | Mất từ **vài tuần đến vài tháng** để kéo cáp | Thiết lập nhanh chóng chỉ trong **vài phút đến vài giờ** |
 | **Mã hóa mặc định** | ❌ **KHÔNG MÃ HÓA MẶC ĐỊNH** (phải bật MACsec hoặc VPN over DX) | ✅ **MÃ HÓA IPsec MẶC ĐỊNH** |
 | **Tính sẵn sàng cao (HA)** | • Max Resilience: 2 kết nối tại 2 locations khác nhau<br>• Cost-effective HA: **Dùng Direct Connect chính + Site-to-Site VPN làm backup** | Cung cấp sẵn **2 tunnels IPsec** trên mỗi kết nối VPN |
@@ -152,7 +154,8 @@ flowchart TD
   - `Public VIF`: Kết nối tới các dịch vụ public của AWS (Amazon S3, DynamoDB, Route 53) mà không qua internet.
   - `Transit VIF`: Kết nối tới AWS Transit Gateway để vươn tới hàng trăm VPC.
 - **Direct Connect Gateway (DXGW)**: Cầu nối toàn cầu cho phép 1 đường cáp Direct Connect kết nối tới nhiều VPC ở **nhiều Region khác nhau**.
-- **LAG (Link Aggregation Group)**: Gom tối đa 4 kết nối Direct Connect vật lý cùng tốc độ thành một đường truyền logic duy nhất để tăng băng thông và dự phòng failover.
+- **LAG (Link Aggregation Group)**: Gom nhiều kết nối Direct Connect Dedicated cùng tốc độ, cùng DX endpoint thành một đường logic (tối đa 4 kết nối với cổng 1/10 Gbps, tối đa 2 kết nối với cổng 100/400 Gbps) để tăng băng thông. LAG **không** thay thế cho dự phòng ở location khác.
+- **Mã hóa trên DX**: **MACsec** (Layer 2, trên cổng Dedicated 10/100/400 Gbps tại location hỗ trợ) hoặc **Site-to-Site VPN qua Public VIF / Transit VIF** (IPsec).
 
 ---
 
@@ -167,7 +170,7 @@ flowchart TD
 | **Giữ nguyên Client IP** | Ghi vào header `X-Forwarded-For` | **Giữ nguyên IP gốc của Client trong TCP packet** | Giữ nguyên nguyên trạng packet |
 | **Đối tượng Target** | EC2, ECS (dynamic port), IP, **Lambda** | EC2, IP, **ALB (ALB làm target của NLB)** | Cụm thiết bị tường lửa ảo của bên thứ 3 |
 | **Định tuyến thông minh** | Theo URL Path (`/api`), Hostname, Query string, Cookie | Chỉ theo IP và Port | Phân phối luồng gói tin trong suốt |
-| **Tích hợp bảo mật** | **Tích hợp trực tiếp AWS WAF**, xác thực OIDC/Cognito | Hỗ trợ Security Group | Chèn cụm IPS/IDS/Firewall (Palo Alto, Fortinet) |
+| **Tích hợp bảo mật** | **Tích hợp trực tiếp AWS WAF**, xác thực OIDC/Cognito, Security Group, mTLS | Hỗ trợ Security Group (từ 08/2023), TLS termination | Chèn cụm IPS/IDS/Firewall (Palo Alto, Fortinet) |
 | **Cross-Zone LB** | **Mặc định BẬT (Miễn phí)** | Mặc định TẮT (Bật có tính phí data transfer) | Mặc định TẮT |
 
 > 💡 **Mẹo Kiến Trúc**:  
@@ -187,7 +190,7 @@ flowchart TD
 
 ### 2. Cơ Chế Giới Hạn Truy Cập An Toàn (CloudFront Security)
 - **Origin Access Control (OAC)**: Thay thế hoàn toàn OAI cũ. Đảm bảo người dùng **bắt buộc phải đi qua CloudFront**, chặn 100% việc truy cập trực tiếp vào S3 Bucket thông qua S3 Bucket Policy.
-- **Bảo Vệ ALB Phía Sau CloudFront**: Cấu hình CloudFront gửi một **Custom Header bí mật** và cấu hình ALB chỉ chấp nhận request có Header này; kết hợp Security Group ALB chỉ cho phép dải IP Prefix List của CloudFront.
+- **Bảo Vệ ALB Phía Sau CloudFront**: Cấu hình CloudFront gửi một **Custom Header bí mật** và cấu hình ALB chỉ chấp nhận request có Header này; kết hợp Security Group ALB chỉ cho phép **AWS-managed prefix list của CloudFront** (`com.amazonaws.global.cloudfront.origin-facing`). Cách mới hơn: **CloudFront VPC Origins** (11/2024) cho phép origin là ALB/NLB/EC2 nằm trong **private subnet**, không cần public IP.
 - **Signed URLs vs Signed Cookies**:
   - `Signed URL`: Dành cho việc cấp quyền tải **1 tệp tin cụ thể** (VD: 1 video khóa học đã mua).
   - `Signed Cookies`: Dành cho việc cấp quyền truy cập **nhiều tệp tin cùng lúc** (VD: toàn bộ khu vực dành cho thành viên VIP).
@@ -213,7 +216,7 @@ flowchart TD
 | **Weighted Routing** | Chia tỷ lệ lưu lượng theo phần trăm (VD: 90% phiên bản v1, 10% phiên bản v2). | **A/B Testing, Canary deployment, di chuyển dần ứng dụng**. Trọng số 0 = ngừng gửi traffic. |
 | **Latency-Based Routing** | Đưa người dùng tới AWS Region có **độ trễ mạng thấp nhất**. | "Lowest latency", "performance across multiple regions". *(Lưu ý: Đo theo độ trễ mạng, không phải khoảng cách địa lý)*. |
 | **Failover Routing** | Định tuyến Chủ động - Bị động (Active-Passive). Health check máy chính lỗi $\rightarrow$ chuyển sang máy phụ. | **Disaster Recovery (DR)**, tự động chuyển hướng khi server chính down. Bắt buộc có Health Check. |
-| **Geolocation Routing** | Định tuyến dựa trên **vị trí địa lý của người dùng** (theo Lục địa hoặc Quốc gia). | **Bản địa hóa nội dung, tuân thủ pháp lý/bản quyền** (VD: User ở Châu Âu bắt buộc vào server EU để tuân thủ GDPR). Bắt buộc có record Default. |
+| **Geolocation Routing** | Định tuyến dựa trên **vị trí địa lý của người dùng** (theo Lục địa, Quốc gia, hoặc Tiểu bang Mỹ). | **Bản địa hóa nội dung, tuân thủ pháp lý/bản quyền** (VD: User ở Châu Âu bắt buộc vào server EU để tuân thủ GDPR). Nên tạo record **Default** cho vị trí không khớp (nếu không có, Route 53 trả "no answer"). |
 | **Geoproximity Routing** | Định tuyến dựa trên khoảng cách giữa user và tài nguyên, có thể dùng tham số **Bias (-99 đến +99)** để mở rộng/thu hẹp vùng. | **Dịch chuyển lưu lượng có chủ đích** giữa các Region bằng trực quan (Traffic Flow). |
 | **Multi-Value Answer** | Trả về tối đa **8 địa chỉ IP khỏe mạnh (Healthy)** kèm health check cho từng IP. | Cân bằng tải phía client đơn giản, không thay thế cho ELB. |
 | **IP-Based Routing** | Định tuyến dựa trên dải mạng CIDR của địa chỉ IP người dùng. | Tối ưu hóa lưu lượng theo từng nhà mạng viễn thông (ISP). |
@@ -230,13 +233,14 @@ flowchart TD
 | Loại API | Đặc Tính Kỹ Thuật | 💡 Khi Nào Chọn Trong Đề Thi? |
 |:---|:---|:---|
 | **REST API** | Đầy đủ tính năng nhất: Quản lý API Key, Usage Plans, Request Validation, Caching (TTL 300s), tích hợp AWS WAF. | Ứng dụng doanh nghiệp cần kiểm soát hạn mức khách hàng, kiếm tiền từ API, bảo vệ WAF. |
-| **HTTP API** | **Rẻ hơn tới 70%** và độ trễ thấp hơn so với REST API. Ít tính năng hơn (chỉ hỗ trợ auth OIDC/OAuth2). | Chỉ cần proxy HTTP đơn giản phía trước Lambda hoặc backend HTTP, tối ưu chi phí tối đa. |
+| **HTTP API** | **Rẻ hơn tới ~70%** và độ trễ thấp hơn so với REST API. Ít tính năng hơn: không có API Keys/Usage Plans, không caching, không gắn trực tiếp WAF; auth hỗ trợ **JWT (OIDC/OAuth2), Lambda authorizer, IAM**. | Chỉ cần proxy HTTP đơn giản phía trước Lambda hoặc backend HTTP, tối ưu chi phí tối đa. |
 | **WebSocket API** | Duy trì kết nối 2 chiều liên tục (Stateful duplex). Server chủ động push dữ liệu xuống client. | Ứng dụng chat thời gian thực, bảng điểm thể thao, giao dịch chứng khoán trực tiếp. |
 
 - **Loại Endpoint**: `Edge-Optimized` (qua CloudFront), `Regional` (trong Region), `Private` (chỉ truy cập từ VPC qua Interface Endpoint).
-- **Giới Hạn Tích Hợp**: Thời gian timeout tối đa của 1 request là **29 giây**.
-- **Điều Tiết Lưu Lượng (Throttling)**: Mặc định **10,000 requests/giây trên mỗi Region** $\rightarrow$ Vượt quá sẽ trả về mã lỗi **`HTTP 429 Too Many Requests`**.
-- **VPC Link**: Cho phép API Gateway kết nối an toàn vào các tài nguyên nội bộ trong VPC nằm sau NLB hoặc ALB private.
+- **Giới Hạn Tích Hợp**: Timeout tích hợp mặc định **29 giây** (đáp án đề thi). Từ 06/2024, REST API loại **Regional/Private** có thể xin tăng vượt 29 giây (đánh đổi giảm throttle quota tài khoản); Edge-optimized vẫn 29s; HTTP API tối đa 30s. Payload tối đa **10 MB**.
+- **Điều Tiết Lưu Lượng (Throttling)**: Mặc định **10,000 requests/giây (burst 5,000) trên mỗi tài khoản/Region** $\rightarrow$ Vượt quá sẽ trả về mã lỗi **`HTTP 429 Too Many Requests`**. Giới hạn theo từng khách hàng bằng **Usage Plans + API Keys**.
+- **VPC Link**: Cho phép API Gateway kết nối an toàn vào các tài nguyên nội bộ trong VPC (REST API: qua NLB — đáp án kinh điển; HTTP API: qua ALB, NLB hoặc AWS Cloud Map).
+- **Caching** (REST API): TTL mặc định 300 giây, tối đa 3600 giây; cache theo stage.
 
 ---
 
@@ -268,3 +272,7 @@ flowchart TD
 | "VPC resolves on-premise company domain names" | **Route 53 Resolver Outbound Endpoint** |
 | "inspect raw packets payload, IDS/IPS appliance" | **VPC Traffic Mirroring** |
 | "packet metadata only, source/destination IP, port, accept/reject" | **VPC Flow Logs** |
+| "CloudFront origin ALB must stay in private subnet, no public exposure" | **CloudFront VPC Origins** |
+| "connect overlapping CIDR networks, NAT between private networks" | **Private NAT Gateway** (hoặc PrivateLink nếu chỉ expose 1 service) |
+| "encrypt Direct Connect traffic at Layer 2" | **MACsec trên DX Dedicated Connection** |
+| "aggregate VPN bandwidth beyond 1.25 Gbps" | **Site-to-Site VPN trên Transit Gateway + ECMP** |

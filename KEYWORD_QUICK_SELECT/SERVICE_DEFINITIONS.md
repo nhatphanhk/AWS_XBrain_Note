@@ -66,8 +66,8 @@
 - **Tín hiệu đề thi**: `batch jobs`, `job queue`, `unlimited execution time (hours/days)`, `HPC jobs`, `Spot instance integration`.
 
 ### 1.7. AWS App Runner & Amazon Lightsail
-- **Amazon Lightsail**: VPS đóng gói trọn gói (Compute + Storage + Networking + IP) với chi phí cố định thấp từ $3.5/tháng, dành cho website WordPress, ứng dụng nhỏ của SME.
-- **AWS App Runner**: Nền tảng PaaS serverless hoàn toàn cho web app và API containerized; chỉ cần trỏ vào Git repo hoặc Container registry là tự build, deploy, scale và gắn chứng chỉ SSL.
+- **Amazon Lightsail**: VPS đóng gói trọn gói (Compute + Storage + Data transfer + IP + DNS) với chi phí cố định thấp hàng tháng (gói rẻ nhất chỉ IPv6 vài USD/tháng), dành cho website WordPress, ứng dụng nhỏ của SME.
+- **AWS App Runner**: Nền tảng PaaS serverless hoàn toàn cho web app và API containerized; chỉ cần trỏ vào Git repo hoặc Container registry là tự build, deploy, scale và gắn chứng chỉ SSL. ⚠️ Không nhận khách mới từ 30/04/2026 (maintenance).
 
 ### 1.8. Amazon EC2 Auto Scaling (ASG)
 - **Bản chất**: Dịch vụ tự động điều chỉnh số lượng máy chủ ảo EC2 dựa trên nhu cầu thực tế hoặc lịch trình định trước.
@@ -83,7 +83,7 @@
 ### 1.10. AWS Outposts, Local Zones & AWS Wavelength
 - **AWS Outposts**: Đưa phần cứng rack máy chủ vật lý và dịch vụ AWS nguyên bản đặt ngay bên trong Trung tâm dữ liệu on-premises của khách hàng; giải quyết bài toán độ trễ cực thấp (< 1ms) với hệ thống nội bộ hoặc tuân thủ dữ liệu không được rời khỏi trụ sở.
 - **AWS Local Zones**: Hạ tầng tính toán và lưu trữ đặt tại các thành phố lớn bên ngoài Region chuẩn; phục vụ người dùng cuối tại các đô thị với độ trễ một con số mili-giây.
-- **AWS Wavelength**: Tích hợp hạ tầng AWS trực tiếp vào các trung tâm dữ liệu mạng viễn thông **5G** của các nhà mạng (Verizon, Vodafone); phục vụ ứng dụng di động, xe tự hành, gaming với độ trễ < 10ms.
+- **AWS Wavelength**: Tích hợp hạ tầng AWS trực tiếp vào các trung tâm dữ liệu mạng viễn thông **5G** của các nhà mạng (VD: Verizon, Vodafone, KDDI, SK Telecom); phục vụ ứng dụng di động, xe tự hành, gaming với độ trễ cực thấp (single-digit ms).
 
 ### 1.11. Amazon ECS Anywhere & Amazon EKS Anywhere
 - **Bản chất**: Khả năng mở rộng control plane của ECS/EKS trên AWS để quản lý container chạy trên chính hạ tầng phần cứng máy chủ On-Premises có sẵn của khách hàng (không cần mua rack Outposts).
@@ -94,7 +94,7 @@
 ## 2. NHÓM 2: STORAGE & DATA TRANSFER
 
 ### 2.1. Amazon S3 (Simple Storage Service)
-- **Bản chất**: Dịch vụ lưu trữ đối tượng (Object Storage) phân tán trên quy mô toàn cầu, dung lượng không giới hạn, độ bền đạt chuẩn công nghiệp 99.999999999% (11 số 9).
+- **Bản chất**: Dịch vụ lưu trữ đối tượng (Object Storage), bucket thuộc 1 Region, dung lượng tổng không giới hạn (mỗi object tối đa 50 TB từ 12/2025), độ bền thiết kế 99.999999999% (11 số 9).
 - **Sinh ra để làm gì?**: Lưu trữ dữ liệu phi cấu trúc (ảnh, video, logs, sao lưu, file cài đặt, Data Lake); đóng vai trò kho chứa dữ liệu tĩnh trung tâm của đám mây.
 - **💡 Móc nhớ**: *"S3 là đại dương lưu trữ vô tận: Ném bất cứ tệp tin nào vào kèm theo một chiếc nhãn (Object Key) là đảm bảo 10 triệu năm không bao giờ mất."*
 - **Tín hiệu đề thi**: `object storage`, `11 9s durability`, `static website hosting`, `data lake storage`, `lifecycle policies`, `unlimited capacity`.
@@ -115,7 +115,7 @@
 - **FSx for Windows File Server**: Hệ thống tệp chia sẻ native cho Windows, hỗ trợ chuẩn **SMB**, tích hợp **Active Directory**, **NTFS ACLs** và DFS Namespaces.
 - **FSx for Lustre**: Hệ thống tệp song song cực nhanh (hàng triệu IOPS, hàng trăm GB/s throughput) tích hợp trực tiếp với Amazon S3, phục vụ tính toán hiệu năng cao (**HPC**) và **Machine Learning Training**.
 - **FSx for NetApp ONTAP**: Hệ thống tệp đa giao thức (NFS, SMB, iSCSI), hỗ trợ tính năng deduplication, compression, và SnapMirror của NetApp.
-- **FSx for OpenZFS**: Dành cho các ứng dụng chạy trên ZFS file system của Linux với độ trễ microsecond.
+- **FSx for OpenZFS**: Dành cho các ứng dụng chạy trên ZFS / NFS (v3, v4.x) của Linux với độ trễ cỡ vài trăm micro-giây, snapshot & clone tức thì.
 
 ### 2.5. AWS Storage Gateway
 - **Bản chất**: Dịch vụ lưu trữ lai (Hybrid Storage) kết nối hạ tầng On-Premises của doanh nghiệp với dung lượng lưu trữ không giới hạn trên Amazon S3 và Glacier.
@@ -123,6 +123,7 @@
   1. **S3 File Gateway**: Cung cấp giao diện mạng NFS/SMB tại chỗ, lưu trữ file thành S3 Object có đệm cục bộ (Local Cache).
   2. **Volume Gateway (Stored vs Cached)**: Cung cấp ổ đĩa khối iSCSI. *Stored* = dữ liệu chính ở tại chỗ, backup snapshot lên S3; *Cached* = dữ liệu chính trên S3, chỉ giữ dữ liệu nóng tại chỗ.
   3. **Tape Gateway (VTL)**: Giả lập thư viện băng từ ảo iSCSI VTL, thay thế băng từ vật lý bằng S3 Glacier.
+  - *(Biến thể thứ 4 — FSx File Gateway — không nhận khách mới từ 28/10/2024.)*
 - **💡 Móc nhớ**: *"Storage Gateway là đường ống dẫn nước từ bể ngầm On-Premises nối thẳng ra hồ chứa S3 trên mây."*
 - **Tín hiệu đề thi**: `hybrid storage`, `local cache for on-prem apps`, `iSCSI virtual tape`, `decommission tape library`.
 
@@ -158,11 +159,11 @@
 - **Tín hiệu đề thi**: `RDS with OS access`, `SSH/RDP to DB server`, `custom database patches`, `legacy enterprise ERP/CRM`.
 
 ### 3.4. Amazon Aurora
-- **Bản chất**: Hệ quản trị cơ sở dữ liệu quan hệ độc quyền thế hệ mới của AWS, tương thích 100% với **MySQL (nhanh hơn gấp 5 lần)** và **PostgreSQL (nhanh hơn gấp 3 lần)**.
-- **Kiến trúc đột phá**: Tách rời tầng tính toán (Compute) và tầng lưu trữ (Storage). Tầng lưu trữ nhân bản **6 bản sao trên 3 Availability Zones**, tự động sửa lỗi (self-healing) và co giãn tới 128 TB.
+- **Bản chất**: Hệ quản trị cơ sở dữ liệu quan hệ độc quyền thế hệ mới của AWS, tương thích **MySQL (AWS công bố tới 5× throughput)** và **PostgreSQL (tới 3×)**.
+- **Kiến trúc đột phá**: Tách rời tầng tính toán (Compute) và tầng lưu trữ (Storage). Tầng lưu trữ nhân bản **6 bản sao trên 3 Availability Zones**, tự động sửa lỗi (self-healing) và tự co giãn tới 128 TiB (**256 TiB** với phiên bản engine mới từ 07/2025).
 - **Các tính năng đỉnh cao**:
-  - **Aurora Serverless v2**: Co giãn công suất theo mili-giây (0.5 đến 128 ACUs).
-  - **Aurora Global Database**: Nhân bản dữ liệu đa vùng với độ trễ $< 1$s, chuyển đổi thảm họa xuyên lục địa trong $< 1$ phút.
+  - **Aurora Serverless v2**: Co giãn công suất tự động theo tải (phiên bản mới: 0 ACU auto-pause tới 256 ACU MySQL / 384 ACU PostgreSQL; phiên bản cũ: 0.5–128 ACU).
+  - **Aurora Global Database**: 1 Region chính + tối đa 10 Region phụ, nhân bản đa vùng với độ trễ thường $< 1$s, chuyển đổi thảm họa xuyên vùng với RTO cỡ $< 1$ phút.
   - **Aurora Clone**: Tạo bản sao cơ sở dữ liệu thử nghiệm tức thì với chi phí $0 nhờ cơ chế Copy-on-Write.
   - **Aurora Backtrack**: Quay ngược thời gian cơ sở dữ liệu về thời điểm trước khi bị lỗi mà không cần restore backup.
 
@@ -176,19 +177,19 @@
 - **💡 Móc nhớ**: *"DynamoDB là chiếc tủ khóa điện tử vô tận: Bạn tra đúng mã khóa (Partition Key) là tủ tự mở ngay lập tức trong 2 mili-giây bất kể trong kho có 1 triệu hay 1 tỷ chiếc tủ."*
 
 ### 3.6. Amazon ElastiCache
-- **Bản chất**: Dịch vụ bộ nhớ đệm In-Memory được quản lý, hỗ trợ **Redis (Valkey)** và **Memcached**.
-- **Sinh ra để làm gì?**: Giảm tải đọc tới 90% cho cơ sở dữ liệu quan hệ (RDS/Aurora) và tăng tốc thời gian phản hồi của ứng dụng xuống dưới 1 mili-giây.
+- **Bản chất**: Dịch vụ bộ nhớ đệm In-Memory được quản lý, hỗ trợ **Valkey**, **Redis OSS** và **Memcached** (có cả bản node-based lẫn ElastiCache Serverless).
+- **Sinh ra để làm gì?**: Giảm tải đọc cho cơ sở dữ liệu (RDS/Aurora/DynamoDB) và tăng tốc thời gian phản hồi của ứng dụng xuống mức micro-giây/dưới 1 mili-giây.
 - **Phân biệt 30 giây**:
-  - **Redis**: Đa năng (hỗ trợ Data structures, Pub/Sub, Multi-AZ Replication, Snapshot持久化, Session store).
+  - **Valkey / Redis OSS**: Đa năng (hỗ trợ Data structures, Pub/Sub, Multi-AZ Replication + auto failover, Snapshot/persistence, Session store).
   - **Memcached**: Đơn giản thuần túy (Key-Value, đa luồng Multi-threaded scale out).
 
 ### 3.7. Các Cơ Sở Dữ Liệu Chuyên Dụng (Specialized Databases)
-- **Amazon DocumentDB**: Tương thích mã nguồn mở **MongoDB**, tối ưu hóa cho dữ liệu tài liệu định dạng JSON bán cấu trúc, tự động mở rộng lưu trữ đến 128 TB.
-- **Amazon Neptune**: Cơ sở dữ liệu đồ thị (**Graph Database**), hỗ trợ Gremlin và openCypher, tối ưu cho bài toán mạng xã hội, điều tra gian lận thẻ tín dụng, cây quan hệ phức tạp.
-- **Amazon QLDB (Quantum Ledger Database)**: Cơ sở dữ liệu sổ cái tập trung bất biến (**Immutable Append-only Ledger**), sử dụng cây mã hóa Merkle Tree SHA-256 để chứng minh dữ liệu tài chính không bị can thiệp.
+- **Amazon DocumentDB**: Tương thích **MongoDB API** (dùng driver MongoDB), tối ưu hóa cho dữ liệu tài liệu định dạng JSON bán cấu trúc, tự động mở rộng lưu trữ đến 128 TiB.
+- **Amazon Neptune**: Cơ sở dữ liệu đồ thị (**Graph Database**), hỗ trợ Gremlin, openCypher và SPARQL, tối ưu cho bài toán mạng xã hội, điều tra gian lận thẻ tín dụng, knowledge graph.
+- **Amazon QLDB (Quantum Ledger Database)**: Cơ sở dữ liệu sổ cái tập trung bất biến (**Immutable Append-only Ledger**), sử dụng cây mã hóa Merkle Tree SHA-256 để chứng minh dữ liệu tài chính không bị can thiệp. ⚠️ **Đã ngừng hỗ trợ 31/07/2025** (AWS khuyến nghị Aurora PostgreSQL); chỉ còn ý nghĩa với đề cũ.
 - **Amazon Keyspaces**: Dịch vụ cơ sở dữ liệu Apache Cassandra serverless, tương thích 100% ngôn ngữ truy vấn **CQL**, không cần quản trị máy chủ cụm.
-- **Amazon Timestream**: Cơ sở dữ liệu chuỗi thời gian (**Time-series**) serverless cho cảm biến IoT, viễn thông, tự động phân tầng lưu trữ nóng (In-memory) sang lạnh (Magnetic).
-- **Amazon MemoryDB for Redis**: Cơ sở dữ liệu chính (Primary DB) tương thích Redis nhưng có độ bền dữ liệu Multi-AZ chuẩn Enterprise (khác ElastiCache chỉ đóng vai trò làm cache phụ).
+- **Amazon Timestream**: Cơ sở dữ liệu chuỗi thời gian (**Time-series**) cho cảm biến IoT, viễn thông. *Timestream for LiveAnalytics* (serverless, tự phân tầng Memory → Magnetic) đóng với khách mới từ 20/06/2025; khách mới dùng *Timestream for InfluxDB*.
+- **Amazon MemoryDB**: Cơ sở dữ liệu chính (Primary DB) in-memory tương thích **Valkey / Redis OSS** nhưng có độ bền dữ liệu Multi-AZ qua transactional log (khác ElastiCache chủ yếu đóng vai trò làm cache).
 
 ---
 
@@ -206,7 +207,7 @@
 
 ### 4.3. AWS PrivateLink (Interface VPC Endpoints)
 - **Bản chất**: Công nghệ kết nối mạng riêng tư an toàn cao cấp sử dụng card mạng ảo **ENI** có địa chỉ IP riêng trong subnet.
-- **Sinh ra để làm gì?**: Truy cập các dịch vụ AWS hoặc dịch vụ SaaS của bên thứ 3 mà **gói tin không bao giờ đi ra Internet công cộng**. Đặc biệt, đây là giải pháp duy nhất cho phép kết nối giữa 2 VPC có **dải địa chỉ IP trùng lặp (Overlapping CIDR)**.
+- **Sinh ra để làm gì?**: Truy cập các dịch vụ AWS hoặc dịch vụ SaaS của bên thứ 3 mà **gói tin không bao giờ đi ra Internet công cộng**. Đặc biệt, đây là giải pháp chuẩn để expose service giữa 2 VPC có **dải địa chỉ IP trùng lặp (Overlapping CIDR)** (kết nối 1 chiều consumer → provider; phương án định tuyến khác là Private NAT Gateway).
 - **Tín hiệu đề thi**: `private connection without internet`, `overlapping CIDRs between VPCs`, `SaaS private connectivity`.
 
 ### 4.4. AWS Elastic Load Balancing (ELB)
@@ -222,12 +223,12 @@
 - **Tín hiệu đề thi**: `static Anycast IPs`, `TCP/UDP support`, `gaming / VoIP`, `bypass DNS caching`, `instant failover`.
 
 ### 4.6. Amazon CloudFront
-- **Bản chất**: Mạng lưới phân phối nội dung toàn cầu (Content Delivery Network - CDN) Layer 7 với hơn 450+ điểm biên (Edge Locations).
-- **Sinh ra để làm gì?**: Lưu cache nội dung tĩnh (ảnh, video, html) và tăng tốc nội dung động (API) gần nhất với người dùng cuối, giảm tải 90% cho máy chủ gốc (S3, ALB) và bảo vệ an ninh chu vi mạng với AWS WAF.
+- **Bản chất**: Mạng lưới phân phối nội dung toàn cầu (Content Delivery Network - CDN) Layer 7 với hàng trăm điểm hiện diện (PoP: Edge Locations + Regional Edge Caches) trên toàn cầu.
+- **Sinh ra để làm gì?**: Lưu cache nội dung tĩnh (ảnh, video, html) và tăng tốc nội dung động (API) gần nhất với người dùng cuối, giảm tải cho máy chủ gốc (S3, ALB) và bảo vệ an ninh chu vi mạng với Shield Standard + AWS WAF.
 - **Tín hiệu đề thi**: `edge caching`, `CDN`, `DDoS absorption at edge`, `OAC for S3 origin`, `CloudFront Functions / Lambda@Edge`.
 
 ### 4.7. Amazon Route 53
-- **Bản chất**: Dịch vụ hệ thống phân giải tên miền (DNS) có độ sẵn sàng và khả năng co giãn cao cấp độ doanh nghiệp (SLA 100%), hoạt động trên cổng Port 53.
+- **Bản chất**: Dịch vụ hệ thống phân giải tên miền (DNS) có độ sẵn sàng và khả năng co giãn cao cấp độ doanh nghiệp (SLA 100%), kiêm đăng ký tên miền và health check; tên gọi lấy từ cổng DNS 53.
 - **Các chính sách định tuyến (Routing Policies)**:
   - **Simple**: Trả về 1 hoặc nhiều IP ngẫu nhiên, không có health check.
   - **Weighted**: Chia phần trăm lưu lượng (ví dụ: 90% v1, 10% v2 cho A/B testing).
@@ -249,10 +250,10 @@
 - **Bản chất**: Dịch vụ quản lý, xuất bản, bảo vệ và giám sát API ở quy mô bất kỳ dạng Serverless.
 - **Sinh ra để làm gì?**: Đóng vai trò cổng tiếp nhận (Front Door) cho các hàm Lambda và dịch vụ backend, xử lý xác thực, rate-limiting, chuyển đổi payload, CORS và caching.
 - **3 Dạng API**: REST API (đầy đủ tính năng, WAF), HTTP API (tốc độ cao, rẻ hơn 70%), WebSocket API (giao tiếp 2 chiều thời gian thực).
-- **Tín hiệu đề thi**: `serverless API front door`, `API throttling / rate limit`, `29s timeout`, `WebSocket connection`.
+- **Tín hiệu đề thi**: `serverless API front door`, `API throttling / rate limit`, `29s timeout` (mặc định; REST Regional/Private xin tăng được từ 06/2024), `WebSocket connection`.
 
 ### 4.10. AWS Direct Connect (DX), Site-to-Site VPN & Client VPN
-- **AWS Direct Connect**: Đường truyền cáp vật lý chuyên dụng riêng biệt từ trung tâm dữ liệu On-Premises đến AWS qua đối tác viễn thông, băng thông cực lớn (1G/10G/100Gbps), độ trễ ổn định, không đi qua Internet.
+- **AWS Direct Connect**: Đường truyền cáp vật lý chuyên dụng riêng biệt từ trung tâm dữ liệu On-Premises đến AWS qua đối tác viễn thông, băng thông lớn (Dedicated 1/10/100/400 Gbps; Hosted 50 Mbps–25 Gbps), độ trễ ổn định, không đi qua Internet, **không mã hóa mặc định** (dùng MACsec hoặc VPN over DX).
 - **AWS Site-to-Site VPN**: Đường hầm bảo mật mã hóa IPsec qua Internet công cộng, triển khai nhanh trong vài phút, băng thông tối đa 1.25 Gbps/tunnel, dùng làm kết nối chính hoặc kênh dự phòng cho Direct Connect.
 - **AWS VPN CloudHub**: Kiến trúc Hub-and-Spoke VPN kết nối nhiều văn phòng chi nhánh (Spoke) với nhau qua một Virtual Private Gateway duy nhất.
 - **AWS Client VPN**: Cổng kết nối bảo mật dựa trên chuẩn OpenVPN cho phép nhân viên làm việc từ xa kết nối an toàn vào mạng VPC nội bộ từ máy tính cá nhân.
@@ -267,7 +268,7 @@
 
 ### 5.2. AWS IAM Identity Center (Formerly AWS SSO)
 - **Bản chất**: Cổng đăng nhập tập trung một lần (Single Sign-On) cho toàn bộ tài khoản AWS trong Organization và các ứng dụng doanh nghiệp bên ngoài (SaaS).
-- **Sinh ra để làm gì?**: Kết nối với nguồn danh tính có sẵn của doanh nghiệp (Microsoft Entra ID/Azure AD, Okta, Google Workspace) để nhân viên dùng đúng một tài khoản công ty truy cập vào nhiều tài khoản AWS.
+- **Sinh ra để làm gì?**: Kết nối với nguồn danh tính có sẵn của doanh nghiệp (Microsoft Entra ID, Okta, Google Workspace qua SAML 2.0 + SCIM, hoặc Active Directory qua AWS Managed Microsoft AD / AD Connector) để nhân viên dùng đúng một tài khoản công ty truy cập vào nhiều tài khoản AWS qua **Permission Sets**.
 - **Tín hiệu đề thi**: `single sign-on`, `integrate with Azure AD / Okta`, `multi-account centralized access`.
 
 ### 5.3. AWS Directory Service
@@ -275,23 +276,23 @@
 - **3 Biến thể chính**:
   1. **AWS Managed Microsoft AD**: Cụm máy chủ Windows AD thật sự được quản lý trên AWS, hỗ trợ quan hệ tin cậy 2 chiều (Trust Relationship) với On-prem AD.
   2. **AD Connector**: Cổng chuyển tiếp proxy xác thực yêu cầu đăng nhập trực tiếp về On-prem AD mà không lưu trữ thông tin tài khoản trên AWS.
-  3. **Simple AD**: Thư mục độc lập dựa trên Samba 4, dành cho ứng dụng nhỏ không cần các tính năng chuyên sâu của Microsoft AD.
+  3. **Simple AD**: Thư mục độc lập tương thích AD dựa trên Samba 4, dành cho ứng dụng nhỏ không cần các tính năng chuyên sâu của Microsoft AD (không hỗ trợ trust với AD khác). *(Không nhận khách mới từ 30/07/2026.)*
 - **Tín hiệu đề thi**: `Active Directory on AWS`, `AD trust relationship`, `AD proxy for authentication`.
 
 ### 5.4. AWS KMS & CloudHSM
-- **AWS KMS (Key Management Service)**: Dịch vụ quản lý và tạo khóa mã hóa dữ liệu tập trung, đa người thuê (Multi-tenant), chứng nhận FIPS 140-2 Level 2/3. Sử dụng cơ chế Envelope Encryption (GenerateDataKey cho dữ liệu > 4 KB).
-- **AWS CloudHSM**: Thiết bị phần cứng mật mã chuyên dụng đơn người thuê (**Single-tenant Hardware Security Module**) đạt chuẩn FIPS 140-2 Level 3; khách hàng nắm giữ độc quyền khóa mã hóa mà nhân viên AWS không thể can thiệp.
-- **Tín hiệu đề thi**: `FIPS 140-2 Level 3 hardware security`, `dedicated hardware HSM`, `exclusive control of encryption keys`.
+- **AWS KMS (Key Management Service)**: Dịch vụ quản lý và tạo khóa mã hóa dữ liệu tập trung, đa người thuê (Multi-tenant), HSM đạt chuẩn **FIPS 140-3 Security Level 3**. Sử dụng cơ chế Envelope Encryption (GenerateDataKey cho dữ liệu > 4 KB).
+- **AWS CloudHSM**: Thiết bị phần cứng mật mã chuyên dụng đơn người thuê (**Single-tenant Hardware Security Module**) — `hsm2m.medium` đạt FIPS 140-3 Level 3 (`hsm1.medium` thế hệ cũ: FIPS 140-2 Level 3); khách hàng nắm giữ độc quyền khóa mã hóa mà nhân viên AWS không thể can thiệp.
+- **Tín hiệu đề thi**: `dedicated / single-tenant hardware HSM`, `exclusive control of encryption keys`, `FIPS 140-2/140-3 Level 3` (khi đề nhấn mạnh phần cứng riêng), `PKCS#11 / JCE / CNG`.
 
 ### 5.5. Bộ Tứ Phát Hiện & Điều Tra Mối Đe Dọa
-- **Amazon GuardDuty**: Dịch vụ phát hiện mối đe dọa an ninh tự động trong thời gian thực (Runtime Threat Detection), ứng dụng Machine Learning phân tích các nguồn nhật ký: **CloudTrail Logs, VPC Flow Logs, DNS Logs, EKS Audit Logs** để phát hiện mã độc đào coin, rò rỉ khóa hay tấn công brute-force.
+- **Amazon GuardDuty**: Dịch vụ phát hiện mối đe dọa an ninh liên tục (Threat Detection), kết hợp threat intelligence + Machine Learning phân tích các nguồn: **CloudTrail management events, VPC Flow Logs, DNS Logs** (nền tảng) và các protection plan **S3, EKS Audit Logs, Runtime Monitoring, Malware Protection (EBS/S3), RDS login, Lambda network** để phát hiện mã độc đào coin, rò rỉ khóa hay tấn công brute-force.
 - **Amazon Inspector**: Dịch vụ quét lỗ hổng bảo mật phần mềm tĩnh (**CVE**) và cấu hình mạng hở trên các máy ảo EC2, mã nguồn Lambda và kho ảnh container Amazon ECR.
 - **Amazon Macie**: Dịch vụ bảo mật dữ liệu sử dụng ML để tự động phát hiện, phân loại và cảnh báo dữ liệu nhạy cảm (**PII: số căn cước, thẻ tín dụng, hồ sơ y tế**) đang lưu trữ trong **Amazon S3**.
 - **Amazon Detective**: Dịch vụ điều tra nguyên nhân gốc rễ (Root-Cause Analysis) sau sự cố an ninh, tự động trích xuất log dựng thành đồ thị trực quan (Visual Graph) thể hiện đường đi của cuộc tấn công.
 
 ### 5.6. Tường Lửa & Phòng Chống DDoS
 - **AWS WAF (Web Application Firewall)**: Tường lửa ứng dụng web Layer 7 kiểm tra lưu lượng HTTP/HTTPS, chặn tấn công SQL Injection (SQLi), Cross-Site Scripting (XSS), chặn IP xấu và giới hạn tốc độ request (Rate-limiting). Triển khai trên: CloudFront, ALB, API Gateway, AppSync, Cognito.
-- **AWS Shield (Standard vs Advanced)**: Shield Standard tự động bảo vệ L3/L4 DDoS miễn phí cho mọi khách hàng AWS. Shield Advanced cung cấp đội phản ứng an ninh 24/7 (DDoS Response Team - SRT), bảo vệ chi phí không bị tăng vọt do DDoS và giám sát Layer 7 nâng cao.
+- **AWS Shield (Standard vs Advanced)**: Shield Standard tự động bảo vệ L3/L4 DDoS miễn phí cho mọi khách hàng AWS. Shield Advanced ($3,000/tháng, cam kết 1 năm) cung cấp đội **Shield Response Team (SRT)** 24/7 (tên cũ: DDoS Response Team - DRT), bảo vệ chi phí không bị tăng vọt do DDoS và tự động giảm thiểu DDoS Layer 7 qua WAF.
 - **AWS Network Firewall**: Tường lửa mạng Stateful L3–L7 có khả năng kiểm tra sâu gói tin (DPI), lọc tên miền FQDN và tích hợp bộ quy tắc phòng chống xâm nhập mã nguồn mở Suricata IPS cho toàn bộ VPC.
 - **AWS Firewall Manager**: Dịch vụ quản trị tập trung cho phép thiết lập và tự động áp đặt bộ quy tắc WAF, Shield, Network Firewall, Route 53 DNS Firewall trên **mọi tài khoản và mọi VPC mới** trong AWS Organizations.
 
@@ -313,7 +314,8 @@
 - **Bản chất**: Dịch vụ hàng đợi tin nhắn phân tán serverless (Message Queue) đầu tiên của AWS, giúp tách rời (decouple) các tầng kiến trúc ứng dụng.
 - **Hai loại hàng đợi**:
   - **SQS Standard**: Thông lượng gần như vô hạn, bảo đảm chuyển giao tin nhắn ít nhất một lần (**At-least-once**), thứ tự ngẫu nhiên (**Best-effort ordering**).
-  - **SQS FIFO**: Đảm bảo thứ tự tuyệt đối (**First-In-First-Out**) và xử lý đúng một lần duy nhất (**Exactly-once** qua Deduplication ID), thông lượng tối đa 3,000 msg/s khi dùng batching.
+  - **SQS FIFO**: Đảm bảo thứ tự tuyệt đối (**First-In-First-Out**) trong từng `MessageGroupId` và xử lý đúng một lần (**Exactly-once processing** qua Deduplication ID, cửa sổ 5 phút), thông lượng 300 msg/s (3,000 msg/s khi batching; High Throughput mode cao hơn nhiều).
+- **Kích thước message**: tối đa **1 MiB** (tăng từ 256 KiB vào 08/2025); lớn hơn dùng Extended Client Library + S3 (tới 2 GB).
 
 ### 6.2. Amazon SNS (Simple Notification Service)
 - **Bản chất**: Dịch vụ gửi nhận thông báo đẩy theo mô hình Nhà xuất bản - Người đăng ký (**Pub/Sub** - Publisher/Subscriber) tốc độ cao.
@@ -350,8 +352,8 @@
   - **Glue ETL Jobs**: Chạy các script biến đổi dữ liệu phân tán bằng Python / PySpark.
 
 ### 7.3. Amazon Kinesis Suite
-- **Kinesis Data Streams (KDS)**: Nền tảng hấp thụ luồng dữ liệu thời gian thực lớn (Streaming Data Platform), lưu trữ và cho phép phát lại dữ liệu từ 24h đến 365 ngày, chia nhỏ công suất theo các đơn vị **Shards** (1 MB/s write, 2 MB/s read).
-- **Kinesis Data Firehose**: Dịch vụ trích xuất và nạp dữ liệu luồng tự động (ETL Delivery) dạng Serverless hoàn toàn, tự động đóng gói buffer và đổ thẳng dữ liệu vào **S3, Redshift, OpenSearch, Splunk** mà không cần viết mã consumer.
+- **Kinesis Data Streams (KDS)**: Nền tảng hấp thụ luồng dữ liệu thời gian thực lớn (Streaming Data Platform), lưu trữ và cho phép phát lại dữ liệu từ 24h đến 365 ngày, chia nhỏ công suất theo các đơn vị **Shards** (1 MB/s write, 2 MB/s read) hoặc chế độ On-Demand tự scale. Record mặc định tối đa 1 MiB, cấu hình được tới 10 MiB (từ 10/2025).
+- **Amazon Data Firehose** (tên cũ: Kinesis Data Firehose, đổi tên 02/2024): Dịch vụ trích xuất và nạp dữ liệu luồng tự động (ETL Delivery) dạng Serverless hoàn toàn, tự động đóng gói buffer và đổ thẳng dữ liệu vào **S3, Redshift, OpenSearch, Splunk** mà không cần viết mã consumer.
 - **Amazon Managed Service for Apache Flink**: Nền tảng xử lý và phân tích dữ liệu luồng theo thời gian thực (trước đây là Kinesis Data Analytics) sử dụng Apache Flink chuẩn công nghiệp.
 
 ### 7.4. Amazon MSK (Managed Streaming for Apache Kafka)
@@ -361,7 +363,7 @@
 
 ### 7.5. Amazon EMR (Elastic MapReduce)
 - **Bản chất**: Nền tảng cụm máy chủ dữ liệu lớn (Big Data Cluster) chạy các framework mã nguồn mở hàng đầu: **Apache Spark, Hadoop, Presto, HBase, Flink**.
-- **Tối ưu chi phí**: Tách biệt thành Master Node (chạy On-Demand), Core Nodes (lưu HDFS) và **Task Nodes (chỉ tính toán, luôn chạy trên Spot Instances để tiết kiệm 80%)**.
+- **Tối ưu chi phí**: Tách biệt thành Primary/Master Node (chạy On-Demand), Core Nodes (lưu HDFS, nên On-Demand/RI) và **Task Nodes (chỉ tính toán, không lưu HDFS → phù hợp Spot Instances, giảm tới 90%)**. Có thêm **EMR Serverless** khi không muốn quản lý cluster.
 
 ### 7.6. Amazon Redshift
 - **Bản chất**: Kho dữ liệu phân tích quy mô Petabyte đám mây (Cloud Data Warehouse) theo mô hình lưu trữ dạng cột (Columnar Storage) và xử lý song song khối lượng lớn (Massively Parallel Processing - MPP).
@@ -386,13 +388,13 @@
 - **Amazon Comprehend**: Dịch vụ xử lý ngôn ngữ tự nhiên (NLP) phân tích văn bản để phát hiện cảm xúc (**Sentiment** tích cực/tiêu cực), thực thể (**Entities**), ngôn ngữ và che giấu dữ liệu nhạy cảm PII.
 - **Amazon Rekognition**: Dịch vụ thị giác máy tính phân tích hình ảnh và video: nhận diện khuôn mặt, tìm kiếm người nổi tiếng, phát hiện đồ vật và kiểm duyệt nội dung phản cảm (Content Moderation).
 - **Amazon Transcribe**: Chuyển đổi giọng nói âm thanh (Audio) thành văn bản (Speech-to-Text).
-- **Amazon Polly**: Chuyển đổi văn bản thành giọng đọc tự nhiên sống động (Text-to-Speech) với hơn 60 giọng đọc đa ngôn ngữ.
+- **Amazon Polly**: Chuyển đổi văn bản thành giọng đọc tự nhiên sống động (Text-to-Speech) với nhiều giọng Standard/Neural/Generative cho hàng chục ngôn ngữ; tùy chỉnh phát âm bằng SSML và Lexicons.
 - **Amazon Translate**: Dịch thuật văn bản đa ngôn ngữ theo thời gian thực sử dụng mạng nơ-ron sâu.
 - **Amazon Personalize**: Động cơ cá nhân hóa trải nghiệm và gợi ý sản phẩm thời gian thực (Recommendation Engine) dựa trên công nghệ học máy tương tự trang thương mại điện tử Amazon.com.
-- **Amazon Kendra**: Công cụ tìm kiếm thông minh cấp độ doanh nghiệp (Intelligent Enterprise Search), trả lời chính xác câu hỏi tự nhiên bằng cách quét qua SharePoint, Confluence, Salesforce và S3.
+- **Amazon Kendra**: Công cụ tìm kiếm thông minh cấp độ doanh nghiệp (Intelligent Enterprise Search), trả lời chính xác câu hỏi tự nhiên bằng cách quét qua SharePoint, Confluence, Salesforce và S3. *(Không nhận khách mới từ 30/07/2026.)*
 
 ### 8.2. Nền Tảng Học Máy Chuyên Sâu & Generative AI
-- **Amazon SageMaker**: Nền tảng học máy toàn diện khép kín dành cho Data Scientists và ML Engineers: từ gán nhãn dữ liệu (Ground Truth), dựng Notebook, huấn luyện mô hình phân tán trên cụm GPU đến triển khai API suy luận (Endpoints) tự động co giãn.
+- **Amazon SageMaker AI** (tên cũ: Amazon SageMaker): Nền tảng học máy toàn diện khép kín dành cho Data Scientists và ML Engineers: từ gán nhãn dữ liệu (Ground Truth), dựng Notebook, huấn luyện mô hình phân tán trên cụm GPU đến triển khai API suy luận (Endpoints) tự động co giãn.
 - **Amazon Bedrock**: Dịch vụ serverless quản lý toàn diện cung cấp quyền truy cập các Mô hình Nền tảng hàng đầu (Foundation Models: Claude, Titan, Llama) qua một API duy nhất; tích hợp Knowledge Bases (RAG), Bedrock Agents và Guardrails mà không cần tự quản lý GPU.
 - **Amazon Augmented AI (A2I)**: Dịch vụ tích hợp bước con người duyệt (Human-in-the-loop review) vào luồng dự đoán Machine Learning khi độ tự tin (Confidence score) của mô hình rơi xuống dưới ngưỡng cho phép.
 
@@ -406,10 +408,11 @@
   - *Agentless Discovery*: Quét qua VMware vCenter lấy danh sách tài nguyên và cấu hình.
   - *Agent-based Discovery*: Cài AWS Discovery Agent lên từng máy chủ để đo hiệu năng chi tiết và lập bản đồ phụ thuộc mạng (Network Dependency Mapping).
 - **AWS Migration Hub**: Bảng điều khiển trung tâm theo dõi tiến độ di chuyển của toàn bộ dự án qua nhiều công cụ (MGN, DMS).
+- ⚠️ *Cập nhật*: Application Discovery Service và Migration Hub **không nhận khách mới từ 07/11/2025** (khách cũ vẫn dùng); AWS định hướng khách mới sang **AWS Transform**.
 
 ### 9.2. AWS Database Migration Service (DMS) & AWS SCT
 - **AWS DMS**: Dịch vụ di chuyển cơ sở dữ liệu với thời gian gián đoạn tối thiểu (Zero downtime), hỗ trợ cả cùng loại (Homogeneous) lẫn khác loại (Heterogeneous) và duy trì đồng bộ liên tục qua **Change Data Capture (CDC)**.
-- **AWS SCT (Schema Conversion Tool)**: Công cụ cài đặt trên máy tính giúp đọc và tự động chuyển đổi cấu trúc bảng, Stored Procedures, Triggers, Views từ hệ quản trị nguồn (Oracle, SQL Server) sang cú pháp tương đương trên AWS (Aurora PostgreSQL/MySQL).
+- **AWS SCT (Schema Conversion Tool)**: Công cụ cài đặt trên máy tính giúp đọc và tự động chuyển đổi cấu trúc bảng, Stored Procedures, Triggers, Views từ hệ quản trị nguồn (Oracle, SQL Server) sang cú pháp tương đương trên AWS (Aurora PostgreSQL/MySQL). Phiên bản managed trên console: **DMS Schema Conversion**.
 
 ### 9.3. AWS Application Migration Service (AWS MGN) & VM Import/Export
 - **AWS MGN**: Dịch vụ chuẩn mực của AWS cho chiến lược di chuyển máy chủ nguyên trạng (**Lift-and-Shift / Rehost**). Agent sao chép từng khối đĩa (Block-level) liên tục qua cổng TCP 1500 về Staging Area trên AWS; cho phép chạy thử nghiệm độc lập trước khi Cutover chính thức.
@@ -421,12 +424,14 @@
 
 ### 9.5. AWS Backup
 - **Bản chất**: Dịch vụ quản lý và tự động hóa chính sách sao lưu tập trung cấp độ doanh nghiệp cho EC2, EBS, RDS, Aurora, DynamoDB, EFS, FSx, S3.
-- **Tính năng độc quyền**: **AWS Backup Vault Lock (Compliance Mode)** biến toàn bộ các bản sao lưu trong kho thành dạng bất biến (**WORM**), ngăn chặn hoàn toàn việc tin tặc mã hóa ransomware hoặc tài khoản root cố tình xóa dữ liệu dự phòng.
+- **Tính năng độc quyền**: **AWS Backup Vault Lock (Compliance Mode)** biến toàn bộ các bản sao lưu trong kho thành dạng bất biến (**WORM**) sau grace time tối thiểu 72 giờ, ngăn chặn hoàn toàn việc tin tặc mã hóa ransomware hoặc tài khoản root cố tình xóa dữ liệu dự phòng. Bổ sung: **logically air-gapped vault** để phục hồi từ tài khoản khác khi tài khoản gốc bị chiếm quyền.
 
 ### 9.6. AWS Snow Family
-- **AWS Snowcone**: Thiết bị nhỏ gọn nhẹ 2.1 kg (8 TB hoặc 14 TB SSD) cho môi trường khắc nghiệt không mạng.
-- **AWS Snowball Edge Storage Optimized**: Thiết bị lưu trữ vật lý 80 TB HDD (hoặc 210 TB NVMe), bảo mật phần cứng chống va đập, chuyên dùng để vận chuyển dữ liệu lớn từ 10 TB đến vài trăm TB khi đường truyền mạng quá chậm.
-- **AWS Snowmobile**: Xe container kéo 45 feet chứa hệ thống lưu trữ dung lượng **100 Petabyte (PB)**, chuyên dùng để di chuyển toàn bộ Data Center quy mô khổng lồ.
+> ⚠️ **Trạng thái hiện tại (11/2026)**: AWS **không còn cung cấp thiết bị Snow cho khách hàng mới** từ 07/11/2025 (khách đang dùng Snowball Edge không bị ảnh hưởng). Thay thế: **AWS DataSync** (online, có thể dùng kèm Direct Connect hosted connection), **AWS Data Transfer Terminal** (mang thiết bị lưu trữ đến địa điểm AWS để upload tốc độ cao), giải pháp Partner; edge compute → **AWS Outposts**. Các mô tả dưới đây giữ lại vì đề SAA-C03 vẫn có thể hỏi.
+
+- **AWS Snowcone** *(đã ngừng cung cấp)*: Thiết bị nhỏ gọn nhẹ 2.1 kg (8 TB HDD hoặc 14 TB SSD) cho môi trường khắc nghiệt không mạng.
+- **AWS Snowball Edge Storage Optimized**: Thiết bị lưu trữ vật lý 80 TB (hoặc 210 TB NVMe), bảo mật phần cứng chống va đập, chuyên dùng để vận chuyển dữ liệu lớn từ 10 TB đến vài trăm TB khi đường truyền mạng quá chậm.
+- **AWS Snowmobile** *(đã ngừng từ 03/2024)*: Xe container kéo 45 feet chứa hệ thống lưu trữ dung lượng **100 Petabyte (PB)**, từng dùng để di chuyển toàn bộ Data Center quy mô khổng lồ.
 
 ---
 
@@ -475,6 +480,7 @@
 - **Bản chất**: Dịch vụ theo dõi phân tán (Distributed Tracing) giúp phân tích và gỡ lỗi các ứng dụng phân tán và kiến trúc microservices.
 - **Sinh ra để làm gì?**: Tạo bản đồ dịch vụ trực quan (**Service Map**) thể hiện độ trễ từng chặng, phát hiện nghẽn cổ chai (Bottlenecks) và cô lập lỗi 4xx/5xx xuyên suốt từ API Gateway, Lambda, ECS tới DynamoDB.
 - **Tín hiệu đề thi**: `distributed tracing`, `visual service map`, `trace latency bottlenecks`, `X-Ray daemon`.
+- *Cập nhật*: X-Ray SDK/Daemon ở maintenance mode từ 25/02/2026 (hết hỗ trợ 25/02/2027) — AWS khuyến nghị OpenTelemetry; dịch vụ X-Ray vẫn hoạt động bình thường.
 
 ### 12.2. Bộ Công Cụ CI/CD (Code Suite)
 - **AWS CodePipeline**: Dịch vụ điều phối quy trình phân phối phần mềm liên tục (CI/CD Orchestration) theo các giai đoạn: Source -> Build -> Test -> Deploy; hỗ trợ cổng phê duyệt thủ công (**Manual Approval via SNS**).
@@ -492,7 +498,7 @@
 
 ### 13.1. Chuyển Mã & Phát Video (Video Streaming)
 - **AWS Elemental MediaConvert**: Dịch vụ chuyển mã video tệp (File-based Video Transcoding) định dạng phát lại theo yêu cầu (**VOD**) sang các chuẩn phát trực tuyến thích ứng: **HLS, MPEG-DASH, MP4**, hỗ trợ đóng gói bảo vệ bản quyền DRM.
-- **Amazon Elastic Transcoder**: Dịch vụ chuyển mã video thế hệ cũ (đã được thay thế chuẩn mực bởi MediaConvert trong các kiến trúc mới).
+- **Amazon Elastic Transcoder**: Dịch vụ chuyển mã video thế hệ cũ — **đã ngừng hoạt động từ 13/11/2025**, thay thế bởi MediaConvert.
 - **Amazon Kinesis Video Streams (KVS)**: Dịch vụ tiếp nhận, lưu trữ và xử lý luồng video thời gian thực từ hàng triệu camera an ninh, thiết bị IoT; hỗ trợ chuẩn WebRTC cho truyền hình trực tiếp hai chiều có độ trễ cực thấp.
 - **Amazon Interactive Video Service (IVS)**: Nền tảng livestream được xây dựng trên công nghệ của Twitch, tối ưu hóa cho độ trễ siêu thấp (**Ultra-low latency < 5 giây**) từ lúc máy quay ghi hình đến người xem trên toàn cầu.
 - **AWS Elemental MediaLive & MediaPackage**: Bộ đôi phát sóng truyền hình trực tiếp 24/7 (Broadcast-grade Live Streaming): MediaLive mã hóa luồng trực tiếp, MediaPackage chịu trách nhiệm đóng gói theo thời gian thực và quản lý quyền kỹ thuật số (DVR time-shifting).
@@ -501,4 +507,4 @@
 - **AWS Amplify**: Bộ công cụ và dịch vụ hosting toàn diện giúp lập trình viên xây dựng và triển khai ứng dụng web/mobile full-stack nhanh chóng; tích hợp sẵn Authentication, Storage, GraphQL API và pipeline Git CI/CD tự động.
 - **AWS Device Farm**: Dịch vụ kiểm thử ứng dụng di động và website trên các thiết bị điện thoại, máy tính bảng vật lý thật (**Real physical devices**) trong trung tâm dữ liệu AWS mà không dùng máy ảo giả lập.
 - **Amazon Location Service**: Dịch vụ bản đồ và vị trí an toàn cho ứng dụng: cung cấp bản đồ số, tìm kiếm địa điểm, tính toán lộ trình và kích hoạt hàng rào địa lý ảo (**Geofencing**).
-- **Amazon Pinpoint**: Nền tảng truyền thông và tiếp thị đa kênh (Email, SMS, Push Notification, Voice), hỗ trợ phân khúc đối tượng người dùng (User Segmentation) và theo dõi tỷ lệ chuyển đổi chiến dịch.
+- **Amazon Pinpoint**: Nền tảng truyền thông và tiếp thị đa kênh (Email, SMS, Push Notification, Voice), hỗ trợ phân khúc đối tượng người dùng (User Segmentation) và theo dõi tỷ lệ chuyển đổi chiến dịch. ⚠️ **Đã ngừng hỗ trợ 30/10/2026** — SMS/voice/push chuyển sang **AWS End User Messaging**, email sang **Amazon SES**, campaign/journey sang **Amazon Connect**.

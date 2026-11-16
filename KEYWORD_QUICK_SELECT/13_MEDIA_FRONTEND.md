@@ -7,7 +7,7 @@
 | Dịch Vụ AWS | Bản Chất Kỹ Thuật (What is it?) | Sinh Ra Để Làm Gì (Core Job)? | 💡 Móc Nhớ Thần Chú |
 |:---|:---|:---|:---|
 | **AWS Elemental MediaConvert**| Dịch vụ chuyển mã video dạng tệp tin (File-based Video Transcoding) chất lượng truyền hình. | Chuyển đổi video VOD (Video on Demand) lưu trên S3 sang nhiều định dạng/độ phân giải (HLS, DASH, CMAF), thêm phụ đề, watermark, DRM. | *"Xưởng lồng tiếng và đóng đĩa phim: Cắt gọt, đóng logo và nén phim thành nhiều bản cho mọi loại đầu đọc."* |
-| **Amazon Elastic Transcoder** | Dịch vụ chuyển mã media cũ dạng serverless trên S3 (đã được thay thế bởi MediaConvert). | Chuyển đổi định dạng file video/audio lưu trên S3 sang chuẩn phát được trên điện thoại, PC, TV. *(Đề SAA-C03 vẫn có thể xuất hiện đáp án này)*. | *"Máy nén video đời cũ: Đổi đuôi video đơn giản, tính tiền theo số phút video xử lý."* |
+| **Amazon Elastic Transcoder** | Dịch vụ chuyển mã media cũ dạng serverless trên S3 — **đã ngừng hoạt động hoàn toàn từ 13/11/2025**, thay thế bởi MediaConvert. | Chuyển đổi định dạng file video/audio lưu trên S3 sang chuẩn phát được trên điện thoại, PC, TV. *(Đề SAA-C03 cũ vẫn có thể xuất hiện đáp án này)*. | *"Máy nén video đời cũ: Đổi đuôi video đơn giản, tính tiền theo số phút video xử lý."* |
 | **Amazon Kinesis Video Streams**| Nền tảng hấp thụ, lưu trữ và xử lý luồng video/âm thanh từ hàng triệu thiết bị vật lý thời gian thực. | Thu thập video từ camera an ninh, drone, thiết bị IoT để lưu trữ hoặc truyền trực tiếp vào **Amazon Rekognition Video** để nhận diện khuôn mặt; WebRTC 2 chiều. | *"Đầu ghi camera giám sát trên mây: Nhận tín hiệu từ hàng ngàn mắt camera và kết nối với AI nhận diện tội phạm."* |
 | **Amazon IVS (Interactive Video Service)**| Nền tảng phát sóng trực tiếp (Livestreaming) tương tác độ trễ cực thấp (< 5s), sử dụng công nghệ của **Twitch**. | Xây dựng tính năng livestream bán hàng, stream game cho hàng triệu khán giả mà không cần hiểu sâu về kỹ thuật video; tích hợp chat và bình chọn (poll). | *"Kênh truyền hình Twitch thu nhỏ: Bật camera là phát sóng toàn cầu với độ trễ siêu thấp dưới 5 giây."* |
 | **AWS Elemental MediaLive** | Dịch vụ mã hóa luồng video trực tiếp (Live Video Encoding) chuẩn phát thanh truyền hình. | Nhận luồng video trực tiếp từ sự kiện thể thao, đài truyền hình và mã hóa thành nhiều luồng đa bitrate (ABR) để phát sóng. | *"Xe truyền hình lưu động: Mã hóa trực tiếp trận bóng đá đỉnh cao gửi về đài phát sóng."* |
@@ -15,7 +15,7 @@
 | **AWS Amplify** | Bộ công cụ và nền tảng hosting để xây dựng, triển khai ứng dụng web/mobile full-stack nhanh chóng. | Dành cho Frontend Developers dựng nhanh app React, Vue, Next.js, Flutter kèm backend (Cognito, AppSync, DynamoDB, S3) từ Git CI/CD. | *"Bộ đồ nghề xây nhà lắp ghép: Chỉ cần ráp các tấm tường có sẵn là có ngay ngôi nhà đầy đủ điện nước."* |
 | **AWS Device Farm** | Dịch vụ kiểm thử ứng dụng web và mobile trên **thiết bị phần cứng thật** trên đám mây. | Chạy thử nghiệm tự động hoặc điều khiển từ xa trên hàng trăm dòng điện thoại Android/iOS thật mà không dùng phần mềm giả lập (Emulator). | *"Showroom điện thoại khổng lồ: Mượn hàng trăm chiếc điện thoại thật để bấm thử nghiệm xem app có bị đơ."* |
 | **Amazon Location Service** | Dịch vụ tích hợp bản đồ, định vị địa điểm, tính toán tuyến đường và hàng rào địa lý (Geofencing). | Thêm tính năng bản đồ và theo dõi vị trí tài xế giao hàng vào ứng dụng an toàn với dữ liệu từ Esri và HERE Maps. | *"Bản đồ định vị riêng của công ty: Vẽ đường đi và cảnh báo khi xe giao hàng chạy ra khỏi khu vực."* |
-| **Amazon Pinpoint** | Dịch vụ tương tác khách hàng và tiếp thị đa kênh (Marketing Campaigns via Email, SMS, Push, Voice). | Phân khúc khách hàng (Segments), thiết kế chuỗi hành trình gửi thông điệp cá nhân hóa (Journeys) và theo dõi tỷ lệ mở/click. | *"Chuyên gia tiếp thị kỹ thuật số: Nhắn tin khuyến mãi trúng đích cho từng nhóm khách hàng tiềm năng."* |
+| **Amazon Pinpoint** | Dịch vụ tương tác khách hàng và tiếp thị đa kênh (Marketing Campaigns via Email, SMS, Push, Voice). ⚠️ **Đã ngừng hỗ trợ 30/10/2026** (không nhận khách mới từ 20/05/2025). | Phân khúc khách hàng (Segments), thiết kế chuỗi hành trình gửi thông điệp cá nhân hóa (Journeys) và theo dõi tỷ lệ mở/click. Thay thế: **AWS End User Messaging** (SMS, voice, push, OTP), **Amazon SES** (email), **Amazon Connect** (campaigns/journeys). | *"Chuyên gia tiếp thị kỹ thuật số: Nhắn tin khuyến mãi trúng đích cho từng nhóm khách hàng tiềm năng."* |
 
 ---
 
@@ -77,7 +77,7 @@
 ### 2. AWS Device Farm (Kiểm Thử Trên Thiết Bị Thật)
 - Kiểm thử ứng dụng trên **hàng ngàn thiết bị vật lý thật (Real Physical Devices: iPhone, iPad, Samsung Galaxy...)** đặt tại trung tâm dữ liệu của AWS.
 - **Không sử dụng thiết bị giả lập (No emulators / simulators)** $\rightarrow$ Giúp phát hiện chính xác các lỗi liên quan đến phần cứng, camera, GPS, pin, bộ nhớ.
-- Hỗ trợ chạy các bài test tự động thông qua các framework phổ biến: **Appium, Espresso, XCTest, Calabash**.
+- Hỗ trợ chạy các bài test tự động thông qua các framework phổ biến: **Appium, Espresso, XCTest / XCUITest**.
 - Hỗ trợ chế độ tương tác thủ công từ xa (Remote access) qua trình duyệt web để debug trực tiếp trên màn hình thiết bị thật.
 
 ### 3. Amazon Location Service (Bản Đồ & Định Vị)
@@ -90,6 +90,8 @@
 - 💡 **Bẫy thi cần tránh**: Định tuyến DNS dựa trên vị trí người dùng $\rightarrow$ Dùng **Route 53 Geolocation Routing** (không liên quan gì tới Amazon Location Service).
 
 ### 4. Amazon Pinpoint vs Amazon SNS vs Amazon SES
+
+> ⚠️ Pinpoint đã ngừng hỗ trợ (30/10/2026): bảng dưới giữ lại để nhận diện đáp án trong đề cũ. Với kiến trúc mới: email marketing/giao dịch $\rightarrow$ **SES**; SMS/push/voice $\rightarrow$ **AWS End User Messaging**; hành trình & phân khúc khách hàng $\rightarrow$ **Amazon Connect**.
 | Tiêu Chí | Amazon Pinpoint | Amazon SNS | Amazon SES |
 |:---|:---|:---|:---|
 | **Mục đích cốt lõi** | **Tiếp thị khách hàng & Phân tích tương tác** | **Thông báo đẩy hệ thống (Pub/Sub)** | **Gửi/nhận email giao dịch quy mô lớn** |
@@ -104,7 +106,7 @@
 | Tín Hiệu Đề Thi (Trigger Keywords) | ✅ Đáp Án Chuẩn |
 |:---|:---|
 | "convert video stored in S3 to multiple formats/bitrates for VOD" | **AWS Elemental MediaConvert** |
-| "legacy file-based media transcoder on S3, pay per minute" | **Amazon Elastic Transcoder** |
+| "legacy file-based media transcoder on S3, pay per minute" | **Amazon Elastic Transcoder** (đã ngừng 13/11/2025 — kiến trúc mới chọn MediaConvert) |
 | "stream video/audio from security cameras, ingest to Rekognition" | **Amazon Kinesis Video Streams** |
 | "interactive live video streaming, Twitch technology, latency < 5 seconds" | **Amazon IVS (Interactive Video Service)** |
 | "broadcast-grade live video encoding, TV sporting events" | **AWS Elemental MediaLive** |
@@ -112,6 +114,7 @@
 | "frontend developer, quickly build full-stack web/mobile app, CI/CD" | **AWS Amplify** |
 | "test mobile application on real physical devices, not emulators" | **AWS Device Farm** |
 | "maps, vehicle tracking, route calculation, geofencing alerts" | **Amazon Location Service** |
-| "marketing campaigns, customer segmentation, multi-channel messaging analytics" | **Amazon Pinpoint** |
+| "marketing campaigns, customer segmentation, multi-channel messaging analytics" | **Amazon Pinpoint** (đề cũ; dịch vụ đã ngừng 30/10/2026) |
+| "send SMS, voice, push notifications, OTP at scale (non-marketing)" | **AWS End User Messaging** |
 | "send transactional emails with high deliverability, SPF/DKIM" | **Amazon SES** |
 

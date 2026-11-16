@@ -54,7 +54,7 @@ flowchart TD
 * **Buckets (Thùng chứa)**: Vùng chứa gốc cấp cao nhất. Tên S3 Bucket mang tính **duy nhất trên toàn cầu (Globally Unique)** xuyên suốt mọi tài khoản AWS trên thế giới.
 * **Objects (Đối tượng)**: Bao gồm:
   - **Key (Khóa)**: Chuỗi ký tự định danh đường dẫn đầy đủ của tệp tin (ví dụ: `data/2026/reports/q1.parquet`). Dấu gạch chéo `/` chỉ là tiền tố (**Prefix**) logic, S3 bên dưới là không gian phẳng (**Flat namespace**).
-  - **Value**: Nội dung dữ liệu (kích thước từ 0 byte tới **tối đa 5 TB** cho một object đơn lẻ; bắt buộc phải dùng **Multi-part Upload** cho tệp tin > 5 GB).
+  - **Value**: Nội dung dữ liệu (kích thước từ 0 byte tới **tối đa 50 TB** cho một object đơn lẻ — tăng từ 5 TB vào 12/2025, đề cũ ghi 5 TB; bắt buộc phải dùng **Multi-part Upload** cho tệp tin > 5 GB).
   - **Version ID**: Định danh phiên bản khi bật **S3 Versioning**.
   - **Metadata**: Thông tin mô tả hệ thống (`Content-Type`, `Cache-Control`) hoặc do người dùng tự định nghĩa (`x-amz-meta-*`).
 * **Strong Read-After-Write Consistency**: S3 cung cấp **Strong Consistency** tức thì cho mọi thao tác `PUT` (cả tạo mới lẫn ghi đè), `DELETE` và `LIST` trên tất cả các Region ngay sau khi nhận phản hồi HTTP 200 thành công. Mỗi prefix hỗ trợ tối thiểu **3,500 PUT/COPY/POST/DELETE** và **5,500 GET/HEAD requests/giây** (không cần random hóa tên prefix như kiến trúc cũ).
@@ -434,7 +434,7 @@ flowchart TD
 - **Tình huống đề thi**: *"Doanh nghiệp y tế/tài chính lưu trữ dữ liệu hồ sơ khách hàng dạng JSON/CSV trên S3. Đội ngũ tiếp thị (Marketing) và phân tích cần truy vấn dữ liệu này nhưng các trường thông tin nhận dạng cá nhân (PII như Số CMND, Số thẻ tín dụng, Tên) phải được che giấu/ẩn danh (redacted). Đội ngũ Tuân thủ (Compliance) thì cần đọc dữ liệu gốc đầy đủ. Làm thế nào để đáp ứng yêu cầu mà không phải nhân đôi dữ liệu ra nhiều S3 bucket?"*
 - **Các phương án bẫy**:
   - ❌ *Tạo cron job chạy Lambda copy dữ liệu đã ẩn danh sang một S3 bucket thứ hai*: Gây tốn chi phí lưu trữ gấp đôi và phát sinh rủi ro lệch đồng bộ dữ liệu giữa 2 bucket.
-- **Giải pháp ĐÚNG**: Sử dụng **Amazon S3 Object Lambda**.
+- **Giải pháp ĐÚNG**: Sử dụng **Amazon S3 Object Lambda** (đáp án theo bộ đề; ⚠️ S3 Object Lambda **không nhận khách hàng mới từ 07/11/2025** — khách mới thường xử lý/biến đổi dữ liệu ở tầng ứng dụng, Lambda + pre-signed URL, hoặc lưu bản đã ẩn danh riêng).
   - S3 Object Lambda tích hợp hàm AWS Lambda can thiệp trực tiếp vào luồng xử lý của lệnh gọi `GetObject`.
   - Khi đội ngũ Marketing gọi S3 API qua **Object Lambda Access Point**, hàm Lambda tự động lọc bỏ các trường PII theo thời gian thực và trả về kết quả đã biên soạn (redacted payload).
   - Đội ngũ Compliance truy cập qua Standard Access Point để đọc nguyên bản dữ liệu gốc. Không cần nhân bản dữ liệu, bảo mật tuyệt đối!
@@ -508,7 +508,7 @@ flowchart TD
 - **Tình huống đề thi**: *"Công ty dữ liệu sở hữu hơn 100,000 tệp tin dữ liệu lớn trên S3 (mỗi file dung lượng 500 MB, tổng dung lượng 50 TB). Ứng dụng phân tích chỉ cần đọc đúng 250 byte đầu tiên của mỗi tệp tin (chứa metadata header) để lập chỉ mục tìm kiếm. Làm thế nào để thực hiện tác vụ này với chi phí băng thông thấp nhất và thời gian xử lý nhanh nhất?"*
 - **Các phương án bẫy**:
   - ❌ *Tải toàn bộ file về EC2 rồi đọc header bằng script*: Tải toàn bộ 50 TB dữ liệu gây tốn kém hàng ngàn USD chi phí truyền tải mạng và thời gian xử lý mất nhiều giờ.
-  - ❌ *Dùng S3 Select*: S3 Select dùng cho câu lệnh truy vấn lọc cột trong file CSV/JSON/Parquet, không tối ưu cho việc đọc byte header nhị phân.
+  - ❌ *Dùng S3 Select*: S3 Select dùng cho câu lệnh truy vấn lọc cột trong file CSV/JSON/Parquet, không tối ưu cho việc đọc byte header nhị phân (ngoài ra S3 Select đã không còn mở cho khách hàng mới).
 - **Giải pháp ĐÚNG**: Sử dụng **S3 Byte-Range Fetches** (truyền header `Range: bytes=0-249` trong lệnh gọi HTTP GET API).
   - AWS S3 chỉ trả về đúng 250 byte đầu tiên của đối tượng qua mạng internet.
   - Tổng lưu lượng tải về giảm từ 50 TB xuống chỉ còn **~25 Megabytes**, tiết kiệm 99.99% chi phí và thời gian chạy tính bằng giây!
@@ -616,7 +616,7 @@ flowchart TD
 | :--- | :--- | :--- | :--- |
 | **AWS Lambda** | Xử lý dữ liệu hướng sự kiện hoặc biến đổi dữ liệu theo thời gian thực | **S3 Event Notifications** & **S3 Object Lambda** | Khi người dùng tải ảnh lên S3, Lambda tự động được kích hoạt để nén ảnh và tạo ảnh đại diện (Thumbnail). |
 | **Amazon Athena** | Chạy truy vấn SQL phân tích trực tiếp trên các tệp tin dữ liệu lớn lưu trong S3 | **Serverless SQL Query Engine** kết hợp AWS Glue Data Catalog | Phân tích 500 GiB file log VPC Flow Logs dạng Parquet lưu trên S3 bằng câu lệnh `SELECT * FROM logs WHERE status = 'REJECT'`. |
-| **AWS KMS** | Quản lý khóa mã hóa dữ liệu lưu trữ theo tiêu chuẩn FIPS 140-2 | Tích hợp **SSE-KMS** kết hợp **S3 Bucket Keys** | Mã hóa toàn bộ dữ liệu giao dịch tài chính bằng Customer Managed Key; tự động ghi nhật ký kiểm toán vào CloudTrail. |
+| **AWS KMS** | Quản lý khóa mã hóa dữ liệu lưu trữ (HSM đạt FIPS 140-3 Level 3) | Tích hợp **SSE-KMS** kết hợp **S3 Bucket Keys** | Mã hóa toàn bộ dữ liệu giao dịch tài chính bằng Customer Managed Key; tự động ghi nhật ký kiểm toán vào CloudTrail. |
 | **AWS WAF** | Lọc và ngăn chặn các cuộc tấn công web Layer 7 ngay tại điểm biên | Gắn trực tiếp **Web ACL** vào CloudFront Distribution | Chặn đứng các đợt tấn công khai thác lỗ hổng SQL Injection và giới hạn tần suất request (Rate-based rules) trước khi chạm tới S3. |
 | **Amazon SQS / SNS** | Phân phối thông báo sự kiện S3 tới nhiều dịch vụ hạ nguồn | Cấu hình **S3 Event Destination** (hỗ trợ lọc theo Prefix/Suffix) | Đẩy thông báo vào hàng đợi SQS mỗi khi có tệp tin hóa đơn định dạng `.pdf` mới được đẩy vào bucket. |
 | **AWS Certificate Manager (ACM)** | Cung cấp chứng chỉ số SSL/TLS tùy chỉnh cho tên miền riêng trên CloudFront | Cấp phát chứng chỉ SSL/TLS miễn phí tại **Region `us-east-1`** | Gắn chứng chỉ `https://cdn.mycompany.com` vào CloudFront để phục vụ người dùng qua kết nối HTTPS an toàn. |

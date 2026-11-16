@@ -10,8 +10,8 @@
 | **AWS Organizations & SCPs**| Dịch vụ quản trị tập trung đa tài khoản AWS; **SCPs (Service Control Policies)** là rào chắn quyền tối thượng. | Quản lý hóa đơn tập trung và đặt rào cản an ninh tối đa phủ quyết quyền của cả Admin/Root tài khoản thành viên. | *"Hiến pháp tập đoàn: Chi nhánh dù là Giám đốc cũng không được vi phạm luật cấm."* |
 | **AWS IAM Identity Center** | Dịch vụ đăng nhập một lần (Single Sign-On - SSO) tập trung cho đa tài khoản AWS và ứng dụng SaaS. | Kết nối với Active Directory, Okta, Azure AD; cấp quyền qua **Permission Sets** thay thế việc tạo IAM User thủ công. | *"Cổng ra vào một cửa: Quẹt một thẻ duy nhất để vào tất cả các tòa nhà công ty."* |
 | **AWS Directory Service** | Dịch vụ Microsoft Active Directory được quản lý trên AWS (Managed AD, AD Connector, Simple AD). | Kết nối hoặc mở rộng Active Directory của công ty lên đám mây phục vụ FSx Windows, RDS SQL Server, WorkSpaces. | *"Chi nhánh văn phòng công chứng: Xác thực nhân sự công ty trên nền tảng Microsoft."* |
-| **AWS KMS** | Dịch vụ quản lý và tạo khóa mã hóa dữ liệu đạt chuẩn bảo mật FIPS 140-2. | Mã hóa đĩa EBS, S3, RDS bằng kỹ thuật **Envelope Encryption**; kiểm soát Key Policies và nhật ký giải mã qua CloudTrail. | *"Két sắt giữ chìa khóa: Chỉ cấp khóa mã hóa dữ liệu cho người có thẩm quyền."* |
-| **AWS CloudHSM** | Thiết bị bảo mật phần cứng chuyên dụng độc quyền (Single-tenant Hardware Security Module - FIPS 140-2 Level 3). | Khách hàng toàn quyền nắm giữ và quản lý khóa mã hóa; AWS không có quyền can thiệp hay khôi phục khóa khi mất. | *"Két sắt nguyên khối của riêng bạn: Tự giữ chìa duy nhất, hãng sản xuất cũng chịu chết nếu mất chìa."* |
+| **AWS KMS** | Dịch vụ quản lý và tạo khóa mã hóa dữ liệu; HSM của KMS đạt chuẩn **FIPS 140-3 Security Level 3**. | Mã hóa đĩa EBS, S3, RDS bằng kỹ thuật **Envelope Encryption**; kiểm soát Key Policies và nhật ký giải mã qua CloudTrail. | *"Két sắt giữ chìa khóa: Chỉ cấp khóa mã hóa dữ liệu cho người có thẩm quyền."* |
+| **AWS CloudHSM** | Thiết bị bảo mật phần cứng chuyên dụng độc quyền (Single-tenant Hardware Security Module — `hsm2m.medium` đạt FIPS 140-3 Level 3; thế hệ cũ `hsm1.medium` FIPS 140-2 Level 3). | Khách hàng toàn quyền nắm giữ và quản lý khóa mã hóa; AWS không có quyền can thiệp hay khôi phục khóa khi mất. | *"Két sắt nguyên khối của riêng bạn: Tự giữ chìa duy nhất, hãng sản xuất cũng chịu chết nếu mất chìa."* |
 | **AWS WAF** | Tường lửa ứng dụng web Layer 7 lọc lưu lượng HTTP/HTTPS bảo vệ CloudFront, ALB, API Gateway. | Chặn tấn công SQL Injection (SQLi), Cross-site Scripting (XSS), giới hạn tần suất (Rate limiting chống DDoS layer 7). | *"Bảo vệ cổng gác nhà hát: Soát vé, kiểm tra túi xách không cho mang vũ khí vào khán phòng."* |
 | **AWS Shield** | Dịch vụ chuyên dụng phòng chống tấn công từ chối dịch vụ phân tán (DDoS). | Bản **Standard** miễn phí bảo vệ Layer 3/4 tự động; bản **Advanced** có đội phản ứng nhanh 24/7 và bảo hiểm chi phí. | *"Áo giáp chống đạn: Chống đỡ mọi đợt xả súng DDoS tầng mạng từ bên ngoài."* |
 | **AWS Network Firewall** | Tường lửa mạng Stateful L3–L7 có kiểm tra sâu gói tin và lọc tên miền FQDN cho toàn bộ VPC. | Bảo vệ toàn diện cấp độ mạng VPC, tích hợp bộ quy tắc phòng chống xâm nhập mã nguồn mở Suricata IPS. | *"Hệ thống kiểm dịch thành phố: Kiểm tra mọi xe ra vào thành phố theo luật kiểm dịch nghiêm ngặt."* |
@@ -24,7 +24,7 @@
 | **SSM Parameter Store** | Kho lưu trữ cấu hình tĩnh, biến môi trường, chuỗi license (Standard Tier miễn phí $0). | Quản lý tham số ứng dụng tập trung, hỗ trợ mã hóa KMS nhưng không có tính năng tự động xoay vòng. | *"Bảng ghi nhớ thông tin: Dán các thông số chung của dự án, miễn phí, dễ đọc."* |
 | **AWS RAM** | Dịch vụ chia sẻ tài nguyên AWS an toàn giữa các tài khoản trong Organization. | Chia sẻ VPC Subnet, Transit Gateway, Route 53 Resolver Rules mà không cần tạo trùng lặp tài nguyên. | *"Kho dùng chung gia đình: Các anh em trong nhà dùng chung xe máy mà không phải mua thêm xe."* |
 | **AWS Artifact** | Cổng tự phục vụ chính thức của AWS cho phép tải về báo cáo kiểm toán tuân thủ (ISO, SOC, PCI) và ký **HIPAA BAA**. | Cung cấp chứng chỉ pháp lý của hạ tầng AWS cho kiểm toán viên bên thứ ba. | *"Văn phòng công chứng: Tải các chứng nhận kiểm toán quốc tế của AWS về trình thanh tra."* |
-| **AWS Audit Manager** | Dịch vụ tự động thu thập bằng chứng liên tục để đánh giá mức độ tuân thủ của tài khoản với các khung pháp lý. | Tự động chuẩn bị báo cáo kiểm toán cho GDPR, HIPAA, PCI-DSS, SOC 2 mà không tốn công gom thủ công. | *"Trợ lý kiểm toán tự động: Hàng ngày tự chụp màn hình lưu chứng từ cho kiểm toán viên."* |
+| **AWS Audit Manager** | Dịch vụ tự động thu thập bằng chứng liên tục để đánh giá mức độ tuân thủ của tài khoản với các khung pháp lý. | Tự động chuẩn bị báo cáo kiểm toán cho GDPR, HIPAA, PCI-DSS, SOC 2 mà không tốn công gom thủ công. *(Không nhận khách mới từ 30/04/2026.)* | *"Trợ lý kiểm toán tự động: Hàng ngày tự chụp màn hình lưu chứng từ cho kiểm toán viên."* |
 | **Amazon Cognito** | Dịch vụ xác thực và phân quyền người dùng ứng dụng web/mobile. | **User Pools** = Xác thực (đăng ký/đăng nhập cấp JWT); **Identity Pools** = Phân quyền (đổi vé lấy AWS credentials). | *"Phòng vé sự kiện: Cửa trước soát vé cấp vòng tay, cửa sau đổi vòng lấy thẻ ra vào."* |
 
 ---
@@ -52,8 +52,16 @@
 Quy tắc vàng: EXPLICIT DENY LUÔN CHIẾN THẮNG MỌI LỆNH ALLOW
 Nếu không có Deny và không có Allow ──> Mặc định là IMPLICIT DENY
 
-Quyền Hiệu Lực = (SCP ∩ Permission Boundary ∩ Identity Policy) + Resource-based Policy
+Trong cùng 1 account (đơn giản hóa):
+Quyền Hiệu Lực = SCP ∩ RCP ∩ Permission Boundary ∩ Session Policy ∩ (Identity Policy ∪ Resource-based Policy)
+
+Cross-account: phải được Allow ở CẢ HAI phía
+  - Identity Policy của principal (account A) cho phép, VÀ
+  - Resource-based Policy (account B) cho phép principal đó
 ```
+- **SCP (Service Control Policy)**: giới hạn quyền tối đa của **principal** (user/role) trong member account.
+- **RCP (Resource Control Policy, ra mắt 11/2024)**: giới hạn quyền tối đa trên **tài nguyên** (S3, STS, KMS, SQS, Secrets Manager...) trong member account — ví dụ chặn mọi principal ngoài Organization truy cập bucket, kể cả khi bucket policy lỡ mở.
+- Cả SCP và RCP **không cấp quyền**, chỉ đặt trần; không áp dụng cho Management Account.
 
 ### 3. Điều Kiện Chính Sách Thường Ra Đề (Condition Keys)
 - `aws:PrincipalOrgID`: Cho phép toàn bộ các tài khoản nằm trong Organization truy cập vào bucket S3.
@@ -84,20 +92,22 @@ Quyền Hiệu Lực = (SCP ∩ Permission Boundary ∩ Identity Policy) + Resou
 | Tiêu Chí So Sánh | AWS KMS | AWS CloudHSM |
 |:---|:---|:---|
 | **Mô hình thuê (Tenancy)** | Multi-tenant (dùng chung phần cứng HSM bảo mật) | **Single-tenant (Phần cứng phần cứng dành riêng 100%)** |
-| **Tiêu chuẩn bảo mật** | FIPS 140-2 Level 2 (tổng thể) / Level 3 (phần cứng) | **FIPS 140-2 Level 3 toàn diện** |
+| **Tiêu chuẩn bảo mật** | HSM của KMS: **FIPS 140-3 Level 3** (trước 2023: Level 2 tổng thể) | **FIPS 140-3 Level 3** (`hsm2m.medium`) / FIPS 140-2 Level 3 (`hsm1.medium`) |
 | **Quyền quản lý khóa** | AWS quản lý hạ tầng, người dùng quản lý Key Policy | **Khách hàng nắm toàn quyền sinh và quản lý khóa** |
 | **Khả năng khôi phục** | AWS hỗ trợ vận hành | **AWS KHÔNG THỂ KHÔI PHỤC nếu khách hàng mất credentials** |
 | **Khả năng tích hợp** | Tích hợp native sẵn với 100+ dịch vụ AWS | Tích hợp qua PKCS#11, JCE, CNG APIs, Custom Key Store |
 | **Use case cốt lõi** | Mã hóa đĩa EBS, S3, RDS, DynamoDB chuẩn mực | Yêu cầu pháp lý bắt buộc phần cứng riêng, SSL offloading, TDE |
+
+> 💡 **Phân biệt trong đề thi**: Vì KMS nay cũng đạt FIPS 140-3 Level 3, tín hiệu chọn **CloudHSM** là: *"single-tenant / dedicated HSM"*, *"customer has exclusive control of keys, AWS cannot access"*, *"PKCS#11 / JCE / CNG"*, *"Oracle TDE, SSL offload"*. Muốn vừa dùng KMS API vừa giữ key trong HSM riêng $\rightarrow$ **KMS Custom Key Store (CloudHSM-backed)**; key phải nằm ngoài AWS $\rightarrow$ **External Key Store (XKS)**.
 
 ### 🛠️ Các Quy Tắc KMS Cần Nhớ Trong Đề Thi
 1. **Phạm vi Region**: Khóa KMS là **Regional** (không rời khỏi Region). Muốn mã hóa xuyên Region $\rightarrow$ Dùng **KMS Multi-Region Keys**.
 2. **Key Policy**: BẮT BUỘC phải có. Nếu không có Key Policy cho phép, ngay cả Admin tài khoản cũng không thể dùng hay sửa khóa.
 3. **Envelope Encryption**: Dùng cho dữ liệu **> 4 KB**. Lệnh `GenerateDataKey` trả về **Plaintext Data Key** (để máy chủ tự mã hóa file) và **Ciphertext Data Key** (lưu đính kèm với dữ liệu).
 4. **Automatic Key Rotation**:
-   - Khóa do AWS quản lý (`aws/s3`, `aws/rds`): Tự động xoay khóa mỗi 1 năm một lần.
-   - Khóa Customer Managed (CMK): Người dùng có thể bật tự động xoay khóa mỗi năm (hoặc xoay thủ công).
-   - Khóa do người dùng tự nhập (Imported Key Material - BYOK): **KHÔNG THỂ BẬT TỰ ĐỘNG XOAY KHÓA**.
+   - Khóa do AWS quản lý (`aws/s3`, `aws/rds`): Tự động xoay khóa mỗi 1 năm một lần (bắt buộc, không tắt được).
+   - Khóa Customer Managed (CMK): Tùy chọn bật tự động xoay — chu kỳ cấu hình **90 ngày đến 2,560 ngày** (mặc định 365 ngày), hoặc xoay **on-demand**. Key ID/ARN giữ nguyên, dữ liệu cũ vẫn giải mã được.
+   - Khóa do người dùng tự nhập (Imported Key Material - BYOK): **KHÔNG THỂ BẬT TỰ ĐỘNG XOAY KHÓA** $\rightarrow$ xoay thủ công bằng cách tạo key mới và đổi alias.
 5. **Thời gian xóa khóa**: Tối thiểu chờ từ **7 đến 30 ngày** (không thể xóa ngay lập tức để tránh thảm họa mất dữ liệu).
 6. **S3 Bucket Key**: Bật tính năng này trên S3 để giảm tới **99% số lượng lệnh gọi API tới KMS**, tránh bị lỗi KMS Quota Throttling và tiết kiệm tiền.
 
@@ -119,9 +129,9 @@ flowchart TD
 
 | Dịch Vụ | Tầng Bảo Vệ | Vị Trí Gắn | 💡 Tín Hiệu Đề Thi Nhận Diện |
 |:---|:---:|:---|:---|
-| **AWS WAF** | Layer 7 | CloudFront, ALB, API Gateway, AppSync, Cognito | Chặn SQLi, XSS, quét bot độc hại, rate limiting (chặn IP gửi quá 100 req/5 phút). **KHÔNG GẮN ĐƯỢC VÀO NLB**. |
+| **AWS WAF** | Layer 7 | CloudFront, ALB, API Gateway (REST), AppSync, Cognito User Pool, App Runner, Verified Access, Amplify | Chặn SQLi, XSS, quét bot độc hại (Bot Control), rate-based rule (cửa sổ đánh giá cấu hình được, VD chặn IP vượt N req / 5 phút). **KHÔNG GẮN ĐƯỢC VÀO NLB / GWLB / EC2 trực tiếp**. (WAF Classic đã ngừng 07/10/2026 — dùng AWS WAF bản mới.) |
 | **AWS Shield Standard** | Layer 3 & 4 | Tự động bật cho mọi tài khoản AWS | Miễn phí, phòng thủ các đòn tấn công SYN Flood, UDP Reflection phổ biến. |
-| **AWS Shield Advanced** | Layer 3, 4 & 7 | Gắn trên EIP, ELB, CloudFront, Global Accelerator, Route 53 | Trả phí (~$3,000/tháng), hỗ trợ đội SRT 24/7, bảo vệ chống tăng vọt chi phí do tự động co giãn khi bị DDoS. |
+| **AWS Shield Advanced** | Layer 3, 4 & 7 | Gắn trên EIP (EC2), ELB, CloudFront, Global Accelerator, Route 53 | Trả phí ($3,000/tháng/Organization, cam kết 1 năm), hỗ trợ **Shield Response Team (SRT)** 24/7, tự động giảm thiểu DDoS lớp 7 qua WAF, **bảo vệ chi phí** (credit) khi tài nguyên tự co giãn do bị DDoS. |
 | **AWS Network Firewall** | Layer 3 – 7 | Toàn bộ VPC (Firewall Subnet) | Tường lửa mạng stateful, kiểm tra sâu gói tin (DPI), bộ luật Suricata IPS, chặn tên miền ra ngoài (FQDN egress filter). |
 | **AWS Firewall Manager** | Quản trị | Cấp độ Organization đa tài khoản | Tự động áp dụng cùng một bộ quy tắc WAF, Shield, Security Group, Network Firewall cho mọi tài khoản mới tạo. |
 
@@ -131,8 +141,8 @@ flowchart TD
 
 | Dịch Vụ | Nguồn Dữ Liệu Phân Tích | Mục Tiêu & Cơ Chế Phát Hiện | 💡 Tín Hiệu Đề Thi Phản Xạ |
 |:---|:---|:---|:---|
-| **Amazon GuardDuty** | CloudTrail (mgmt + S3 data), VPC Flow Logs, DNS Logs, EKS Audit | **Phát hiện mối đe dọa thời gian thực (Runtime)** bằng ML: Máy ảo đào coin, credential bị lộ từ IP lạ, brute-force. | "detect crypto mining", "compromised credentials", "unusual API activity", "malicious IP". |
-| **Amazon Inspector** | Quét EC2 (qua SSM Agent), Container Images (ECR), Lambda code | **Quét lỗ hổng tĩnh (CVE)** và đánh giá mức độ hở cổng mạng (Network reachability) chưa được vá. | "scan for CVE vulnerabilities", "unpatched packages", "ECR image vulnerability scanning". |
+| **Amazon GuardDuty** | Nguồn nền tảng: CloudTrail management events, VPC Flow Logs, DNS Logs (không cần bật các log này riêng). Protection plans bổ sung: S3 (data events), EKS Audit Logs, **Runtime Monitoring** (EKS/ECS/EC2 qua agent), **Malware Protection** (EBS, S3), RDS login activity, Lambda network activity | **Phát hiện mối đe dọa** bằng threat intelligence + ML: Máy ảo đào coin, credential bị lộ dùng từ IP lạ, brute-force, giao tiếp với C&C. | "detect crypto mining", "compromised credentials", "unusual API activity", "malicious IP", "scan uploaded S3 objects for malware". |
+| **Amazon Inspector** | Quét EC2 (qua SSM Agent hoặc agentless snapshot scan), Container Images (ECR), Lambda code & dependencies | **Quét lỗ hổng phần mềm (CVE)** liên tục và đánh giá mức độ hở cổng mạng (Network reachability). (Inspector Classic đã ngừng 05/2026.) | "scan for CVE vulnerabilities", "unpatched packages", "ECR image vulnerability scanning". |
 | **Amazon Macie** | Đọc nội dung tệp tin trong **Amazon S3 duy nhất** | **Tìm kiếm và phân loại dữ liệu nhạy cảm (PII)**: Số CMND/CCCD, thẻ tín dụng, bệnh án trong bucket S3. | "discover PII in S3", "credit card numbers in S3", "HIPAA/GDPR compliance for S3 data". |
 | **Amazon Detective** | Findings từ GuardDuty, VPC Flow Logs, CloudTrail | **Điều tra nguyên nhân gốc rễ (Root-Cause Investigation)** bằng sơ đồ quan hệ đồ thị (Graph visual). | "investigate root cause of security incident", "interactive graph visualization of attack". |
 | **AWS Security Hub** | Findings từ GuardDuty, Inspector, Macie, Config, Firewall Manager | **Bảng điều khiển an ninh tập trung** và chấm điểm tuân thủ CIS AWS Foundations Benchmark, PCI-DSS. | "centralized dashboard for all security findings", "CIS benchmark compliance score", "ASFF format". |
@@ -159,14 +169,16 @@ flowchart TD
 | "cross-account access using temporary credentials" | **IAM Role with Trust Policy (`sts:AssumeRole`)** |
 | "prevent confused deputy attack when third-party assumes role" | **External ID** |
 | "org-wide guardrail, deny action across all member accounts including root" | **Service Control Policies (SCP)** |
+| "prevent external principals from accessing resources across the organization, even with misconfigured bucket policy" | **Resource Control Policies (RCP)** |
 | "limit maximum permissions an IAM developer can grant themselves" | **IAM Permission Boundaries** |
 | "centralized single sign-on for multiple accounts and SaaS" | **AWS IAM Identity Center (AWS SSO)** |
 | "existing on-prem Active Directory, do not sync/replicate passwords to AWS" | **AD Connector** |
+| "small, low-cost standalone directory, basic AD features" | **Simple AD** (đề cũ; Simple AD không nhận khách mới từ 30/07/2026) |
 | "full-featured Active Directory on AWS, 2-way trust with on-prem" | **AWS Managed Microsoft AD** |
 | "audit who decrypted what key, CloudTrail integration" | **AWS KMS (Customer Managed Key)** |
 | "data > 4 KB encryption" | **Envelope Encryption (`GenerateDataKey`)** |
 | "prevent KMS throttling on high-volume S3 requests" | **S3 Bucket Key** |
-| "dedicated single-tenant hardware HSM, FIPS 140-2 Level 3, customer owns keys" | **AWS CloudHSM** |
+| "dedicated single-tenant hardware HSM, FIPS 140-2/140-3 Level 3, customer owns keys" | **AWS CloudHSM** |
 | "auto-rotate database passwords without application downtime" | **AWS Secrets Manager** |
 | "store configuration parameters, non-secret strings, free tier" | **SSM Parameter Store (Standard)** |
 | "public SSL certificate auto-renew for free for ALB/CloudFront" | **AWS Certificate Manager (ACM)** |

@@ -49,7 +49,7 @@ flowchart TD
   - **Lưu ý sống còn về RAM & Swap Space**: Hypervisor của AWS **KHÔNG THỂ tự động biết được mức sử dụng bộ nhớ RAM (Memory Utilization)**, không gian hoán đổi (**Swap Space**), hoặc dung lượng trống của ổ đĩa bên trong hệ điều hành (`TD-Set2 Q61`)! Muốn thu thập RAM, Swap và Disk Space, bạn **bắt buộc phải cài đặt Unified CloudWatch Agent** bên trong máy ảo EC2 (`TD-Set1 Q12`, `TD-Set2 Q61`) và gán IAM Role có AWS Managed Policy **`CloudWatchAgentServerPolicy`** (`TD-Set6 Q19`).
 - **CloudWatch Logs & Logs Insights**:
   - Cấu trúc: **Log Groups** (đại diện cho ứng dụng) chứa nhiều **Log Streams** (đại diện cho từng máy ảo/container).
-  - **Subscription Filters**: Cho phép stream log thời gian thực từ CloudWatch Logs tới **Amazon Kinesis Data Firehose**, **AWS Lambda**, hoặc **Amazon OpenSearch Service** để phân tích SIEM và lưu trữ phân tích quy mô lớn (`TD-Set3 Q05`).
+  - **Subscription Filters**: Cho phép stream log thời gian thực từ CloudWatch Logs tới **Amazon Kinesis Data Streams**, **Amazon Data Firehose** (tên cũ: Kinesis Data Firehose), **AWS Lambda**, hoặc **Amazon OpenSearch Service** để phân tích SIEM và lưu trữ phân tích quy mô lớn (`TD-Set3 Q05`).
   - **CloudWatch Logs Insights**: Công cụ truy vấn mạnh mẽ phân tích hàng triệu dòng log bằng cú pháp SQL-like trong vài giây:
     ```sql
     fields @timestamp, @message
@@ -86,7 +86,7 @@ flowchart TD
   - *Management Events*: Các thao tác cấu hình tài nguyên mặt phẳng điều khiển (`RunInstances`, `CreateBucket`, `AttachRolePolicy`).
   - *Data Events*: Các thao tác mức đối tượng dữ liệu (**mặc định bị tắt** do lưu lượng khổng lồ): `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`, `lambda:Invoke`. Khi cần kiểm toán chi tiết ai tải/xóa từng object trong S3 bucket nhạy cảm, phải chủ động kích hoạt S3 Data Events (`TD-Set5 Q07`).
   - *CloudTrail Insights*: Ứng dụng học máy phân tích tự động các đợt bùng nổ gọi API bất thường (ví dụ: bùng nổ lỗi `AccessDenied` hoặc đột ngột xuất hiện hàng ngàn lệnh xóa tài nguyên lúc nửa đêm).
-  - *CloudTrail Lake*: Kho dữ liệu kiểm toán được quản lý hoàn toàn cho phép chạy truy vấn SQL trực tiếp trên lịch sử sự kiện nhiều năm mà không cần thiết lập hạ tầng Athena hay ETL.
+  - *CloudTrail Lake*: Kho dữ liệu kiểm toán được quản lý hoàn toàn cho phép chạy truy vấn SQL trực tiếp trên lịch sử sự kiện nhiều năm mà không cần thiết lập hạ tầng Athena hay ETL. ⚠️ *Cập nhật*: CloudTrail Lake không nhận khách hàng mới từ 31/05/2026 — khách mới thường dùng Trail → S3 + Athena hoặc CloudWatch Logs Insights.
 
 ---
 
@@ -329,7 +329,7 @@ flowchart TD
 | **Lưu trữ nhật ký kiểm toán API dài hơn 90 ngày** | **Tạo CloudTrail Trail xuất về S3 Bucket** | CloudTrail Event History (tự động biến mất sau 90 ngày) | `TD-Set5 Q47`, `TD-Set5 Q28` |
 | **Kiểm toán chi tiết ai tải/xóa từng file trên S3 (`GetObject`, `PutObject`)** | **Bật CloudTrail S3 Data Events** | CloudTrail mặc định (chỉ ghi Management Events, không ghi Data Events) | `TD-Set5 Q07` |
 | **Phân tích lỗi HTTP 504, request URL và độ trễ backend target** | **Application Load Balancer (ALB) Access Logs + Athena** | VPC Flow Logs (Layer 4, không thấy URL/HTTP code/target latency) | `TD-Set5 Q23` |
-| **Truyền log thời gian thực từ CloudWatch sang OpenSearch/SIEM** | **CloudWatch Logs Subscription Filter $\rightarrow$ Kinesis Data Firehose** | Xuất log thủ công qua Console (độ trễ cao, không tự động) | `TD-Set3 Q05` |
+| **Truyền log thời gian thực từ CloudWatch sang OpenSearch/SIEM** | **CloudWatch Logs Subscription Filter $\rightarrow$ Amazon Data Firehose** | Xuất log thủ công qua Console (độ trễ cao, không tự động) | `TD-Set3 Q05` |
 | **Tìm nút thắt cổ chai độ trễ microservices/Lambda/DynamoDB** | **AWS X-Ray** (`Tracing: Active`) | CloudWatch Logs thông thường (khó tái tạo Service Map phân tán) | `TD-Set3 Q60`, `TD-Set4 Q51` |
 | **Kiểm tra tuân thủ chính sách mật khẩu IAM Password Policy** | **AWS Config Managed Rule `iam-password-policy`** | Viết script quét thủ công (tốn công, không liên tục) | `TD-Set4 Q45` |
 | **Tự động vá lỗi tài nguyên lệch chuẩn cấu hình** | **AWS Config + SSM Automation Remediation** | Thông báo email chờ con người xử lý thủ công | `TD-Set5 Q04` |

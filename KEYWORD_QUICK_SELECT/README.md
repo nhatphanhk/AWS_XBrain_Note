@@ -5,7 +5,9 @@
 
 ---
 
-## 📂 Danh Mục Toàn Diện Hệ Thống Tài Liệu Tra Cứu (17 Files)
+## 📂 Danh Mục Toàn Diện Hệ Thống Tài Liệu Tra Cứu (18 Files)
+
+> 🆕 **Cập nhật 11/2026**: Đã rà soát toàn bộ số liệu theo tài liệu chính thức của AWS và bổ sung file [`15_SERVICE_UPDATES_2024_2026.md`](./15_SERVICE_UPDATES_2024_2026.md) tổng hợp các giới hạn đã thay đổi (SQS/Lambda async/EventBridge 1 MB, Kinesis 10 MiB, S3 50 TB, gp3 80,000 IOPS...), các dịch vụ đã ngừng/không nhận khách mới (Snowball Edge, Pinpoint, Elastic Transcoder, Migration Hub, Kendra...) và tính năng mới (Regional NAT Gateway, Aurora DSQL, DynamoDB MRSC, RCP, S3 Vectors...). Đề hiện hành vẫn là **SAA-C03** (exam guide v1.1 — 29/10/2026).
 
 | File | Chuyên Đề Kiến Trúc | Nội Dung & Giá Trị Độc Quyền |
 |:---|:---|:---|
@@ -25,6 +27,7 @@
 | 🛠️ [`12_DEVELOPER_TOOLS.md`](./12_DEVELOPER_TOOLS.md) | 🛠️ **Developer Tools & CI/CD** | AWS X-Ray (Service Map, trace/subsegment, annotations vs metadata), CodePipeline (stages, manual approval SNS), CodeBuild (buildspec.yml serverless build), CodeDeploy (appspec.yml, blue/green, linear/canary traffic shifting), CodeArtifact (private npm/pip repo, upstream cache proxy), CloudShell, AWS CDK & AWS SAM. |
 | 🎬 [`13_MEDIA_FRONTEND.md`](./13_MEDIA_FRONTEND.md) | 🎬 **Media & Frontend Services** | Elemental MediaConvert (VOD HLS/DASH/DRM) vs Elastic Transcoder (legacy), Kinesis Video Streams (WebRTC 2-way), Amazon IVS (< 5s Twitch livestream), MediaLive + MediaPackage (24/7 broadcast), Kiến trúc VOD/Camera/Livestream, AWS Amplify (Full-stack SSR Next.js, Git CI/CD), Device Farm (real physical hardware), Location Service, Pinpoint. |
 | ⚙️ [`14_SERVERLESS_PATTERNS.md`](./14_SERVERLESS_PATTERNS.md) | ⚙️ **Serverless Architecture & Hard Limits** | Triết lý thiết kế Serverless ("least operational overhead", "no server management", "scale to zero"), 8 mô hình kiến trúc Serverless chuẩn mực, **Bảng tra cứu thông số giới hạn cứng (Hard Limits & Numbers) cần thuộc lòng trước khi thi**. |
+| 🆕 [`15_SERVICE_UPDATES_2024_2026.md`](./15_SERVICE_UPDATES_2024_2026.md) | 🆕 **Cập Nhật Dịch Vụ 2024–2026** | Trạng thái kỳ thi SAA-C03, bảng **con số cũ → mới**, danh sách **dịch vụ đã ngừng / không nhận khách mới** kèm hướng thay thế, **tính năng mới** đáng chú ý cho kiến trúc sư, bảng "đề cũ → thực tế mới". |
 
 ---
 

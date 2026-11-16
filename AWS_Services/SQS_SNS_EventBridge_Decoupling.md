@@ -150,7 +150,7 @@ flowchart LR
 | Tiêu chí | Amazon EventBridge | Amazon AppFlow |
 | :--- | :--- | :--- |
 | **Bản chất** | Serverless **Event Bus** chuyên định tuyến các **sự kiện (Events)** nhỏ thời gian thực | Dịch vụ tích hợp truyền tải **luồng dữ liệu lớn (Bulk / Incremental Data Transfer)** 2 chiều |
-| **Quy mô dữ liệu** | Payload nhỏ (tối đa 256 KB cho mỗi sự kiện JSON) | Dữ liệu lớn (hàng Gigabytes / Terabytes dữ liệu bảng, đối tượng) |
+| **Quy mô dữ liệu** | Payload nhỏ (tối đa 1 MB cho mỗi sự kiện JSON — tăng từ 256 KB vào 10/2025) | Dữ liệu lớn (hàng Gigabytes / Terabytes dữ liệu bảng, đối tượng) |
 | **Mục đích chính** | Kích hoạt tác vụ (Event-driven): Lambda, Step Functions, SNS khi có sự kiện thay đổi trạng thái | Đồng bộ và nạp dữ liệu (Data Ingestion/Sync): Ingest dữ liệu SaaS vào S3 Data Lake, Redshift Data Warehouse |
 | **Bảo mật kết nối** | HTTPS / VPC Endpoints | Tích hợp gốc với **AWS PrivateLink** cho kết nối SaaS riêng tư không qua Internet |
 | **Lập trình** | Yêu cầu định nghĩa JSON filter patterns | Giao diện kéo thả No-Code: mapping trường, filtering, data masking tự động |
@@ -289,8 +289,8 @@ flowchart LR
 - **Tình huống đề thi**: *"Hệ thống thương mại điện tử gửi và nhận hàng triệu tin nhắn mỗi giờ qua Amazon SQS. Chi phí gọi API của SQS bắt đầu tăng cao. Doanh nghiệp muốn tăng thông lượng truyền tải tin nhắn và cắt giảm chi phí gọi API mà không làm thay đổi kiến trúc cơ bản."*
 - **Giải pháp ĐÚNG**: Sử dụng tính năng **Batch Messages (Gửi và nhận theo lô)**:
   - Sử dụng các API lô: `SendMessageBatch`, `ReceiveMessageBatch`, và `DeleteMessageBatch`.
-  - Mỗi mẻ (batch) cho phép gom tối đa **10 tin nhắn** (tổng dung lượng không quá 256 KB).
-  - AWS tính phí API của 1 batch (10 tin nhắn) tương đương với phí của **1 request đơn lẻ** $\rightarrow$ Giúp giảm tới **10 lần chi phí gọi API SQS** và tăng đáng kể thông lượng I/O cho worker!
+  - Mỗi mẻ (batch) cho phép gom tối đa **10 tin nhắn** (tổng dung lượng batch không vượt quá giới hạn kích thước message — nay là **1 MiB**, trước 08/2025 là 256 KiB).
+  - AWS tính phí API của 1 batch (10 tin nhắn) như **1 request** (mỗi khối 64 KB payload tính là 1 request) $\rightarrow$ Giúp giảm tới **~10 lần chi phí gọi API SQS** với message nhỏ và tăng đáng kể thông lượng I/O cho worker!
 
 #### 🪤 Bẫy 15: Tách Rời Bằng 2 Hàng Đợi SQS Kết Hợp Co Giãn ASG — (U-PT4 Q04)
 - **Tình huống đề thi**: *"Công ty logistics vận hành hệ thống gồm 2 giai đoạn: tiếp nhận đơn hàng (job intake) và xử lý đơn hàng (job processing). Tải công việc ở 2 giai đoạn biến động độc lập và không đồng đều. Cần thiết kế kiến trúc phân tách hoàn toàn 2 tầng và co giãn các máy chủ worker tự động dựa trên số lượng đơn hàng tồn đọng."*
@@ -431,7 +431,7 @@ sequenceDiagram
 | :--- | :--- | :--- | :--- |
 | **AWS Lambda** | Tự động xử lý tin nhắn ngay khi xuất hiện trong queue | Event Source Mapping | Lambda tự động poll SQS theo từng batch (10-100 tin nhắn) và tự động scale concurrency theo độ dài hàng đợi. |
 | **Amazon EC2 Auto Scaling** | Co giãn số lượng máy chủ worker dựa trên tải công việc thực tế | Custom Metric `BacklogPerInstance` | Tự động tăng số lượng máy ảo chuyển đổi video khi số lượng video chờ trong SQS vượt quá 500 file. |
-| **Amazon S3** | Xử lý tin nhắn vượt quá dung lượng tối đa 256 KB | **Amazon SQS Extended Client** | Tin nhắn nặng 5 MB được lưu vào S3, SQS chỉ mang chuỗi con trỏ (S3 Pointer Payload), client tự động tải file từ S3. |
+| **Amazon S3** | Xử lý tin nhắn vượt quá dung lượng tối đa của SQS (1 MiB; đề cũ: 256 KB) | **Amazon SQS Extended Client** | Tin nhắn nặng 5 MB được lưu vào S3, SQS chỉ mang chuỗi con trỏ (S3 Pointer Payload), client tự động tải file từ S3. |
 | **AWS Step Functions** | Điều phối các quy trình nghiệp vụ bất đồng bộ phức tạp | Task Token Integration (`.waitForTaskToken`) | Step Functions gửi tin nhắn vào SQS kèm Task Token và tạm dừng; khi nhân viên duyệt đơn xong, gửi token về để tiếp tục luồng. |
 | **AWS KMS** | Mã hóa an toàn nội dung thông điệp trong hàng đợi và topic | Server-Side Encryption (SSE-KMS) | Tự động mã hóa dữ liệu thẻ tín dụng trong SQS bằng Customer Managed Key (CMK) tuân thủ tiêu chuẩn PCI-DSS. |
 | **Amazon CloudWatch** | Giám sát độ sâu hàng đợi và phát hiện tắc nghẽn | CloudWatch Alarms & Metrics | Bắn cảnh báo cho đội ngũ trực ban nếu chỉ số `ApproximateAgeOfOldestMessage` vượt quá 1,800 giây (30 phút). |

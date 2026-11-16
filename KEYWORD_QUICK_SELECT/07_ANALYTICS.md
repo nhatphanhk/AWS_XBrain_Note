@@ -8,7 +8,7 @@
 |:---|:---|:---|:---|
 | **Amazon Athena** | Công cụ truy vấn SQL Serverless tương thích chuẩn ANSI SQL, đọc trực tiếp file trên S3. | Chạy các câu truy vấn phân tích ad-hoc trên Data Lake không cần cluster, chỉ tính tiền \$5/TB data scanned. | *"Kính lúp đọc sách trong kho S3: Mở sách ra đọc thẳng, không cần khuân sách về nhà."* |
 | **AWS Glue** | Dịch vụ tích hợp dữ liệu (ETL) serverless: Crawlers (phát hiện schema), Catalog (từ điển), Jobs (biến đổi), DataBrew (no-code). | Tự động hóa pipeline trích xuất, biến đổi và nạp dữ liệu từ nhiều nguồn về Data Lake/Data Warehouse. | *"Nhà máy chế biến quặng tự động: Đãi cát tìm vàng, đóng gói thành thỏi Parquet chuẩn."* |
-| **Amazon EMR** | Nền tảng cụm Big Data được quản lý chạy các framework mã nguồn mở: **Hadoop, Spark, Presto, Flink**. | Xử lý dữ liệu lớn cấp độ Petabyte với quyền can thiệp sâu vào cấu hình phần cứng; dùng Spot cho Task nodes để tiết kiệm 80%. | *"Đoàn xe ben đại công trường: Xúc đất đá hàng triệu tấn phân tán khắp nơi."* |
+| **Amazon EMR** | Nền tảng cụm Big Data được quản lý chạy các framework mã nguồn mở: **Hadoop, Spark, Presto, Flink**. | Xử lý dữ liệu lớn cấp độ Petabyte với quyền can thiệp sâu vào cấu hình cluster; dùng Spot cho Task nodes (giảm tới 90% so với On-Demand). Có thể chạy trên EC2, EKS hoặc **EMR Serverless**. | *"Đoàn xe ben đại công trường: Xúc đất đá hàng triệu tấn phân tán khắp nơi."* |
 | **Amazon Redshift** | Kho dữ liệu đám mây (Cloud Data Warehouse) lưu trữ theo cột (Columnar) và xử lý song song khối lượng lớn (MPP). | Chạy các báo cáo BI phức tạp, tổng hợp hàng tỷ bản ghi với tốc độ cực nhanh; hỗ trợ Spectrum query thẳng S3. | *"Thư viện trung tâm thành phố: Sắp xếp sách theo từng mục lục chi tiết, tra cứu thống kê cực nhanh."* |
 | **AWS Lake Formation** | Dịch vụ quản trị tập trung Data Lake trên S3, phân quyền cấp độ hàng và cột (**Row/Column-level access control**). | Xây dựng Data Lake bảo mật trong vài ngày, chia sẻ dữ liệu an toàn cho Athena, Redshift mà không copy data. | *"Trưởng ban an ninh kho bạc: Kiểm soát từng người chỉ được nhìn đúng trang sổ được phép."* |
 | **Amazon OpenSearch** | Dịch vụ tìm kiếm và phân tích nhật ký phân tán (Elasticsearch & OpenSearch Dashboards). | Tìm kiếm toàn văn (Full-text search) có gợi ý từ khóa, theo dõi log ứng dụng và vẽ biểu đồ trực quan; hỗ trợ vector search k-NN. | *"Google tìm kiếm nội bộ: Gõ từ khóa tìm kiếm ra kết quả ngay trong vài mili-giây."* |
@@ -26,11 +26,12 @@
 ### 1. Bản Chất Kỹ Thuật & Tối Ưu Chi Phí
 - Dựa trên công nghệ **Trino / Presto**, chạy trực tiếp trên file lưu trong Amazon S3.
 - **Mô hình tính giá**: **$5 trên mỗi TB dữ liệu được quét (Data Scanned)**.
-- 💡 **3 Biện Pháp Vàng Giảm 90% Chi Phí Athena**:
+- 💡 **3 Biện Pháp Vàng Giảm Mạnh Lượng Dữ Liệu Quét (và chi phí) của Athena**:
   1. **Định dạng cột (Columnar Formats)**: Chuyển đổi dữ liệu CSV/JSON sang **Apache Parquet hoặc ORC**. Khi query `SELECT name`, Athena chỉ quét đúng cột `name`, bỏ qua toàn bộ các cột khác.
   2. **Nén dữ liệu (Compression)**: Nén các file Parquet bằng thuật toán **Snappy hoặc GZIP**.
   3. **Phân vùng dữ liệu (Partitioning)**: Tổ chức dữ liệu S3 theo cấu trúc thư mục ngày tháng (VD: `s3://bucket/logs/year=2026/month=11/day=12/`). Câu query lọc theo ngày chỉ quét đúng thư mục đó.
-- **Kích thước file tối ưu**: Nên gom các file nhỏ thành các file lớn có kích thước **từ 128 MB đến 512 MB** để tránh độ trễ overhead khi mở file.
+- **Kích thước file tối ưu**: Nên gom các file nhỏ thành file lớn (khoảng **≥ 128 MB**) để tránh overhead mở quá nhiều file nhỏ.
+- **Partition Projection**: Tính partition từ cấu hình bảng thay vì tra Glue Catalog $\rightarrow$ tăng tốc truy vấn trên bảng có rất nhiều partition.
 
 ### 2. Các Tính Năng Nâng Cao
 - **AWS Glue Data Catalog**: Athena sử dụng Data Catalog làm từ điển siêu dữ liệu (Metadata Schema) để biết cấu trúc bảng, tên cột và kiểu dữ liệu của các file trên S3.
@@ -45,8 +46,8 @@
 flowchart LR
     Producer[Nguồn Dữ Liệu: Logs, IoT, Clickstream]
     Producer --> KDS[Kinesis Data Streams\nĐộ trễ ~200ms\nLưu trữ & Replay 24h-365d\nCần viết Consumer]
-    Producer --> Firehose[Amazon Data Firehose\nNear real-time (0-900s)\nServerless Auto-scale\nĐổ thẳng S3/Redshift/OpenSearch]
-    Producer --> MSK[Amazon MSK (Apache Kafka)\nMessage size tới 10MB\nTương thích Kafka ecosystem]
+    Producer --> Firehose[Amazon Data Firehose\nNear real-time - buffer 0-900s\nServerless Auto-scale\nĐổ thẳng S3/Redshift/OpenSearch]
+    Producer --> MSK[Amazon MSK - Apache Kafka\nMessage mặc định 1MB, cấu hình lớn hơn\nTương thích Kafka ecosystem]
 
     KDS --> Flink[Managed Service for Apache Flink\nTính toán real-time, Windowing]
     KDS --> Firehose
@@ -57,9 +58,9 @@ flowchart LR
 
 | Tiêu Chí So Sánh | Kinesis Data Streams (KDS) | Amazon Data Firehose | Amazon MSK (Apache Kafka) |
 |:---|:---|:---|:---|
-| **Độ trễ xử lý** | **Thời gian thực (~200 mili-giây)** | Gần thời gian thực (**Near real-time: 60–900s buffer**) | Thời gian thực (< 100 mili-giây) |
-| **Khả năng lưu trữ & Replay**| ✅ **Lưu từ 24 giờ đến 365 ngày (Replay được)** | ❌ **KHÔNG lưu trữ, KHÔNG thể replay** | ✅ **Lưu trữ không giới hạn trên EBS** |
-| **Kích thước bản ghi tối đa**| Tối đa **1 MB / record** | Tối đa 1 MB / record | **Cấu hình lên tới 10 MB** |
+| **Độ trễ xử lý** | **Thời gian thực (~200 ms với consumer chuẩn, ~70 ms với Enhanced Fan-Out)** | Gần thời gian thực (**Near real-time: buffer interval 0–900 giây**) | Thời gian thực (độ trễ thấp, tùy cấu hình cluster) |
+| **Khả năng lưu trữ & Replay**| ✅ **Lưu từ 24 giờ đến 365 ngày (Replay được)** | ❌ **KHÔNG lưu trữ, KHÔNG thể replay** | ✅ **Lưu theo retention cấu hình** (EBS của broker + Tiered Storage gần như không giới hạn) |
+| **Kích thước bản ghi tối đa**| Mặc định **1 MiB**, cấu hình tới **10 MiB** (từ 10/2025) | Tối đa 1,000 KiB / record | Mặc định 1 MB, **cấu hình lớn hơn** (đề thi thường nói "tới 10 MB") |
 | **Quản lý Consumer** | Tự viết mã nguồn (KCL, Lambda, Flink) | **Hoàn toàn Serverless, tự đổ vào đích đến** | Viết consumer Kafka chuẩn (Java, Python) |
 | **Biến đổi định dạng** | Không tích hợp sẵn | ✅ **Tự đổi JSON sang Parquet/ORC qua Glue** | Cần Kafka Streams / Flink |
 | **Đích đến hỗ trợ** | Bất kỳ ứng dụng nào đọc từ Shard | **S3, Redshift (via COPY), OpenSearch, Splunk, Iceberg** | Bất kỳ Kafka Consumer nào |
@@ -74,7 +75,7 @@ flowchart LR
 | **Bản chất kiến trúc** | Cụm máy chủ Big Data chuyên dụng (EC2/EKS/Serverless) | **Serverless ETL Engine 100% (Không thấy máy chủ)** |
 | **Hệ sinh thái hỗ trợ** | **Đầy đủ: Hadoop, Spark, Hive, HBase, Presto, Flink** | Apache Spark, Python Shell |
 | **Mức độ kiểm soát** | Toàn quyền cấu hình OS, SSH vào node, tinh chỉnh JVM | AWS lo toàn bộ hạ tầng, chỉ nộp mã nguồn script |
-| **Chiến lược chi phí** | **Tận dụng Spot Instances cho Task Nodes (Giảm 80%)** | Tính phí theo Data Processing Units (**DPUs**) theo giây |
+| **Chiến lược chi phí** | **Tận dụng Spot Instances cho Task Nodes (giảm tới 90%)**; Master/Core nên On-Demand/RI | Tính phí theo Data Processing Units (**DPUs**) theo giây (tối thiểu 1 phút) |
 | **Lưu trữ dữ liệu cụm** | HDFS trên ổ cứng EC2 nội bộ hoặc **EMRFS (S3)** | Đọc trực tiếp từ S3 / Database |
 | **Trường hợp sử dụng** | Xử lý Big Data quy mô Petabyte, di chuyển cụm Hadoop cũ từ On-Premises lên AWS, tùy biến sâu thư viện. | Pipeline ETL làm sạch dữ liệu tự động, crawl schema vào Data Catalog, chuyển đổi CSV sang Parquet. |
 
@@ -92,14 +93,16 @@ flowchart LR
 - **Lưu trữ theo cột (Columnar Storage)**: Tối ưu cho các câu lệnh `SUM`, `AVG`, `COUNT` trên hàng triệu dòng.
 - **Xử lý song song khối lượng lớn (MPP)**:
   - `Leader Node`: Nhận câu lệnh SQL từ client, lập kế hoạch thực thi và phân phối việc cho các Compute Nodes.
-  - `Compute Nodes`: Chạy song song và lưu trữ dữ liệu trên ổ cứng NVMe.
+  - `Compute Nodes`: Chạy song song các phần của truy vấn. Với node **RA3**, dữ liệu nằm trên **Redshift Managed Storage** (S3 + cache SSD cục bộ) $\rightarrow$ scale compute và storage độc lập.
+- **Redshift Serverless**: Không quản lý cluster, tự scale theo RPU, trả tiền theo thời gian truy vấn chạy — phù hợp tải không đều/ad-hoc.
+- **Zero-ETL integration**: Đồng bộ gần thời gian thực từ Aurora MySQL/PostgreSQL, RDS MySQL, DynamoDB sang Redshift mà không cần tự viết pipeline ETL.
 - **Redshift Spectrum**: Cho phép cụm Redshift chạy câu truy vấn SQL trực tiếp trên hàng Petabyte dữ liệu thô lưu trong **Amazon S3 Data Lake** mà không cần nạp (`COPY`) dữ liệu vào cụm Redshift.
 - **Concurrency Scaling**: Tự động bổ sung các cụm phụ tạm thời trong vài giây để giải phóng tình trạng ùn tắc truy vấn khi có hàng ngàn user cùng xem báo cáo đầu tuần.
 
 ### 2. Các Kiểu Phân Phối Dữ Liệu (Distribution Styles)
 - **AUTO**: Redshift tự động chọn kiểu phù hợp nhất dựa trên kích thước bảng.
 - **KEY**: Phân phối các dòng có cùng giá trị khóa (Matching Key) vào cùng một Compute Node $\rightarrow$ Tối ưu hóa cực đại tốc độ phép **`JOIN`**.
-- **ALL**: Sao chép nguyên vẹn toàn bộ bảng sang tất cả các Compute Nodes $\rightarrow$ Dành cho các **bảng danh mục (Dimension Tables) nhỏ < 3 triệu dòng**.
+- **ALL**: Sao chép nguyên vẹn toàn bộ bảng sang tất cả các Compute Nodes $\rightarrow$ Dành cho các **bảng danh mục (Dimension Tables) nhỏ, ít thay đổi** (tốn dung lượng và chậm khi ghi vì phải ghi vào mọi node).
 - **EVEN**: Phân phối các dòng đều đặn theo vòng tròn (Round-Robin) $\rightarrow$ Dành cho bảng dữ liệu lớn không tham gia phép JOIN.
 
 ---
@@ -140,9 +143,9 @@ flowchart TD
 | **Amazon Polly** | Văn bản (Text) $\rightarrow$ Giọng đọc tự nhiên (Audio / MP3) | "text-to-speech", "read news articles aloud to users", "synthesize lifelike voices", "SSML pronunciation". |
 | **Amazon Translate** | Văn bản ngôn ngữ A $\rightarrow$ Văn bản ngôn ngữ B | "translate multilingual content", "real-time chat translation", "custom terminology". |
 | **Amazon Lex** | Giọng nói / Văn bản $\rightarrow$ Chatbot đàm thoại tự nhiên | "conversational chatbot", "voicebot", "NLU intent and slot", "integrate with Amazon Connect". |
-| **Amazon Kendra** | Tài liệu nội bộ (SharePoint, S3, Salesforce) $\rightarrow$ Hộp tìm kiếm trả lời câu hỏi tự nhiên | "intelligent enterprise search engine", "search intranet documents using natural language questions", "RAG retriever". |
+| **Amazon Kendra** | Tài liệu nội bộ (SharePoint, S3, Salesforce) $\rightarrow$ Hộp tìm kiếm trả lời câu hỏi tự nhiên | "intelligent enterprise search engine", "search intranet documents using natural language questions", "RAG retriever". *(Không nhận khách mới từ 30/07/2026.)* |
 | **Amazon Personalize**| Lịch sử click, mua hàng $\rightarrow$ Gợi ý cá nhân hóa thời gian thực | "real-time personalized product recommendations", "Amazon.com recommendation engine". |
-| **Amazon Augmented AI (A2I)**| Dự đoán ML có confidence score thấp $\rightarrow$ Giao diện cho con người duyệt lại | "human-in-the-loop review", "low confidence ML predictions", "auditing sensitive AI decisions". |
+| **Amazon Augmented AI (A2I)**| Dự đoán ML có confidence score thấp $\rightarrow$ Giao diện cho con người duyệt lại | "human-in-the-loop review", "low confidence ML predictions", "auditing sensitive AI decisions". *(Thuộc nhóm tính năng SageMaker AI chuyển maintenance từ 30/07/2026.)* |
 | **Amazon SageMaker AI**| Dữ liệu thô $\rightarrow$ Huấn luyện, tối ưu và triển khai Custom ML Models | "build, train, and deploy custom machine learning models", "data scientists", "Managed Spot Training (giảm 90%)". |
 
 ---
@@ -162,7 +165,9 @@ flowchart TD
 | "serverless BI dashboards", "SPICE in-memory", "natural language Q&A" | **Amazon QuickSight** |
 | "subscribe to third-party commercial datasets on cloud" | **AWS Data Exchange** |
 | "real-time streaming analytics", "sliding windows", "Apache Flink" | **Amazon Managed Service for Apache Flink** |
-| "managed Apache Kafka", "message size > 1 MB up to 10 MB" | **Amazon MSK** |
+| "managed Apache Kafka", "message size > 1 MB up to 10 MB" | **Amazon MSK** (đáp án kinh điển; KDS nay cũng cấu hình được tới 10 MiB) |
+| "near real-time replication from Aurora/DynamoDB to Redshift without ETL pipeline" | **Zero-ETL integration** |
+| "data warehouse without managing clusters, intermittent queries" | **Amazon Redshift Serverless** |
 | "Foundation Models via serverless API", "GenAI chatbot RAG" | **Amazon Bedrock** |
 | "extract tables and forms from scanned PDFs/invoices" | **Amazon Textract** |
 | "analyze customer feedback sentiment", "detect PII in text" | **Amazon Comprehend** |

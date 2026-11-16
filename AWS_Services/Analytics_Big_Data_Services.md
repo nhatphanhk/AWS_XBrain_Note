@@ -57,7 +57,7 @@ flowchart LR
 2. **Amazon Athena**: Truy vấn phân tích ad-hoc phi máy chủ (Serverless SQL) trực tiếp trên hàng Petabytes dữ liệu lưu trữ tại Amazon S3 bằng ngôn ngữ Presto/Trino chuẩn ANSI SQL mà hoàn toàn không cần nạp dữ liệu hay khởi tạo máy chủ.
 3. **AWS Glue**: Dịch vụ ETL (Extract, Transform, Load) hoàn toàn Serverless. Sử dụng **Glue Crawlers** để tự động quét schema và đăng ký vào **Glue Data Catalog**, kết hợp **Glue ETL Jobs** chạy Apache Spark tự động co giãn theo DPUs (Data Processing Units).
 4. **Amazon EMR (Elastic MapReduce)**: Cung cấp môi trường cụm tính toán Big Data phân tán tiêu chuẩn công nghiệp (Apache Spark, Hive, Presto, Flink, HBase) với khả năng co giãn hàng ngàn máy ảo EC2 On-Demand/Spot tối ưu chi phí tới 90%.
-5. **Amazon Kinesis Data Streams (KDS)**: Tiếp nhận và xử lý luồng dữ liệu streaming thời gian thực (Real-time Latency < 1s) với cơ chế phân đoạn (Shards), lưu giữ tin nhắn (Retention 24h - 365 ngày), hỗ trợ nhiều consumer độc lập qua **Enhanced Fan-Out** (*TD-Set1 Q08*).
+5. **Amazon Kinesis Data Streams (KDS)**: Tiếp nhận và xử lý luồng dữ liệu streaming thời gian thực (Real-time Latency < 1s) với cơ chế phân đoạn (Shards), lưu giữ tin nhắn (Retention 24h - 365 ngày), hỗ trợ nhiều consumer độc lập qua **Enhanced Fan-Out** (*TD-Set1 Q08*). Mỗi shard: 1 MB/s hoặc 1,000 records/s ghi, 2 MB/s đọc. Kích thước record mặc định tối đa **1 MiB**, từ 10/2025 có thể cấu hình tới **10 MiB** cho từng stream (throughput/shard không đổi; đề cũ coi "> 1 MB" là tín hiệu chọn Amazon MSK).
 6. **Amazon Data Firehose (formerly Kinesis Firehose)**: Đường ống nạp dữ liệu Near Real-time (đệm tối thiểu 60s hoặc 1MB) hoàn toàn Serverless; tự động chuyển đổi định dạng (JSON sang Parquet/ORC) và đẩy thẳng vào **S3, Redshift, OpenSearch Service, Splunk, hoặc HTTP Endpoints** (*TD-Set3 Q46*).
 7. **Amazon Redshift & Redshift Spectrum**: Kho dữ liệu đám mây (Data Warehouse) lưu trữ theo cột (Columnar Storage), tối ưu cho các truy vấn phân tích phức tạp (OLAP). Nạp dữ liệu song song cực nhanh từ S3 qua lệnh `COPY`, và hỗ trợ **Redshift Spectrum** để join trực tiếp dữ liệu trong kho với các tệp tin trên S3 Data Lake mà không cần nạp vào ổ đĩa (*TD-Set1 Q28, TD-Set1 Q36*).
 8. **Amazon OpenSearch Service (formerly Elasticsearch)**: Dịch vụ tìm kiếm phân tích và hiển thị log thời gian thực (Logstash/Fluentbit/Firehose $\rightarrow$ OpenSearch $\rightarrow$ OpenSearch Dashboards), hỗ trợ tìm kiếm toàn văn bản (full-text search) và phát hiện bất thường (*TD-Set3 Q46, TD-Set6 Q56*).
@@ -227,6 +227,8 @@ flowchart TD
 ```
 
 #### 7.1. Amazon Quantum Ledger Database (Amazon QLDB)
+
+> ⚠️ **Amazon QLDB đã ngừng hỗ trợ hoàn toàn từ 31/07/2025** — AWS khuyến nghị chuyển sang **Amazon Aurora PostgreSQL**. Nội dung dưới đây chỉ còn giá trị để nhận diện đáp án trong các bộ đề cũ.
 * **Bản chất**: Cơ sở dữ liệu sổ cái hoàn toàn được quản lý (**Fully managed ledger database**), cung cấp một nhật ký giao dịch minh bạch, bất biến (**Immutable**) và có thể xác minh bằng mật mã (**Cryptographically verifiable**).
 * **Cơ chế mã hóa bất biến**:
   - Mọi thay đổi dữ liệu đều được ghi tuần tự vào một **Journal (Nhật ký chỉ ghi - Append-only)**. Dữ liệu trong Journal không bao giờ bị sửa đổi hay xóa bỏ.
@@ -246,6 +248,8 @@ flowchart TD
   - Quản trị viên không bao giờ phải lo lắng về việc cấu hình cụm, vá lỗi OS, phân vùng lại hạt nhân hay bảo trì node Cassandra như khi tự cài trên EC2 (*TD-Set5 Q15*).
 
 #### 7.3. Amazon Timestream (Cơ Sở Dữ Liệu Chuỗi Thời Gian - Time-Series Database)
+
+> ⚠️ **Cập nhật**: *Timestream for LiveAnalytics* (bản serverless tự phân tầng Memory → Magnetic) **đóng với khách hàng mới từ 20/06/2025**; khách mới dùng **Timestream for InfluxDB** (AWS khuyến nghị InfluxDB 3 cho phần lớn nhu cầu di chuyển).
 - **Bản chất:** Cơ sở dữ liệu chuyên dụng cho dữ liệu chuỗi thời gian (Time-Series Data) như cảm biến IoT, telemetry công nghiệp, metrics hạ tầng DevOps và phân tích hành vi ứng dụng theo thời gian thực (hỗ trợ cả kiến trúc Serverless và Timestream for InfluxDB).
 - **Cơ chế phân tầng lưu trữ tự động (Automated Storage Tiering):**
   - Dữ liệu mới (Recent data) được ghi vào tầng **In-Memory Store** để truy vấn thời gian thực tốc độ cực cao.

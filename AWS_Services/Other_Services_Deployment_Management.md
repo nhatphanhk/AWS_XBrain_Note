@@ -223,9 +223,9 @@ Dùng **Config Aggregator** để tập trung kết quả tuân thủ từ nhi�
 
 ## 5. AWS Trusted Advisor — Cố Vấn Tối Ưu Hóa Tự Động
 
-### 5.1 Bản Chất & 5 Trụ Cột
+### 5.1 Bản Chất & 6 Nhóm Kiểm Tra
 
-**AWS Trusted Advisor** là công cụ kiểm tra tự động môi trường AWS của bạn theo 5 trụ cột của **AWS Well-Architected Framework**, đưa ra khuyến nghị thực tế tức thì.
+**AWS Trusted Advisor** là công cụ kiểm tra tự động môi trường AWS của bạn theo best practices, đưa ra khuyến nghị thực tế tức thì. Các check được chia thành **6 nhóm**: Cost Optimization, Performance, Security, Fault Tolerance, Service Limits và **Operational Excellence** (nhóm thứ 6 được bổ sung sau; sơ đồ dưới minh họa 5 nhóm kinh điển hay gặp trong đề).
 
 ```mermaid
 flowchart TD
@@ -240,8 +240,8 @@ flowchart TD
 
 | Gói Support | Checks có sẵn | API Access |
 | :--- | :--- | :--- |
-| **Basic / Developer** | Chỉ **7 core checks** (Security + Service Limits cơ bản) | ❌ Không |
-| **Business / Enterprise** | **Toàn bộ 500+ checks** | ✅ Có (Trusted Advisor API) |
+| **Basic / Developer** | Chỉ bộ check cơ bản: toàn bộ nhóm **Service Limits** + một số check **Security** (tài liệu cũ gọi là "7 core checks") | ❌ Không |
+| **Business / Enterprise** (và các gói cao hơn) | **Toàn bộ checks** (hàng trăm check, gồm cả check do Security Hub, Compute Optimizer... cung cấp) | ✅ Có (AWS Support API / Trusted Advisor API) |
 
 > [!NOTE]
 > **Business/Enterprise Support** mở khóa tích hợp với **AWS Organizations Organizational View** — xem trạng thái toàn bộ accounts trong Organization từ một bảng điều khiển.
@@ -368,8 +368,8 @@ Amazon MQ hỗ trợ cấu hình **Active/Standby** trải rộng 2 Availability
 | Loại email | Ví dụ | Dịch vụ phù hợp |
 | :--- | :--- | :--- |
 | Transactional | Order confirm, password reset, shipping notification | **Amazon SES** |
-| Marketing bulk | Newsletter, promotional campaigns với segmentation | **Amazon SES** (đơn giản) hoặc **Amazon Pinpoint** (nâng cao) |
-| Multi-channel (Push, SMS, Email) | Omni-channel campaign | **Amazon Pinpoint** |
+| Marketing bulk | Newsletter, promotional campaigns với segmentation | **Amazon SES** (đơn giản) hoặc **Amazon Pinpoint** (nâng cao — đề cũ; đã ngừng 30/10/2026) |
+| Multi-channel (Push, SMS, Email) | Omni-channel campaign | **Amazon Pinpoint** (đề cũ) → hiện nay: **AWS End User Messaging** + **SES** + **Amazon Connect** |
 
 ### 10.2 Tính Năng Bảo Mật Email
 
@@ -381,6 +381,8 @@ Amazon MQ hỗ trợ cấu hình **Active/Standby** trải rộng 2 Availability
 ---
 
 ## 11. Amazon Pinpoint — Multi-Channel Marketing Campaigns
+
+> ⚠️ **Trạng thái 11/2026**: **Amazon Pinpoint đã ngừng hỗ trợ từ 30/10/2026** (không nhận khách mới từ 20/05/2025). Console và các tài nguyên engagement (endpoints, segments, campaigns, journeys, analytics) không còn truy cập được. Các API gửi SMS, voice, mobile push, OTP, phone number validate tiếp tục qua **AWS End User Messaging**; email chuyển sang **Amazon SES**; campaign/journey/segment chuyển sang **Amazon Connect** (outbound campaigns, Customer Profiles). Nội dung dưới đây giữ lại để nhận diện đáp án trong đề cũ.
 
 ### 11.1 Bản Chất
 
@@ -420,7 +422,7 @@ flowchart TD
 | "GraphQL API, real-time sync mobile app" | **AWS AppSync** | GraphQL + WebSocket Subscriptions |
 | "Deploy React SPA, CI/CD từ GitHub" | **AWS Amplify** | Git-based hosting + serverless backend |
 | "Gửi triệu email/ngày, DKIM, bounce tracking" | **Amazon SES** | Bulk email, low cost |
-| "Campaign marketing đa kênh: Email + SMS + Push" | **Amazon Pinpoint** | Multi-channel + segmentation + journey |
+| "Campaign marketing đa kênh: Email + SMS + Push" | **Amazon Pinpoint** (đề cũ; dịch vụ đã ngừng 30/10/2026) | Multi-channel + segmentation + journey |
 
 ---
 
@@ -438,5 +440,5 @@ flowchart TD
 
 5. **Bẫy AWS Batch vs Lambda**: Chọn Lambda cho workload chạy 2 giờ → **SAI**. Lambda tối đa 15 phút; dùng AWS Batch cho long-running jobs.
 
-6. **Bẫy Trusted Advisor**: Nghĩ rằng Basic Support có đầy đủ checks → **SAI**. Basic/Developer chỉ có 7 core checks; cần Business/Enterprise để có toàn bộ 500+ checks.
+6. **Bẫy Trusted Advisor**: Nghĩ rằng Basic Support có đầy đủ checks → **SAI**. Basic/Developer chỉ có bộ check cơ bản (Service Limits + một số Security, đề cũ gọi là "7 core checks"); cần Business/Enterprise để có toàn bộ checks và API.
 

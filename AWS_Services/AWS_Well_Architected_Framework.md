@@ -11,7 +11,7 @@
 ### Dịch vụ gì?
 - **AWS Well-Architected Framework**: Bộ khung lý thuyết và tập hợp các nguyên tắc thiết kế tối ưu (Best Practices) được đúc kết từ hàng triệu hệ thống của AWS, gồm **6 Trụ Cột** cốt lõi: Operational Excellence, Security, Reliability, Performance Efficiency, Cost Optimization, và Sustainability.
 - **AWS Well-Architected Tool**: Dịch vụ tự đánh giá (Self-assessment tool) trên AWS Management Console, cho phép rà soát kiến trúc ứng dụng (Workloads), nhận diện các rủi ro mức độ cao (**High Risk Issues - HRI**) và trung bình (**Medium Risk Issues - MRI**) kèm lộ trình khắc phục (Improvement Plan).
-- **AWS Trusted Advisor**: Dịch vụ "cố vấn ảo" tự động liên tục quét tài nguyên thực tế bên trong tài khoản AWS, đưa ra khuyến nghị tức thời trên 5 danh mục: Cost Optimization, Security, Fault Tolerance, Performance, và Service Limits. Hỗ trợ **Trusted Advisor Organization View** (`CM-PT5 Q05`) để tổng hợp báo cáo toàn tổ chức.
+- **AWS Trusted Advisor**: Dịch vụ "cố vấn ảo" tự động liên tục quét tài nguyên thực tế bên trong tài khoản AWS, đưa ra khuyến nghị tức thời trên 6 danh mục: Cost Optimization, Security, Fault Tolerance, Performance, Service Limits và Operational Excellence (tài liệu cũ chỉ liệt kê 5 danh mục đầu). Hỗ trợ **Trusted Advisor Organization View** (`CM-PT5 Q05`) để tổng hợp báo cáo toàn tổ chức.
 - **AWS Control Tower**: Dịch vụ thiết lập và quản trị Landing Zone đa tài khoản theo chuẩn Well-Architected, tự động hóa cấp phát tài khoản qua **Account Factory** (`TD-Set2 Q16`), áp dụng kiểm soát đa tầng (Preventive, Detective, Proactive Guardrails) và phát hiện lệch chuẩn (**Account Drift Notifications**) (`TD-Set8 Q22`, `CM-PT6 Q25`).
 - **Bộ Công Cụ FinOps & Cost Management**:
   - **AWS Compute Optimizer**: Sử dụng Machine Learning phân tích CloudWatch metrics để đưa ra khuyến nghị điều chỉnh đúng kích cỡ (**Right-sizing**) cho EC2, EBS, Lambda, ECS on Fargate.
@@ -205,7 +205,7 @@ mindmap
 #### 🪤 Bẫy 10: Tối Ưu Hóa Chi Phí EBS Khi Thừa IOPS: Hạ Cấp Từ io2 Xuống gp3 — (TD-Set8 Q03)
 - **Tình huống đề thi**: *"Báo cáo AWS Cost and Usage Report (CUR) cho thấy nhiều ổ đĩa EBS `io2 Block Express` trong môi trường sản xuất có mức sử dụng IOPS thực tế dưới 10,000 IOPS và thông lượng dưới 300 MB/s. Yêu cầu tối ưu chi phí theo trụ cột Cost Optimization mà không gây thời gian chết."*
 - **Giải pháp ĐÚNG**: Sử dụng **EBS Elastic Volumes** để chuyển đổi trực tiếp loại ổ đĩa từ **`io2` sang `gp3`** (`TD-Set8 Q03`).
-  - Ổ đĩa `gp3` cung cấp tới 16,000 IOPS và 1,000 MB/s thông lượng với chi phí rẻ hơn 75-80% mà không cần detach ổ đĩa hay tắt máy chủ.
+  - Ổ đĩa `gp3` cung cấp tới 80,000 IOPS và 2,000 MiB/s thông lượng (từ 09/2025; đề cũ ghi 16,000 IOPS / 1,000 MB/s) với chi phí thấp hơn nhiều so với io2, chuyển đổi bằng Elastic Volumes mà không cần detach ổ đĩa hay tắt máy chủ.
 
 #### 🪤 Bẫy 11: AWS Budgets Filtering: Service-Level Filters vs Cost Allocation Tags — (CM-PT1 Q42, CM-PT4 Q44)
 - **Tình huống đề thi**: *"Doanh nghiệp muốn thiết lập ngân sách cảnh báo riêng cho dịch vụ Amazon EC2 của dự án Mobile App mà không bị ảnh hưởng bởi chi phí lưu trữ S3 hay database RDS của các dự án khác."*

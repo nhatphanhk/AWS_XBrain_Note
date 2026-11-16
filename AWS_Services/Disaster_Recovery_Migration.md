@@ -168,6 +168,8 @@ flowchart LR
 
 ### 6. Chiến Lược Chuyển Dữ Liệu Dung Lượng Lớn (Snow Family & DataSync)
 
+> ⚠️ **Cập nhật 11/2026**: Snowcone đã ngừng cung cấp; **Snowball Edge không nhận khách mới từ 07/11/2025** (AWS không còn bán bất kỳ thiết bị Snow nào cho khách mới). Thay thế: **AWS DataSync** (online, một task có thể tận dụng tới ~10 Gbps), **Direct Connect hosted connection** tạm thời cho dự án migration, **AWS Data Transfer Terminal** (upload vật lý tại địa điểm của AWS) và giải pháp Partner trên AWS Marketplace.
+
 | Phương thức | Dung lượng tối ưu | Băng thông mạng yêu cầu | Kịch bản sử dụng chuẩn mực & Trạng thái 2026 |
 | :--- | :--- | :--- | :--- |
 | **AWS DataSync** | Hàng chục đến hàng trăm TB | Cần kết nối Internet tốc độ cao hoặc Direct Connect | Tự động hóa đồng bộ tệp tin định kỳ từ NAS/SAN (NFS/SMB) lên S3, EFS, FSx với tốc độ nhanh gấp 10 lần các công cụ mã nguồn mở. |
@@ -178,6 +180,8 @@ flowchart LR
 ---
 
 ### 7. Khung Chiến Lược 7Rs Di Chuyển Lên Mây & Bộ Đôi Khảo Sát/Điều Phối (AWS Migration Hub, Application Discovery Service, Migration Evaluator)
+
+> ⚠️ **Cập nhật 11/2026**: **AWS Migration Hub** và **AWS Application Discovery Service** chuyển sang chế độ maintenance — **không nhận khách hàng mới từ 07/11/2025** (khách cũ vẫn dùng bình thường). AWS định hướng khách mới sang **AWS Transform**. Nội dung dưới đây giữ lại vì đề SAA-C03 vẫn hỏi các dịch vụ này. Với chiến lược **Relocate**, ngoài VMware Cloud on AWS nay có thêm **Amazon Elastic VMware Service (EVS)** (GA 08/2025).
 
 #### 7.1. Khung 7 Chiến Lược Di Chuyển Lên Đám Mây (The 7Rs of Cloud Migration)
 
@@ -246,7 +250,7 @@ flowchart TD
     
     LockChoice -->|Quy định Pháp lý & Chống Ransomware| CompMode["Compliance Mode (WORM - Write Once, Read Many)\n- KHÔNG AI có thể xóa hoặc sửa bản backup\n- Kể cả ROOT ACCOUNT và AWS SUPPORT cũng BÓ TAY!"]
     
-    CompMode --> CoolOff["Thời Gian Ân Hạn (Cooling-off Period: 1 - 72 giờ)\n- Trong giai đoạn này vẫn có thể hủy Lock\n- HẾT THỜI GIAN ÂN HẠN: KHÓA VĨNH VIỄN KHÔNG THỂ ĐẢO NGƯỢC!"]
+    CompMode --> CoolOff["Thời Gian Ân Hạn - Grace time: tối thiểu 72 giờ (3 ngày)\n- Trong giai đoạn này vẫn có thể hủy Lock\n- HẾT THỜI GIAN ÂN HẠN: KHÓA VĨNH VIỄN KHÔNG THỂ ĐẢO NGƯỢC!"]
 ```
 
 - **Mục tiêu**: Bảo vệ doanh nghiệp trước các cuộc tấn công mã độc tống tiền (**Ransomware**) và nhân viên nội bộ bất hảo có ý định xóa sạch các bản sao lưu để phá hoại.
@@ -256,7 +260,7 @@ flowchart TD
      - **KHÔNG MỘT AI** (kể cả Root Account, Quản trị viên cao cấp, hay Đội ngũ hỗ trợ kỹ thuật AWS Support) có quyền xóa bản sao lưu trước khi hết thời hạn lưu trữ (Retention Period).
      - **KHÔNG THỂ giảm thời hạn lưu trữ** (chỉ được phép tăng thêm).
      - **KHÔNG THỂ xóa Backup Vault** khi bên trong vẫn còn điểm khôi phục (Recovery Points).
-- **Thời Gian Ân Hạn (Cooling-off Period)**: Khi cấu hình Compliance Mode, AWS bắt buộc thiết lập thời gian làm nguội từ **1 đến 72 giờ** (mặc định 72 giờ). Trong thời gian này, quản trị viên có thể kiểm tra và hủy bỏ cấu hình khóa. Khi đồng hồ đếm ngược kết thúc, chính sách khóa trở thành **bất khả biến vĩnh viễn (Permanent and irreversible)**.
+- **Thời Gian Ân Hạn (Cooling-off Period)**: Khi cấu hình Compliance Mode, AWS bắt buộc thiết lập thời gian ân hạn (`ChangeableForDays`) **tối thiểu 3 ngày (72 giờ)**, tối đa 36,500 ngày; nếu không khai báo tham số này thì lock được tạo ở Governance Mode. Trong thời gian này, quản trị viên có thể kiểm tra và hủy bỏ cấu hình khóa. Khi đồng hồ đếm ngược kết thúc, chính sách khóa trở thành **bất khả biến vĩnh viễn (Permanent and irreversible)**.
 
 #### 8.2. AWS Backup Audit Manager — Tự Động Hóa Kiểm Toán & Tuân Thủ Sao Lưu
 
@@ -441,7 +445,7 @@ Chi Phí Rẻ Nhất / RTO-RPO Lâu Nhất                Chi Phí Đắt Nhất
   - ❌ *Dùng IAM Deny Policy gắn vào tài khoản Root*: Sai vì IAM Policy gắn vào IAM User/Role, không thể ngăn chặn Root account thực hiện quyền tối cao xóa tài nguyên ngoại trừ thông qua Service Control Policies (SCP) hoặc tính năng chuyên dụng như Vault Lock Compliance Mode.
 - **Giải pháp ĐÚNG**: Kích hoạt **AWS Backup Vault Lock ở chế độ Compliance Mode**.
   - Compliance Mode khóa cứng toàn bộ Backup Vault theo chuẩn WORM.
-  - Sau khi hết thời gian ân hạn (Cooling-off Period từ 1 đến 72 giờ), không một ai (kể cả Root User và AWS Support) có thể xóa điểm khôi phục, giảm thời hạn lưu trữ, hoặc xóa Vault.
+  - Sau khi hết thời gian ân hạn (grace time tối thiểu 72 giờ), không một ai (kể cả Root User và AWS Support) có thể xóa điểm khôi phục, giảm thời hạn lưu trữ, hoặc xóa Vault.
 
 #### 🪤 Bẫy 15: Lập Bản Đồ Phụ Thuộc Ứng Dụng (Application Dependency Mapping): Agent-based vs Agentless Discovery — (TD-Set2 Q14)
 - **Tình huống đề thi**: *"Doanh nghiệp muốn lập kế hoạch di chuyển một hệ thống gồm hàng trăm máy chủ vật lý (bare-metal) và máy ảo on-premises lên AWS. Trước khi lên lịch trình di chuyển theo từng đợt (migration waves), nhóm kiến trúc cần xác định chính xác các ứng dụng phụ thuộc vào nhau như thế nào, các tiến trình (processes) đang chạy trên từng OS, và các kết nối mạng cổng TCP vào/ra (inbound/outbound network connections). Giải pháp khảo sát nào là phù hợp nhất?"*
@@ -478,7 +482,7 @@ Chi Phí Rẻ Nhất / RTO-RPO Lâu Nhất                Chi Phí Đắt Nhất
 #### 🪤 Bẫy 19: Bộ Ba Quản Trị Sao Lưu Nâng Cao: Audit Manager, Vault Lock Compliance Mode & Cross-Account Copy — (CM-PT1 Q31, CM-PT1 Q58, CM-PT1 Q57, CM-PT3 Q41, CM-PT4 Q26, U-PT4 Q54)
 - **AWS Backup Audit Manager** (`CM-PT1 Q31`): Cung cấp các khung đánh giá tự động (Auditing Frameworks) để theo dõi và chứng minh tính tuân thủ của các chính sách sao lưu đối với các tiêu chuẩn pháp lý (HIPAA, PCI-DSS, ISO 27001), tự động tạo báo cáo kiểm toán định kỳ.
 - **AWS Backup Vault Lock (Compliance Mode vs Governance Mode)** (`CM-PT1 Q58`):
-  - **Compliance Mode**: Khóa bất biến WORM (Write Once, Read Many). Sau thời gian ân hạn làm quen (Cooling-off Period từ 1 đến 365 ngày), **KHÔNG MỘT AI (kể cả tài khoản AWS Root hay Support của AWS) CÓ THỂ XÓA HOẶC SỬA BẢN SAO LƯU** cho đến khi hết thời hạn Retention Period. Đây là lá chắn tối thượng chống mã độc tống tiền (Ransomware).
+  - **Compliance Mode**: Khóa bất biến WORM (Write Once, Read Many). Sau thời gian ân hạn (grace time tối thiểu 72 giờ = 3 ngày), **KHÔNG MỘT AI (kể cả tài khoản AWS Root hay Support của AWS) CÓ THỂ XÓA HOẶC SỬA BẢN SAO LƯU** cho đến khi hết thời hạn Retention Period. Đây là lá chắn tối thượng chống mã độc tống tiền (Ransomware).
   - **Governance Mode**: Vẫn cho phép người dùng có quyền IAM đặc biệt (`backup:DeleteRecoveryPoint`) xóa bản sao lưu.
 - **Cross-Account & Cross-Region Backup Copy** (`CM-PT1 Q57`, `CM-PT4 Q26`, `U-PT4 Q54`): Tự động sao chép các điểm phục hồi (Recovery Points) sang một Region thứ hai (cho DR) và sang một **AWS Account độc lập trong AWS Organizations** (cho Security Isolation, chống trường hợp tài khoản chính bị hacker chiếm đoạt).
 

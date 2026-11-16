@@ -23,16 +23,16 @@
 ### 1. Phân Biệt SQS Standard vs SQS FIFO
 | Tiêu Chí So Sánh | SQS Standard | SQS FIFO |
 |:---|:---|:---|
-| **Thông lượng (Throughput)** | **Gần như vô hạn (Unlimited TPS)** | **300 msg/s** (Lên tới 3,000 msg/s với batching / High Throughput) |
+| **Thông lượng (Throughput)** | **Gần như vô hạn (Unlimited TPS)** | **300 API call/s** cho mỗi thao tác (= 3,000 msg/s khi batch 10 message). Bật **High Throughput FIFO** để tăng lên rất nhiều (tới hàng chục nghìn TPS/API ở một số Region), throughput phân theo `MessageGroupId`. |
 | **Thứ tự tin nhắn (Ordering)** | Best-effort (Có thể không đúng thứ tự ban đầu) | **Strict First-In-First-Out (Đúng thứ tự 100%)** |
-| **Độ tin cậy chuyển giao** | At-least-once (Có thể nhận trùng tin nhắn) | **Exactly-once (Tuyệt đối không bao giờ nhận trùng)** |
+| **Độ tin cậy chuyển giao** | At-least-once (Có thể nhận trùng tin nhắn) | **Exactly-once processing** (loại bỏ message trùng trong cửa sổ dedup 5 phút) |
 | **Tên hàng đợi** | Tự do | **BẮT BUỘC KẾT THÚC BẰNG `.fifo`** |
 | **Nhóm xử lý song song** | Không có | Dùng **`MessageGroupId`** (Các message cùng Group ID xử lý tuần tự, khác Group ID xử lý song song) |
 | **Cơ chế chống trùng** | Ứng dụng tự xử lý Idempotency | Dùng **`MessageDeduplicationId`** hoặc Content-Based Dedup trong cửa sổ **5 phút** |
 | **Chuyển đổi loại hàng đợi** | ❌ Không thể đổi thành FIFO (phải tạo queue mới) | ❌ Không thể đổi thành Standard (phải tạo queue mới) |
 
 ### 2. Các Thuật Ngữ & Cấu Hình Sống Còn Của SQS
-- **Kích thước Message tối đa**: **256 KB**.
+- **Kích thước Message tối đa**: **1 MiB** (tăng từ 256 KiB vào 08/2025, áp dụng cả Standard và FIFO; đề/khóa học cũ ghi 256 KB). Message > 64 KB được tính thêm request theo từng khối 64 KB.
   - Muốn gửi tin nhắn lớn hơn (tới 2 GB) $\rightarrow$ Sử dụng thư viện **Amazon SQS Extended Client Library for Java/Python** (lưu payload thực tế vào Amazon S3 và chỉ để đường dẫn pointer vào SQS).
 - **Thời gian lưu giữ (Retention Period)**: Mặc định **4 ngày**, có thể điều chỉnh từ 1 phút đến tối đa **14 ngày**.
 - **Visibility Timeout**: Mặc định **30 giây**, tối đa **12 giờ**.
@@ -44,7 +44,7 @@
   - DLQ của hàng đợi FIFO cũng bắt buộc phải là một hàng đợi FIFO.
   - **DLQ Redrive**: Tính năng bấm nút đẩy ngược các message từ DLQ về hàng đợi chính sau khi lập trình viên đã sửa xong lỗi code.
 - **Long Polling (`WaitTimeSeconds` từ 1 đến 20 giây)**:
-  - Worker giữ kết nối mở chờ tin nhắn mới tới hàng đợi $\rightarrow$ **Giảm tới 90% số lượng request rỗng**, tiết kiệm chi phí API tối đa so với Short Polling (0s).
+  - Worker giữ kết nối mở chờ tin nhắn mới tới hàng đợi $\rightarrow$ **giảm mạnh số lượng request rỗng (empty receives) và false empty**, tiết kiệm chi phí API so với Short Polling (0s). Cấu hình ở cấp queue (`ReceiveMessageWaitTimeSeconds`) hoặc từng lệnh gọi.
 - **Delay Queue**: Hoãn việc phát tin nhắn cho worker từ **0 đến 15 phút** sau khi được đẩy vào hàng đợi.
 - **Metric Tính Toán Auto Scaling**: Để ASG scale số lượng EC2 worker chuẩn xác theo lượng công việc tồn đọng $\rightarrow$ Dùng metric **`ApproximateNumberOfMessagesVisible`** chia cho số instance đang chạy (Backlog Per Instance).
 
@@ -80,7 +80,7 @@ flowchart LR
 | Thành Phần | Chức Năng Cốt Lõi |
 |:---|:---|
 | **Event Buses** | • `Default`: Nhận sự kiện từ toàn bộ các dịch vụ AWS.<br>• `Custom`: Nhận sự kiện từ ứng dụng nội bộ qua API `PutEvents`.<br>• `Partner`: Nhận sự kiện từ các đối tác SaaS (Salesforce, Datadog, Zendesk, Shopify). |
-| **Rules & Filtering** | So khớp cấu trúc JSON của sự kiện (Event Pattern) và định tuyến tới tối đa **5 targets** trên mỗi rule (Lambda, SQS, SNS, Step Functions, Kinesis, ECS task). |
+| **Rules & Filtering** | So khớp cấu trúc JSON của sự kiện (Event Pattern) và định tuyến tới tối đa **5 targets** trên mỗi rule (Lambda, SQS, SNS, Step Functions, Kinesis, ECS task, API Destinations, event bus ở account/Region khác). Payload sự kiện tối đa **1 MB** (tăng từ 256 KB vào 10/2025). |
 | **EventBridge Scheduler** | Bộ lập lịch tác vụ serverless thay thế hoàn toàn cron jobs truyền thống. Hỗ trợ lịch định kỳ, lịch 1 lần duy nhất, múi giờ quốc tế và cơ chế giãn cách thời gian (Flexible time windows) chống spike. |
 | **Archive & Replay** | Lưu trữ toàn bộ các sự kiện đã xảy ra và cho phép phát lại (Replay) vào hệ thống để thử nghiệm tính năng mới hoặc debug. |
 | **Schema Registry** | Tự động suy luận cấu trúc JSON của sự kiện và sinh mã nguồn code bindings (Java, Python, TypeScript) cho developer. |
@@ -136,7 +136,7 @@ flowchart LR
 | "prevent duplicate messages within 5 minutes" | **MessageDeduplicationId** |
 | "reduce empty responses and API costs for SQS" | **Long Polling (`WaitTimeSeconds = 20`)** |
 | "isolate failed messages for debugging", "poison pill" | **Dead-Letter Queue (DLQ)** |
-| "SQS messages larger than 256 KB up to 2 GB" | **Amazon SQS Extended Client Library** |
+| "SQS messages larger than 1 MiB (đề cũ: 256 KB) up to 2 GB" | **Amazon SQS Extended Client Library** |
 | "metric to scale EC2 worker fleet based on queue backlog" | **`ApproximateNumberOfMessagesVisible` / Instances** |
 | "fan-out 1 event to multiple independent queues/services" | **SNS $\rightarrow$ Multiple SQS Queues (Fan-out)** |
 | "filter messages before hitting subscribers", "JSON policy" | **SNS Message Filtering** |

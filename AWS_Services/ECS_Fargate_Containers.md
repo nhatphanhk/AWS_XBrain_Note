@@ -202,7 +202,7 @@ flowchart TD
 
 #### 🪤 Bẫy 4: Chạy Ứng Dụng Web Container Với Ít Công Vận Hành Nhất: App Runner vs ECS — (CM-PT2 Q57, CM-PT4 Q05)
 - **Tình huống đề thi**: *"Doanh nghiệp muốn triển khai một ứng dụng web dạng Docker container với ít chi phí vận hành và quản lý hạ tầng nhất (LEAST operational overhead), không muốn phải tự cấu hình VPC, subnets, Load Balancers hay ECS Clusters."*
-- **Giải pháp ĐÚNG**: **AWS App Runner**.
+- **Giải pháp ĐÚNG**: **AWS App Runner** (đáp án theo bộ đề). ⚠️ *Cập nhật*: App Runner chuyển sang maintenance, **không nhận khách mới từ 30/04/2026** — với tài khoản mới, phương án tương đương ít vận hành nhất thường là **ECS trên Fargate** (hoặc Lambda nếu phù hợp).
   - Dịch vụ PaaS Serverless Container của riêng AWS: Lập trình viên chỉ cần trỏ tới Docker image trong Amazon ECR hoặc mã nguồn Git.
   - App Runner tự động cung cấp Load Balancer, chứng chỉ SSL/TLS, định tuyến lưu lượng, giám sát và co giãn tự động theo số lượng request đồng thời mà người dùng hoàn toàn không cần quản lý mạng hay cluster.
 
@@ -285,7 +285,7 @@ flowchart TD
 #### 🪤 Bẫy 14: Quét Lỗ Hổng Bảo Mật Container Trên Amazon ECR (Scan on Push) — (CM-PT4 Q17)
 - **Tình huống đề thi**: *"Doanh nghiệp yêu cầu mọi Docker image trước khi triển khai lên môi trường sản xuất (Production) phải được tự động kiểm tra lỗ hổng phần mềm (CVE vulnerabilities). Cần kích hoạt tính năng nào trên ECR với chi phí thấp nhất?"*
 - **Giải pháp ĐÚNG**: Bật tùy chọn **Scan on Push** trên Amazon ECR Repository (`CM-PT4 Q17`).
-  - Mỗi khi lập trình viên hoặc pipeline CI/CD đẩy image mới lên kho ECR, AWS tự động kích hoạt bộ quét bảo mật (Basic Scanning với Clair hoặc Enhanced Scanning với Amazon Inspector) và gửi cảnh báo EventBridge nếu phát hiện lỗ hổng nghiêm trọng.
+  - Mỗi khi lập trình viên hoặc pipeline CI/CD đẩy image mới lên kho ECR, AWS tự động kích hoạt bộ quét bảo mật (Basic Scanning bằng công nghệ quét native của AWS — trước đây dựa trên Clair — hoặc Enhanced Scanning với Amazon Inspector) và gửi cảnh báo EventBridge nếu phát hiện lỗ hổng nghiêm trọng.
 
 #### 🪤 Bẫy 15: So Sánh Chi Phí & Lập Lịch Tác Vụ ECS: EC2 vs Fargate — (U-PT1 Q16, TD-Set5 Q19, CM-PT2 Q54, CM-PT4 Q13, CM-PT6 Q01)
 - **So sánh chi phí quy mô lớn (`U-PT1 Q16`, `TD-Set5 Q19`)**: Khi ứng dụng container chạy liên tục 24/7 với hàng trăm task và tài nguyên sử dụng đều đặn, mô hình **ECS on EC2 kết hợp Reserved Instances / Compute Savings Plans và EC2 Spot** (`TD-Set5 Q19`) có chi phí thấp hơn đáng kể so với chạy hoàn toàn trên Fargate On-Demand (`U-PT1 Q16`). Fargate chỉ rẻ hơn cho các ứng dụng chạy ngắt quãng, tải biến thiên hoặc startup muốn tiết kiệm công vận hành.

@@ -385,7 +385,7 @@ sequenceDiagram
 | Dịch vụ liên kết | Phương thức tích hợp | Mục đích kỹ thuật & Kịch bản thực tế |
 | :--- | :--- | :--- |
 | **AWS Lambda** | DynamoDB Streams Trigger | Kiến trúc hướng sự kiện: Tự động gửi email thông báo khi đơn hàng được tạo hoặc cập nhật trạng thái. |
-| **Amazon S3** | Export to S3 / Import from S3 | Xuất toàn bộ dữ liệu DynamoDB sang file Parquet trên S3 mà không tiêu tốn RCU để phân tích bằng Athena. |
+| **Amazon S3** | Export to S3 / Import from S3 | Xuất dữ liệu DynamoDB (full hoặc incremental, yêu cầu bật PITR) sang S3 ở định dạng **DynamoDB JSON hoặc Amazon Ion** mà không tiêu tốn RCU, rồi phân tích bằng Athena (cần Parquet thì chuyển đổi tiếp bằng Glue). |
 | **Amazon OpenSearch** | OpenSearch Ingestion / Streams | Cung cấp tính năng tìm kiếm văn bản tự do (Full-text search) cho sản phẩm lưu trong DynamoDB. |
 | **AWS KMS** | Customer Managed Key (CMK) | Mã hóa toàn bộ dữ liệu At-Rest trên bảng, chỉ mục phụ GSI và các bản sao lưu PITR. |
 | **VPC Endpoint** | **Gateway VPC Endpoint (Miễn phí)** | Cho phép các máy chủ EC2 / Lambda trong Private Subnet truy cập DynamoDB an toàn không tốn phí NAT. |

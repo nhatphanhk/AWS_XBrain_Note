@@ -115,7 +115,7 @@ flowchart LR
    - Thay thế hoàn toàn cho thế hệ cũ `gp2` với giá rẻ hơn **20%**.
    - **Tách biệt độc lập 3 tham số**: Dung lượng (GiB), Số lượng IOPS và Băng thông Throughput (MB/s).
    - **Baseline miễn phí**: Mặc định cung cấp sẵn **3,000 IOPS** và **125 MB/s throughput** hoàn toàn miễn phí ở bất kỳ kích thước ổ đĩa nào (từ 1 GiB tới 64 TiB).
-   - Có thể mở rộng độc lập lên tới **16,000 IOPS** và **1,000 MB/s** mà không cần phải mua thêm dung lượng đĩa thừa.
+   - Có thể mở rộng độc lập lên tới **80,000 IOPS** và **2,000 MiB/s** (từ 09/2025; trước đó là 16,000 IOPS / 1,000 MiB/s và dung lượng tối đa 16 TiB) mà không cần phải mua thêm dung lượng đĩa thừa. Tỷ lệ tối đa 500 IOPS/GiB (cần ≥ 160 GiB để đạt 80,000 IOPS) và 0.25 MiB/s cho mỗi IOPS.
 2. **General Purpose SSD (`gp2` - Thế hệ cũ [Legacy / Tránh dùng])**:
    - Hiệu năng IOPS bị gắn chặt vào dung lượng: \$3 \text{ IOPS} / 1 \text{ GiB}$. Để có 9,000 IOPS, bắt buộc phải tạo ổ đĩa 3,000 GiB (lãng phí tiền dung lượng).
    - Cơ chế Burst IOPS lên 3,000 bằng bình chứa I/O Credits; khi hết credit hiệu năng bị sập về baseline. Khuyến nghị nâng cấp 100% sang `gp3`.
@@ -225,7 +225,7 @@ flowchart TD
 
 | Loại Ổ Đĩa EBS | Công nghệ | IOPS / Băng Thông tối đa | Trường hợp sử dụng tối ưu (Use Case) |
 |:---|:---|:---|:---|
-| **General Purpose SSD (`gp3`)** | SSD | 16,000 IOPS / 1,000 MB/s | **Lựa chọn mặc định tốt nhất**: Cung cấp baseline 3,000 IOPS và 125 MB/s miễn phí độc lập với dung lượng đĩa. Rẻ hơn `gp2` tới 20%. |
+| **General Purpose SSD (`gp3`)** | SSD | **80,000 IOPS / 2,000 MiB/s** (từ 09/2025; đề cũ: 16,000 / 1,000) | **Lựa chọn mặc định tốt nhất**: Cung cấp baseline 3,000 IOPS và 125 MB/s đã gồm trong giá, độc lập với dung lượng đĩa. Rẻ hơn `gp2` tới 20%. |
 | **Provisioned IOPS SSD (`io2 Block Express`)** | SSD | **256,000 IOPS** / 4,000 MB/s | **Cơ sở dữ liệu nhiệm vụ sống còn (Mission-Critical)**: Oracle, SAP HANA, MSSQL yêu cầu độ trễ dưới 1 millisecond và độ tin cậy 99.999%. |
 | **Throughput Optimized HDD (`st1`)** | HDD | 500 IOPS / 500 MB/s | **Dữ liệu lớn tuần tự, thông lượng cao**: Big Data, Data Warehousing, Log Processing, Kafka, Hadoop. Không dùng làm ổ boot OS. |
 | **Cold HDD (`sc1`)** | HDD | 250 IOPS / 250 MB/s | **Lưu trữ tuần tự ít truy cập, chi phí rẻ nhất**: Sao lưu dự phòng, dữ liệu lưu trữ lịch sử dạng file lớn. |
@@ -311,7 +311,7 @@ flowchart TD
 - **Giải pháp ĐÚNG**: Kích hoạt tính năng **Amazon EBS Snapshot Lock**.
   - Hỗ trợ 2 chế độ:
     - **Governance Mode**: Cho phép người dùng có quyền IAM đặc biệt mở khóa khi cần.
-    - **Compliance Mode**: **Không ai (kể cả tài khoản Root của AWS) có thể xóa snapshot** hoặc giảm thời gian khóa trước khi hết hạn. Cung cấp khoảng thời gian dùng thử (cooling-off period) trước khi khóa vĩnh viễn.
+    - **Compliance Mode**: **Không ai (kể cả tài khoản Root của AWS) có thể xóa snapshot** hoặc giảm thời gian khóa trước khi hết hạn. Cung cấp khoảng thời gian dùng thử (cooling-off period, tối đa 72 giờ) trước khi khóa vĩnh viễn.
 
 #### 🪤 Bẫy 9: Tách Biệt Cấu Hình IOPS Độc Lập Khỏi Dung Lượng Bằng EBS gp3 — (TD-Set5 Q04, CM-PT6 Q46)
 - **Tình huống đề thi**: *"Migrate cơ sở dữ liệu lên EC2 yêu cầu tốc độ 12,000 IOPS nhưng dung lượng lưu trữ chỉ cần 200 GB. Cần chọn cấu hình ổ đĩa EBS tiết kiệm chi phí nhất."*
@@ -322,7 +322,7 @@ flowchart TD
 #### 🪤 Bẫy 10: Tối Ưu Chi Phí Khi Thừa IOPS: Hạ Cấp Từ io2 Xuống gp3 — (TD-Set8 Q03)
 - **Tình huống đề thi**: *"Một công ty sử dụng nhiều ổ đĩa EBS loại Provisioned IOPS SSD (`io2 Block Express`) gắn vào các máy chủ EC2 trong môi trường Production. Qua kiểm tra báo cáo chi phí AWS Cost and Usage Report (CUR), kiến trúc sư nhận thấy ứng dụng chỉ sử dụng dưới 10,000 IOPS và băng thông dưới 300 MB/s. Cần làm gì để cắt giảm chi phí mà không gây downtime?"*
 - **Giải pháp ĐÚNG**: Sử dụng tính năng **EBS Elastic Volumes** để chuyển đổi loại ổ đĩa từ **`io2` sang `gp3`** trực tiếp trong thời gian chạy (in-flight modification) (`TD-Set8 Q03`).
-  - Ổ đĩa `gp3` đáp ứng tối đa tới 16,000 IOPS và 1,000 MB/s thông lượng với chi phí rẻ hơn tới 75-80% so với `io2 Block Express`. Quá trình chuyển đổi diễn ra hoàn toàn không cần tháo đĩa hay tắt máy chủ (`TD-Set8 Q03`).
+  - Ổ đĩa `gp3` đáp ứng dư sức 10,000 IOPS / 300 MB/s (tối đa hiện nay 80,000 IOPS và 2,000 MiB/s; đề cũ ghi 16,000 IOPS / 1,000 MB/s) với chi phí rẻ hơn rất nhiều so với `io2 Block Express`. Quá trình chuyển đổi diễn ra hoàn toàn không cần tháo đĩa hay tắt máy chủ (`TD-Set8 Q03`).
 
 #### 🪤 Bẫy 11: Khắc Phục Hiện Tượng Giảm Hiệu Năng Khởi Đầu Bằng EBS Fast Snapshot Restore (FSR) — (U-PT4 Q05)
 - **Tình huống đề thi**: *"Một công ty tài chính vận hành phần mềm mô hình hóa hiệu năng cao trên EC2 kèm EBS. Nhóm cần nhân bản môi trường kiểm thử (test) từ các bản snapshot của volume Production đang chạy. Tuy nhiên, khi các máy chủ test vừa khởi chạy và bắt đầu truy cập volume mới, ứng dụng gặp độ trễ cao bất thường trong thời gian đầu (I/O latency spikes). Cần giải pháp giúp volume test đạt ngay 100% hiệu năng tối đa ngay từ giây đầu tiên mà không làm trễ tiến độ kiểm thử."*
@@ -399,8 +399,10 @@ flowchart TD
 - **Performance Modes (Chế độ hiệu năng)**:
   - **`General Purpose` (Mặc định)**: Tối ưu cho độ trễ mỗi thao tác đọc/ghi thấp nhất. Khuyến nghị cho hầu hết các ứng dụng thông thường, web serving, CMS, môi trường phát triển phần mềm.
   - **`Max I/O`**: Thiết kế cho các hệ thống có hàng trăm hoặc hàng ngàn EC2 instances / containers truy cập đồng thời (Big Data analytics, xử lý genomics, media processing song song). Cung cấp tổng IOPS và thông lượng tổng thể cực lớn, chấp nhận độ trễ tính bằng mili-giây cho mỗi thao tác (`TD-Set6 Q46`, `U-PT2 Q09`).
+  - ⚠️ **Cập nhật**: AWS hiện xếp `Max I/O` là chế độ **thế hệ trước** và **khuyến nghị General Purpose cho mọi file system** (Max I/O có độ trễ mỗi thao tác cao hơn). Max I/O **không hỗ trợ Elastic throughput và One Zone**; performance mode **không đổi được** sau khi tạo. Đề thi cũ vẫn có thể chọn Max I/O cho "hàng nghìn client song song".
 - **Throughput Modes (Chế độ thông lượng)**:
-  - **`Bursting Throughput` (Mặc định)**: Thông lượng tỷ lệ thuận với dung lượng dữ liệu lưu trong EFS (50 KB/s trên mỗi GiB lưu trữ). Khi dung lượng lưu trữ nhỏ, thông lượng baseline rất thấp; ứng dụng tải nặng sẽ nhanh chóng cạn kiệt Burst Credits dẫn đến nghẽn thắt cổ chai I/O.
+  - **`Elastic Throughput` (Mặc định hiện nay, khuyến nghị)**: Tự động co giãn thông lượng theo tải, trả tiền theo lượng dữ liệu đọc/ghi — phù hợp tải đột biến, khó dự đoán.
+  - **`Bursting Throughput`** (mặc định ở thế hệ cũ): Thông lượng tỷ lệ thuận với dung lượng dữ liệu lưu trong EFS (50 KiB/s trên mỗi GiB lưu trữ ở Standard). Khi dung lượng lưu trữ nhỏ, thông lượng baseline rất thấp; ứng dụng tải nặng sẽ nhanh chóng cạn kiệt Burst Credits dẫn đến nghẽn thắt cổ chai I/O.
   - **`Provisioned Throughput`**: Cho phép chỉ định cố định một mức thông lượng đọc/ghi mong muốn (từ 1 MB/s đến vài GB/s) **hoàn toàn độc lập với dung lượng lưu trữ đĩa**. Phù hợp tuyệt đối cho workload có dung lượng file lưu trữ nhỏ (hoặc tệp tin bị xóa ngay sau khi xử lý) nhưng đòi hỏi tốc độ đọc/ghi cực nhanh (`TD-Set6 Q46`, `U-PT3 Q33`).
 
 #### 🪤 Bẫy 20: Bật EBS Encryption by Default Cấp Region & Giám Sát Tuân Thủ Bằng AWS Config `encrypted-volumes` — (TD-Set6 Q04, CM-PT3 Q03, CM-PT6 Q06, CM-PT6 Q13, CM-PT6 Q14)
@@ -466,7 +468,7 @@ flowchart TD
 | **Giữ lại Root Volume sau khi máy ảo EC2 bị Terminate** | **Cấu hình thuộc tính `DeleteOnTermination = false`** | Để mặc định true (máy bị xóa volume mất theo) | `TD-Set3 Q62` |
 | **Mount hệ thống tệp EFS từ VPC ở Region khác** | **Inter-Region VPC Peering + Mount Target IP/DNS** | Không thể mount xuyên Region (sai: EFS hỗ trợ qua peering) | `CM-PT4 Q25` |
 | **Tính toán HPC, Machine Learning, kết nối trực tiếp S3** | **Amazon FSx for Lustre** | Amazon EFS (thông lượng song song thấp hơn Lustre) | `TD-Set6 Q42` |
-| **Cơ sở dữ liệu Oracle/SAP cực lớn cần > 100,000 IOPS** | **Amazon EBS `io2 Block Express` (lên tới 256,000 IOPS)** | `gp3` (giới hạn tối đa 16,000 IOPS) | `TD-Set8 Q03` |
+| **Cơ sở dữ liệu Oracle/SAP cực lớn cần > 100,000 IOPS** | **Amazon EBS `io2 Block Express` (lên tới 256,000 IOPS)** | `gp3` (giới hạn tối đa 80,000 IOPS; đề cũ: 16,000 IOPS) | `TD-Set8 Q03` |
 | **Khóa chống xóa snapshot đáp ứng tuân thủ pháp lý kể cả Root** | **Amazon EBS Snapshot Lock (Compliance Mode)** | IAM Policy Deny (Root vẫn có thể xóa hoặc sửa) | `CM-PT6 Q20` |
 
 ---
@@ -582,7 +584,7 @@ flowchart TD
   $$\text{Phí Provisioned IOPS} = 12,000 \text{ IOPS} \times 0.065\$ = 780.00\$$$
   $$\text{Tổng chi phí io2 ban đầu} = 75.00\$ + 780.00\$ = \mathbf{855.00\$/\text{tháng}}$$
 * **Chiến lược tối ưu hóa**:
-  - Dòng `gp3` cho phép cấp phát lên tới **16,000 IOPS** độc lập. Chuyển đổi ổ đĩa sang **`gp3` 600 GiB với 12,000 IOPS** (bao gồm 3,000 IOPS miễn phí + 9,000 IOPS mua thêm):
+  - Dòng `gp3` cho phép cấp phát IOPS độc lập (hiện tối đa **80,000 IOPS**; đề cũ: 16,000). Chuyển đổi ổ đĩa sang **`gp3` 600 GiB với 12,000 IOPS** (bao gồm 3,000 IOPS miễn phí + 9,000 IOPS mua thêm):
   $$\text{Phí dung lượng gp3} = 600 \text{ GiB} \times 0.08\$ = 48.00\$$$
   $$\text{Phí IOPS bổ sung} = (12,000 - 3,000) \times 0.005\$ = 45.00\$$$
   $$\text{Tổng chi phí gp3 mới} = 48.00\$ + 45.00\$ = \mathbf{93.00\$/\text{tháng}}$$

@@ -44,7 +44,7 @@ flowchart TD
 
 * ❌ **Truyền phát dữ liệu thô dung lượng lớn (Video streaming, File upload > 10 MB)**: API Gateway có giới hạn tải trọng cứng (**Payload Limit = 10 MB**).  
   👉 *Giải pháp thay thế*: Sử dụng **Amazon S3 Presigned URLs** để client upload trực tiếp lên S3.
-* ❌ **Xử lý tác vụ tính toán thời gian dài > 29 giây**: API Gateway có thời gian chờ tối đa (**Integration Timeout = 29 giây** không thể tăng thêm).  
+* ❌ **Xử lý tác vụ tính toán thời gian dài > 29 giây**: API Gateway có thời gian chờ tích hợp mặc định (**Integration Timeout = 29 giây**; từ 06/2024 chỉ REST API Regional/Private mới xin tăng được, đổi lại giảm throttle quota).  
   👉 *Giải pháp thay thế*: Trả về `HTTP 202 Accepted` ngay lập tức, đẩy message vào **SQS** hoặc khởi chạy **Step Functions Asynchronous Workflow**.
 * ❌ **Yêu cầu giao thức không phải HTTP/WebSocket (TCP/UDP, MQTT)**: API Gateway chỉ hỗ trợ HTTP/HTTPS và WebSocket.  
   👉 *Giải pháp thay thế*: Sử dụng **Network Load Balancer (NLB)** hoặc **AWS IoT Core**.
@@ -265,7 +265,7 @@ classDiagram
 #### 🪤 Bẫy 3: Xử Lý API Timeout Khi Thời Gian Xử Lý Vượt Quá 29 Giây — (CM-PT1 Q38)
 - **Tình huống đề thi**: *"Khách hàng gửi yêu cầu xuất báo cáo phân tích dữ liệu qua REST API. Việc sinh báo cáo mất khoảng 45 giây đến 2 phút. Kiến trúc sư nên thiết kế như thế nào để tránh lỗi timeout?"*
 - **Phương án bẫy**:
-  - ❌ *Tăng Integration Timeout của API Gateway lên 60 giây*: Sai! 29 giây là giới hạn cứng (**Hard Quota**) của API Gateway và không thể tăng thêm bằng Service Quotas hay yêu cầu AWS Support.
+  - ❌ *Tăng Integration Timeout của API Gateway lên 60 giây*: Đáp án sai trong bối cảnh đề thi — 29 giây là timeout mặc định và giữ client chờ đồng bộ 2 phút là thiết kế kém (dễ timeout ở client/proxy, chiếm tài nguyên). *Cập nhật*: từ 06/2024, REST API loại **Regional/Private** có thể xin tăng timeout vượt 29 giây (đánh đổi giảm throttle quota của tài khoản); Edge-optimized vẫn 29 giây, HTTP API tối đa 30 giây. Dù vậy, thiết kế bất đồng bộ vẫn là đáp án chuẩn.
 - **Giải pháp ĐÚNG**:
   - Thiết kế kiến trúc **Bất đồng bộ (Asynchronous Request-Reply Pattern)**:
   - API Gateway tiếp nhận yêu cầu, kích hoạt **AWS Step Functions** hoặc đẩy vào **SQS**, sau đó trả ngay về client mã phản hồi `HTTP 202 Accepted` kèm theo một `JobID`.
@@ -475,7 +475,7 @@ sequenceDiagram
 | Mã lỗi / Hiện tượng | Nguyên nhân cốt lõi | Các bước điều tra | Giải pháp xử lý triệt để |
 | :--- | :--- | :--- | :--- |
 | **`HTTP 429 Too Many Requests`** | Lưu lượng vượt quá Steady-state Rate Limit hoặc Burst Limit đã thiết lập trên Stage hoặc Usage Plan. | Kiểm tra metric CloudWatch `4XXError` và `ExecutionError`. Xem log CloudWatch của API Gateway. | 1. Yêu cầu AWS tăng Soft Limit tài khoản nếu tải hợp lệ.<br>2. Cấu hình Client áp dụng thuật toán **Exponential Backoff with Jitter**.<br>3. Bật API Gateway Cache để giảm tải cho backend. |
-| **`HTTP 504 Gateway Timeout`** | Backend (Lambda function hoặc máy chủ HTTP) mất hơn **29 giây** để phản hồi. | Kiểm tra CloudWatch Logs của Lambda; xem execution duration của hàm backend. | 1. **29 giây là Hard Limit không thể tăng của API Gateway**.<br>2. Chuyển kiến trúc sang bất đồng bộ: API Gateway trả về `HTTP 202 Accepted` ngay lập tức và đẩy task vào SQS hoặc Step Functions. |
+| **`HTTP 504 Gateway Timeout`** | Backend (Lambda function hoặc máy chủ HTTP) mất hơn **29 giây** để phản hồi. | Kiểm tra CloudWatch Logs của Lambda; xem execution duration của hàm backend. | 1. **29 giây là timeout mặc định của API Gateway** (REST API Regional/Private có thể xin tăng từ 06/2024, Edge-optimized thì không).<br>2. Chuyển kiến trúc sang bất đồng bộ: API Gateway trả về `HTTP 202 Accepted` ngay lập tức và đẩy task vào SQS hoặc Step Functions. |
 | **Lỗi `CORS (Cross-Origin Resource Sharing)` trên trình duyệt** | Trình duyệt gửi request `OPTIONS` (Preflight request) nhưng API Gateway không cấu hình trả về các Headers CORS cần thiết. | Mở DevTools trên trình duyệt, tab Console kiểm tra thông báo: *"No 'Access-Control-Allow-Origin' header is present on the requested resource"*. | 1. Bật tính năng **Enable CORS** trên tài nguyên API Gateway.<br>2. Nếu dùng Lambda Proxy Integration, code Lambda **BẮT BUỘC** phải tự chèn header `Access-Control-Allow-Origin: '*'` vào đối tượng JSON phản hồi. |
 | **`HTTP 403 Forbidden: Missing Authentication Token`** | 1. Gọi sai URL endpoint hoặc sai phương thức HTTP (ví dụ: route chỉ có POST nhưng client gọi GET).<br>2. API yêu cầu API Key nhưng client không truyền header `x-api-key`. | So sánh chính xác Path và HTTP Method trong URL client gọi với định nghĩa trong API Gateway Console. | 1. Kiểm tra lại routing và URL path.<br>2. Nếu endpoint yêu cầu bảo vệ bằng IAM, client phải ký request bằng SigV4. |
 
@@ -485,7 +485,7 @@ sequenceDiagram
 
 ### 7 Nguyên Tắc Kiến Trúc "Sống Còn" Của Serverless Integration
 1. **HTTP API cho Microservices, REST API cho Enterprise SaaS**: Khi cần API siêu nhanh, giá rẻ, chuẩn OIDC $\rightarrow$ Chọn HTTP API. Khi cần WAF, Caching, Usage Plans, Request Transformation $\rightarrow$ Chọn REST API.
-2. **29 giây là trần thời gian của API Gateway**: Tuyệt đối không để API Gateway chờ tác vụ đồng bộ quá 29 giây; luôn chuyển sang mô hình bất đồng bộ (`HTTP 202 Accepted` + SQS / Step Functions).
+2. **29 giây là trần thời gian mặc định của API Gateway**: Không thiết kế để API Gateway chờ tác vụ đồng bộ quá 29 giây (dù REST Regional/Private có thể xin tăng); luôn chuyển sang mô hình bất đồng bộ (`HTTP 202 Accepted` + SQS / Step Functions).
 3. **CUP để xác thực, CIP để phân quyền AWS**: Nhớ quy tắc: User Pool = Danh bạ người dùng & JWT Token. Identity Pool = Đổi token lấy IAM Role truy cập trực tiếp tài nguyên AWS.
 4. **Tránh "Lambda làm bưu tá" (Direct Integration)**: Nếu mục đích của bạn chỉ là nhận JSON từ API Gateway để đẩy vào SQS, DynamoDB hoặc EventBridge $\rightarrow$ Dùng tích hợp trực tiếp, bỏ qua Lambda!
 5. **Standard cho nghiệp vụ chính xác, Express cho tốc độ cao**: Standard Workflows đảm bảo thực thi Exactly-once cho đơn hàng, tài chính. Express Workflows tối ưu cho ingest dữ liệu lớn với chi phí siêu rẻ.
@@ -496,7 +496,7 @@ sequenceDiagram
 
 ### Danh Mục Kiểm Tra Nhanh Kiến Thức SAA-C03 (Exam Readiness Checklist)
 - [ ] Phân biệt rõ HTTP APIs (rẻ hơn 71%, siêu trễ thấp, OIDC native) vs REST APIs (API Caching, WAF, Usage Plans, API Keys) vs WebSocket APIs (Stateful 2-way real-time).
-- [ ] Hiểu rõ mô hình tính phí pay-per-call của API Gateway và hard limit 29 giây timeout (`CM-PT1 Q38`).
+- [ ] Hiểu rõ mô hình tính phí pay-per-call của API Gateway và timeout tích hợp mặc định 29 giây (`CM-PT1 Q38`).
 - [ ] Nắm vững cách phân quyền truy cập: API Gateway Resource Policy (chặn/mở theo dải IP `aws:SourceIp` - `U-PT2 Q24`) vs Usage Plans + API Keys (`U-PT3 Q08`).
 - [ ] Phân biệt bản chất: Cognito User Pools (quản lý danh bạ, xác thực, cấp phát JWT) vs Cognito Identity Pools (đổi token lấy AWS Temporary Credentials qua STS để truy cập trực tiếp S3/DynamoDB - `U-PT6 Q39`).
 - [ ] Nắm vững tích hợp ALB + Cognito User Pools qua rule action `authenticate-cognito` (`U-PT2 Q14`).

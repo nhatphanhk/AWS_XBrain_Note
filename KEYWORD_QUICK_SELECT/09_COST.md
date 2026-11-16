@@ -49,9 +49,13 @@ Quy tắc 6: Amazon S3 ──> Amazon CloudFront ──────────�
 Quy tắc 7: CloudFront ──> Người dùng cuối ─────────────────────────> RẺ HƠN S3 truyền trực tiếp ra Internet
 Quy tắc 8: RDS Read Replica cùng Region ──────────────────────────> MIỄN PHÍ DỮ LIỆU ĐỒNG BỘ
 Quy tắc 9: RDS Read Replica Cross-Region ─────────────────────────> CÓ TÍNH PHÍ DỮ LIỆU ĐỒNG BỘ
-Quy tắc 10: Private Subnet gọi S3 qua NAT Gateway ────────────────> TỐN PHÍ ($0.045/giờ + $0.045/GB)
+Quy tắc 10: Private Subnet gọi S3 qua NAT Gateway ────────────────> TỐN PHÍ ($0.045/giờ + $0.045/GB, us-east-1)
              👉 Đổi sang Gateway VPC Endpoint ───────────────────> HOÀN TOÀN MIỄN PHÍ ($0)
+Quy tắc 11: Public IPv4 (kể cả EIP đang gắn) ─────────────────────> CÓ TÍNH PHÍ $0.005/IP/giờ (từ 02/2024)
+Quy tắc 12: Dùng Public IP thay vì Private IP giữa 2 EC2 cùng AZ ──> BỊ TÍNH PHÍ như traffic khác AZ
 ```
+
+> 💡 Mức giá trên là giá tham khảo tại `us-east-1`, có thể thay đổi theo Region và thời điểm — đề thi chỉ hỏi **quy tắc**, không hỏi con số chính xác.
 
 ---
 
@@ -75,14 +79,14 @@ Quy tắc 10: Private Subnet gọi S3 qua NAT Gateway ────────�
    - Workload chạy ổn định liên tục 1–3 năm $\rightarrow$ Mua **Compute Savings Plans** hoặc **Reserved Instances**.
    - Môi trường Dev/Test/Staging $\rightarrow$ Dùng **AWS Instance Scheduler** (EventBridge + Lambda) tự động tắt máy ngoài giờ hành chính (giảm ngay 70%).
    - Tối ưu hóa kích cỡ máy chủ theo khuyến nghị của **AWS Compute Optimizer**.
-   - Chuyển đổi sang vi xử lý kiến trúc ARM (**AWS Graviton**) mang lại hiệu năng/giá thành tốt hơn 20%.
+   - Chuyển đổi sang vi xử lý kiến trúc ARM (**AWS Graviton**): AWS công bố price-performance tốt hơn tới ~40% so với instance x86 tương đương.
 
 2. **Nhóm Storage (Lưu trữ)**:
    - Dùng **S3 Lifecycle Rules** chuyển dữ liệu sang S3 Standard-IA / S3 Glacier / Deep Archive theo thời gian.
    - Dữ liệu không đoán trước được mô hình truy cập $\rightarrow$ Dùng **S3 Intelligent-Tiering** (không tốn phí truy xuất).
    - Tệp tin ngắn hạn bị xóa sau 10 đến 15 ngày $\rightarrow$ **Giữ nguyên tại S3 Standard** (tránh bẫy phạt 30 ngày của Standard-IA).
    - Nâng cấp ổ đĩa từ **gp2 lên gp3** (giảm ngay 20% chi phí lưu trữ và hiệu năng cao hơn).
-   - Thường xuyên quét và xóa các ổ đĩa EBS bị mồ côi (Unattached EBS volumes), Snapshot quá cũ, và Elastic IP không gắn vào máy ảo.
+   - Thường xuyên quét và xóa các ổ đĩa EBS bị mồ côi (Unattached EBS volumes), Snapshot quá cũ, và Elastic IP không dùng (từ 02/2024 mọi IPv4 public đều tính phí $0.005/giờ).
 
 3. **Nhóm Database (Cơ sở dữ liệu)**:
    - Workload biến động bất thường, dev/test $\rightarrow$ Dùng **Aurora Serverless v2** hoặc **DynamoDB On-Demand**.
@@ -95,8 +99,8 @@ Quy tắc 10: Private Subnet gọi S3 qua NAT Gateway ────────�
    - Giữ lưu lượng giao tiếp giữa các máy chủ trong **cùng 1 Availability Zone** bất cứ khi nào có thể (tránh phí truyền dữ liệu cross-AZ).
 
 5. **Nhóm Analytics (Phân tích dữ liệu)**:
-   - Truy vấn **Amazon Athena**: Chuyển đổi dữ liệu sang định dạng cột **Parquet / ORC** kết hợp **Partitioning** để giảm 90% lượng dữ liệu quét.
-   - Amazon EMR: Sử dụng **Spot Instances cho Task Nodes** (tiết kiệm tới 80% chi phí tính toán).
+   - Truy vấn **Amazon Athena**: Chuyển đổi dữ liệu sang định dạng cột **Parquet / ORC**, nén, kết hợp **Partitioning** để giảm mạnh lượng dữ liệu quét (thường giảm hàng chục %, có thể tới ~90%).
+   - Amazon EMR: Sử dụng **Spot Instances cho Task Nodes** (giảm tới 90% so với On-Demand).
    - Tạm dừng (Pause) cụm Amazon Redshift khi không sử dụng hoặc chuyển sang **Redshift Serverless**.
 
 ---

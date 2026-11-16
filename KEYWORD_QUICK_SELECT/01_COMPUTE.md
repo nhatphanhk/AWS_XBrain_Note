@@ -15,7 +15,7 @@
 | **Amazon ECR** | Kho lưu trữ Docker/OCI image phân tán (Container Registry) private và public trên AWS. | Lưu trữ, bảo mật mã hóa, quét lỗ hổng (Inspector) và sao chép image xuyên Region/Account cho ECS/EKS/Lambda. | *"Kho chứa container tiêu chuẩn: Kiểm tra hàng trước khi xuất kho, chống ghi đè nhãn."* |
 | **AWS Batch** | Dịch vụ lập lịch và điều phối các tác vụ tính toán hàng loạt (Batch Computing) ở mọi quy mô. | Điều phối hàng trăm ngàn job tính toán phân tích kỹ thuật, render đồ họa, HPC; tích hợp Spot instances tự scale về 0. | *"Xưởng gia công thời vụ: Có đơn hàng là thuê thợ làm thật nhanh rồi tự giải tán."* |
 | **AWS Elastic Beanstalk**| Nền tảng triển khai ứng dụng dạng dịch vụ (PaaS) cho web applications. | Triển khai nhanh ứng dụng Java, .NET, PHP, Node.js, Python mà không cần tự cấu hình hạ tầng, nhưng vẫn toàn quyền SSH vào EC2. | *"Khách sạn đầy đủ tiện nghi: Có sẵn giường tủ, bạn chỉ xách vali mã nguồn vào ở."* |
-| **AWS App Runner** | Dịch vụ PaaS Serverless chuyên cho web apps/APIs từ source code hoặc container image. | Đưa web app lên internet nhanh nhất: tự lo build, TLS SSL, load balancer, auto scale; không cần biết VPC/cluster. | *"Tàu cao tốc trọn gói: Đưa code lên là chạy thẳng ra internet có sẵn HTTPS."* |
+| **AWS App Runner** | Dịch vụ PaaS Serverless chuyên cho web apps/APIs từ source code hoặc container image. | Đưa web app lên internet nhanh nhất: tự lo build, TLS SSL, load balancer, auto scale; không cần biết VPC/cluster. ⚠️ App Runner chuyển sang maintenance, **không nhận khách mới từ 30/04/2026** (khách cũ vẫn dùng) — kiến trúc mới thường chọn ECS trên Fargate hoặc Lambda. | *"Tàu cao tốc trọn gói: Đưa code lên là chạy thẳng ra internet có sẵn HTTPS."* |
 | **Amazon Lightsail** | VPS đơn giản với mức giá cố định hàng tháng (gồm compute, storage, data transfer, IP, DNS). | Dành cho người ít kinh nghiệm AWS, chạy blog WordPress, web thử nghiệm, chi phí cố định dễ đoán. | *"Căn hộ mini trọn gói: Trả tiền trọn gói tiền nhà + điện nước hàng tháng, không phát sinh."* |
 | **AWS Outposts** | Rack phần cứng máy chủ AWS đặt trực tiếp tại Data Center của khách hàng (On-Premises). | Chạy dịch vụ AWS (EC2, EBS, S3 on Outposts, ECS, RDS) tại chỗ để đáp ứng yêu cầu lưu trữ dữ liệu tại chỗ (Data Residency) và độ trễ cực thấp. | *"Mang một góc trung tâm dữ liệu AWS về đặt ngay trong phòng server công ty mình."* |
 | **AWS Local Zones** | Điểm mở rộng của AWS Region đặt gần các đô thị lớn có đông dân cư. | Phục vụ người dùng cuối tại thành phố cụ thể với độ trễ dưới 10 mili-giây (single-digit ms) cho game, live streaming, VDI. | *"Trạm phân phối vệ tinh: Đặt gần trung tâm thành phố để giao hàng siêu tốc."* |
@@ -34,7 +34,7 @@
 | "NVMe local SSD, millions IOPS, Cassandra" | `i3en`, `i4g`, `d3` (Storage Optimized) | "I" = IOPS NVMe SSD, "D" = Dense HDD. Gắn vật lý, microsecond. | NoSQL databases, Data Warehouse |
 | "GPU ML training, deep learning, CUDA, graphics" | `p5`, `g5`, `inf2`, `trn1` (Accelerated / GPU) | "P"/"G" = NVIDIA GPUs; "Inf"/"Trn" = AWS Inferentia/Trainium. | ML training/inference, 3D render |
 | "burstable, dev/test, spiky occasional load" | `t3`, `t4g` (Burstable) | "T" = Throttleable. Dùng CPU Credits — burst khi cần, tiết kiệm khi nhàn. | Dev/Test, small sites, microservices |
-| "ARM chip, cheapest per vCPU, Graviton" | `*7g`, `*8g` series (AWS Graviton) | Hậu tố "g" = Graviton ARM. 20% rẻ hơn x86 cùng hiệu năng, tiết kiệm điện. | Đa số workloads hiện đại |
+| "ARM chip, best price-performance, Graviton" | `*7g`, `*8g` series (AWS Graviton) | Hậu tố "g" = Graviton ARM. Giá/giờ thấp hơn instance x86 tương đương, AWS công bố price-performance tốt hơn tới ~40% và tiết kiệm năng lượng hơn. Yêu cầu phần mềm build cho ARM64. | Đa số workloads hiện đại (Linux, container, Java, Python, Node.js) |
 
 ---
 
@@ -47,7 +47,7 @@
 | **EC2 Instance Savings Plans** | Cố định 1 instance family trong 1 region (1 hoặc 3 năm). Vẫn đổi được size, OS, AZ. | ≤ 72% | ❌ | Tiết kiệm hơn Compute SP nhưng kém linh hoạt hơn. |
 | **Standard Reserved Instances (RI)** | Cố định instance type, 1 hoặc 3 năm. Bán lại được trên RI Marketplace. | ≤ 72% | ❌ | Không đổi được family. Thanh toán: All Upfront (rẻ nhất), Partial, No Upfront. |
 | **Convertible RI** | Cho phép đổi instance family, OS, tenancy trong quá trình cam kết. | ≤ 66% | ❌ | Linh hoạt hơn Standard RI nhưng mức giảm giá thấp hơn. |
-| **Spot Instances / Spot Fleet** | Dùng capacity EC2 nhàn rỗi. Phù hợp batch, CI/CD, rendering, big data, worker pull SQS. | ≤ 90% | ✅ | **Cảnh báo thu hồi trước 2 phút** (`instance-action` metadata). Có thể Stop, Hibernate hoặc Terminate. |
+| **Spot Instances / Spot Fleet** | Dùng capacity EC2 nhàn rỗi. Phù hợp batch, CI/CD, rendering, big data, worker pull SQS. | ≤ 90% | ✅ | **Cảnh báo thu hồi trước 2 phút** (`instance-action` metadata / EventBridge), có thêm tín hiệu sớm *Rebalance Recommendation*. Hành vi khi bị thu hồi: Stop, Hibernate hoặc Terminate. Chiến lược phân bổ khuyến nghị: **`price-capacity-optimized`**. |
 | **Dedicated Hosts** | Thuê trọn 1 server vật lý riêng biệt, thấy rõ socket/core/host ID. Bắt buộc cho **BYOL license per-core/socket** (Oracle, Windows Server, SQL Server). | Đắt nhất | ❌ | Kiểm soát vị trí instance placement trên host vật lý. |
 | **Dedicated Instances** | Chạy trên phần cứng chỉ dành riêng cho account của bạn (không chung khách hàng khác). | Phí phụ | ❌ | Không thấy được socket/core vật lý $\rightarrow$ **Không dùng cho BYOL theo socket**. |
 | **On-Demand Capacity Reservations (ODCR)** | Giữ chỗ capacity ở 1 AZ cụ thể cho sự kiện ngắn hạn (Black Friday, DR drill). | 0% | ❌ | Không cam kết thời gian, hủy lúc nào cũng được. **Không giảm giá** (trừ khi kết hợp Regional RI / Savings Plans). |
@@ -82,7 +82,7 @@
 - **Lifecycle Hooks**:
   - `Pending:Wait` $\rightarrow$ Chạy script cài đặt, khởi tạo cache, kiểm tra cấu hình $\rightarrow$ `Pending:Proceed` mới gắn vào Load Balancer nhận traffic.
   - `Terminating:Wait` $\rightarrow$ Tạm dừng xóa instance để thu thập log files, gửi dữ liệu lên S3 $\rightarrow$ `Terminating:Proceed`.
-- **Warm Pool**: Tạo sẵn một cụm instance ở trạng thái `Stopped` hoặc `Running` $\rightarrow$ Giảm thời gian scale-out từ vài phút xuống vài giây cho các ứng dụng boot nặng.
+- **Warm Pool**: Tạo sẵn một cụm instance đã khởi tạo ở trạng thái `Stopped`, `Hibernated` hoặc `Running` $\rightarrow$ Giảm mạnh thời gian scale-out cho các ứng dụng boot/khởi tạo nặng (instance `Stopped` chỉ trả phí EBS).
 - **Default Termination Policy (Chính sách chọn instance xóa)**:
   1. Chọn **AZ có nhiều instance nhất**.
   2. Trong AZ đó, chọn instance sử dụng **Launch Template / Configuration cũ nhất**.
@@ -95,7 +95,7 @@
 
 | Keyword | Placement Group | 💡 Vì Sao | Giới Hạn Cứng |
 |:---|:---|:---|:---|
-| "lowest latency, HPC, MPI, 100 Gbps, closely located" | **Cluster** | Gom vào cùng một rack vật lý trong 1 AZ $\rightarrow$ Băng thông 100 Gbps, độ trễ < 1ms. Rủi ro: Hỏng rack = hỏng cả cụm. | 1 AZ duy nhất |
+| "lowest latency, HPC, MPI, high throughput, closely located" | **Cluster** | Gom các instance sát nhau trong 1 AZ $\rightarrow$ độ trễ mạng thấp nhất, băng thông cao (tới 10 Gbps cho 1 luồng TCP; tổng băng thông tùy loại instance, kết hợp ENA/EFA). Rủi ro: sự cố phần cứng/AZ có thể ảnh hưởng cả cụm. | 1 AZ duy nhất (có thể peer VPC nhưng hiệu năng giảm) |
 | "max fault tolerance, critical app, separate hardware" | **Spread** | Mỗi instance nằm trên 1 rack vật lý độc lập (nguồn điện + switch riêng). Hỏng 1 rack chỉ mất 1 máy. | $\le$ **7 instances / AZ / group** |
 | "HDFS / Kafka / Cassandra, rack-aware, hundreds of nodes" | **Partition** | Chia nhóm instance thành các partition (mỗi partition = 1 rack riêng). Thông tin partition đọc qua metadata giúp app phân tán replica an toàn. | $\le$ 7 partitions / AZ |
 
@@ -149,10 +149,31 @@
 
 ### 4. Amazon ECR (Elastic Container Registry)
 - Kho lưu trữ OCI Docker image private/public, dữ liệu lưu ngầm trên **Amazon S3** (độ bền 11 số 9).
-- **Image Vulnerability Scanning**: Quét cơ bản (Basic - dùng Clair) hoặc quét nâng cao (Enhanced - dùng **Amazon Inspector** phát hiện CVE).
+- **Image Vulnerability Scanning**: Quét cơ bản (Basic — công nghệ quét native của AWS, trước đây dựa trên Clair; quét khi push hoặc thủ công) hoặc quét nâng cao (Enhanced — tích hợp **Amazon Inspector**, quét liên tục CVE của OS và ngôn ngữ lập trình).
 - **Tag Immutability**: Bật tính năng chống ghi đè tag `latest`, ngăn chặn việc vô tình đẩy code mới ghi đè mã nguồn đang chạy ổn định.
 - **Lifecycle Policy**: Tự động dọn dẹp và xóa các image cũ không dùng để tối ưu chi phí lưu trữ.
 - **Truy Cập Private Từ VPC**: Cần tạo VPC Interface Endpoints (`ecr.api`, `ecr.dkr`) kèm **Gateway Endpoint cho S3** (để kéo các layer file image).
+
+---
+
+## λ AWS LAMBDA — GIỚI HẠN & CƠ CHẾ GỌI HÀM CẦN NHỚ
+
+| Hạng Mục | Giá Trị / Cơ Chế | 💡 Ý Nghĩa Trong Đề Thi |
+|:---|:---|:---|
+| **Timeout** | Tối đa **15 phút (900 giây)** | Job dài hơn $\rightarrow$ AWS Batch, ECS/Fargate hoặc chia nhỏ bằng Step Functions. |
+| **Bộ nhớ** | **128 MB – 10,240 MB**; vCPU tăng tỷ lệ theo RAM (tối đa 6 vCPU) | Hàm CPU-bound chậm $\rightarrow$ tăng memory để có thêm CPU. |
+| **Ổ tạm `/tmp`** | **512 MB – 10 GB** (ephemeral) | Cần lưu bền/chia sẻ file giữa các lần gọi $\rightarrow$ mount **EFS** hoặc dùng S3. |
+| **Gói triển khai** | 50 MB (zip upload trực tiếp), 250 MB (giải nén, gồm Layers), **10 GB (container image)** | Thư viện ML lớn $\rightarrow$ đóng gói container image. |
+| **Payload** | **6 MB** (đồng bộ), **1 MB** (bất đồng bộ — tăng từ 256 KB vào 10/2025) | File lớn $\rightarrow$ upload S3 trước. |
+| **Concurrency** | Mặc định **1,000 / Region** (soft limit). **Reserved Concurrency** = giữ chỗ + giới hạn trần; **Provisioned Concurrency** = giữ sẵn môi trường warm | Một hàm "ăn hết" concurrency làm hàm khác bị throttle $\rightarrow$ đặt Reserved Concurrency. |
+| **Cold start** | **Provisioned Concurrency** hoặc **SnapStart** (Java, Python, .NET) | "Giảm độ trễ khởi động cho Java" $\rightarrow$ SnapStart. |
+
+**3 kiểu gọi hàm (Invocation models):**
+1. **Synchronous** (API Gateway, ALB, Function URL, SDK `RequestResponse`): caller chờ kết quả, client tự retry.
+2. **Asynchronous** (S3 Event, SNS, EventBridge): Lambda xếp hàng nội bộ, **tự retry tối đa 2 lần** (cấu hình 0–2), giữ sự kiện tối đa 6 giờ; lỗi cuối cùng gửi vào **DLQ (SQS/SNS)** hoặc **Lambda Destinations** (on-success/on-failure, khuyến nghị dùng thay DLQ).
+3. **Event Source Mapping / Poll-based** (SQS, Kinesis Data Streams, DynamoDB Streams, MSK, Amazon MQ): Lambda tự poll và gọi hàm theo batch. Với Kinesis/DynamoDB Streams, bản ghi lỗi sẽ chặn shard cho đến khi xử lý được hoặc hết hạn $\rightarrow$ dùng *bisect batch on error*, *maximum retry attempts*, *on-failure destination*.
+
+**Lambda trong VPC**: Lambda tạo Hyperplane ENI trong subnet được chọn. Muốn ra Internet phải đi qua **NAT Gateway** (subnet private) — gắn Lambda vào public subnet **không** giúp nó có IP public. Gọi S3/DynamoDB riêng tư $\rightarrow$ Gateway VPC Endpoint.
 
 ---
 
@@ -164,7 +185,7 @@
 | "Docker container", "AWS-native", "least operational overhead than K8s" | **Amazon ECS** |
 | "run container without managing servers/nodes", "serverless containers" | **AWS Fargate** |
 | "batch job > 15 mins", "genomics", "financial simulation", "large-scale batch" | **AWS Batch** |
-| "deploy web app quickly from Git/image", "no VPC/cluster knowledge", "URL HTTPS" | **AWS App Runner** |
+| "deploy web app quickly from Git/image", "no VPC/cluster knowledge", "URL HTTPS" | **AWS App Runner** (đề cũ; dịch vụ không nhận khách mới từ 30/04/2026) |
 | "event-driven", "< 15 minutes", "scale to zero", "file upload processing" | **AWS Lambda** |
 | "simple WordPress", "fixed monthly price", "all-in-one VPS" | **Amazon Lightsail** |
 | "data residency", "ultra-low latency on-premises", "same AWS console/API" | **AWS Outposts** |

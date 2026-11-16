@@ -91,6 +91,10 @@ flowchart TD
 | **Cấu hình card mạng** | Không cần can thiệp; bắt buộc phải gắn **Elastic IP**. | **Bắt buộc phải tắt cờ `Source/Destination Check`** trên card mạng ENI. |
 | **Cơ chế tính phí** | Phí theo giờ duy trì (~\\$0.045/h) + **Phí xử lý dữ liệu (\\$0.045/GB)**. | Tính phí máy ảo EC2 On-Demand hoặc Spot + phí ổ đĩa EBS. |
 
+> 🆕 **Regional NAT Gateway (ra mắt 11/2025)**: Ngoài NAT Gateway kiểu zonal truyền thống (đặt trong public subnet của từng AZ — đáp án kinh điển "mỗi AZ một NAT Gateway"), AWS bổ sung chế độ **regional availability**: một NAT Gateway duy nhất **tự mở rộng/thu hẹp qua các AZ** theo nơi có workload, không cần public subnet ở mỗi AZ và không phải sửa route table khi workload chuyển sang AZ mới. Tính phí theo từng AZ hoạt động + phí xử lý dữ liệu. Chưa hỗ trợ GovCloud và China Regions.
+>
+> 💡 NAT Gateway còn hỗ trợ **NAT64** (kết hợp DNS64) để workload chỉ có IPv6 gọi tới đích IPv4.
+
 ---
 
 ### 4. Kết nối riêng tư: VPC Endpoints (Gateway vs Interface Endpoints)
@@ -301,7 +305,7 @@ flowchart TD
 #### 🪤 Bẫy 3: Mạng IPv6 Trong Private Subnet Chỉ Cho Phép Ra Internet — (CM-PT1 Q33)
 - **Tình huống đề thi**: *"Ứng dụng chạy trên dải IPv6 trong private subnet cần tải các bản vá từ Internet nhưng phải ngăn chặn hoàn toàn mọi kết nối khởi tạo từ Internet vào máy chủ."*
 - **Các phương án bẫy**:
-  - ❌ *Dùng NAT Gateway*: NAT Gateway chỉ hỗ trợ dịch địa chỉ cho **IPv4**, hoàn toàn không hoạt động với IPv6 (IPv6 vốn là địa chỉ toàn cầu công khai, không cần NAT).
+  - ❌ *Dùng NAT Gateway*: NAT Gateway phục vụ dịch địa chỉ **IPv4** (chỉ hỗ trợ IPv6 ở dạng NAT64 khi đích là IPv4); với lưu lượng IPv6 → IPv6 ra Internet thì không cần NAT (IPv6 vốn là địa chỉ toàn cầu công khai) mà dùng Egress-Only IGW.
   - ❌ *Dùng Internet Gateway*: IGW thông thường cho phép kết nối 2 chiều (cả Inbound và Outbound), vi phạm yêu cầu bảo mật.
 - **Giải pháp ĐÚNG**: **Egress-Only Internet Gateway (outbound-only IGW)**.
   - Cho phép lưu lượng IPv6 từ instance khởi tạo đi ra ngoài Internet.

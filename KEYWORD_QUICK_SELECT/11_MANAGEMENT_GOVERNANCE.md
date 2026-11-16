@@ -55,7 +55,8 @@ TAM GIÁC QUẢN TRỊ VÀ GIÁM SÁT AWS:
   - **EC2 Actions**: Stop, Terminate, Reboot, hoặc **Recover**.
 - 🌟 **Tính Năng EC2 Recover (Thường Ra Đề)**:
   - Khi máy ảo bị lỗi kiểm tra phần cứng (`StatusCheckFailed_System`) $\rightarrow$ CloudWatch Alarm kích hoạt **EC2 Recover**.
-  - Máy ảo sẽ được di chuyển sang một máy chủ vật lý mới hoàn toàn nhưng **GIỮ NGUYÊN TOÀN BỘ: Private IP, Elastic IP, Metadata, Instance ID và EBS Volume gắn kèm**!
+  - Máy ảo sẽ được di chuyển sang một máy chủ vật lý mới hoàn toàn nhưng **GIỮ NGUYÊN TOÀN BỘ: Private IP, Elastic IP, Metadata, Instance ID, Placement Group và EBS Volume gắn kèm**! (Dữ liệu trên **Instance Store bị mất**; instance dùng instance store không hỗ trợ recover.)
+  - Nhiều instance type hiện được bật sẵn **simplified automatic recovery** (không cần tạo alarm); Alarm + Recover vẫn là đáp án chuẩn trong đề.
 - **Composite Alarms**: Cho phép gộp nhiều Alarm đơn lẻ lại bằng các biểu thức logic `AND`, `OR` để giảm thiểu các cảnh báo rác (Alarm Noise).
 
 ### 4. CloudWatch Logs: Insights & Subscription Filters
@@ -76,7 +77,8 @@ TAM GIÁC QUẢN TRỊ VÀ GIÁM SÁT AWS:
 | **Data Events** | Ghi lại các thao tác dữ liệu chi tiết trên tài nguyên (VD: `GetObject`, `PutObject` trên S3; `Invoke` trên Lambda). **Mặc định TẮT (phải bật riêng và có tính phí)**. | Audit xem ai đã tải file nhạy cảm trong bucket S3 xuống máy tính. |
 | **CloudTrail Insights** | Sử dụng thuật toán Machine Learning tự động phát hiện các hành vi gọi API bất thường (ví dụ: số lần gọi API tăng vọt 500% so với ngày thường). | Phát hiện sớm tài khoản bị hack hoặc rò rỉ mã nguồn. |
 | **Organization Trail** | Cấu hình từ tài khoản quản trị (Management Account) để tự động ghi log API của **TẤT CẢ các tài khoản thành viên trong Organization**. | Thu thập và tập trung toàn bộ nhật ký kiểm toán doanh nghiệp về một bucket S3 duy nhất. |
-| **Log File Integrity Validation**| Bật tính năng chữ ký số kiểm tra tính toàn vẹn của file log $\rightarrow$ Phát hiện nếu file log bị kẻ xấu sửa đổi hoặc xóa bớt. | Đáp ứng yêu cầu kiểm toán an ninh nghiêm ngặt. |
+| **Log File Integrity Validation**| Bật tính năng chữ ký số (SHA-256 hash + digest file ký RSA) kiểm tra tính toàn vẹn của file log $\rightarrow$ Phát hiện nếu file log bị kẻ xấu sửa đổi hoặc xóa bớt. | Đáp ứng yêu cầu kiểm toán an ninh nghiêm ngặt. |
+| **CloudTrail Lake** | Data lake được quản lý để lưu (tới nhiều năm) và truy vấn sự kiện CloudTrail bằng SQL. *(Chuyển maintenance, không nhận khách mới từ 31/05/2026 — khách mới thường dùng Trail → S3 + Athena hoặc CloudWatch Logs.)* | "query CloudTrail events with SQL without building pipeline" (đề cũ). |
 
 > 🔒 **Bảo Vệ File Log CloudTrail An Toàn Tuyệt Đối**:  
 > Đề bài yêu cầu: *"Bảo đảm file log CloudTrail không thể bị sửa, xóa hay ghi đè bởi bất kỳ ai kể cả Admin"* $\rightarrow$ Lưu vào **S3 Bucket riêng biệt** + Bật **S3 Versioning** + Bật **S3 Object Lock (Compliance Mode)** + Bật **MFA Delete** + Mã hóa bằng **SSE-KMS**.
@@ -87,7 +89,8 @@ TAM GIÁC QUẢN TRỊ VÀ GIÁM SÁT AWS:
 
 - **Nguyên lý hoạt động**: Ghi lại mọi thay đổi cấu hình (Configuration Items) của tài nguyên theo thời gian và đánh giá so với các bộ quy tắc (**Config Rules**).
 - **Các Bộ Quy Tắc (Rules)**:
-  - *AWS Managed Rules* (Hơn 300+ rules có sẵn): VD: `s3-bucket-public-read-prohibited`, `encrypted-volumes`, `restricted-ssh` (kiểm tra port 22 có mở 0.0.0.0/0).
+  - *AWS Managed Rules* (hàng trăm rule có sẵn): VD: `s3-bucket-public-read-prohibited`, `encrypted-volumes`, `restricted-ssh` (kiểm tra port 22 có mở 0.0.0.0/0).
+  - Kiểu kích hoạt: **Configuration changes** (khi tài nguyên thay đổi) hoặc **Periodic** (định kỳ 1, 3, 6, 12, 24 giờ).
   - *Custom Rules*: Tự viết logic kiểm tra bằng **AWS Lambda** hoặc **Guard DSL**.
 - ⚠️ **LƯU Ý CỐT TỬ ĐỀ THI**: **AWS Config KHÔNG CÓ TÍNH NĂNG NGĂN CHẶN HÀNH ĐỘNG XẢY RA** (Config là dịch vụ mang tính chất thám tử - Detective, nó chỉ phát hiện vi phạm SAU KHI tài nguyên đã bị tạo hoặc sửa).
   - 👉 Muốn **CHẶN TRƯỚC (Preventive)** không cho tạo $\rightarrow$ Dùng **Service Control Policies (SCP)** hoặc **IAM Policy**.
@@ -112,7 +115,7 @@ TAM GIÁC QUẢN TRỊ VÀ GIÁM SÁT AWS:
 | **Change Sets** | Tạo bản xem trước (Preview) chi tiết các tài nguyên sẽ bị thêm, sửa, hoặc xóa trước khi thực sự áp dụng update vào Stack. | "Preview changes before updating production infrastructure", "avoid unexpected replacement of database". |
 | **CloudFormation StackSets** | Mở rộng triển khai 1 template CloudFormation duy nhất ra **nhiều AWS Accounts VÀ nhiều AWS Regions** đồng thời từ một tài khoản quản trị. | "Deploy standard baseline infrastructure across all accounts in AWS Organization and multiple regions". |
 | **Drift Detection** | Quét và so sánh cấu hình thực tế của tài nguyên với cấu hình khai báo trong template $\rightarrow$ Phát hiện ai đã vào console sửa tay tài nguyên. | "Detect manual out-of-band changes to infrastructure". |
-| **DeletionPolicy** | Quy định điều gì sẽ xảy ra với tài nguyên khi Stack bị xóa: `Delete` (mặc định xóa), **`Retain` (giữ lại tài nguyên)**, hoặc **`Snapshot` (chụp bản sao lưu EBS/RDS trước khi xóa)**. | "Prevent RDS database from being deleted when CloudFormation stack is deleted". |
+| **DeletionPolicy** | Quy định điều gì sẽ xảy ra với tài nguyên khi Stack bị xóa: `Delete` (mặc định với đa số tài nguyên), **`Retain` (giữ lại tài nguyên)**, hoặc **`Snapshot` (chụp bản sao lưu EBS/RDS/ElastiCache/Redshift... trước khi xóa)**. Lưu ý: `AWS::RDS::DBCluster` và `AWS::RDS::DBInstance` (không thuộc cluster) mặc định là `Snapshot`. Dùng thêm **`UpdateReplacePolicy`** để bảo vệ khi update làm thay thế tài nguyên. | "Prevent RDS database from being deleted when CloudFormation stack is deleted". |
 | **Stack Policy** | Chính sách JSON ngăn chặn việc cập nhật hoặc vô tình ghi đè các tài nguyên trọng yếu trong quá trình update stack (VD: bảo vệ Database instance). | "Protect critical production database from being updated or replaced during stack update". |
 | **Cross-Stack Reference** | Dùng từ khóa `Export` trong phần Outputs của Stack hạ tầng $\rightarrow$ Stack ứng dụng dùng hàm `Fn::ImportValue` để đọc lại giá trị. | "Share VPC ID and Subnets between network stack and application stack". |
 | **cfn-init & cfn-signal** | `cfn-init` đọc cấu hình cài đặt phần mềm trên EC2; `cfn-signal` gửi tín hiệu về cho CloudFormation biết máy chủ đã boot xong để tiếp tục. | "Wait for EC2 application bootstrap to complete before marking stack creation successful". |

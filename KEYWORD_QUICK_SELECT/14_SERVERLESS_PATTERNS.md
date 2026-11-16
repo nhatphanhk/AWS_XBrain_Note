@@ -70,7 +70,7 @@ SECURITY:      Amazon Cognito, AWS KMS, AWS Secrets Manager
 
 ### 4. Xử Lý Nghẽn Kết Nối Khi Lambda Truy Cập Database Quan Hệ (RDS Connection Pooling)
 - **Vấn đề**: Mỗi lần hàm Lambda scale-out có thể tạo ra hàng ngàn instance đồng thời, mỗi instance mở 1 kết nối tới MySQL/PostgreSQL $\rightarrow$ Gây lỗi **`Too many connections error`** và sập RDS.
-- **Giải pháp chuẩn AWS**: Đặt **Amazon RDS Proxy** ở giữa. RDS Proxy giữ và gom cụm kết nối (Connection Pooling), chia sẻ lại kết nối cho các Lambda functions $\rightarrow$ Giảm 90% tải CPU/RAM cho database và giảm thời gian failover xuống 66%.
+- **Giải pháp chuẩn AWS**: Đặt **Amazon RDS Proxy** ở giữa. RDS Proxy giữ và gom cụm kết nối (Connection Pooling), chia sẻ lại kết nối cho các Lambda functions $\rightarrow$ giảm số kết nối và overhead mở/đóng kết nối trên database, giảm thời gian failover tới 66%, hỗ trợ IAM authentication và lấy credential từ Secrets Manager.
 
 ### 5. Phát Tán Sự Kiện Xử Lý Đơn Hàng Độc Lập (Fan-Out Pattern)
 ```
@@ -118,21 +118,22 @@ Khi làm bài thi, rất nhiều câu hỏi cố tình đưa ra các mốc thờ
 |:---|:---|:---|
 | **AWS Lambda** | **Thời gian chạy tối đa: 15 phút** | Đề bài nói: *"Tác vụ tính toán xử lý mất 30 phút hoặc vài giờ"* $\rightarrow$ **LOẠI BỎ NGAY LAMBDA** (Bắt buộc chọn **AWS Batch, ECS on Fargate, hoặc Step Functions**). |
 | **AWS Lambda** | **Bộ nhớ RAM: 128 MB đến 10 GB** | CPU tự động tăng tỷ lệ thuận theo dung lượng RAM được cấp phát. |
-| **AWS Lambda** | **Payload kích thước: Đồng bộ 6 MB / Bất đồng bộ 256 KB** | Đề bài gửi file lớn 50 MB qua API Gateway vào thẳng Lambda $\rightarrow$ **Sai** (Phải upload file lên S3 trước). |
-| **AWS Lambda** | **Hạn mức Concurrency: 1,000 / Region** | Vượt quá 1,000 thực thi đồng thời mặc định sẽ bị trả về lỗi **`HTTP 429 Too Many Requests`**. Dùng **Provisioned Concurrency** để xóa bỏ hiện tượng trễ khởi động lạnh (**Cold Start**). |
+| **AWS Lambda** | **Payload kích thước: Đồng bộ 6 MB / Bất đồng bộ 1 MB** (async tăng từ 256 KB vào 10/2025; đề cũ ghi 256 KB) | Đề bài gửi file lớn 50 MB qua API Gateway vào thẳng Lambda $\rightarrow$ **Sai** (Phải upload file lên S3 trước, thường qua pre-signed URL). |
+| **AWS Lambda** | **Hạn mức Concurrency: 1,000 / Region** (mặc định, xin tăng được) | Vượt quá bị throttle (**`TooManyRequestsException` / HTTP 429**). Dùng **Reserved Concurrency** để giữ phần cho hàm quan trọng; **Provisioned Concurrency** hoặc **SnapStart** để giảm trễ khởi động lạnh (**Cold Start**). |
 | **AWS Lambda** | **Ổ đĩa tạm `/tmp`: 512 MB đến 10 GB** | Dùng để tải file tạm về giải nén hoặc xử lý cục bộ trước khi đẩy đi. |
-| **Amazon API Gateway** | **Timeout tối đa của 1 request: 29 giây** | Đề bài nói: *"Ứng dụng cần đợi tiến trình backend xử lý mất 2 phút mới trả về kết quả qua API Gateway"* $\rightarrow$ **BỊ LỖI TIMEOUT NGAY** (Bắt buộc thiết kế bất đồng bộ: API Gateway trả về mã 202 Accepted + đẩy việc vào SQS). |
+| **Amazon API Gateway** | **Timeout tích hợp mặc định: 29 giây** | Đề bài nói: *"Ứng dụng cần đợi tiến trình backend xử lý mất 2 phút mới trả về kết quả qua API Gateway"* $\rightarrow$ **BỊ LỖI TIMEOUT** với cấu hình mặc định (thiết kế bất đồng bộ: API Gateway trả về 202 Accepted + đẩy việc vào SQS/Step Functions, client poll hoặc nhận callback/WebSocket). Ghi chú: từ 06/2024 REST API Regional/Private có thể xin tăng timeout > 29s, nhưng đáp án "async" vẫn là thiết kế chuẩn. |
 | **Amazon API Gateway** | **Payload kích thước tối đa: 10 MB** | Request body gửi qua API Gateway không được vượt quá 10 MB. |
 | **Amazon API Gateway** | **Throttling mặc định: 10,000 req/s** | Vượt quá sẽ trả về mã lỗi **`HTTP 429`**. Cung cấp **Usage Plans + API Keys** để giới hạn hạn ngạch từng khách hàng. |
-| **Amazon SQS** | **Kích thước tin nhắn: 256 KB** | Vượt quá 256 KB $\rightarrow$ Bắt buộc dùng **Amazon SQS Extended Client Library** (lưu file vào S3). |
+| **Amazon SQS** | **Kích thước tin nhắn: 1 MiB** (tăng từ 256 KiB vào 08/2025; đề cũ ghi 256 KB) | Vượt quá giới hạn $\rightarrow$ dùng **Amazon SQS Extended Client Library** (lưu payload vào S3, tới 2 GB). |
 | **Amazon SQS** | **Thời gian lưu trữ (Retention): 4 ngày (tối đa 14 ngày)** | Tin nhắn không được xử lý trong vòng 14 ngày sẽ tự động bị xóa vĩnh viễn. |
 | **Amazon SQS** | **Visibility Timeout tối đa: 12 giờ** | Mặc định 30 giây. Phải hoàn tất xử lý và gọi lệnh `DeleteMessage` trước khi hết giờ. |
-| **Amazon SQS** | **Long Polling: 1 đến 20 giây** | Giảm thiểu số lượng request rỗng, tiết kiệm 90% chi phí API. |
+| **Amazon SQS** | **Long Polling: 1 đến 20 giây** | Giảm mạnh số lượng request rỗng, tiết kiệm chi phí API so với short polling. |
 | **Amazon DynamoDB** | **Kích thước 1 Item tối đa: 400 KB** | Đề bài lưu trữ file tài liệu PDF hoặc ảnh lớn trong DynamoDB $\rightarrow$ **Sai** (Phải lưu file trên S3, DynamoDB chỉ lưu metadata). |
 | **Amazon DynamoDB** | **Phục hồi theo thời gian (PITR): 35 ngày** | Cho phép khôi phục bảng về bất kỳ giây nào trong vòng 35 ngày gần nhất. |
 | **AWS Step Functions** | **Standard Workflow: Tối đa 1 năm** | Hỗ trợ bước dừng chờ người duyệt (Human approval) bằng callback task token. |
 | **AWS Step Functions** | **Express Workflow: Tối đa 5 phút** | Dành cho xử lý luồng sự kiện IoT tốc độ cao, tính phí theo thời gian chạy GB-s. |
-| **Kinesis Data Streams** | **Kích thước bản ghi (Record): Tối đa 1 MB** | Kinesis Streams chỉ nhận bản ghi $\le$ 1 MB (nếu cần lớn hơn tới 10 MB $\rightarrow$ Dùng **Amazon MSK**). |
+| **Kinesis Data Streams** | **Kích thước bản ghi (Record): mặc định 1 MiB, cấu hình tới 10 MiB** (từ 10/2025) | Đề cũ: bản ghi > 1 MB (tới 10 MB) $\rightarrow$ **Amazon MSK**. Hiện có thể nâng `MaxRecordSize` của stream lên 10 MiB, nhưng throughput/shard vẫn 1 MB/s nên chỉ phù hợp khi bản ghi lớn chiếm tỷ lệ nhỏ. |
+| **Amazon EventBridge** | **Kích thước sự kiện: tối đa 1 MB** (tăng từ 256 KB vào 10/2025) | Payload lớn $\rightarrow$ lưu S3, sự kiện chỉ chứa tham chiếu (claim-check pattern). |
 | **Kinesis Data Streams** | **Thời gian lưu trữ: 24 giờ đến 365 ngày** | Dữ liệu stream có thể được tua lại và phát lại (Replay) nhiều lần. |
 | **Kinesis Data Streams** | **Công suất 1 Shard: 1 MB/s vào / 2 MB/s ra** | Đạt tối đa 1,000 records ghi vào mỗi giây trên 1 Shard. Vượt quá bị lỗi `ProvisionedThroughputExceeded`. |
 
@@ -148,7 +149,7 @@ Khi làm bài thi, rất nhiều câu hỏi cố tình đưa ra các mốc thờ
 | "low-cost, high-performance serverless HTTP proxy API" | **Amazon API Gateway (HTTP API)** |
 | "serverless GraphQL API, real-time WebSocket subscriptions" | **AWS AppSync** |
 | "serverless NoSQL database, single-digit ms, auto-scale" | **Amazon DynamoDB** |
-| "relational SQL database, unpredictable variable load, scale capacity to zero" | **Amazon Aurora Serverless v2** |
+| "relational SQL database, unpredictable variable load, scale capacity to zero" | **Amazon Aurora Serverless v2** (phiên bản mới hỗ trợ auto-pause về 0 ACU) |
 | "serverless SQL query directly on S3 data lake files" | **Amazon Athena** |
 | "serverless streaming data ingestion into S3/Redshift without consumer code" | **Amazon Data Firehose** |
 | "serverless multi-step workflow orchestration, error retry, human approval" | **AWS Step Functions Standard** |

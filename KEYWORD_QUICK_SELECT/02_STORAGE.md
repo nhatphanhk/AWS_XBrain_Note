@@ -15,15 +15,15 @@
 | **AWS Backup** | Dịch vụ quản trị và tự động hóa chính sách sao lưu tập trung cấp doanh nghiệp đa dịch vụ. | Lập lịch backup tập trung cho EC2, EBS, RDS, Aurora, DynamoDB, EFS, FSx, S3; hỗ trợ khóa bất biến Vault Lock (WORM). | *"Tổng kho két sắt bảo mật: Quản lý chìa khóa và lịch cất giữ tài sản toàn bộ công ty."* |
 | **AWS DataSync** | Công cụ truyền dữ liệu trực tuyến tốc độ cao (TLS, checksum) giữa On-Prem và AWS Storage. | Tự động hóa việc di chuyển và đồng bộ dữ liệu định kỳ qua mạng (nhanh gấp 10 lần rsync). | *"Đoàn xe chuyên dụng: Chở dữ liệu định kỳ qua mạng cực nhanh và an toàn."* |
 | **AWS Transfer Family** | Cổng giao tiếp SFTP, FTPS, FTP, AS2 được quản lý hoàn toàn đổ thẳng vào S3 hoặc EFS. | Cho đối tác bên ngoài upload file an toàn qua SFTP quen thuộc mà không cần dựng FTP server. | *"Cửa khẩu SFTP: Đối tác nước ngoài giao hàng vào kho S3 bằng xe quen thuộc."* |
-| **AWS Snow Family** | Thiết bị vận chuyển dữ liệu vật lý ngoại tuyến (Snowball Edge 80–210 TB, Snowcone, Snowmobile). | Di chuyển hàng chục TB đến hàng trăm PB khi đường truyền mạng quá chậm hoặc không có Internet. | *"Tàu chở container vật lý: Chở cả kho dữ liệu đi đường bộ khi mạng Internet nghẽn."* |
+| **AWS Snow Family** | Thiết bị vận chuyển dữ liệu vật lý ngoại tuyến (Snowball Edge 80–210 TB; Snowcone và Snowmobile đã ngừng). | Di chuyển hàng chục TB đến hàng PB khi đường truyền mạng quá chậm hoặc không có Internet. ⚠️ Từ 07/11/2025 AWS **không bán thiết bị Snow cho khách mới** (khách cũ vẫn dùng); thay thế: DataSync (+ Direct Connect), **AWS Data Transfer Terminal**, giải pháp Partner; edge compute $\rightarrow$ Outposts. | *"Tàu chở container vật lý: Chở cả kho dữ liệu đi đường bộ khi mạng Internet nghẽn."* |
 
 ---
 
 ## 🪣 AMAZON S3 — CÁC NGUYÊN TẮC VÀ THÔNG SỐ CỐT LÕI
 
 - **Định danh**: Tên Bucket là **duy nhất trên toàn cầu** (Globally unique), nhưng mỗi Bucket thuộc về **1 Region cụ thể**.
-- **Kích thước Object**: Tối đa **5 TB**. Upload 1 lần qua `PUT` đơn lẻ tối đa **5 GB**.
-- **Multipart Upload**: Khuyến nghị dùng cho file **> 100 MB**, **bắt buộc** dùng cho file **> 5 GB**. Giúp upload song song các phần và resume khi mất mạng.
+- **Kích thước Object**: Tối đa **50 TB** (tăng từ 5 TB vào 12/2025 — tài liệu/đề cũ ghi 5 TB). Upload 1 lần qua `PUT` đơn lẻ tối đa **5 GB**; 1 lệnh `GET` đơn lẻ tối đa 5 TB (object lớn hơn phải tải bằng byte-range/part song song).
+- **Multipart Upload**: Khuyến nghị dùng cho file **> 100 MB**, **bắt buộc** dùng cho file **> 5 GB**. Tối đa 10,000 part, mỗi part 5 MB – 5 GB (part cuối có thể nhỏ hơn). Giúp upload song song các phần và resume khi mất mạng; dùng lifecycle rule `AbortIncompleteMultipartUpload` để dọn part dở dang.
 - **Tính nhất quán**: Đạt chuẩn **Strong Read-After-Write Consistency** cho mọi lệnh PUT và DELETE.
 - **Độ bền (Durability)**: Đạt chuẩn **11 số 9 (99.999999999%)** trên mọi Storage Class (kể cả One Zone-IA).
 - **Static Website Hosting**: Chỉ cung cấp giao thức HTTP. Muốn có HTTPS $\rightarrow$ Bắt buộc kết hợp **Amazon CloudFront**.
@@ -37,13 +37,13 @@
 | Storage Class | Availability | Min Days | Min Size | Retrieval Fee | 💡 Khi Nào Chọn Trong Đề Thi? |
 |:---|:---:|:---:|:---:|:---:|:---|
 | **S3 Standard** | 99.99% (≥3 AZ) | 0 ngày | 0 KB | $0 | Dữ liệu truy cập thường xuyên, website, analytics, **file có vòng đời ngắn < 30 ngày**. |
-| **S3 Intelligent-Tiering** | 99.9% (≥3 AZ) | 0 ngày | 128 KB | **$0** (Không phí phạt) | **Mô hình truy cập không biết trước hoặc thay đổi**. Tự chuyển: Frequent $\rightarrow$ Infrequent (30 ngày) $\rightarrow$ Archive Instant (90 ngày). Tùy chọn: Archive Access (90+ ngày), Deep Archive Access (180+ ngày). File < 128 KB không tự chuyển. |
+| **S3 Intelligent-Tiering** | 99.9% (≥3 AZ) | 0 ngày | Không có (object < 128 KB không được auto-tier, luôn tính giá Frequent) | **$0** (Không phí phạt) — có phí monitoring nhỏ / object | **Mô hình truy cập không biết trước hoặc thay đổi**. Tự chuyển: Frequent $\rightarrow$ Infrequent (sau 30 ngày không truy cập) $\rightarrow$ Archive Instant (sau 90 ngày). Tùy chọn kích hoạt: Archive Access (90+ ngày), Deep Archive Access (180+ ngày). |
 | **S3 Standard-IA** | 99.9% (≥3 AZ) | **30 ngày** | 128 KB | Có phí / GB | Dữ liệu ít truy cập (1–2 lần/tháng), cần lấy ra trong **vài mili-giây**, sao lưu DR đa vùng. |
 | **S3 One Zone-IA** | **99.5% (1 AZ)** | **30 ngày** | 128 KB | Có phí / GB | **Rẻ hơn Standard-IA 20%**. Dùng cho dữ liệu có thể tái tạo được (thumbnails, secondary copies). Hỏng AZ = mất vĩnh viễn. Keyword: `re-creatable`, `non-critical`. |
 | **S3 Glacier Instant Retrieval** | 99.9% (≥3 AZ) | **90 ngày** | 128 KB | Cao hơn IA | Dữ liệu lưu trữ lâu dài nhưng cần truy xuất trong **vài mili-giây** (hồ sơ y tế, ảnh báo chí cũ). Truy cập ~1 lần/quý. |
-| **S3 Glacier Flexible Retrieval** | 99.99% (≥3 AZ) | **90 ngày** | 0 KB | Tùy chọn | Chờ lấy dữ liệu: **Expedited (1–5 phút)**, **Standard (3–5 giờ)**, **Bulk (5–12 giờ — MIỄN PHÍ retrieval fee)**. Sao lưu định kỳ hàng quý/năm. |
-| **S3 Glacier Deep Archive** | 99.99% (≥3 AZ) | **180 ngày** | 0 KB | Rẻ nhất | **Rẻ nhất thế giới đám mây** (< $1/TB/tháng). Lấy dữ liệu: Standard (12 giờ), Bulk (48 giờ). Tuân thủ pháp lý 7–10 năm. Keyword: `retain 7-10 years`, `lowest cost`. |
-| **S3 Express One Zone** | 99.95% (1 AZ) | 0 ngày | 0 KB | $0 | **Nhanh gấp 10 lần Standard** (độ trễ single-digit ms). Dạng Directory Bucket lưu trong 1 AZ. Cho ML Training, Apache Spark, AI workloads. |
+| **S3 Glacier Flexible Retrieval** | 99.99% (≥3 AZ) | **90 ngày** | Mỗi object cộng thêm ~40 KB metadata tính phí | Tùy chọn | Chờ lấy dữ liệu: **Expedited (1–5 phút)**, **Standard (3–5 giờ)**, **Bulk (5–12 giờ — MIỄN PHÍ retrieval fee)**. Sao lưu định kỳ hàng quý/năm. Muốn Expedited luôn sẵn sàng $\rightarrow$ mua **Provisioned Retrieval Capacity**. |
+| **S3 Glacier Deep Archive** | 99.99% (≥3 AZ) | **180 ngày** | Mỗi object cộng thêm ~40 KB metadata tính phí | Rẻ nhất | **Lớp lưu trữ rẻ nhất của S3** (~$0.00099/GB-tháng ≈ $1/TB). Lấy dữ liệu: Standard (trong 12 giờ), Bulk (trong 48 giờ). Tuân thủ pháp lý 7–10 năm. Keyword: `retain 7-10 years`, `lowest cost`. |
+| **S3 Express One Zone** | 99.95% (1 AZ) | 0 ngày | 0 KB | Không phí retrieval kiểu IA/Glacier | **Nhanh tới 10 lần Standard** (độ trễ single-digit ms). Dạng **Directory Bucket** lưu trong 1 AZ do bạn chọn. Cho ML Training, Apache Spark, AI workloads, đặt cùng AZ với compute. |
 
 > ⚠️ **BẪY THI KINH ĐIỂN VỀ VÒNG ĐỜI S3**:  
 > Đề bài: *"Tập tin tạm thời được lưu trữ và tự động xóa sau 10 đến 15 ngày, phương án nào rẻ nhất?"*  
@@ -69,12 +69,13 @@
 - **MFA Delete**: Bắt buộc xác thực đa yếu tố để xóa vĩnh viễn một version hoặc tạm dừng Versioning. **Chỉ tài khoản Root mới bật được MFA Delete**.
 
 ### 2. S3 Object Lock (Chuẩn WORM - Write Once, Read Many)
-- Bắt buộc phải bật **S3 Versioning** trước khi kích hoạt Object Lock.
+- Bắt buộc phải bật **S3 Versioning** (tự bật khi kích hoạt Object Lock). Có thể bật Object Lock cho cả bucket đã tồn tại; khi đã bật thì **không thể tắt Object Lock và không thể suspend Versioning**.
+- Retention áp dụng trên **từng object version**; có thể đặt *default retention* ở cấp bucket.
 | Chế Độ | Đặc Điểm Phân Quyền | Ngữ Cảnh Sử Dụng |
 |:---|:---|:---|
 | **Compliance Mode** | **KHÔNG MỘT AI** (kể cả AWS Root, kể cả AWS Support) có thể xóa hoặc sửa object trong thời hạn khóa. | Chống mã độc tống tiền (Ransomware), tuân thủ luật tài chính khắt khe (SEC Rule 17a-4). |
 | **Governance Mode** | Người dùng có quyền IAM đặc biệt (`s3:BypassGovernanceRetention`) có thể gỡ khóa hoặc xóa object. | Kiểm soát nội bộ linh hoạt, tránh nhân viên xóa nhầm nhưng admin vẫn can thiệp được. |
-| **Legal Hold** | Khóa dữ liệu vô thời hạn (không có ngày hết hạn cố định), bật/tắt bằng cờ ON/OFF. | Giữ chứng cứ phục vụ điều tra pháp lý độc lập với thời hạn retention period. |
+| **Legal Hold** | Khóa dữ liệu vô thời hạn (không có ngày hết hạn cố định), bật/tắt bằng cờ ON/OFF; người có quyền `s3:PutObjectLegalHold` mới gỡ được. | Giữ chứng cứ phục vụ điều tra pháp lý độc lập với thời hạn retention period. |
 
 ### 3. S3 Replication (CRR & SRR)
 - **Điều kiện tiên quyết**: **Bắt buộc bật S3 Versioning ở CẢ 2 BUCKET (nguồn và đích)**.
@@ -96,8 +97,8 @@
 - **Ép Buộc Kết Nối HTTPS**: Tạo Bucket Policy từ chối (`Deny`) mọi request có `"aws:SecureTransport": "false"`.
 
 ### 2. Kiểm Soát Quyền Truy Cập
-- **Block Public Access**: Bật mặc định ở cấp tài khoản và cấp bucket để chặn mọi nguy cơ lộ dữ liệu public.
-- **Object Ownership**: Đặt chế độ **Bucket owner enforced** $\rightarrow$ **Vô hiệu hóa hoàn toàn Access Control Lists (ACLs)**, tập trung quản lý qua Bucket Policy.
+- **Block Public Access**: Bật mặc định cho mọi bucket mới (từ 04/2023); có thể đặt ở cấp tài khoản và cấp bucket để chặn mọi nguy cơ lộ dữ liệu public.
+- **Object Ownership**: Chế độ **Bucket owner enforced** (mặc định cho bucket mới từ 04/2023) $\rightarrow$ **Vô hiệu hóa hoàn toàn Access Control Lists (ACLs)**, tập trung quản lý qua Bucket Policy / IAM.
 - **Pre-signed URLs**: Cho phép người dùng tạm thời tải lên hoặc tải xuống 1 file cụ thể mà không cần tài khoản IAM. Thừa hưởng quyền của người tạo link và hết hạn sau thời gian định sẵn.
 - **S3 Access Points**: Tạo các điểm truy cập riêng với chính sách (Policy) độc lập cho từng nhóm ứng dụng hoặc người dùng (VD: Access Point cho phòng Tài chính, Access Point cho phòng Marketing).
 
@@ -105,7 +106,8 @@
 - **Hạn mức mặc định theo Prefix**: **3,500 PUT/POST/DELETE** và **5,500 GET/HEAD requests / giây trên mỗi Prefix**.
   - Muốn scale thông lượng $\rightarrow$ Chia dữ liệu ra nhiều prefix song song (VD: `/images/`, `/documents/`, `/logs/`).
 - **Byte-Range Fetch**: Tải song song nhiều phần (ranges) của một file lớn để tăng tốc độ tải hoặc chỉ đọc phần header của file.
-- **S3 Select**: Lọc và chỉ kéo đúng các cột/hàng cần thiết từ file CSV/JSON/Parquet trực tiếp tại tầng S3 trước khi trả về ứng dụng $\rightarrow$ Giảm 80% băng thông mạng và CPU.
+- **S3 Select**: Lọc và chỉ kéo đúng các cột/hàng cần thiết từ 1 file CSV/JSON/Parquet trực tiếp tại tầng S3 trước khi trả về ứng dụng $\rightarrow$ giảm dữ liệu truyền về và CPU phía client. ⚠️ **Không còn mở cho khách hàng mới** (khách cũ vẫn dùng); AWS khuyến nghị **Amazon Athena** hoặc lọc phía client / byte-range fetch.
+- **S3 Transfer Acceleration**: Upload/download qua Edge Location của CloudFront rồi đi mạng trục AWS về bucket $\rightarrow$ tăng tốc cho người dùng ở xa Region; chỉ tính phí khi thực sự tăng tốc.
 
 ---
 
@@ -113,24 +115,24 @@
 
 | Loại Ổ EBS | Công Nghệ | IOPS / Throughput Tối Đa | 💡 Khi Nào Chọn Trong Đề Thi? |
 |:---|:---:|:---:|:---|
-| **gp3** (General Purpose) | SSD | 16,000 IOPS / 1,000 MB/s | **Lựa chọn mặc định**, ổ boot OS, dev/test. Chỉnh IOPS và Throughput độc lập với dung lượng (rẻ hơn gp2 20%). Baseline 3,000 IOPS + 125 MB/s miễn phí. |
-| **gp2** (General Purpose) | SSD | 16,000 IOPS | Công nghệ cũ, IOPS gắn liền với dung lượng (3 IOPS/GB) có cơ chế Burst credits. Nên nâng cấp lên gp3. |
+| **gp3** (General Purpose) | SSD | **80,000 IOPS / 2,000 MiB/s, tới 64 TiB** (nâng từ 16,000 IOPS / 1,000 MiB/s / 16 TiB vào 09/2025) | **Lựa chọn mặc định**, ổ boot OS, dev/test, phần lớn DB. Chỉnh IOPS và Throughput độc lập với dung lượng (giá/GB rẻ hơn gp2 ~20%). Baseline 3,000 IOPS + 125 MiB/s đã gồm trong giá. *Đề cũ dùng mốc 16,000 IOPS.* |
+| **gp2** (General Purpose) | SSD | 16,000 IOPS | Công nghệ cũ, IOPS gắn liền với dung lượng (3 IOPS/GiB, tối thiểu 100), volume < 1 TiB có Burst tới 3,000 IOPS bằng credits. Nên chuyển lên gp3 bằng Elastic Volumes. |
 | **io2 Block Express** | SSD | **256,000 IOPS** / 4,000 MB/s | Cơ sở dữ liệu quan trọng (SAP HANA, Oracle, SQL Server) cần độ trễ sub-millisecond và IOPS cực lớn. Hỗ trợ **EBS Multi-Attach**. |
 | **io1** (Provisioned IOPS) | SSD | 64,000 IOPS / 1,000 MB/s | Thế hệ trước của io2. |
-| **st1** (Throughput Optimized) | HDD | 500 IOPS / 500 MB/s | Dữ liệu đọc/ghi tuần tự lớn (Big data, Hadoop, Kafka, Log processing). **KHÔNG THỂ LÀM Ổ BOOT**. |
+| **st1** (Throughput Optimized) | HDD | 500 IOPS / 500 MB/s | Dữ liệu đọc/ghi tuần tự lớn (Big data, Data warehouse, Kafka, Log processing). **KHÔNG THỂ LÀM Ổ BOOT**. Kích thước 125 GiB – 16 TiB. |
 | **sc1** (Cold HDD) | HDD | 250 IOPS / 250 MB/s | Dữ liệu lạnh, ít truy cập, chi phí rẻ nhất họ EBS. **KHÔNG THỂ LÀM Ổ BOOT**. |
 
 ### 🛠️ Các Quy Tắc Vàng Của EBS Cần Nhớ
 1. **Phạm vi AZ**: EBS Volume chỉ tồn tại trong **1 Availability Zone duy nhất**. Muốn chuyển sang AZ hoặc Region khác $\rightarrow$ Chụp **Snapshot** rồi restore tại AZ/Region mới.
 2. **Delete on Termination**: Mặc định **BẬT** cho Root volume (tự xóa khi EC2 bị terminate) và mặc định **TẮT** cho các ổ đĩa dữ liệu phụ gắn thêm.
 3. **Mã hóa (Encryption)**: Bật tính năng *"Always encrypt new EBS volumes"* cho toàn Region. Nếu ổ đĩa chưa mã hóa $\rightarrow$ Chụp Snapshot $\rightarrow$ Copy Snapshot kèm tùy chọn bật mã hóa KMS $\rightarrow$ Khởi tạo Volume mới từ snapshot mã hóa.
-4. **Elastic Volumes**: Cho phép tăng dung lượng, đổi loại ổ (VD: gp2 $\rightarrow$ gp3) trực tiếp khi máy chủ đang chạy mà không cần unmount hay reboot.
-5. **EBS Multi-Attach**: CHỈ hỗ trợ dòng `io1` và `io2`, gắn vào tối đa **16 EC2 instances trong CÙNG 1 AZ**. Đòi hỏi ứng dụng phải dùng Cluster-aware file system (như GFS2).
+4. **Elastic Volumes**: Cho phép tăng dung lượng, đổi loại ổ (VD: gp2 $\rightarrow$ gp3), đổi IOPS/throughput trực tiếp khi máy chủ đang chạy mà không cần detach hay reboot. Sau khi tăng dung lượng phải **mở rộng file system trong OS**; **không thể giảm dung lượng** volume; mỗi volume phải chờ ~6 giờ giữa 2 lần sửa.
+5. **EBS Multi-Attach**: CHỈ hỗ trợ dòng `io1` và `io2`, gắn vào tối đa **16 instance Nitro trong CÙNG 1 AZ**. Đòi hỏi ứng dụng phải dùng Cluster-aware file system (như GFS2) — không dùng XFS/EXT4 thông thường.
 
 ### 📸 EBS Snapshots & Quản Lý Vòng Đời
 - **Bản chất**: Lưu ngầm trên Amazon S3, hoạt động theo cơ chế **Incremental (chỉ lưu các khối đĩa bị thay đổi)**.
 - **Fast Snapshot Restore (FSR)**: Loại bỏ hoàn toàn độ trễ đọc lần đầu (Lazy loading) khi khởi tạo volume từ snapshot (tính thêm phí).
-- **Snapshot Archive**: Lưu trữ snapshot dài hạn rẻ hơn 75% so với snapshot thông thường, thời gian phục hồi từ 24–72 giờ.
+- **Snapshot Archive**: Lưu trữ snapshot dài hạn rẻ hơn tới 75% so với snapshot thông thường, thời gian phục hồi (restore khỏi archive) 24–72 giờ, lưu tối thiểu 90 ngày.
 - **Recycle Bin**: Thiết lập thời gian giữ lại (Retention rules) để khôi phục các snapshot hoặc AMI bị xóa nhầm.
 - **Amazon Data Lifecycle Manager (DLM)**: Tự động hóa lịch chụp, sao chép xuyên Region và xóa snapshot EBS theo chính sách.
 
@@ -154,11 +156,11 @@ flowchart TD
 
 | Dịch Vụ | Giao Thức | Hệ Điều Hành | 💡 Đặc Điểm Quyết Định Trong Đề Thi |
 |:---|:---:|:---:|:---|
-| **Amazon EFS** | NFSv4 | **Linux duy nhất** | Tự co giãn không cần khai báo trước dung lượng, Multi-AZ mặc định (có bản EFS One Zone rẻ hơn). Đắt hơn EBS ~3 lần. Cung cấp **EFS Access Points** để phân quyền thư mục cho container/Lambda. |
+| **Amazon EFS** | NFSv4.0 / 4.1 | **Linux duy nhất** (không hỗ trợ Windows) | Tự co giãn không cần khai báo trước dung lượng, Multi-AZ mặc định (có bản EFS One Zone rẻ hơn). Giá/GB cao hơn EBS gp2 nhiều lần (~3×) nhưng chỉ trả theo dung lượng dùng. Storage classes: Standard, Infrequent Access, **Archive** + Lifecycle Management. Throughput mode: **Elastic** (khuyến nghị, mặc định), Provisioned, Bursting. Cung cấp **EFS Access Points** để phân quyền thư mục cho container/Lambda. |
 | **FSx for Windows File Server** | SMB | Windows (mount được Linux) | Tích hợp sâu Microsoft Active Directory, NTFS ACLs, DFS Namespaces (gộp nhiều file shares). Hỗ trợ Multi-AZ và Single-AZ, backup tự động hằng ngày sang S3. |
 | **FSx for Lustre** | Lustre | Linux | Hệ thống tệp song song cho HPC, mô phỏng tài chính, training Machine Learning. Đọc/ghi trực tiếp từ S3 như một thư mục cục bộ. Bản **Scratch** (tạm thời, rẻ, không replicate) và **Persistent** (lâu dài, HA trong AZ). |
 | **FSx for NetApp ONTAP** | NFS, SMB, iSCSI | Đa nền tảng (Linux, Windows, macOS, VMware) | Migrate hệ thống NetApp tại chỗ lên AWS không sửa ứng dụng. Hỗ trợ tính năng nén, chống trùng lặp (dedup), clone tức thì (point-in-time clone). |
-| **FSx for OpenZFS** | NFS (v3, v4) | Linux, macOS | Di chuyển workload ZFS lên AWS. Thông lượng hàng triệu IOPS, độ trễ dưới 0.5 mili-giây, nén dữ liệu ZFS. |
+| **FSx for OpenZFS** | NFS (v3, v4.0, v4.1, v4.2) | Linux, macOS, Windows (NFS client) | Di chuyển workload ZFS / NFS Linux lên AWS. Hiệu năng tới hàng triệu IOPS, độ trễ cỡ vài trăm micro-giây, snapshot/clone tức thì, nén dữ liệu ZFS. |
 
 ---
 
@@ -168,7 +170,7 @@ flowchart TD
 | Biến Thể Gateway | Giao Thức On-Prem | Lưu Trữ Phía Sau | 💡 Ngữ Cảnh Đề Thi Phản Xạ |
 |:---|:---:|:---:|:---|
 | **S3 File Gateway** | NFS / SMB | Amazon S3 | Ứng dụng tại chỗ cần ghi file qua NFS/SMB và lưu thành object S3 có cache cục bộ độ trễ thấp. |
-| **FSx File Gateway** | SMB | FSx for Windows | Người dùng tại văn phòng chi nhánh truy cập thư mục FSx for Windows trên mây với tốc độ mạng LAN nhờ local cache. |
+| **FSx File Gateway** | SMB | FSx for Windows | Người dùng tại văn phòng chi nhánh truy cập thư mục FSx for Windows trên mây với tốc độ mạng LAN nhờ local cache. ⚠️ **Không nhận khách mới từ 28/10/2024** — AWS khuyến nghị client kết nối thẳng FSx for Windows, hoặc FSx for NetApp ONTAP FlexCache khi cần cache tại chỗ. |
 | **Volume Gateway — Cached** | iSCSI | Amazon S3 | Dữ liệu chính lưu trên S3, chỉ giữ dữ liệu nóng (hay dùng) tại ổ đĩa On-Premises. Tiết kiệm bộ nhớ tại chỗ. |
 | **Volume Gateway — Stored** | iSCSI | On-Premises (S3 backup) | Toàn bộ dữ liệu nằm tại On-Premises để truy cập tức thì, sao lưu bất đồng bộ snapshot lên S3. |
 | **Tape Gateway (VTL)** | iSCSI VTL | S3 Glacier / Deep Archive | **Thay thế thư viện băng từ vật lý**. Phần mềm sao lưu cũ (Veeam, Commvault) giữ nguyên, băng ảo cất trên Glacier. |
@@ -177,13 +179,15 @@ flowchart TD
 - Quản lý sao lưu tập trung theo chính sách cho: **EC2, EBS, RDS, Aurora, DynamoDB, EFS, FSx, S3, Storage Gateway**.
 - **Backup Plan**: Định nghĩa tần suất sao lưu, thời gian lưu giữ (Retention), và tự động chuyển sang tầng lưu trữ lạnh (Cold Storage).
 - **Cross-Region & Cross-Account Backup**: Tự động sao chép bản backup sang Region hoặc AWS Account khác để phòng chống thảm họa và ransomware.
-- **AWS Backup Vault Lock**: Bật chế độ **Compliance Mode (WORM)** ngăn chặn mọi người dùng (kể cả root) xóa hoặc sửa bản sao lưu trước thời hạn.
+- **AWS Backup Vault Lock**: Bật chế độ **Compliance Mode (WORM)** ngăn chặn mọi người dùng (kể cả root) xóa hoặc sửa bản sao lưu trước thời hạn. Compliance mode có **grace time tối thiểu 72 giờ** để thử nghiệm; hết grace time thì khóa vĩnh viễn, không ai gỡ được. Governance mode: người có quyền IAM phù hợp vẫn gỡ được khóa.
+- **Logically air-gapped vault**: Vault đặc biệt luôn khóa ở compliance mode, cô lập logic khỏi tài khoản nguồn, có thể chia sẻ qua AWS RAM sang tài khoản khác để phục hồi khi tài khoản gốc bị xâm nhập.
 
 ### 3. Công Cụ Truyền Tải Dữ Liệu: DataSync vs Transfer Family vs Snow Family
 - **AWS DataSync**: Đồng bộ dữ liệu định kỳ qua mạng (NFS/SMB/HDFS $\rightarrow$ S3/EFS/FSx), nhanh gấp 10 lần rsync, bảo toàn quyền POSIX/NTFS.
 - **AWS Transfer Family**: Cung cấp cổng SFTP/FTPS/FTP/AS2 cho đối tác bên ngoài upload file trực tiếp vào S3 hoặc EFS mà không sửa script của họ.
 - **AWS Snow Family**: Vận chuyển dữ liệu vật lý ngoại tuyến khi đường truyền internet quá chậm (mất > 1 tuần để truyền qua mạng).
   - *Quy tắc vàng*: Dữ liệu từ Snowball chỉ có thể import vào **Amazon S3 Standard**, sau đó mới dùng Lifecycle Rule chuyển sang S3 Glacier (không import trực tiếp vào Glacier).
+  - ⚠️ *Cập nhật*: Snowmobile đã ngừng (03/2024), Snowcone đã ngừng cung cấp (2024), Snowball Edge không nhận khách mới từ 07/11/2025. Khách mới: **DataSync** (online, có thể kết hợp Direct Connect hosted connection tạm thời) hoặc **AWS Data Transfer Terminal** (mang thiết bị lưu trữ tới địa điểm AWS để upload tốc độ cao).
 
 ---
 
@@ -202,7 +206,7 @@ flowchart TD
 | "centralized backup policy across multiple services", "ransomware backup lock" | **AWS Backup + Vault Lock** |
 | "accelerate large file upload globally to S3", "worldwide users" | **S3 Transfer Acceleration** |
 | "file upload > 5 GB" | **S3 Multipart Upload** |
-| "query specific rows/columns directly from S3 CSV/Parquet" | **S3 Select** |
+| "query specific rows/columns directly from S3 CSV/Parquet" | **S3 Select** (đề cũ) / **Amazon Athena** (khuyến nghị hiện tại) |
 | "single-digit ms latency for S3", "AI/ML training in 1 AZ" | **S3 Express One Zone** |
 | "WORM compliance", "nobody can delete even root", "SEC 17a-4" | **S3 Object Lock (Compliance Mode)** |
 | "temporary files deleted after 10 days, cost-effective" | **S3 Standard (Tránh bẫy Standard-IA)** |
@@ -211,4 +215,5 @@ flowchart TD
 | "retain 7-10 years, compliance, lowest storage cost" | **S3 Glacier Deep Archive** |
 | "transfer TBs of files periodically over network", "10x faster than rsync" | **AWS DataSync** |
 | "external partners upload via SFTP to S3" | **AWS Transfer Family** |
-| "offline data transfer > 10 TB, slow internet" | **AWS Snowball Edge** |
+| "offline data transfer > 10 TB, slow internet" | **AWS Snowball Edge** (đáp án đề thi; khách mới hiện dùng Data Transfer Terminal / DataSync + DX) |
+| "protect backups even if the source account is compromised" | **AWS Backup logically air-gapped vault / cross-account copy + Vault Lock** |

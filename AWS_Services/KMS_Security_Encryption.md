@@ -13,7 +13,7 @@ Bảo vệ dữ liệu và an toàn thông tin là trụ cột hàng đầu (Sec
 1. **AWS Key Management Service (AWS KMS)**: Dịch vụ quản lý khóa mật mã tập trung, tích hợp gốc với hơn 100 dịch vụ AWS, cho phép tạo, xoay vòng và kiểm soát các khóa mã hóa (**KMS Keys**) để bảo vệ dữ liệu lưu trữ (Encryption at Rest) và hỗ trợ thuật toán kháng lượng tử (Post-Quantum Hybrid Cryptography).
 2. **AWS Secrets Manager**: Dịch vụ chuyên dụng quản lý, mã hóa và **tự động luân chuyển (Auto-rotate)** các thông tin bí mật nhạy cảm (mật khẩu cơ sở dữ liệu RDS/Aurora, API keys, OAuth tokens) thông qua các hàm AWS Lambda mà không làm gián đoạn ứng dụng.
 3. **AWS Systems Manager Parameter Store**: Kho lưu trữ tham số cấu hình tập trung phân tầng (Hierarchical Key-Value Store), hỗ trợ PlainText và mã hóa **`SecureString`** qua KMS với chi phí tối ưu (tầng Standard hoàn toàn miễn phí).
-4. **AWS CloudHSM**: Thiết bị mô-đun bảo mật phần cứng chuyên dụng (**Hardware Security Module**), đạt chuẩn kiểm định an ninh **FIPS 140-2/3 Level 3**, đơn khách hàng (**Single-tenant**) trao quyền kiểm soát độc quyền vật liệu khóa cho doanh nghiệp.
+4. **AWS CloudHSM**: Thiết bị mô-đun bảo mật phần cứng chuyên dụng (**Hardware Security Module**), đạt chuẩn kiểm định an ninh **FIPS 140-3 Level 3** (`hsm2m.medium`; thế hệ `hsm1.medium` là FIPS 140-2 Level 3), đơn khách hàng (**Single-tenant**) trao quyền kiểm soát độc quyền vật liệu khóa cho doanh nghiệp.
 5. **AWS WAF & AWS Shield**: Bộ đôi phòng ngự chu vi mạng: **AWS WAF** lọc lưu lượng web Layer 7 (chống SQLi, XSS, Brute-force bot) và **AWS Shield** bảo vệ chống tấn công từ chối dịch vụ phân tán (**DDoS Protection** Layer 3/4/7).
 6. **Bộ Ba Trí Tuệ Nhân Tạo An Ninh**: **Amazon GuardDuty** (phát hiện mối đe dọa thông minh qua log), **Amazon Inspector** (quét lỗ hổng phần mềm CVE và mã nguồn tự động), và **Amazon Macie** (quét và bảo vệ dữ liệu định danh cá nhân nhạy cảm PII trên S3 bằng ML).
 
@@ -41,9 +41,9 @@ flowchart TD
     Dim3 --> G1[Single-Region Keys\nHoạt động trong 1 Region duy nhất]
     Dim3 --> G2[Multi-Region Keys\nCùng Key ID & Key Material đa vùng]
 
-    Dim4 --> M1[AWS KMS HSM\nMặc định, FIPS 140-2 Level 3 Multi-tenant]
+    Dim4 --> M1[AWS KMS HSM\nMặc định, FIPS 140-3 Level 3 Multi-tenant]
     Dim4 --> M2[Imported BYOK\nTự nạp khóa, Kill-switch tức thì 1 giây]
-    Dim4 --> M3[CloudHSM Store\nCụm HSM riêng FIPS 140-2 Level 3]
+    Dim4 --> M3[CloudHSM Store\nCụm HSM riêng FIPS 140-2/140-3 Level 3]
     Dim4 --> M4[External Key Store - XKS\nKhóa đặt tại On-Premises HSM vật lý]
 ```
 
@@ -226,7 +226,7 @@ flowchart LR
   - Cấu hình **Glue Security Configuration** tích hợp với **AWS KMS Customer Managed Key (CMK)**: Tự động mã hóa dữ liệu ghi vào S3 target, mã hóa metadata catalog, và mã hóa shuffle storage tạm thời trên các node Glue.
 
 #### 4. Kiểm Soát Khóa Tuyệt Đối Với KMS Custom Key Store Backed by AWS CloudHSM — (TD-Set1 Q64, TD-Set6 Q47)
-- **Tình huống thi**: Doanh nghiệp tài chính/y tế có yêu cầu pháp lý nghiêm ngặt: Toàn bộ dữ liệu đám mây phải được mã hóa ở trạng thái nghỉ, tích hợp dễ dàng với các dịch vụ AWS, nhưng doanh nghiệp phải **toàn quyền kiểm soát vật liệu khóa (exclusive control)**, lưu trữ khóa trên thiết bị phần cứng chuyên dụng đơn khách hàng (**Single-tenant FIPS 140-2 Level 3 Dedicated HSM**), có khả năng **xóa sạch vật liệu khóa ngay lập tức (immediate key material removal)** và kiểm toán việc dùng khóa độc lập hoàn toàn với AWS CloudTrail (`TD-Set1 Q64`, `TD-Set6 Q47`).
+- **Tình huống thi**: Doanh nghiệp tài chính/y tế có yêu cầu pháp lý nghiêm ngặt: Toàn bộ dữ liệu đám mây phải được mã hóa ở trạng thái nghỉ, tích hợp dễ dàng với các dịch vụ AWS, nhưng doanh nghiệp phải **toàn quyền kiểm soát vật liệu khóa (exclusive control)**, lưu trữ khóa trên thiết bị phần cứng chuyên dụng đơn khách hàng (**Single-tenant FIPS 140-2/140-3 Level 3 Dedicated HSM**), có khả năng **xóa sạch vật liệu khóa ngay lập tức (immediate key material removal)** và kiểm toán việc dùng khóa độc lập hoàn toàn với AWS CloudTrail (`TD-Set1 Q64`, `TD-Set6 Q47`).
 - **Giải pháp tối ưu chuẩn AWS**:
   - Tạo một **AWS KMS Custom Key Store** được hỗ trợ bởi cụm **AWS CloudHSM (CloudHSM-backed KMS key)**.
   - KMS quản lý vòng đời logic và giao diện API cho các dịch vụ AWS (EBS, S3, RDS), nhưng vật liệu khóa mật mã thực tế được sinh ra, lưu trữ an toàn và thực thi mật mã độc quyền bên trong phần cứng CloudHSM của khách hàng.
@@ -322,7 +322,7 @@ flowchart LR
 - **Tình huống đề thi**: *"Doanh nghiệp xử lý thẻ tín dụng phân vân giữa KMS và CloudHSM. Khi nào bắt buộc phải dùng CloudHSM?"*
 - **Điểm mấu chốt**:
   - **AWS KMS**: Dịch vụ đa người dùng (**Multi-tenant**), AWS quản lý phần cứng ngầm. Thích hợp cho hầu hết các workload thông thường, chi phí thấp (\$1/key/tháng).
-  - **AWS CloudHSM**: Thiết bị phần cứng đơn khách hàng (**Single-tenant dedicated hardware appliance**), khách hàng sở hữu độc quyền thông tin đăng nhập HSM (`crypto-user`), tuân thủ chuẩn **FIPS 140-2 Level 3**, hỗ trợ giao thức tiêu chuẩn công nghiệp (PKCS#11, JCE, CNG). Chi phí cao (tính theo giờ phần cứng).
+  - **AWS CloudHSM**: Thiết bị phần cứng đơn khách hàng (**Single-tenant dedicated hardware appliance**), khách hàng sở hữu độc quyền thông tin đăng nhập HSM (`crypto-user`), tuân thủ chuẩn **FIPS 140-3 Level 3** (`hsm2m.medium`; `hsm1.medium`: FIPS 140-2 Level 3), hỗ trợ giao thức tiêu chuẩn công nghiệp (PKCS#11, JCE, CNG). Chi phí cao (tính theo giờ phần cứng).
 
 #### 🪤 Bẫy 9: Cơ Chế Chờ Xóa Khóa KMS Để Tránh Mất Mát Dữ Liệu Ngoài Ý Muốn — (TD-Set8 Q05)
 - **Tình huống đề thi**: *"Kỹ sư vô tình gọi API xóa khóa KMS. Dữ liệu mã hóa có bị mất vĩnh viễn ngay lập tức không?"*
@@ -356,9 +356,11 @@ flowchart LR
 - **Các phương án bẫy**:
   - ❌ *Khóa tạm thời bị khóa trong 1 giờ và gửi thông báo cảnh báo qua Amazon SNS*: Sai vì HSM vật lý tuân thủ tiêu chuẩn an ninh phần cứng FIPS nghiêm ngặt nhất.
   - ❌ *AWS Support có thể can thiệp đặt lại mật khẩu master*: CloudHSM là thiết bị Single-tenant, AWS không hề có quyền truy cập root hay mật khẩu của khách hàng.
-- **Giải pháp ĐÚNG**: Cơ chế tự bảo vệ phần cứng **Zeroization (FIPS 140-2 Level 3)** (`TD-Set5 Q58`):
-  - Nếu nhập sai mật khẩu Crypto Officer (CO) **3 lần liên tiếp**, thiết bị CloudHSM sẽ tự động kích hoạt Zeroization: **Xóa sạch vĩnh viễn toàn bộ vật liệu khóa, chứng chỉ và cấu hình trong bộ nhớ HSM** để ngăn chặn tấn công Brute-force!
-  - Do đó, bắt buộc phải có quy trình sao lưu cụm CloudHSM tự động và kiểm soát nghiêm ngặt thông tin đăng nhập CO.
+- **Đáp án theo bộ đề**: Cơ chế tự bảo vệ phần cứng **Zeroization** (`TD-Set5 Q58`) — đáp án này xuất phát từ tài liệu **CloudHSM Classic** (thế hệ cũ): đăng nhập sai mật khẩu quản trị quá số lần cho phép thì HSM bị zeroize, **xóa sạch vĩnh viễn toàn bộ vật liệu khóa, chứng chỉ và cấu hình**.
+- ⚠️ **Hành vi của AWS CloudHSM hiện tại (cần phân biệt)**:
+  - Nhập sai mật khẩu quá số lần cho phép (**5 lần** với cluster tạo sau 02/2018; cluster cũ hơn: 20 lần) $\rightarrow$ **tài khoản bị khóa (lockout)**, không phải xóa HSM. Crypto User bị khóa do CO/Admin đặt lại mật khẩu; nếu mất toàn bộ thông tin đăng nhập admin thì AWS **không thể** khôi phục.
+  - **Zeroization** xảy ra khi phát hiện can thiệp vật lý/logic (tamper) hoặc khi chủ động zeroize; dữ liệu tạo sau bản backup gần nhất sẽ mất.
+  - Do đó, bắt buộc phải có quy trình **backup cluster CloudHSM** (tự động hằng ngày), chạy **≥ 2 HSM ở nhiều AZ**, và kiểm soát nghiêm ngặt thông tin đăng nhập CO/Admin.
 
 #### 🪤 Bẫy 13: Quy Trình Mã Hóa Cơ Sở Dữ Liệu & Ổ Đĩa Đang Chạy (In-Place Encryption) — (CM-PT2 Q64, U-PT2 Q16)
 - **Tình huống đề thi**: *"Cơ sở dữ liệu Amazon RDS hoặc ổ đĩa EBS volume đang hoạt động ở trạng thái chưa mã hóa (Unencrypted). Ban quản trị yêu cầu kích hoạt mã hóa AWS KMS cho dữ liệu này với thời gian gián đoạn thấp nhất và không làm mất dữ liệu."*
@@ -446,8 +448,8 @@ flowchart LR
 | **Quét lỗ hổng CVE trên EC2, ECR, Lambda** | **Amazon Inspector** | GuardDuty (không quét lỗ hổng phần mềm) | `TD-Set1 Q12`, `TD-Set4 Q38` |
 | **Tự động tìm kiếm số thẻ tín dụng/PII trong S3** | **Amazon Macie** | AWS IAM Access Analyzer (chỉ phân tích quyền) | `TD-Set1 Q44`, `TD-Set5 Q44`, `TD-Set6 Q44` |
 | **Chống tấn công SQL Injection, XSS, HTTP Flood** | **AWS WAF** (gắn trên ALB/CloudFront) | AWS Shield Standard (chỉ bảo vệ Layer 3/4) | `TD-Set1 Q16` |
-| **Phần cứng FIPS 140-2 Level 3 độc quyền kiểm soát khóa** | **AWS CloudHSM** (hoặc KMS Custom Key Store) | AWS KMS Standard (môi trường Multi-tenant) | `TD-Set1 Q64`, `TD-Set6 Q47` |
-| **Nhập sai mật khẩu CO 3 lần trên CloudHSM** | **Zeroization tự động xóa sạch toàn bộ khóa** | Tạm khóa 1 giờ hoặc gửi cảnh báo SNS | `TD-Set5 Q58` |
+| **Phần cứng FIPS 140-2/140-3 Level 3 single-tenant, độc quyền kiểm soát khóa** | **AWS CloudHSM** (hoặc KMS Custom Key Store) | AWS KMS Standard (môi trường Multi-tenant, dù HSM của KMS nay cũng đạt FIPS 140-3 L3) | `TD-Set1 Q64`, `TD-Set6 Q47` |
+| **Nhập sai mật khẩu quản trị nhiều lần trên CloudHSM** | Đề cũ (CloudHSM Classic): **Zeroization**; CloudHSM hiện tại: **khóa tài khoản (lockout)** | Tạm khóa 1 giờ hoặc gửi cảnh báo SNS | `TD-Set5 Q58` |
 | **Lưu trữ bí mật/mật khẩu rẻ nhất (không cần auto-rotate)** | **SSM Parameter Store (SecureString)** | AWS Secrets Manager (\$0.40/secret/tháng đắt đỏ) | `TD-Set3 Q33` |
 | **Tự động xoay vòng mật khẩu DB không gián đoạn** | **AWS Secrets Manager** (kết hợp Lambda) | SSM Parameter Store (không tích hợp xoay vòng tự động) | `TD-Set2 Q10` |
 | **Mã hóa DB RDS / EBS volume đang unencrypted** | **Snapshot $\rightarrow$ Copy Snapshot (Encrypt KMS) $\rightarrow$ Restore** | Bật mã hóa trực tiếp trên RDS/EBS instance | `CM-PT2 Q64`, `U-PT2 Q16` |
@@ -521,7 +523,7 @@ sequenceDiagram
 | Tiêu chuẩn so sánh | AWS KMS (CMK) | AWS CloudHSM | AWS Secrets Manager | SSM Parameter Store | HashiCorp Vault on AWS |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Bản chất dịch vụ** | Dịch vụ quản lý khóa mật mã đa người dùng (Multi-tenant) quản lý bởi AWS. | Thiết bị phần cứng bảo mật chuyên dụng đơn khách hàng (Single-tenant). | Dịch vụ lưu trữ và tự động xoay vòng thông tin bí mật chuyên dụng. | Kho lưu trữ tham số cấu hình ứng dụng phân tầng. | Phần mềm quản trị bí mật bên thứ 3 tự vận hành trên máy ảo EC2/EKS. |
-| **Tiêu chuẩn kiểm định** | FIPS 140-2/3 Level 3 Cryptographic Modules. | **FIPS 140-2 Level 3** toàn bộ phần cứng chuyên dụng. | Được mã hóa bảo vệ bằng AWS KMS. | Hỗ trợ PlainText hoặc mã hóa bằng AWS KMS. | Tùy biến theo cấu hình backend lưu trữ. |
+| **Tiêu chuẩn kiểm định** | HSM đạt FIPS 140-3 Level 3. | **FIPS 140-3 Level 3** (`hsm2m.medium`) / FIPS 140-2 Level 3 (`hsm1.medium`), phần cứng chuyên dụng. | Được mã hóa bảo vệ bằng AWS KMS. | Hỗ trợ PlainText hoặc mã hóa bằng AWS KMS. | Tùy biến theo cấu hình backend lưu trữ. |
 | **Tự động xoay vòng** | Tự động xoay vòng khóa KMS (90 - 2560 ngày). | Khách hàng tự lập trình và quản trị vòng đời khóa. | **Tích hợp sẵn gốc (Native)** với Lambda cho RDS/Redshift. | Không hỗ trợ sẵn (Phải tự viết Lambda kích hoạt ngoài). | Hỗ trợ xoay vòng qua Vault Dynamic Secrets engine. |
 | **Quyền kiểm soát vật liệu khóa** | AWS quản lý bên trong HSM; người dùng không trích xuất được Plaintext Key. | **Khách hàng nắm quyền kiểm soát độc quyền**, AWS không thể can thiệp. | AWS quản lý dữ liệu bí mật đã được mã hóa. | AWS quản lý trong hệ thống phân tán. | Khách hàng nắm giữ chìa khóa Unseal Keys. |
 | **Giao thức hỗ trợ** | AWS REST API / AWS SDK / SigV4. | PKCS#11, Java Cryptography Extension (JCE), Microsoft CNG. | AWS REST API / AWS SDK. | AWS REST API / AWS SDK. | Vault HTTP API, HashiCorp CLI, Agent Injector. |
